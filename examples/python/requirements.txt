@@ -1,2 +1,3 @@
 mcp
 smolagents[litellm]
+rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api
