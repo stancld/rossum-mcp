@@ -28,8 +28,7 @@ pip install -r requirements.txt
 
 ```bash
 export ROSSUM_API_TOKEN="your_rossum_api_token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # Optional
-export ROSSUM_QUEUE_ID="your_queue_id"  # Optional, will prompt if not set
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 ```
 
 3. **Add invoice files:**
