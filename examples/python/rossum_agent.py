@@ -39,11 +39,14 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
     Args:
         operation: MCP operation name. Available:
             - 'upload_document': Upload document (requires: file_path, queue_id)
-            - 'list_annotations': List annotations with optional filtering
+            - 'list_annotations': List annotations with optional filtering (requires: queue_id, optional: status)
             - 'get_annotation': Get annotation details (requires: annotation_id)
+            - 'get_queue': Get queue details including schema_id (requires: queue_id)
+            - 'get_schema': Get schema details (requires: schema_id)
+            - 'get_queue_schema': Get complete schema for a queue in one call (requires: queue_id) - RECOMMENDED
         arguments: JSON string of operation arguments.
             MUST use json.dumps() to convert dict to JSON string.
-            IDs (queue_id, annotation_id) must be integers, not strings.
+            IDs (queue_id, annotation_id, schema_id) must be integers, not strings.
 
     Returns:
         JSON string with operation result. Use json.loads() to parse.
@@ -61,6 +64,13 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
         data = json.loads(result)
         if "error" not in data:
             annotation_id = data.get("annotation_id")
+
+        # Get queue schema (recommended approach)
+        schema_result = rossum_mcp_tool("get_queue_schema",
+                                       json.dumps({"queue_id": 12345}))
+        schema_data = json.loads(schema_result)
+        if "error" not in schema_data:
+            schema_content = schema_data.get("schema_content")
     """
     # Validate arguments type
     if isinstance(arguments, dict):
