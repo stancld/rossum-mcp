@@ -268,6 +268,28 @@ Common mistakes to avoid:
 - Passing dict to rossum_mcp_tool (use json.dumps())
 - Using string IDs instead of integers
 - Checking annotation data before imports finish
+
+IMPORTANT: Fetching N annotations from a queue:
+When asked to fetch N annotations from a queue:
+1. Call 'list_annotations' with the queue_id and optionally limit the results
+2. Iterate through the returned annotations (up to N items)
+3. For each annotation, perform required operations (extract data, process fields, etc.)
+
+Example pattern:
+```python
+import json
+
+# Fetch N annotations from a queue
+annotations_json = rossum_mcp_tool('list_annotations', json.dumps({'queue_id': 12345}))
+annotations_data = json.loads(annotations_json)
+
+# Iterate through first N annotations
+for annotation in annotations_data.get('results', [])[:N]:
+    annotation_id = annotation['id']
+    # Process each annotation as needed
+    ann_json = rossum_mcp_tool('get_annotation', json.dumps({'annotation_id': annotation_id}))
+    ann_data = json.loads(ann_json)
+```
 """
 
     prompt_templates["system_prompt"] += "\n" + custom_instructions
