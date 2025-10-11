@@ -1,0 +1,59 @@
+name: Tests
+
+# Trigger on push or pull request to master branch
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install pytest pytest-asyncio coverage
+        shell: bash
+
+      - name: Run pre-commit checks
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files
+        shell: bash
+
+      - name: Run tests
+        run: |
+          coverage run --source=rossum_mcp -m pytest tests/ -v --junitxml=report.xml
+        shell: bash
+        env:
+          ROSSUM_API_BASE_URL: https://api.test.rossum.ai
+          ROSSUM_API_TOKEN: test-token-123
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: report.xml
+        if: failure()
+
+      - name: Coverage statistics
+        if: success()
+        run: |
+          coverage xml
+          coverage report
+        shell: bash
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          name: codecov-mcp-server
+          fail_ci_if_error: false
