@@ -30,7 +30,6 @@ from smolagents import CodeAgent, LiteLLMModel, tool
 
 # Constants
 DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
-SERVER_SCRIPT_PATH = "../../server.py"
 
 
 @tool
@@ -189,10 +188,9 @@ def get_file_info(path: str) -> str:
 
 async def _execute_operation(operation: str, arguments: dict[str, Any]) -> str:
     """Execute Rossum MCP operation via stdio client."""
-    server_script = os.path.join(os.path.dirname(__file__), SERVER_SCRIPT_PATH)
     server_params = StdioServerParameters(
-        command="python3",
-        args=[server_script],
+        command="rossum-mcp",
+        args=[],
         env={
             **os.environ,
             "ROSSUM_API_BASE_URL": os.environ["ROSSUM_API_BASE_URL"],

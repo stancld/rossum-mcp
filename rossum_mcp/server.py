@@ -361,11 +361,16 @@ class RossumMCPServer:
             )
 
 
-async def main() -> None:
-    """Main entry point"""
+async def async_main() -> None:
+    """Async main entry point"""
     server = RossumMCPServer()
     await server.run()
 
 
+def main() -> None:
+    """Main entry point for console script"""
+    asyncio.run(async_main())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

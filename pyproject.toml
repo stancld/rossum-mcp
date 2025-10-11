@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rossum-mcp = "server:main"
+rossum-mcp = "rossum_mcp.server:main"
 
 [tool.setuptools]
 packages = ["rossum_mcp"]
