@@ -43,6 +43,18 @@ class RossumMCPServer:
         self.setup_handlers()
 
     def _upload_document_sync(self, file_path: str, queue_id: int) -> dict:
+        """Upload a document to Rossum (synchronous implementation).
+
+        Args:
+            file_path: Absolute path to the document file
+            queue_id: Rossum queue ID where the document should be uploaded
+
+        Returns:
+            Dictionary containing task_id, task_status, queue_id, and message
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist
+        """
         path = Path(file_path)
         if not path.exists():
             logger.error(f"File not found: {file_path}")
@@ -58,6 +70,15 @@ class RossumMCPServer:
         }
 
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
+        """Upload a document to Rossum for processing (async wrapper).
+
+        Args:
+            file_path: Absolute path to the document file
+            queue_id: Rossum queue ID where the document should be uploaded
+
+        Returns:
+            Dictionary containing task_id, task_status, queue_id, and message
+        """
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
@@ -69,6 +90,15 @@ class RossumMCPServer:
     def _get_annotation_sync(
         self, annotation_id: int, sideloads: Sequence[str] = ()
     ) -> dict:
+        """Retrieve annotation data from Rossum (synchronous implementation).
+
+        Args:
+            annotation_id: The annotation ID to retrieve
+            sideloads: List of sideloads to include (e.g., ['content'])
+
+        Returns:
+            Dictionary containing annotation details including id, status, url, content, etc.
+        """
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
 
         annotation = self.client.retrieve_annotation(annotation_id, sideloads)
@@ -98,6 +128,15 @@ class RossumMCPServer:
             )
 
     def _list_annotations_sync(self, queue_id: int, status: str | None = None) -> dict:
+        """List annotations for a queue (synchronous implementation).
+
+        Args:
+            queue_id: Rossum queue ID to list annotations from
+            status: Optional status filter (comma-separated)
+
+        Returns:
+            Dictionary containing count and results list of annotations
+        """
         logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}")
 
         # Build filter parameters
@@ -127,6 +166,15 @@ class RossumMCPServer:
         queue_id: int,
         status: str | None = "importing,to_review,confirmed,exported",
     ) -> dict:
+        """List annotations for a queue with optional filtering (async wrapper).
+
+        Args:
+            queue_id: Rossum queue ID to list annotations from
+            status: Optional status filter (comma-separated). Defaults to common statuses.
+
+        Returns:
+            Dictionary containing count and results list of annotations
+        """
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return await loop.run_in_executor(
@@ -134,6 +182,14 @@ class RossumMCPServer:
             )
 
     def _get_queue_sync(self, queue_id: int) -> dict:
+        """Retrieve queue details (synchronous implementation).
+
+        Args:
+            queue_id: Rossum queue ID to retrieve
+
+        Returns:
+            Dictionary containing queue details including schema_id
+        """
         logger.debug(f"Retrieving queue: queue_id={queue_id}")
 
         queue = self.client.retrieve_queue(queue_id)
@@ -156,6 +212,14 @@ class RossumMCPServer:
             return await loop.run_in_executor(pool, self._get_queue_sync, queue_id)
 
     def _get_schema_sync(self, schema_id: int) -> dict:
+        """Retrieve schema details (synchronous implementation).
+
+        Args:
+            schema_id: Rossum schema ID to retrieve
+
+        Returns:
+            Dictionary containing schema details and content
+        """
         logger.debug(f"Retrieving schema: schema_id={schema_id}")
 
         schema = self.client.retrieve_schema(schema_id)
@@ -174,6 +238,16 @@ class RossumMCPServer:
             return await loop.run_in_executor(pool, self._get_schema_sync, schema_id)
 
     def _get_queue_schema_sync(self, queue_id: int) -> dict:
+        """Retrieve complete schema for a queue (synchronous implementation).
+
+        This convenience method combines queue and schema retrieval in a single call.
+
+        Args:
+            queue_id: Rossum queue ID
+
+        Returns:
+            Dictionary containing queue and schema details including schema content
+        """
         logger.debug(f"Retrieving queue schema: queue_id={queue_id}")
 
         # First retrieve the queue to get the schema URL/ID
@@ -205,7 +279,11 @@ class RossumMCPServer:
             )
 
     def setup_handlers(self) -> None:
-        """Setup MCP protocol handlers"""
+        """Setup MCP protocol handlers.
+
+        Registers the list_tools and call_tool handlers for the MCP server.
+        These handlers define the available tools and their execution logic.
+        """
 
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
@@ -353,7 +431,10 @@ class RossumMCPServer:
                 ]
 
     async def run(self) -> None:
-        """Start the MCP server"""
+        """Start the MCP server.
+
+        Runs the server using stdio transport for communication with MCP clients.
+        """
         async with stdio_server() as (read_stream, write_stream):
             print("Rossum MCP Server running on stdio", file=sys.stderr)
             await self.server.run(
@@ -362,13 +443,20 @@ class RossumMCPServer:
 
 
 async def async_main() -> None:
-    """Async main entry point"""
+    """Async main entry point.
+
+    Creates and runs the RossumMCPServer instance.
+    """
     server = RossumMCPServer()
     await server.run()
 
 
 def main() -> None:
-    """Main entry point for console script"""
+    """Main entry point for console script.
+
+    This is the entry point used when running the server as a command-line tool.
+    It initializes the async event loop and starts the server.
+    """
     asyncio.run(async_main())
 
 
