@@ -13,40 +13,42 @@
 
 A Model Context Protocol (MCP) server that provides tools for uploading documents and retrieving annotations using the Rossum API. Built with Python and the official [rossum-sdk](https://github.com/rossumai/rossum-sdk). Powered by the highly efficient **Qwen 3 Next 80B A3B** model for intelligent document processing.
 
-## Real-World Use Case
+## Real-World Use Case 📊
 
-Imagine you have a board meeting in 10 minutes and you forgot to process 30 invoices for one of your contractors. You need an aggregation for them - **fast**. With Rossum MCP, you can:
+Imagine you have a board meeting in 10 minutes ⏰ and you forgot to process 30 invoices for one of your contractors. You need an aggregation for them - **fast**. With Rossum MCP, you can:
 
-1. **Upload all 30 invoices in bulk** to your Rossum queue
-2. **Wait for automatic processing** - AI extracts all data from every invoice
-3. **Aggregate the data** - automatically sum up all line items across documents
-4. **Generate a presentable visualization** - create an interactive bar chart showing revenue by service
+1. 📤 **Upload all 30 invoices in bulk** to your Rossum queue
+2. 🤖 **Wait for automatic processing** - AI extracts all data from every invoice
+3. 📈 **Aggregate the data** - automatically sum up all line items across documents
+4. 🎨 **Generate a presentable visualization** - create an interactive bar chart showing revenue by service
 
-All of this happens in minutes, with a simple conversational prompt. No manual data entry, no spreadsheets, no panic. Just upload, process, and present.
+All of this happens in minutes, with a simple conversational prompt. No manual data entry, no spreadsheets, no panic. Just upload, process, and present. ✨
 
-### Example: From Chaos to Chart
+### Example: From Chaos to Chart 🚀
 
 Starting from a folder full of unprocessed invoices:
 
 ```
 /examples/data/
-├── invoice_001.pdf
-├── invoice_002.pdf
+├── 📄 invoice_001.pdf
+├── 📄 invoice_002.pdf
 ├── ...
-└── invoice_030.pdf
+└── 📄 invoice_030.pdf
 ```
 
 With a single prompt (see [examples/PROMPT.md](examples/PROMPT.md)), the agent:
-- Uploads all documents to Rossum
-- Monitors processing status automatically
-- Extracts and aggregates line items by description
-- Generates an interactive HTML chart ([`revenue.html`](revenue.html))
+- ⬆️ Uploads all documents to Rossum
+- 👀 Monitors processing status automatically
+- 🔍 Extracts and aggregates line items by description
+- 📊 Generates an interactive HTML chart ([`revenue.html`](revenue.html))
 
-Result: You walk into your meeting with a professional visualization showing exactly how much revenue each service generated across all 30 invoices.
+Result: You walk into your meeting with a professional visualization showing exactly how much revenue each service generated across all 30 invoices. 🎯
 
-**[View the interactive chart →](revenue.html)**
+<div align="center">
+  <img src="revenue.png" alt="Revenue by Services Chart" width="800">
+</div>
 
-The generated chart is fully interactive (built with Plotly) - hover over bars to see exact values, zoom, pan, and export as needed. Perfect for presentations.
+The generated chart is fully interactive (built with Plotly) - hover over bars to see exact values, zoom, pan, and export as needed. Perfect for presentations. 💼
 
 ## Features
 
