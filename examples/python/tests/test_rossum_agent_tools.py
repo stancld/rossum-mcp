@@ -4,7 +4,6 @@ import json
 from collections import defaultdict
 
 import pytest
-
 from rossum_agent_tools import parse_annotation_content
 
 # Sample annotation content structure (simplified)

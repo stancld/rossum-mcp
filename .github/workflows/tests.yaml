@@ -1,4 +1,4 @@
-name: Examples Tests
+name: Tests
 
 # Trigger on push or pull request to master branch
 on:
@@ -8,7 +8,7 @@ on:
     branches: [master]
 
 jobs:
-  examples-tests:
+  tests:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -18,29 +18,36 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd examples/python
           pip install uv==0.8.18
-          uv pip install --system -r requirements.txt -c constraints.txt
-          uv pip install --system -r requirements-dev.txt
+          uv pip install --system -e .[tests]
         shell: bash
 
       - name: Run tests
         run: |
-          cd examples/python
-          coverage run --source=. -m pytest tests/ -v --junitxml=report.xml
+          coverage run --source=rossum_mcp -m pytest tests/ -v --junitxml=report.xml
         shell: bash
+        env:
+          ROSSUM_API_BASE_URL: https://api.test.rossum.ai
+          ROSSUM_API_TOKEN: test-token-123
 
       - name: Upload pytest results
         uses: actions/upload-artifact@v4
         with:
-          name: examples-test-report
-          path: examples/python/report.xml
+          name: test-report
+          path: report.xml
         if: failure()
 
       - name: Coverage statistics
         if: success()
         run: |
-          cd examples/python
           coverage xml
           coverage report
         shell: bash
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          name: codecov-mcp-server
+          fail_ci_if_error: false

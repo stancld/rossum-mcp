@@ -4,7 +4,7 @@
 - **Python setup**: `pip install -e .`
 - **Run server**: `python server.py`
 - **Lint & type check**: `pre-commit run --all-files`
-- **Individual tools**: `ruff check --fix`, `ruff format`, `mypy --config-file=examples/python/mypy.ini`
+- **Individual tools**: `ruff check --fix`, `ruff format`, `mypy --config-file=mypy.ini`
 
 ## Architecture
 - Single-file MCP server (`server.py`) for Rossum API integration
