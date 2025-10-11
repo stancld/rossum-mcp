@@ -50,6 +50,10 @@ class TestRossumMCPServerInit:
 
     def test_init_missing_env_vars(self, monkeypatch: MonkeyPatch) -> None:
         """Test that __init__ fails if environment variables are missing."""
+        # Remove environment variables that might be set by other fixtures
+        monkeypatch.delenv("ROSSUM_API_BASE_URL", raising=False)
+        monkeypatch.delenv("ROSSUM_API_TOKEN", raising=False)
+
         with pytest.raises(KeyError):
             RossumMCPServer()
 
