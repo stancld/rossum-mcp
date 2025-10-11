@@ -44,11 +44,3 @@ jobs:
           coverage xml
           coverage report
         shell: bash
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./examples/python/coverage.xml
-          name: codecov-examples-python
-          fail_ci_if_error: false
