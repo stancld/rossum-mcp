@@ -15,6 +15,15 @@ dependencies = [
     "rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinx-autodoc-typehints>=1.25.0",
+    "myst-parser>=2.0.0",
+    "sphinx-copybutton>=0.5.2",
+]
+
 [project.scripts]
 rossum-mcp = "rossum_mcp.server:main"
 
