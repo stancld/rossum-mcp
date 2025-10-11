@@ -19,10 +19,9 @@ import os
 import sys
 
 import yaml
-from smolagents import CodeAgent, LiteLLMModel
-
 from file_system_tools import get_file_info, list_files, read_file
 from rossum_agent_tools import parse_annotation_content, rossum_mcp_tool
+from smolagents import CodeAgent, LiteLLMModel
 
 # Constants
 DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"

@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""
-Rossum MCP Server
+"""Rossum MCP Server
+
 Provides tools for uploading documents and retrieving annotations using Rossum API
 """
 
+import asyncio
+import concurrent.futures
+import json
+import logging
 import os
 import sys
-import asyncio
-import logging
-import concurrent.futures
+import traceback
 from collections.abc import Sequence
 from pathlib import Path
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
-
+from mcp.types import TextContent, Tool
 from rossum_api import SyncRossumAPIClient
 from rossum_api.dtos import Token
 
@@ -36,9 +37,7 @@ class RossumMCPServer:
         self.base_url = os.environ["ROSSUM_API_BASE_URL"]
         self.api_token = os.environ["ROSSUM_API_TOKEN"]
 
-        self.client = SyncRossumAPIClient(
-            base_url=self.base_url, credentials=Token(token=self.api_token)
-        )
+        self.client = SyncRossumAPIClient(base_url=self.base_url, credentials=Token(token=self.api_token))
 
         self.setup_handlers()
 
@@ -79,17 +78,11 @@ class RossumMCPServer:
         Returns:
             Dictionary containing task_id, task_status, queue_id, and message
         """
-        import concurrent.futures
-
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            return await loop.run_in_executor(
-                pool, self._upload_document_sync, file_path, queue_id
-            )
+            return await loop.run_in_executor(pool, self._upload_document_sync, file_path, queue_id)
 
-    def _get_annotation_sync(
-        self, annotation_id: int, sideloads: Sequence[str] = ()
-    ) -> dict:
+    def _get_annotation_sync(self, annotation_id: int, sideloads: Sequence[str] = ()) -> dict:
         """Retrieve annotation data from Rossum (synchronous implementation).
 
         Args:
@@ -115,17 +108,11 @@ class RossumMCPServer:
             "modified_at": annotation.modified_at,
         }
 
-    async def get_annotation(
-        self, annotation_id: int, sideloads: Sequence[str] = ()
-    ) -> dict:
+    async def get_annotation(self, annotation_id: int, sideloads: Sequence[str] = ()) -> dict:
         """Retrieve annotation data from Rossum (async wrapper)"""
-        import concurrent.futures
-
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            return await loop.run_in_executor(
-                pool, self._get_annotation_sync, annotation_id, sideloads
-            )
+            return await loop.run_in_executor(pool, self._get_annotation_sync, annotation_id, sideloads)
 
     def _list_annotations_sync(self, queue_id: int, status: str | None = None) -> dict:
         """List annotations for a queue (synchronous implementation).
@@ -177,9 +164,7 @@ class RossumMCPServer:
         """
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            return await loop.run_in_executor(
-                pool, self._list_annotations_sync, queue_id, status
-            )
+            return await loop.run_in_executor(pool, self._list_annotations_sync, queue_id, status)
 
     def _get_queue_sync(self, queue_id: int) -> dict:
         """Retrieve queue details (synchronous implementation).
@@ -274,9 +259,7 @@ class RossumMCPServer:
         """Retrieve schema for a given queue (async wrapper)"""
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            return await loop.run_in_executor(
-                pool, self._get_queue_schema_sync, queue_id
-            )
+            return await loop.run_in_executor(pool, self._get_queue_schema_sync, queue_id)
 
     def setup_handlers(self) -> None:
         """Setup MCP protocol handlers.
@@ -389,17 +372,12 @@ class RossumMCPServer:
 
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-            import json
-            import traceback
-
             try:
                 logger.info(f"Tool called: {name} with arguments: {arguments}")
 
                 match name:
                     case "upload_document":
-                        result = await self.upload_document(
-                            arguments["file_path"], arguments["queue_id"]
-                        )
+                        result = await self.upload_document(arguments["file_path"], arguments["queue_id"])
                     case "get_annotation":
                         result = await self.get_annotation(
                             arguments["annotation_id"],
@@ -423,12 +401,10 @@ class RossumMCPServer:
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
             except Exception as e:
-                logger.error(f"Tool {name} failed: {str(e)}")
+                logger.error(f"Tool {name} failed: {e!s}")
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 error_result = {"error": str(e), "traceback": traceback.format_exc()}
-                return [
-                    TextContent(type="text", text=json.dumps(error_result, indent=2))
-                ]
+                return [TextContent(type="text", text=json.dumps(error_result, indent=2))]
 
     async def run(self) -> None:
         """Start the MCP server.
@@ -437,9 +413,7 @@ class RossumMCPServer:
         """
         async with stdio_server() as (read_stream, write_stream):
             print("Rossum MCP Server running on stdio", file=sys.stderr)
-            await self.server.run(
-                read_stream, write_stream, self.server.create_initialization_options()
-            )
+            await self.server.run(read_stream, write_stream, self.server.create_initialization_options())
 
 
 async def async_main() -> None:
