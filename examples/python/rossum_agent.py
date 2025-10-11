@@ -39,11 +39,17 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
     Args:
         operation: MCP operation name. Available:
             - 'upload_document': Upload document (requires: file_path, queue_id)
-            - 'list_annotations': List annotations with optional filtering
-            - 'get_annotation': Get annotation details (requires: annotation_id)
+            - 'list_annotations': List annotations with optional filtering (requires: queue_id, optional: status)
+            - 'get_annotation': Get annotation details (requires: annotation_id, optional: sideloads)
+                sideloads=['content'] is used to necessary to get a annotation content, not only its URL.
+                Output can be deserialized with `ann = Annotation(**json.loads(...))` for further processing.
+                Annotation content is then access as `ann.content`.
+            - 'get_queue': Get queue details including schema_id (requires: queue_id)
+            - 'get_schema': Get schema details (requires: schema_id)
+            - 'get_queue_schema': Get complete schema for a queue in one call (requires: queue_id) - RECOMMENDED
         arguments: JSON string of operation arguments.
             MUST use json.dumps() to convert dict to JSON string.
-            IDs (queue_id, annotation_id) must be integers, not strings.
+            IDs (queue_id, annotation_id, schema_id) must be integers, not strings.
 
     Returns:
         JSON string with operation result. Use json.loads() to parse.
@@ -61,6 +67,13 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
         data = json.loads(result)
         if "error" not in data:
             annotation_id = data.get("annotation_id")
+
+        # Get queue schema (recommended approach)
+        schema_result = rossum_mcp_tool("get_queue_schema",
+                                       json.dumps({"queue_id": 12345}))
+        schema_data = json.loads(schema_result)
+        if "error" not in schema_data:
+            schema_content = schema_data.get("schema_content")
     """
     # Validate arguments type
     if isinstance(arguments, dict):
@@ -221,7 +234,10 @@ Tools returning JSON strings (MUST parse with json.loads()):
 For rossum_mcp_tool:
 - INPUT: Pass 'arguments' as JSON string using json.dumps(), NOT dict
 - IDs: queue_id and annotation_id must be INTEGERS, not strings
-- OUTPUT: Parse result with json.loads() before accessing
+- OUTPUT: Parse result with json.loads() to get a dict
+- IMPORTANT: When getting annotations, deserialize the dict into Annotation object:
+  from rossum_api.models.annotation import Annotation
+  annotation = Annotation(**json.loads(ann_json))
 
 IMPORTANT: When uploading documents and checking status:
 - After upload, documents enter "importing" state while being processed
@@ -258,6 +274,173 @@ Common mistakes to avoid:
 - Passing dict to rossum_mcp_tool (use json.dumps())
 - Using string IDs instead of integers
 - Checking annotation data before imports finish
+
+IMPORTANT: Fetching N annotations from a queue:
+When asked to fetch N annotations from a queue:
+1. Call 'list_annotations' with the queue_id and optionally limit the results
+2. Iterate through the returned annotations (up to N items)
+3. For each annotation, perform required operations (extract data, process fields, etc.)
+
+Example pattern:
+```python
+import json
+
+# Fetch N annotations from a queue
+annotations_json = rossum_mcp_tool('list_annotations', json.dumps({'queue_id': 12345}))
+annotations_data = json.loads(annotations_json)
+
+# Iterate through first N annotations
+for annotation in annotations_data.get('results', [])[:N]:
+    annotation_id = annotation['id']
+    # Process each annotation as needed
+    ann_json = rossum_mcp_tool('get_annotation', json.dumps({'annotation_id': annotation_id, 'sideloads': ['content']}))
+    ann_data = json.loads(ann_json)
+```
+
+IMPORTANT: Accessing Annotation Content and Datapoints:
+When you get an annotation with `content` as a sideload, the response includes a 'content' field.
+This content is a LIST of items representing the document structure (sections, datapoints, multivalues).
+
+Annotation Content Structure:
+- annotation['content'] is a list of dictionaries
+- Each dictionary has these key fields:
+  * 'category': Type of item - 'section', 'datapoint', 'multivalue', or 'tuple'
+  * 'schema_id': Schema identifier for the field
+  * 'children': List of nested items (for section/multivalue/tuple categories)
+  * 'content': Dict with actual value and metadata (for datapoint category only)
+
+CRITICAL: Datapoint Values Are Nested in 'content' Field:
+- For datapoints: value is at datapoint['content']['value']
+- NOT at datapoint['value'] (this will fail!)
+- The 'content' dict also contains: page, position, rir_confidence, etc.
+- IMPORTANT: Use only those fields with rir_confidence >= 0.6
+
+Accessing Field Values - RECOMMENDED APPROACH:
+```python
+import json
+from rossum_api.models.annotation import Annotation
+
+# Get annotation with content sideload
+ann_json = rossum_mcp_tool('get_annotation', json.dumps({'annotation_id': 12345, 'sideloads': ['content']}))
+annotation = Annotation(**json.loads(ann_json))
+content = annotation.content
+
+# Method 1: Recursive search for datapoint by schema_id (RECOMMENDED)
+def get_datapoint_value(items, schema_id):
+    '''Recursively search for a datapoint value by schema_id'''
+    for item in items:
+        # Check if this is the datapoint we're looking for
+        if item.get('category') == 'datapoint' and item.get('schema_id') == schema_id:
+            return item.get('content', {}).get('value')
+
+        # Recursively search in children (sections, multivalues, tuples)
+        if 'children' in item:
+            result = get_datapoint_value(item['children'], schema_id)
+            if result is not None:
+                return result
+    return None
+
+# Get single field values
+sender_name = get_datapoint_value(content, 'sender_name')
+invoice_date = get_datapoint_value(content, 'date_issue')
+total_amount = get_datapoint_value(content, 'amount_total')
+
+# Method 2: Direct iteration for all datapoints in content
+def extract_all_datapoints(items):
+    '''Recursively extract all datapoints from content structure'''
+    datapoints = {}
+    for item in items:
+        if item.get('category') == 'datapoint':
+            schema_id = item.get('schema_id')
+            value = item.get('content', {}).get('value')
+            if (item.get('content', {}).get('rir_confidence') or 0.0) > 0.6:
+                datapoints[schema_id] = value
+
+        # Recurse into children
+        if 'children' in item:
+            datapoints.update(extract_all_datapoints(item['children']))
+
+    return datapoints
+
+all_fields = extract_all_datapoints(content)
+print(all_fields)  # {'sender_name': 'Acme Corp', 'amount_total': '1500.00', ...}
+```
+
+Handling Complex Fields (Multivalue/Line Items):
+```python
+# Find multivalue field (e.g., line_items)
+def get_line_items(content):
+    '''Extract line items from annotation content'''
+    for item in content:
+        # Line items are in a section, then multivalue
+        if item.get('category') == 'section' and item.get('schema_id') == 'line_items_section':
+            for child in item.get('children', []):
+                if child.get('category') == 'multivalue' and child.get('schema_id') == 'line_items':
+                    # Each child of multivalue is a tuple (one line item)
+                    line_items = []
+                    for tuple_item in child.get('children', []):
+                        if tuple_item.get('category') == 'tuple':
+                            # Extract all datapoints from this tuple
+                            item_data = {}
+                            for datapoint in tuple_item.get('children', []):
+                                if datapoint.get('category') == 'datapoint':
+                                    schema_id = datapoint.get('schema_id')
+                                    value = datapoint.get('content', {}).get('value')
+                                    if (item.get('content', {}).get('rir_confidence') or 0.0) > 0.6:
+                                        item_data[schema_id] = value
+                            line_items.append(item_data)
+                    return line_items
+    return []
+
+line_items = get_line_items(content)
+for item in line_items:
+    print(f"Description: {item.get('item_description')}, Amount: {item.get('item_amount')}")
+```
+
+Using Schema to Guide Extraction:
+```python
+# Get schema to know which fields to look for
+import json
+schema_json = rossum_mcp_tool('get_queue_schema', json.dumps({'queue_id': 12345}))
+schema = json.loads(schema_json)
+schema_content = schema.get('schema_content', [])
+
+# Extract all datapoint schema_ids from schema (recursively)
+def get_schema_field_ids(schema_items):
+    field_ids = []
+    for item in schema_items:
+        if item.get('category') == 'datapoint':
+            field_ids.append(item.get('id'))
+        if 'children' in item:
+            field_ids.extend(get_schema_field_ids(item['children']))
+    return field_ids
+
+field_ids = get_schema_field_ids(schema_content)
+
+# Then fetch annotation and extract those specific fields
+ann_json = rossum_mcp_tool('get_annotation', json.dumps({'annotation_id': 67890, 'sideloads': ['content']}))
+annotation = Annotation(**json.loads(ann_json))
+
+# Build result dict with all fields from schema
+result = {}
+for field_id in field_ids:
+    result[field_id] = get_datapoint_value(annotation.content, field_id)
+```
+
+Common Field Schema IDs in Invoice Schemas:
+- 'document_id' or 'invoice_id': Invoice number
+- 'sender_name' or 'vendor_name': Supplier/vendor name
+- 'date_issue' or 'invoice_date': Invoice date
+- 'amount_total' or 'total_amount': Total amount
+- 'currency': Currency code
+- 'line_items': Multivalue containing line items (inside 'line_items_section')
+  - Common children: 'item_description', 'item_quantity', 'item_amount', 'item_rate'
+
+IMPORTANT: Always check if field exists before accessing:
+- Use .get() method to avoid KeyError
+- Remember: datapoint['content']['value'], NOT datapoint['value']
+- Check if value is None or empty string
+- Some fields may not be extracted or confirmed yet
 """
 
     prompt_templates["system_prompt"] += "\n" + custom_instructions
@@ -277,6 +460,7 @@ Common mistakes to avoid:
             "queue",
             "random",
             "re",
+            "rossum_api.models.annotation",
             "stat",
             "statistics",
             "time",
