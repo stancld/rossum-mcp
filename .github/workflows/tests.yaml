@@ -18,14 +18,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e .
-          pip install pytest pytest-asyncio coverage
-        shell: bash
-
-      - name: Run pre-commit checks
-        run: |
-          pip install pre-commit
-          pre-commit run --all-files
+          pip install uv==0.8.18
+          uv pip install --system -e .[tests]
         shell: bash
 
       - name: Run tests
