@@ -11,7 +11,7 @@
 
 </div>
 
-A Model Context Protocol (MCP) server that provides tools for uploading documents and retrieving annotations using the Rossum API. Built with Python and the official [rossum-sdk](https://github.com/rossumai/rossum-sdk). Powered by the highly efficient **Qwen 3 Next 80B A3B** model for intelligent document processing.
+A Model Context Protocol (MCP) server that provides tools for uploading documents and retrieving annotations using the Rossum API. Built with Python and the official [rossum-sdk](https://github.com/rossumai/rossum-sdk).
 
 ## Real-World Use Case 📊
 
@@ -25,6 +25,8 @@ Imagine you have a board meeting in 10 minutes ⏰ and you forgot to process 30 
 All of this happens in minutes, with a simple conversational prompt. No manual data entry, no spreadsheets, no panic. Just upload, process, and present. ✨
 
 ### Example: From Chaos to Chart 🚀
+
+**This real-world example was achieved using the efficient Qwen 3 Next 80B A3B model.**
 
 Starting from a folder full of unprocessed invoices:
 
