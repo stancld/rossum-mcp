@@ -2,4 +2,4 @@ mcp
 smolagents[litellm]
 rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api
 rossum-mcp @ git+https://github.com/stancld/rossum-mcp#egg=rossum-mcp
-yaml
+pyyaml
