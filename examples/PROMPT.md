@@ -4,4 +4,4 @@ Upload all invoices from /Users/daniel.stancl/projects/rossum-mcp/examples/data 
 
 
 ## Prompt used to testing the schema retrieval followed by a single item retrieval
-Retrieve schema for the queue 3901094. Get the name for line items for description and total amount.
+Retrieve schema for the queue 3901094. Get the name for line items for description and total amount. Then fetch one annotation in `to_review` state from queue 3901094, and return dict: `{description: total amount}` for all rows. Proceed step by step, always return intermediate result.

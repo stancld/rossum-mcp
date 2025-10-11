@@ -9,6 +9,7 @@ import sys
 import asyncio
 import logging
 import concurrent.futures
+from collections.abc import Sequence
 from pathlib import Path
 
 from mcp.server import Server
@@ -65,29 +66,35 @@ class RossumMCPServer:
                 pool, self._upload_document_sync, file_path, queue_id
             )
 
-    def _get_annotation_sync(self, annotation_id: int) -> dict:
+    def _get_annotation_sync(
+        self, annotation_id: int, sideloads: Sequence[str] = ()
+    ) -> dict:
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
 
-        annotation = self.client.retrieve_annotation(annotation_id)
+        annotation = self.client.retrieve_annotation(annotation_id, sideloads)
 
         return {
             "id": annotation.id,
             "status": annotation.status,
             "url": annotation.url,
+            "schema": annotation.schema,
+            "modifier": annotation.modifier,
             "document": annotation.document,
             "content": annotation.content,
             "created_at": annotation.created_at,
             "modified_at": annotation.modified_at,
         }
 
-    async def get_annotation(self, annotation_id: int) -> dict:
+    async def get_annotation(
+        self, annotation_id: int, sideloads: Sequence[str] = ()
+    ) -> dict:
         """Retrieve annotation data from Rossum (async wrapper)"""
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return await loop.run_in_executor(
-                pool, self._get_annotation_sync, annotation_id
+                pool, self._get_annotation_sync, annotation_id, sideloads
             )
 
     def _list_annotations_sync(self, queue_id: int, status: str | None = None) -> dict:
@@ -231,6 +238,11 @@ class RossumMCPServer:
                                 "type": "integer",
                                 "description": "The annotation ID obtained from list_annotations",
                             },
+                            "sideloads": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Optional list of sideloads to include. Use ['content'] to fetch annotation content with datapoints. Without this, only metadata is returned.",
+                            },
                         },
                         "required": ["annotation_id"],
                     },
@@ -310,7 +322,10 @@ class RossumMCPServer:
                         arguments["file_path"], arguments["queue_id"]
                     )
                 elif name == "get_annotation":
-                    result = await self.get_annotation(arguments["annotation_id"])
+                    result = await self.get_annotation(
+                        arguments["annotation_id"],
+                        sideloads=arguments.get("sideloads", ()),
+                    )
                 elif name == "list_annotations":
                     result = await self.list_annotations(
                         queue_id=arguments["queue_id"], status=arguments.get("status")
