@@ -317,27 +317,29 @@ class RossumMCPServer:
             try:
                 logger.info(f"Tool called: {name} with arguments: {arguments}")
 
-                if name == "upload_document":
-                    result = await self.upload_document(
-                        arguments["file_path"], arguments["queue_id"]
-                    )
-                elif name == "get_annotation":
-                    result = await self.get_annotation(
-                        arguments["annotation_id"],
-                        sideloads=arguments.get("sideloads", ()),
-                    )
-                elif name == "list_annotations":
-                    result = await self.list_annotations(
-                        queue_id=arguments["queue_id"], status=arguments.get("status")
-                    )
-                elif name == "get_queue":
-                    result = await self.get_queue(arguments["queue_id"])
-                elif name == "get_schema":
-                    result = await self.get_schema(arguments["schema_id"])
-                elif name == "get_queue_schema":
-                    result = await self.get_queue_schema(arguments["queue_id"])
-                else:
-                    raise ValueError(f"Unknown tool: {name}")
+                match name:
+                    case "upload_document":
+                        result = await self.upload_document(
+                            arguments["file_path"], arguments["queue_id"]
+                        )
+                    case "get_annotation":
+                        result = await self.get_annotation(
+                            arguments["annotation_id"],
+                            sideloads=arguments.get("sideloads", ()),
+                        )
+                    case "list_annotations":
+                        result = await self.list_annotations(
+                            queue_id=arguments["queue_id"],
+                            status=arguments.get("status"),
+                        )
+                    case "get_queue":
+                        result = await self.get_queue(arguments["queue_id"])
+                    case "get_schema":
+                        result = await self.get_schema(arguments["schema_id"])
+                    case "get_queue_schema":
+                        result = await self.get_queue_schema(arguments["queue_id"])
+                    case _:
+                        raise ValueError(f"Unknown tool: {name}")
 
                 logger.info(f"Tool {name} completed successfully")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
