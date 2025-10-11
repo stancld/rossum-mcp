@@ -15,13 +15,14 @@
 
 ## Code Style
 - **Python version**: 3.12+ syntax required
-- **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`)
-- **Imports**: Use `from pathlib import Path`, standard library first
+- **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`). Avoid using `Any` type annotation as much as possible - use specific types instead
+- **Imports**: Use `from pathlib import Path`, standard library first. Do NOT add try/except blocks for missing imports - assume all dependencies are installed
 - **Async**: Wrap sync operations with `ThreadPoolExecutor` for MCP
 - **Logging**: File-based logging to `/tmp/` since stdout is MCP protocol
 - **Error handling**: Return JSON error objects, include tracebacks for debugging
 - **Comments**: Brief, explain why not what
 - **Quality**: Use pre-commit hooks (ruff, mypy, codespell) before committing
+- **Development workflow**: After making code changes, iteratively run `pre-commit run --all-files` and fix all mypy type errors until the checks pass cleanly
 
 ## Environment
 - Required: `ROSSUM_API_TOKEN`, `ROSSUM_API_BASE_URL`

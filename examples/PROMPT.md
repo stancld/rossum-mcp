@@ -11,7 +11,7 @@ Upload all invoices from /Users/daniel.stancl/projects/rossum-mcp/examples/data 
 3. Retrieve all annotations in 'to_review' state from queue 3901094
 4. For each document:
     - Extract all line items
-    - Create a dictionary mapping {item_description: item_amount}
+    - Create a dictionary mapping {item_description: item_amount_total}
     - If multiple line items share the same description, sum their amounts
     - Print result for each document
 5. Aggregate across all documents: sum amounts for each unique description
