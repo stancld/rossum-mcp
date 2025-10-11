@@ -40,7 +40,7 @@ pip install -e .
 3. Set up environment variables:
 ```bash
 export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.develop.r8.lol/v1"  # or your organization's base URL
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # or your organization's base URL
 ```
 
 ## Usage
@@ -64,7 +64,7 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
       "args": ["/path/to/rossum-mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.develop.r8.lol/v1"
+        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1"
       }
     }
   }
@@ -240,13 +240,20 @@ Other possible states include: `created`, `failed_import`, `split`, `in_workflow
 Use upload_document with:
 - file_path: "/path/to/invoice.pdf"
 - queue_id: "12345"
-Response: { annotation_id: "67890", ... }
+Response: { task_id: "67890", task_status: "created", message: "..." }
 ```
 
-2. Wait for processing and check status:
+2. Get the annotation ID:
+```
+Use list_annotations with:
+- queue_id: "12345"
+Find your document in the results by creation time
+```
+
+3. Check annotation status:
 ```
 Use get_annotation with:
-- annotation_id: "67890"
+- annotation_id: "67890" (from list_annotations)
 Check status field - wait until it's "to_review", "confirmed", or "exported"
 ```
 
@@ -258,7 +265,7 @@ For agents uploading multiple documents:
 ```
 For each file:
   Use upload_document with file_path and queue_id
-  Store returned annotation_ids
+  Store returned task_ids
 ```
 
 2. Check status of all annotations:
