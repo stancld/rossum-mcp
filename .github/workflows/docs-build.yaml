@@ -1,0 +1,36 @@
+name: Documentation Build
+
+# Trigger on push or pull request to master branch
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  docs-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install uv==0.8.18
+          uv pip install --system -e ".[docs]"
+        shell: bash
+
+      - name: Build documentation
+        run: |
+          cd docs
+          make html
+        shell: bash
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/build/html/
+        if: success()
