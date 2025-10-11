@@ -1,0 +1,54 @@
+name: Examples Tests
+
+# Trigger on push or pull request to master branch
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  examples-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          cd examples/python
+          pip install uv==0.8.18
+          uv pip install --system -r requirements.txt -c constraints.txt
+          uv pip install --system -r requirements-dev.txt
+        shell: bash
+
+      - name: Run tests
+        run: |
+          cd examples/python
+          coverage run --source=. -m pytest tests/ -v --junitxml=report.xml
+        shell: bash
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-test-report
+          path: examples/python/report.xml
+        if: failure()
+
+      - name: Coverage statistics
+        if: success()
+        run: |
+          cd examples/python
+          coverage xml
+          coverage report
+        shell: bash
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./examples/python/coverage.xml
+          name: codecov-examples-python
+          fail_ci_if_error: false
