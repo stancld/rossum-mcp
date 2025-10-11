@@ -20,6 +20,7 @@ import sys
 
 import yaml
 from file_system_tools import get_file_info, list_files, read_file
+from plot_tools import plot_data
 from rossum_agent_tools import parse_annotation_content, rossum_mcp_tool
 from smolagents import CodeAgent, LiteLLMModel
 
@@ -186,7 +187,7 @@ IMPORTANT: Always check if field exists before accessing:
     prompt_templates["system_prompt"] += "\n" + custom_instructions
 
     return CodeAgent(
-        tools=[rossum_mcp_tool, parse_annotation_content, list_files, read_file, get_file_info],
+        tools=[rossum_mcp_tool, parse_annotation_content, list_files, read_file, get_file_info, plot_data],
         model=llm,
         prompt_templates=prompt_templates,
         additional_authorized_imports=[

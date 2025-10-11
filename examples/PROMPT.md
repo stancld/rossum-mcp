@@ -18,3 +18,13 @@ Upload all invoices from /Users/daniel.stancl/projects/rossum-mcp/examples/data 
 6. Return the final dictionary: {description: total_amount_across_all_docs}
 
 Proceed step-by-step and show intermediate results after each major step.
+
+## Prompt for plot generation
+
+Using the provided data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
+
+Data:
+```
+{'API Integration Development': 26992.25, 'System Architecture Design': 59209.98, 'DevOps Automation Setup': 21064.31, 'Code Review and Optimization': 28266.449999999997, 'Database Design and
+Migration': 47037.86, 'Software Development Services': 26441.66, 'Security Audit Services': 16695.22, 'Cloud Infrastructure Consulting': 23659.550000000003, 'Performance Testing': 9997.68, 'Technical
+Documentation': 10884.769999999999}
