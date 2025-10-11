@@ -7,6 +7,9 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **upload_document**: Upload a document to Rossum for processing
 - **get_annotation**: Retrieve annotation data for a previously uploaded document
 - **list_annotations**: List all annotations for a queue with optional filtering
+- **get_queue**: Retrieve queue details including schema_id
+- **get_schema**: Retrieve schema details and content
+- **get_queue_schema**: Retrieve complete schema for a queue in a single call
 
 ## Prerequisites
 
@@ -86,19 +89,19 @@ result = rossum_agent.run(
 
 #### 1. upload_document
 
-Uploads a document to Rossum for processing. The annotation will initially be in `importing` state.
+Uploads a document to Rossum for processing. Returns a task ID. Use `list_annotations` to get the annotation ID.
 
 **Parameters:**
 - `file_path` (string, required): Absolute path to the document file
-- `queue_id` (string, required): Rossum queue ID where the document should be uploaded
+- `queue_id` (integer, required): Rossum queue ID where the document should be uploaded
 
 **Returns:**
 ```json
 {
-  "annotation_id": "12345",
-  "document_id": "67890",
-  "queue_id": "queue_id",
-  "status": "uploaded"
+  "task_id": "12345",
+  "task_status": "created",
+  "queue_id": 12345,
+  "message": "Document upload initiated. Use `list_annotations` to find the annotation ID for this queue."
 }
 ```
 
@@ -107,7 +110,8 @@ Uploads a document to Rossum for processing. The annotation will initially be in
 Retrieves annotation data for a previously uploaded document. Use this to check the status of a document.
 
 **Parameters:**
-- `annotation_id` (string, required): The annotation ID returned from upload_document
+- `annotation_id` (integer, required): The annotation ID obtained from list_annotations
+- `sideloads` (array, optional): List of sideloads to include. Use `['content']` to fetch annotation content with datapoints
 
 **Returns:**
 ```json
@@ -115,7 +119,9 @@ Retrieves annotation data for a previously uploaded document. Use this to check 
   "id": "12345",
   "status": "to_review",
   "url": "https://elis.rossum.ai/api/v1/annotations/12345",
-  "document": "67890",
+  "schema": "67890",
+  "modifier": "11111",
+  "document": "22222",
   "content": [...],
   "created_at": "2024-01-01T00:00:00Z",
   "modified_at": "2024-01-01T00:00:00Z"
@@ -127,17 +133,13 @@ Retrieves annotation data for a previously uploaded document. Use this to check 
 Lists all annotations for a queue with optional filtering. Useful for checking the status of multiple uploaded documents.
 
 **Parameters:**
-- `queue_id` (string, required): Rossum queue ID to list annotations from
-- `status` (string, optional): Filter by annotation status (e.g., 'importing', 'to_review', 'confirmed', 'exported')
-- `page_size` (number, optional): Number of results per page (default: 100)
-- `ordering` (string, optional): Field to order by (e.g., '-created_at' for newest first)
+- `queue_id` (integer, required): Rossum queue ID to list annotations from
+- `status` (string, optional): Filter by annotation status (default: 'importing,to_review,confirmed,exported')
 
 **Returns:**
 ```json
 {
   "count": 42,
-  "next": "https://elis.rossum.ai/api/v1/annotations?page=2",
-  "previous": null,
   "results": [
     {
       "id": "12345",
@@ -148,6 +150,63 @@ Lists all annotations for a queue with optional filtering. Useful for checking t
       "modified_at": "2024-01-01T00:00:00Z"
     }
   ]
+}
+```
+
+#### 4. get_queue
+
+Retrieves queue details including the schema_id. Use this to get the schema_id for use with get_schema.
+
+**Parameters:**
+- `queue_id` (integer, required): Rossum queue ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": "12345",
+  "name": "Invoices",
+  "url": "https://elis.rossum.ai/api/v1/queues/12345",
+  "schema_id": "67890",
+  "workspace": "11111",
+  "inbox": "22222",
+  "created_at": "2024-01-01T00:00:00Z",
+  "modified_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### 5. get_schema
+
+Retrieves schema details including the schema content/structure. Use get_queue first to obtain the schema_id.
+
+**Parameters:**
+- `schema_id` (integer, required): Rossum schema ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": "67890",
+  "name": "Invoice Schema",
+  "url": "https://elis.rossum.ai/api/v1/schemas/67890",
+  "content": [...]
+}
+```
+
+#### 6. get_queue_schema
+
+Retrieves the complete schema for a queue in a single call. This is the recommended way to get a queue's schema.
+
+**Parameters:**
+- `queue_id` (integer, required): Rossum queue ID
+
+**Returns:**
+```json
+{
+  "queue_id": "12345",
+  "queue_name": "Invoices",
+  "schema_id": "67890",
+  "schema_name": "Invoice Schema",
+  "schema_url": "https://elis.rossum.ai/api/v1/schemas/67890",
+  "schema_content": [...]
 }
 ```
 
