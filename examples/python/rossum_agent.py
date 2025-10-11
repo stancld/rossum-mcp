@@ -263,6 +263,7 @@ def main(args: argparse.Namespace) -> None:
     - Print result for each document
 5. Aggregate across all documents: sum amounts for each unique description
 6. Return the final dictionary: {description: total_amount_across_all_docs}
+7. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
 
 Proceed step-by-step and show intermediate results after each major step."""
 
