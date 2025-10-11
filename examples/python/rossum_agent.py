@@ -28,7 +28,7 @@ from smolagents import CodeAgent, LiteLLMModel
 DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
 
 
-def create_agent() -> CodeAgent:
+def create_agent(stream_outputs: bool = False) -> CodeAgent:
     """Create and configure the Rossum agent with custom tools and instructions."""
     llm = LiteLLMModel(
         model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
@@ -207,7 +207,7 @@ IMPORTANT: Always check if field exists before accessing:
             "time",
             "unicodedata",
         ],
-        stream_outputs=True,
+        stream_outputs=stream_outputs,
     )
 
 
@@ -231,6 +231,7 @@ def _check_env_vars() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--use-hardcoded-prompt", action="store_true")
+    parser.add_argument("--stream-outputs", action="store_true")
     return parser.parse_args()
 
 
@@ -242,7 +243,7 @@ def main(args: argparse.Namespace) -> None:
     _check_env_vars()
 
     print("\n🔧 Initializing agent...")
-    agent = create_agent()
+    agent = create_agent(args.stream_outputs)
 
     print("\n" + "=" * 50)
     print("Agent ready! You can now give instructions.")
@@ -251,19 +252,23 @@ def main(args: argparse.Namespace) -> None:
     print("=" * 50 + "\n")
 
     if args.use_hardcoded_prompt:
-        prompt = """1. Fetch the schema for queue 3901094
-2. Identify the schema field IDs for:
+        prompt = """1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
+    - Do not include documents from `knowledge` folder.
+2. Once you send all annotations, wait for a few seconds.
+3. Then, start checking annotation status. Once all are imported, return a list of all annotations_urls
+4. Fetch the schema for the target queue.
+5. Identify the schema field IDs for:
     - Line item description field
     - Line item total amount field
-3. Retrieve all annotations in 'to_review' state from queue 3901094
-4. For each document:
+6. Retrieve all annotations in 'to_review' state from queue 3901094
+7. For each document:
     - Extract all line items
     - Create a dictionary mapping {item_description: item_amount_total}
     - If multiple line items share the same description, sum their amounts
     - Print result for each document
-5. Aggregate across all documents: sum amounts for each unique description
-6. Return the final dictionary: {description: total_amount_across_all_docs}
-7. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
+8. Aggregate across all documents: sum amounts for each unique description
+9. Return the final dictionary: {description: total_amount_across_all_docs}
+10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
 
 Proceed step-by-step and show intermediate results after each major step."""
 
