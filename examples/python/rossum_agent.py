@@ -14,6 +14,7 @@ Environment Variables:
     LLM_MODEL_ID: (Optional) LLM model identifier
 """
 
+import argparse
 import asyncio
 import importlib.resources
 import json
@@ -313,7 +314,6 @@ CRITICAL: Datapoint Values Are Nested in 'content' Field:
 - For datapoints: value is at datapoint['content']['value']
 - NOT at datapoint['value'] (this will fail!)
 - The 'content' dict also contains: page, position, rir_confidence, etc.
-- IMPORTANT: Use only those fields with rir_confidence >= 0.6
 
 Accessing Field Values - RECOMMENDED APPROACH:
 ```python
@@ -353,8 +353,7 @@ def extract_all_datapoints(items):
         if item.get('category') == 'datapoint':
             schema_id = item.get('schema_id')
             value = item.get('content', {}).get('value')
-            if (item.get('content', {}).get('rir_confidence') or 0.0) > 0.6:
-                datapoints[schema_id] = value
+            datapoints[schema_id] = value
 
         # Recurse into children
         if 'children' in item:
@@ -386,8 +385,7 @@ def get_line_items(content):
                                 if datapoint.get('category') == 'datapoint':
                                     schema_id = datapoint.get('schema_id')
                                     value = datapoint.get('content', {}).get('value')
-                                    if (item.get('content', {}).get('rir_confidence') or 0.0) > 0.6:
-                                        item_data[schema_id] = value
+                                    item_data[schema_id] = value
                             line_items.append(item_data)
                     return line_items
     return []
@@ -487,7 +485,13 @@ def _check_env_vars() -> None:
         sys.exit(1)
 
 
-def main() -> None:
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use-hardcoded-prompt", action="store_true")
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace) -> None:
     """Main entry point - run interactive agent CLI."""
     print("🤖 Rossum Invoice Processing Agent")
     print("=" * 50)
@@ -502,6 +506,24 @@ def main() -> None:
     print("Example: 'Upload all invoices from the data folder'")
     print("Type 'quit' to exit")
     print("=" * 50 + "\n")
+
+    if args.use_hardcoded_prompt:
+        prompt = """1. Fetch the schema for queue 3901094
+2. Identify the schema field IDs for:
+    - Line item description field
+    - Line item total amount field
+3. Retrieve all annotations in 'to_review' state from queue 3901094
+4. For each document:
+    - Extract all line items
+    - Create a dictionary mapping {item_description: item_amount}
+    - If multiple line items share the same description, sum their amounts
+    - Print result for each document
+5. Aggregate across all documents: sum amounts for each unique description
+6. Return the final dictionary: {description: total_amount_across_all_docs}
+
+Proceed step-by-step and show intermediate results after each major step."""
+
+        agent.run(prompt)
 
     while True:
         try:
@@ -525,4 +547,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_args())
