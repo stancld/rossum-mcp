@@ -1,0 +1,10 @@
+services:
+  get_example_constraints:
+    image: ghcr.io/astral-sh/uv:python3.12-alpine
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: sh -c "
+      apk add --no-cache git &&
+      uv pip compile --system examples/python/requirements.txt -o examples/python/constraints.txt --no-annotate --no-header
+      "
