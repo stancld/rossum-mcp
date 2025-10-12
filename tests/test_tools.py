@@ -1,10 +1,9 @@
-"""Tests for parse_annotation_content tool"""
-
 import json
 from collections import defaultdict
 
 import pytest
-from rossum_agent_tools import parse_annotation_content
+
+from rossum_mcp.tools import parse_annotation_content
 
 # Sample annotation content structure (simplified)
 sample_content = [
