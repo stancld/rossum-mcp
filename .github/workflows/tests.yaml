@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv==0.8.18
-          uv pip install --system -e .[tests,tools]
+          uv pip install --system -e .[tests]
         shell: bash
 
       - name: Run tests

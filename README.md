@@ -69,32 +69,19 @@ The generated chart is fully interactive (built with Plotly) - hover over bars t
 
 ## Installation
 
-### Basic Installation (MCP Server Only)
+1. Clone this repository or download the files
 
+2. Install dependencies:
 ```bash
-pip install rossum-mcp
+pip install -r requirements.txt
 ```
 
-Or install from source:
+Or install as a package:
 ```bash
-git clone https://github.com/stancld/rossum-mcp.git
-cd rossum-mcp
 pip install -e .
 ```
 
-### With Agent Tools (smolagents integration)
-
-To use the agent tools for building AI agents with smolagents:
-
-```bash
-pip install rossum-mcp[tools]
-```
-
-This includes:
-- `rossum_mcp_tool`: Interface to call MCP server operations from agents
-- `parse_annotation_content`: Utilities for parsing annotation data structures
-
-### Set up environment variables:
+3. Set up environment variables:
 ```bash
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # or your organization's base URL
@@ -130,36 +117,23 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
 
 ### Using with Smolagents
 
-Install with agent tools support:
-
-```bash
-pip install rossum-mcp[tools]
-```
-
-The package includes ready-to-use tools for building AI agents with smolagents:
+The Python implementation makes it easy to use with smolagents, as both use Python and can share the `rossum_api` package:
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel
-from rossum_mcp.tools import rossum_mcp_tool, parse_annotation_content
+from smolagents import ToolCallingAgent, ManagedAgent
 
-# Create an agent with Rossum tools
-agent = CodeAgent(
-    tools=[rossum_mcp_tool, parse_annotation_content],
-    model=LiteLLMModel(model_id="anthropic/claude-3-5-sonnet-20241022")
+# Create a Rossum MCP agent
+rossum_agent = ManagedAgent(
+    agent=ToolCallingAgent(tools=[]),
+    name="rossum",
+    description="Upload and process documents using Rossum API"
 )
 
-# Use the agent to process documents
-result = agent.run(
-    "Upload all PDFs from /path/to/invoices to queue 12345, "
-    "wait for processing, then extract all line items"
+# Use the agent
+result = rossum_agent.run(
+    "Upload the invoice.pdf to queue 12345 and wait for it to be processed"
 )
 ```
-
-The tools provide:
-- **rossum_mcp_tool**: Call any MCP server operation (upload_document, get_annotation, etc.)
-- **parse_annotation_content**: Extract datapoints and line items from annotation content
-
-See [examples/python/](examples/python/) for complete working examples.
 
 ### Available Tools
 
