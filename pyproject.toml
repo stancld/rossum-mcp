@@ -28,9 +28,6 @@ tests = [
     "pytest-asyncio>=0.21.0",
     "coverage>=7.0.0",
 ]
-tools = [
-    "smolagents>=1.0.0",
-]
 
 [project.scripts]
 rossum-mcp = "rossum_mcp.server:main"
