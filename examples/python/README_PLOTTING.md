@@ -101,7 +101,7 @@ def plot_data(
 ## Real-World Example
 
 ```python
-from rossum_agent_tools import rossum_mcp_tool, parse_annotation_content
+from rossum_mcp.tools import rossum_mcp_tool, parse_annotation_content
 from plot_tools import plot_data
 
 # 1. Get annotations

@@ -21,8 +21,9 @@ import sys
 import yaml
 from file_system_tools import get_file_info, list_files, read_file
 from plot_tools import plot_data
-from rossum_agent_tools import parse_annotation_content, rossum_mcp_tool
 from smolagents import CodeAgent, LiteLLMModel
+
+from rossum_mcp.tools import parse_annotation_content, rossum_mcp_tool
 
 # Constants
 DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
