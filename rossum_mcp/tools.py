@@ -1,7 +1,11 @@
 """Rossum Agent Tools
 
-Collection of tools for the Rossum Invoice Processing Agent.
-Provides interfaces for MCP operations and annotation parsing.
+Collection of tools for AI agents working with Rossum MCP server.
+Provides interfaces for MCP operations and annotation content parsing.
+
+Note:
+    This module requires the 'tools' extra to be installed:
+    pip install rossum-mcp[tools]
 """
 
 import asyncio
@@ -11,7 +15,13 @@ from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from smolagents import tool
+
+try:
+    from smolagents import tool
+except ImportError as e:
+    raise ImportError(
+        "The 'smolagents' package is required to use rossum_mcp.tools. Install it with: pip install rossum-mcp[tools]"
+    ) from e
 
 
 @tool
