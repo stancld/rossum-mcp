@@ -20,7 +20,7 @@ jobs:
         run: |
           cd examples/python
           pip install uv==0.8.18
-          uv pip install --system -r requirements.txt -c constraints.txt
+          uv pip install --system -r <(grep -v "rossum-mcp" requirements.txt) -c constraints.txt
           uv pip install --system -r requirements-dev.txt
         shell: bash
 
