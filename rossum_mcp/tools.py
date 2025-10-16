@@ -37,11 +37,15 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
                 Output can be deserialized with `ann = Annotation(**json.loads(...))` for further processing.
                 Annotation content is then access as `ann.content`.
             - 'get_queue': Get queue details including schema_id (requires: queue_id)
+                Output keys: id, name, url, schema, workspace, inbox, engine.
             - 'get_schema': Get schema details (requires: schema_id)
             - 'get_queue_schema': Get complete schema for a queue in one call (requires: queue_id) - RECOMMENDED
+            - 'get_queue_engine': Get complete engine information for a queue in one call (requires: queue_id) - RECOMMENDED
+            - 'create_queue': Create a new queue with schema and optional engine assignment
+                (requires: name, workspace_id, schema_id, optional: engine_id, inbox_id, connector_id, locale, automation_enabled, automation_level, training_enabled)
         arguments: JSON string of operation arguments.
             MUST use json.dumps() to convert dict to JSON string.
-            IDs (queue_id, annotation_id, schema_id) must be integers, not strings.
+            IDs (queue_id, annotation_id, schema_id, workspace_id, engine_id) must be integers, not strings.
 
     Returns:
         JSON string with operation result. Use json.loads() to parse.
@@ -66,6 +70,33 @@ def rossum_mcp_tool(operation: str, arguments: str = "{}") -> str:
         schema_data = json.loads(schema_result)
         if "error" not in schema_data:
             schema_content = schema_data.get("schema_content")
+
+        # Get queue workspace
+        qurur_result = rossum_mcp_tool("get_queue",
+                                       json.dumps({"queue_id": 12345}))
+        queue_data = json.loads(schema_result)
+        queue["workspace"]
+
+        # Get queue engine (recommended approach)
+        engine_result = rossum_mcp_tool("get_queue_engine",
+                                       json.dumps({"queue_id": 12345}))
+        engine_data = json.loads(engine_result)
+        if "error" not in engine_data:
+            engine_id = engine_data.get("engine_id")
+            engine_type = engine_data.get("engine_type")  # dedicated, generic, or standard
+
+        # Create a new queue with schema and engine
+        create_result = rossum_mcp_tool("create_queue",
+                                       json.dumps({
+                                           "name": "My Invoice Queue",
+                                           "workspace_id": 12345,
+                                           "schema_id": 67890,
+                                           "engine_id": 99999,
+                                           "automation_enabled": True
+                                       }))
+        queue_data = json.loads(create_result)
+        if "error" not in queue_data:
+            new_queue_id = queue_data.get("id")
     """
     # Validate arguments type
     if isinstance(arguments, dict):

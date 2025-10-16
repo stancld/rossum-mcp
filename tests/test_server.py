@@ -268,6 +268,7 @@ class TestGetQueue:
         mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/50"
         mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/1"
         mock_queue.inbox = "https://api.test.rossum.ai/v1/inboxes/10"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/15"
         mock_queue.created_at = "2025-01-01T00:00:00Z"
         mock_queue.modified_at = "2025-01-02T00:00:00Z"
 
@@ -277,7 +278,7 @@ class TestGetQueue:
 
         assert result["id"] == 100
         assert result["name"] == "Test Queue"
-        assert result["schema_id"] == mock_queue.schema
+        assert result["schema"] == mock_queue.schema
         assert result["workspace"] == mock_queue.workspace
 
         server.client.retrieve_queue.assert_called_once_with(100)
@@ -292,6 +293,7 @@ class TestGetQueue:
         mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/50"
         mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/1"
         mock_queue.inbox = "https://api.test.rossum.ai/v1/inboxes/10"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/15"
         mock_queue.created_at = "2025-01-01T00:00:00Z"
         mock_queue.modified_at = "2025-01-02T00:00:00Z"
 
@@ -413,6 +415,344 @@ class TestGetQueueSchema:
 
         assert result["queue_id"] == 100
         assert result["schema_id"] == 50
+
+
+@pytest.mark.unit
+class TestGetQueueEngine:
+    """Tests for combined queue and engine retrieval functionality."""
+
+    def test_get_queue_engine_sync_success(self, server: RossumMCPServer) -> None:
+        """Test successful queue engine retrieval."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/15"
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = None
+
+        mock_engine = Mock()
+        mock_engine.id = 15
+        mock_engine.name = "Test Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+
+        server.client.retrieve_queue.return_value = mock_queue
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["queue_id"] == 100
+        assert result["queue_name"] == "Test Queue"
+        assert result["engine_id"] == 15
+        assert result["engine_name"] == "Test Engine"
+        assert result["engine_type"] == "standard"
+
+        server.client.retrieve_queue.assert_called_once_with(100)
+        server.client.retrieve_engine.assert_called_once_with(15)
+
+    def test_get_queue_engine_sync_dedicated_engine(self, server: RossumMCPServer) -> None:
+        """Test queue engine retrieval with dedicated engine."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = None
+        mock_queue.dedicated_engine = "https://api.test.rossum.ai/v1/engines/20"
+        mock_queue.generic_engine = None
+
+        mock_engine = Mock()
+        mock_engine.id = 20
+        mock_engine.name = "Dedicated Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/20"
+
+        server.client.retrieve_queue.return_value = mock_queue
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["engine_id"] == 20
+        assert result["engine_type"] == "dedicated"
+        server.client.retrieve_engine.assert_called_once_with(20)
+
+    def test_get_queue_engine_sync_generic_engine(self, server: RossumMCPServer) -> None:
+        """Test queue engine retrieval with generic engine."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = None
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = "https://api.test.rossum.ai/v1/engines/25"
+
+        mock_engine = Mock()
+        mock_engine.id = 25
+        mock_engine.name = "Generic Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/25"
+
+        server.client.retrieve_queue.return_value = mock_queue
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["engine_id"] == 25
+        assert result["engine_type"] == "generic"
+        server.client.retrieve_engine.assert_called_once_with(25)
+
+    def test_get_queue_engine_sync_no_engine(self, server: RossumMCPServer) -> None:
+        """Test queue engine retrieval when no engine is assigned."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = None
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = None
+
+        server.client.retrieve_queue.return_value = mock_queue
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["queue_id"] == 100
+        assert result["queue_name"] == "Test Queue"
+        assert result["engine_id"] is None
+        assert result["engine_name"] is None
+        assert result["engine_url"] is None
+        assert result["engine_type"] is None
+        assert "No engine assigned" in result["message"]
+
+        server.client.retrieve_queue.assert_called_once_with(100)
+        server.client.retrieve_engine.assert_not_called()
+
+    def test_get_queue_engine_sync_with_trailing_slash(self, server: RossumMCPServer) -> None:
+        """Test queue engine retrieval with trailing slash in engine URL."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/15/"
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = None
+
+        mock_engine = Mock()
+        mock_engine.id = 15
+        mock_engine.name = "Test Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+
+        server.client.retrieve_queue.return_value = mock_queue
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["engine_id"] == 15
+        server.client.retrieve_engine.assert_called_once_with(15)
+
+    def test_get_queue_engine_sync_with_embedded_dict(self, server: RossumMCPServer) -> None:
+        """Test queue engine retrieval when engine is embedded as a dict."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        # Engine is embedded as a dict with all required fields - no need to make additional API call
+        mock_queue.engine = {
+            "id": 18,
+            "name": "Embedded Engine",
+            "url": "https://api.test.rossum.ai/v1/engines/18",
+            "type": "custom",
+            "learning_enabled": True,
+            "description": "Test embedded engine",
+            "agenda_id": "test-agenda",
+        }
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = None
+
+        server.client.retrieve_queue.return_value = mock_queue
+
+        result = server._get_queue_engine_sync(100)
+
+        assert result["queue_id"] == 100
+        assert result["queue_name"] == "Test Queue"
+        assert result["engine_id"] == 18
+        assert result["engine_name"] == "Embedded Engine"
+        assert result["engine_url"] == "https://api.test.rossum.ai/v1/engines/18"
+        assert result["engine_type"] == "standard"
+
+        server.client.retrieve_queue.assert_called_once_with(100)
+        # Should NOT call retrieve_engine since engine is embedded
+        server.client.retrieve_engine.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_async(self, server: RossumMCPServer) -> None:
+        """Test async wrapper for queue engine retrieval."""
+        mock_queue = Mock()
+        mock_queue.id = 100
+        mock_queue.name = "Test Queue"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/15"
+        mock_queue.dedicated_engine = None
+        mock_queue.generic_engine = None
+
+        mock_engine = Mock()
+        mock_engine.id = 15
+        mock_engine.name = "Test Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+
+        server.client.retrieve_queue.return_value = mock_queue
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = await server.get_queue_engine(100)
+
+        assert result["queue_id"] == 100
+        assert result["engine_id"] == 15
+
+
+@pytest.mark.unit
+class TestCreateQueue:
+    """Tests for queue creation functionality."""
+
+    def test_create_queue_sync_success(self, server: RossumMCPServer) -> None:
+        """Test successful queue creation with schema and engine."""
+        # Mock the queue creation response
+        mock_queue = Mock()
+        mock_queue.id = 200
+        mock_queue.name = "New Test Queue"
+        mock_queue.url = "https://api.test.rossum.ai/v1/queues/200"
+        mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/1"
+        mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/50"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/10"
+        mock_queue.inbox = None
+        mock_queue.connector = None
+        mock_queue.locale = "en_GB"
+        mock_queue.automation_enabled = True
+        mock_queue.automation_level = "always"
+        mock_queue.training_enabled = True
+
+        server.client.create_new_queue.return_value = mock_queue
+
+        # Call the sync method
+        result = server._create_queue_sync(
+            name="New Test Queue",
+            workspace_id=1,
+            schema_id=50,
+            engine_id=10,
+            automation_enabled=True,
+            automation_level="always",
+        )
+
+        # Verify the result
+        assert result["id"] == 200
+        assert result["name"] == "New Test Queue"
+        assert result["schema"] == mock_queue.schema
+        assert result["engine"] == mock_queue.engine
+        assert result["automation_enabled"] is True
+        assert result["automation_level"] == "always"
+        assert "created successfully" in result["message"]
+
+        # Verify the client was called correctly
+        server.client.create_new_queue.assert_called_once()
+        call_args = server.client.create_new_queue.call_args[0][0]
+        assert call_args["name"] == "New Test Queue"
+        assert call_args["workspace"] == "https://api.test.rossum.ai/workspaces/1"
+        assert call_args["schema"] == "https://api.test.rossum.ai/schemas/50"
+        assert call_args["engine"] == "https://api.test.rossum.ai/engines/10"
+        assert call_args["automation_enabled"] is True
+        assert call_args["automation_level"] == "always"
+
+    def test_create_queue_sync_minimal_params(self, server: RossumMCPServer) -> None:
+        """Test queue creation with minimal required parameters."""
+        mock_queue = Mock()
+        mock_queue.id = 201
+        mock_queue.name = "Minimal Queue"
+        mock_queue.url = "https://api.test.rossum.ai/v1/queues/201"
+        mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/2"
+        mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/60"
+        mock_queue.engine = None
+        mock_queue.inbox = None
+        mock_queue.connector = None
+        mock_queue.locale = "en_GB"
+        mock_queue.automation_enabled = False
+        mock_queue.automation_level = "never"
+        mock_queue.training_enabled = True
+
+        server.client.create_new_queue.return_value = mock_queue
+
+        result = server._create_queue_sync(
+            name="Minimal Queue",
+            workspace_id=2,
+            schema_id=60,
+        )
+
+        assert result["id"] == 201
+        assert result["name"] == "Minimal Queue"
+        assert result["engine"] is None
+
+        call_args = server.client.create_new_queue.call_args[0][0]
+        assert "engine" not in call_args  # Optional field should not be included if None
+        assert call_args["automation_enabled"] is False
+        assert call_args["training_enabled"] is True
+
+    def test_create_queue_sync_with_all_options(self, server: RossumMCPServer) -> None:
+        """Test queue creation with all optional parameters."""
+        mock_queue = Mock()
+        mock_queue.id = 202
+        mock_queue.name = "Full Queue"
+        mock_queue.url = "https://api.test.rossum.ai/v1/queues/202"
+        mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/3"
+        mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/70"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/20"
+        mock_queue.inbox = "https://api.test.rossum.ai/v1/inboxes/5"
+        mock_queue.connector = "https://api.test.rossum.ai/v1/connectors/8"
+        mock_queue.locale = "en_US"
+        mock_queue.automation_enabled = True
+        mock_queue.automation_level = "always"
+        mock_queue.training_enabled = False
+
+        server.client.create_new_queue.return_value = mock_queue
+
+        result = server._create_queue_sync(
+            name="Full Queue",
+            workspace_id=3,
+            schema_id=70,
+            engine_id=20,
+            inbox_id=5,
+            connector_id=8,
+            locale="en_US",
+            automation_enabled=True,
+            automation_level="always",
+            training_enabled=False,
+        )
+
+        assert result["id"] == 202
+        assert result["inbox"] == mock_queue.inbox
+        assert result["connector"] == mock_queue.connector
+        assert result["locale"] == "en_US"
+        assert result["training_enabled"] is False
+
+        call_args = server.client.create_new_queue.call_args[0][0]
+        assert call_args["inbox"] == "https://api.test.rossum.ai/inboxes/5"
+        assert call_args["connector"] == "https://api.test.rossum.ai/connectors/8"
+        assert call_args["locale"] == "en_US"
+
+    @pytest.mark.asyncio
+    async def test_create_queue_async(self, server: RossumMCPServer) -> None:
+        """Test async wrapper for queue creation."""
+        mock_queue = Mock()
+        mock_queue.id = 203
+        mock_queue.name = "Async Queue"
+        mock_queue.url = "https://api.test.rossum.ai/v1/queues/203"
+        mock_queue.workspace = "https://api.test.rossum.ai/v1/workspaces/4"
+        mock_queue.schema = "https://api.test.rossum.ai/v1/schemas/80"
+        mock_queue.engine = "https://api.test.rossum.ai/v1/engines/30"
+        mock_queue.inbox = None
+        mock_queue.connector = None
+        mock_queue.locale = "en_GB"
+        mock_queue.automation_enabled = False
+        mock_queue.automation_level = "never"
+        mock_queue.training_enabled = True
+
+        server.client.create_new_queue.return_value = mock_queue
+
+        result = await server.create_queue(
+            name="Async Queue",
+            workspace_id=4,
+            schema_id=80,
+            engine_id=30,
+        )
+
+        assert result["id"] == 203
+        assert result["name"] == "Async Queue"
 
 
 @pytest.mark.unit
