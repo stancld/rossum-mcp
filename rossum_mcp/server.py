@@ -18,7 +18,9 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 from rossum_api import SyncRossumAPIClient
+from rossum_api.domain_logic.resources import Resource
 from rossum_api.dtos import Token
+from rossum_api.models import deserialize_default
 
 # Set up logging to a file (since stdout is used for MCP)
 logging.basicConfig(
@@ -183,11 +185,10 @@ class RossumMCPServer:
             "id": queue.id,
             "name": queue.name,
             "url": queue.url,
-            "schema_id": queue.schema,
+            "schema": queue.schema,
             "workspace": queue.workspace,
             "inbox": queue.inbox,
-            "created_at": queue.created_at,
-            "modified_at": queue.modified_at,
+            "engine": queue.engine,
         }
 
     async def get_queue(self, queue_id: int) -> dict:
@@ -261,6 +262,185 @@ class RossumMCPServer:
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return await loop.run_in_executor(pool, self._get_queue_schema_sync, queue_id)
 
+    def _get_queue_engine_sync(self, queue_id: int) -> dict:
+        """Retrieve complete engine information for a queue (synchronous implementation).
+
+        This convenience method combines queue and engine retrieval in a single call.
+
+        Args:
+            queue_id: Rossum queue ID
+
+        Returns:
+            Dictionary containing queue and engine details. If no engine is assigned,
+            returns None for engine fields.
+        """
+        logger.debug(f"Retrieving queue engine: queue_id={queue_id}")
+
+        # First retrieve the queue to get the engine URL/ID
+        queue = self.client.retrieve_queue(queue_id)
+
+        # Check if an engine is assigned and determine its type
+        engine_url = None
+        engine_type = None
+
+        if queue.dedicated_engine:
+            engine_url = queue.dedicated_engine
+            engine_type = "dedicated"
+        elif queue.generic_engine:
+            engine_url = queue.generic_engine
+            engine_type = "generic"
+        elif queue.engine:
+            engine_url = queue.engine
+            engine_type = "standard"
+
+        if not engine_url:
+            return {
+                "queue_id": queue.id,
+                "queue_name": queue.name,
+                "engine_id": None,
+                "engine_name": None,
+                "engine_url": None,
+                "engine_type": None,
+                "message": "No engine assigned to this queue",
+            }
+
+        # Extract engine ID from the engine URL or use the embedded object
+        # The engine field can be a URL like "https://api.elis.rossum.ai/v1/engines/12345"
+        # or an embedded dict/object with engine data
+        if isinstance(engine_url, str):
+            engine_id = int(engine_url.rstrip("/").split("/")[-1])
+            # Retrieve the engine from API
+            engine = self.client.retrieve_engine(engine_id)
+        else:
+            # If it's a dict, it's an embedded engine object - deserialize it using the SDK
+            # No need to make an additional API call
+            engine = deserialize_default(Resource.Engine, engine_url)
+
+        # Now engine is always an Engine model object
+        engine_id = engine.id
+        engine_name = engine.name
+        engine_url_final = engine.url
+
+        return {
+            "queue_id": queue.id,
+            "queue_name": queue.name,
+            "engine_id": engine_id,
+            "engine_name": engine_name,
+            "engine_url": engine_url_final,
+            "engine_type": engine_type,
+        }
+
+    async def get_queue_engine(self, queue_id: int) -> dict:
+        """Retrieve engine for a given queue (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return await loop.run_in_executor(pool, self._get_queue_engine_sync, queue_id)
+
+    def _create_queue_sync(
+        self,
+        name: str,
+        workspace_id: int,
+        schema_id: int,
+        engine_id: int | None = None,
+        inbox_id: int | None = None,
+        connector_id: int | None = None,
+        locale: str = "en_GB",
+        automation_enabled: bool = False,
+        automation_level: str = "never",
+        training_enabled: bool = True,
+    ) -> dict:
+        """Create a new queue with schema and optional engine assignment (synchronous implementation).
+
+        Args:
+            name: Queue name
+            workspace_id: Workspace ID where the queue should be created
+            schema_id: Schema ID to assign to the queue
+            engine_id: Optional engine ID to assign to the queue
+            inbox_id: Optional inbox ID to assign to the queue
+            connector_id: Optional connector ID to assign to the queue
+            locale: Queue locale (default: en_GB)
+            automation_enabled: Enable automation for the queue (default: False)
+            automation_level: Automation level ('never', 'always', etc.) (default: never)
+            training_enabled: Enable training for the queue (default: True)
+
+        Returns:
+            Dictionary containing created queue details including id, name, schema, and engine
+        """
+        logger.debug(
+            f"Creating queue: name={name}, workspace_id={workspace_id}, schema_id={schema_id}, engine_id={engine_id}"
+        )
+
+        # Build queue data with required fields
+        queue_data: dict = {
+            "name": name,
+            "workspace": f"{self.base_url}/workspaces/{workspace_id}",
+            "schema": f"{self.base_url}/schemas/{schema_id}",
+            "locale": locale,
+            "automation_enabled": automation_enabled,
+            "automation_level": automation_level,
+            "training_enabled": training_enabled,
+        }
+
+        # Add optional fields if provided
+        if engine_id is not None:
+            queue_data["engine"] = f"{self.base_url}/engines/{engine_id}"
+
+        if inbox_id is not None:
+            queue_data["inbox"] = f"{self.base_url}/inboxes/{inbox_id}"
+
+        if connector_id is not None:
+            queue_data["connector"] = f"{self.base_url}/connectors/{connector_id}"
+
+        # Create the queue
+        queue = self.client.create_new_queue(queue_data)
+
+        return {
+            "id": queue.id,
+            "name": queue.name,
+            "url": queue.url,
+            "workspace": queue.workspace,
+            "schema": queue.schema,
+            "engine": queue.engine,
+            "inbox": queue.inbox,
+            "connector": queue.connector,
+            "locale": queue.locale,
+            "automation_enabled": queue.automation_enabled,
+            "automation_level": queue.automation_level,
+            "training_enabled": queue.training_enabled,
+            "message": f"Queue '{queue.name}' created successfully with ID {queue.id}",
+        }
+
+    async def create_queue(
+        self,
+        name: str,
+        workspace_id: int,
+        schema_id: int,
+        engine_id: int | None = None,
+        inbox_id: int | None = None,
+        connector_id: int | None = None,
+        locale: str = "en_GB",
+        automation_enabled: bool = False,
+        automation_level: str = "never",
+        training_enabled: bool = True,
+    ) -> dict:
+        """Create a new queue with schema and optional engine assignment (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return await loop.run_in_executor(
+                pool,
+                self._create_queue_sync,
+                name,
+                workspace_id,
+                schema_id,
+                engine_id,
+                inbox_id,
+                connector_id,
+                locale,
+                automation_enabled,
+                automation_level,
+                training_enabled,
+            )
+
     def setup_handlers(self) -> None:
         """Setup MCP protocol handlers.
 
@@ -328,7 +508,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue",
-                    description="Retrieve queue details including the schema_id. Use this to get the schema_id associated with a queue, which can then be used to retrieve the schema with get_schema.",
+                    description="Retrieve queue details including the schema_id. Use this to get the schema_id associated with a queue, which can then be used to retrieve the schema with get_schema. Returns: {id, name, url, schema, workspace, inbox, engine}",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -356,7 +536,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue_schema",
-                    description="Retrieve the complete schema for a given queue in a single call. This tool automatically fetches the queue details, extracts the schema_id, and retrieves the full schema including its content. This is the recommended way to get a queue's schema.",
+                    description="Retrieve the complete schema for a given queue in a single call. This tool automatically fetches the queue details, extracts the schema_id, and retrieves the full schema including its content. This is the recommended way to get a queue's schema. Returns: {queue_id, queue_name, schema_id, schema_name, schema_url, schema_content (array)}",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -366,6 +546,70 @@ class RossumMCPServer:
                             },
                         },
                         "required": ["queue_id"],
+                    },
+                ),
+                Tool(
+                    name="get_queue_engine",
+                    description="Retrieve the complete engine information for a given queue in a single call. This tool automatically fetches the queue details, extracts the engine_id, and retrieves the full engine details including its type (dedicated, generic, or standard). If no engine is assigned, returns None for engine fields. Returns: {queue_id, queue_name, engine_id (int|null), engine_name (str|null), engine_url (str|null), engine_type (str|null: 'dedicated'/'generic'/'standard'), message (optional)}",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "queue_id": {
+                                "type": "integer",
+                                "description": "Rossum queue ID for which to retrieve the engine",
+                            },
+                        },
+                        "required": ["queue_id"],
+                    },
+                ),
+                Tool(
+                    name="create_queue",
+                    description="Create a new queue with schema and optional engine assignment. This tool allows you to create a queue, assign a schema to it, and optionally assign an engine, inbox, and connector. The queue will be created in the specified workspace.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Name of the queue to create",
+                            },
+                            "workspace_id": {
+                                "type": "integer",
+                                "description": "Workspace ID where the queue should be created",
+                            },
+                            "schema_id": {
+                                "type": "integer",
+                                "description": "Schema ID to assign to the queue",
+                            },
+                            "engine_id": {
+                                "type": "integer",
+                                "description": "Optional engine ID to assign to the queue for document processing",
+                            },
+                            "inbox_id": {
+                                "type": "integer",
+                                "description": "Optional inbox ID to assign to the queue",
+                            },
+                            "connector_id": {
+                                "type": "integer",
+                                "description": "Optional connector ID to assign to the queue",
+                            },
+                            "locale": {
+                                "type": "string",
+                                "description": "Queue locale (e.g., 'en_US', 'en_GB'). Default: 'en_GB'",
+                            },
+                            "automation_enabled": {
+                                "type": "boolean",
+                                "description": "Enable automation for the queue. Default: false",
+                            },
+                            "automation_level": {
+                                "type": "string",
+                                "description": "Automation level ('never', 'always', etc.). Default: 'never'",
+                            },
+                            "training_enabled": {
+                                "type": "boolean",
+                                "description": "Enable training for the queue. Default: true",
+                            },
+                        },
+                        "required": ["name", "workspace_id", "schema_id"],
                     },
                 ),
             ]
@@ -394,6 +638,21 @@ class RossumMCPServer:
                         result = await self.get_schema(arguments["schema_id"])
                     case "get_queue_schema":
                         result = await self.get_queue_schema(arguments["queue_id"])
+                    case "get_queue_engine":
+                        result = await self.get_queue_engine(arguments["queue_id"])
+                    case "create_queue":
+                        result = await self.create_queue(
+                            name=arguments["name"],
+                            workspace_id=arguments["workspace_id"],
+                            schema_id=arguments["schema_id"],
+                            engine_id=arguments.get("engine_id"),
+                            inbox_id=arguments.get("inbox_id"),
+                            connector_id=arguments.get("connector_id"),
+                            locale=arguments.get("locale", "en_GB"),
+                            automation_enabled=arguments.get("automation_enabled", False),
+                            automation_level=arguments.get("automation_level", "never"),
+                            training_enabled=arguments.get("training_enabled", True),
+                        )
                     case _:
                         raise ValueError(f"Unknown tool: {name}")
 
