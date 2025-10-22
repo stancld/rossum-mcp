@@ -34,7 +34,8 @@ repos:
         args: [--config-file=mypy.ini]
         additional_dependencies: [
           numpy==2.3.3,
-          types-seaborn==0.13.2.20250914
+          types-seaborn==0.13.2.20250914,
+          types-requests==2.32.4.20250913
         ]
         language: python
         pass_filenames: false

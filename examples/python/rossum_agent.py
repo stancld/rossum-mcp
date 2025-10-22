@@ -20,6 +20,7 @@ import sys
 
 import yaml
 from file_system_tools import get_file_info, list_files, read_file
+from internal_tools import copy_queue_knowledge, retrieve_queue_status
 from plot_tools import plot_data
 from smolagents import CodeAgent, LiteLLMModel
 
@@ -183,12 +184,88 @@ IMPORTANT: Always check if field exists before accessing:
 - Remember: datapoint['content']['value'], NOT datapoint['value']
 - Check if value is None or empty string
 - Some fields may not be extracted or confirmed yet
+
+IMPORTANT: Setting Automation Thresholds:
+Automation thresholds control when documents are automatically exported based on AI confidence.
+Thresholds range from 0.0 to 1.0 (e.g., 0.90 = 90% confidence).
+
+Two levels of threshold configuration:
+1. Queue-level (default threshold for all fields)
+2. Field-level (overrides queue default for specific fields)
+
+Setting queue-level automation threshold:
+```python
+import json
+
+# Configure queue automation with 90% confidence threshold
+queue_data = {
+    "automation_enabled": True,
+    "automation_level": "confident",  # Options: "never", "always", "confident"
+    "default_score_threshold": 0.90
+}
+result_json = rossum_mcp_tool('update_queue', json.dumps({
+    'queue_id': 12345,
+    'queue_data': queue_data
+}))
+result = json.loads(result_json)
+print(f"Queue updated: {result['message']}")
+print(f"Default threshold: {result['default_score_threshold']}")
+```
+
+Setting field-level thresholds (customize per field):
+```python
+import json
+
+# Step 1: Get current schema
+schema_json = rossum_mcp_tool('get_queue_schema', json.dumps({'queue_id': 12345}))
+schema_data = json.loads(schema_json)
+schema_id = schema_data['schema_id']
+schema_content = schema_data['schema_content']
+
+# Step 2: Set custom thresholds for specific fields
+field_thresholds = {
+    'invoice_id': 0.98,      # Critical field - high threshold
+    'vendor_name': 0.95,     # Important field
+    'amount_total': 0.95,    # Important field
+    'line_items': 0.85,      # Less critical - lower threshold
+}
+
+# Apply thresholds to schema content
+for field in schema_content:
+    field_id = field.get('id')
+    if field_id in field_thresholds:
+        field['score_threshold'] = field_thresholds[field_id]
+        print(f"Set {field_id} threshold to {field_thresholds[field_id]}")
+
+# Step 3: Update the schema
+update_result_json = rossum_mcp_tool('update_schema', json.dumps({
+    'schema_id': schema_id,
+    'schema_data': {'content': schema_content}
+}))
+update_result = json.loads(update_result_json)
+print(f"Schema updated: {update_result['message']}")
+```
+
+Automation level options:
+- "never": No automation - all documents require manual review
+- "always": Automate always
+- "confident": Automate if all thresholds are exceeded and all checks paass
 """
 
     prompt_templates["system_prompt"] += "\n" + custom_instructions
 
     return CodeAgent(
-        tools=[rossum_mcp_tool, parse_annotation_content, list_files, read_file, get_file_info, plot_data],
+        tools=[
+            rossum_mcp_tool,
+            parse_annotation_content,
+            list_files,
+            read_file,
+            get_file_info,
+            plot_data,
+            # Rossum internal tools
+            copy_queue_knowledge,
+            retrieve_queue_status,
+        ],
         model=llm,
         prompt_templates=prompt_templates,
         additional_authorized_imports=[
