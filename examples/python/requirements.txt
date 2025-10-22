@@ -8,3 +8,4 @@ kaleido>=0.2.1
 matplotlib>=3.8.0
 seaborn>=0.13.0
 numpy>=1.26.0
+streamlit>=1.50.0

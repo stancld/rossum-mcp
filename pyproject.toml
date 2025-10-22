@@ -31,6 +31,10 @@ tests = [
 tools = [
     "smolagents>=1.0.0",
 ]
+streamlit = [
+    "streamlit>=1.28.0",
+    "smolagents>=1.0.0",
+]
 
 [project.scripts]
 rossum-mcp = "rossum_mcp.server:main"
