@@ -441,7 +441,91 @@ class RossumMCPServer:
                 training_enabled,
             )
 
-    def setup_handlers(self) -> None:
+    def _update_queue_sync(self, queue_id: int, queue_data: dict) -> dict:
+        """Update an existing queue with new settings (synchronous implementation).
+
+        Args:
+            queue_id: Rossum queue ID to update
+            queue_data: Dictionary containing queue fields to update
+                Supported fields: name, automation_enabled, automation_level,
+                default_score_threshold, locale, training_enabled, etc.
+
+        Returns:
+            Dictionary containing updated queue details
+
+        Example:
+            Update automation settings:
+            {
+                "automation_enabled": True,
+                "automation_level": "auto_if_confident",
+                "default_score_threshold": 0.90
+            }
+        """
+        logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
+
+        # Use the internal client's PATCH method to update specific fields
+        updated_queue_data = self.client.internal_client.update(Resource.Queue, queue_id, queue_data)
+        updated_queue = self.client._deserializer(Resource.Queue, updated_queue_data)
+
+        return {
+            "id": updated_queue.id,
+            "name": updated_queue.name,
+            "url": updated_queue.url,
+            "automation_enabled": updated_queue.automation_enabled,
+            "automation_level": updated_queue.automation_level,
+            "default_score_threshold": updated_queue.default_score_threshold,
+            "locale": updated_queue.locale,
+            "training_enabled": updated_queue.training_enabled,
+            "message": f"Queue '{updated_queue.name}' (ID {updated_queue.id}) updated successfully",
+        }
+
+    async def update_queue(self, queue_id: int, queue_data: dict) -> dict:
+        """Update an existing queue with new settings (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return await loop.run_in_executor(pool, self._update_queue_sync, queue_id, queue_data)
+
+    def _update_schema_sync(self, schema_id: int, schema_data: dict) -> dict:
+        """Update an existing schema (synchronous implementation).
+
+        Args:
+            schema_id: Rossum schema ID to update
+            schema_data: Dictionary containing schema fields to update
+                Typically contains 'content' - the schema content array
+
+        Returns:
+            Dictionary containing updated schema details
+
+        Example:
+            Update field-level thresholds:
+            {
+                "content": [
+                    {"id": "invoice_id", "score_threshold": 0.98, ...},
+                    {"id": "amount_total", "score_threshold": 0.95, ...},
+                ]
+            }
+        """
+        logger.debug(f"Updating schema: schema_id={schema_id}")
+
+        # Use the internal client's PATCH method to update specific fields
+        updated_schema_data = self.client.internal_client.update(Resource.Schema, schema_id, schema_data)
+        updated_schema = self.client._deserializer(Resource.Schema, updated_schema_data)
+
+        return {
+            "id": updated_schema.id,
+            "name": updated_schema.name,
+            "url": updated_schema.url,
+            "content": updated_schema.content,
+            "message": f"Schema '{updated_schema.name}' (ID {updated_schema.id}) updated successfully",
+        }
+
+    async def update_schema(self, schema_id: int, schema_data: dict) -> dict:
+        """Update an existing schema (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return await loop.run_in_executor(pool, self._update_schema_sync, schema_id, schema_data)
+
+    def setup_handlers(self) -> None:  # noqa: C901
         """Setup MCP protocol handlers.
 
         Registers the list_tools and call_tool handlers for the MCP server.
@@ -612,6 +696,44 @@ class RossumMCPServer:
                         "required": ["name", "workspace_id", "schema_id"],
                     },
                 ),
+                Tool(
+                    name="update_queue",
+                    description="Update an existing queue's settings including automation thresholds. Use this to configure automation settings like enabling automation, setting automation level, and defining the default confidence score threshold for automated exports. The default_score_threshold ranges from 0.0 to 1.0 (e.g., 0.90 = 90% confidence). Common automation_level values: 'never' (no automation), 'confident' (auto-export if confidence thresholds met), 'confident' (auto-export if validation passes).",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "queue_id": {
+                                "type": "integer",
+                                "description": "Queue ID to update",
+                            },
+                            "queue_data": {
+                                "type": "object",
+                                "description": "Dictionary containing queue fields to update. Common fields: 'name' (str), 'automation_enabled' (bool), 'automation_level' (str: 'never'/'always'/'confident'), 'default_score_threshold' (float: 0.0-1.0, e.g., 0.90 for 90%), 'locale' (str), 'training_enabled' (bool)",
+                                "additionalProperties": True,
+                            },
+                        },
+                        "required": ["queue_id", "queue_data"],
+                    },
+                ),
+                Tool(
+                    name="update_schema",
+                    description="Update an existing schema, typically used to set field-level automation thresholds. To set custom thresholds for specific fields: 1) First get the schema using get_queue_schema, 2) Modify the 'content' array by adding/updating 'score_threshold' properties on specific fields, 3) Call this tool with the modified content. Field-level thresholds override the queue's default_score_threshold. Use higher thresholds (0.95-0.98) for critical fields like amounts and IDs, and lower thresholds (0.80-0.90) for less critical fields.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "schema_id": {
+                                "type": "integer",
+                                "description": "Schema ID to update",
+                            },
+                            "schema_data": {
+                                "type": "object",
+                                "description": "Dictionary containing schema fields to update. Typically contains 'content' key with the full schema content array where each field can have a 'score_threshold' property (float 0.0-1.0)",
+                                "additionalProperties": True,
+                            },
+                        },
+                        "required": ["schema_id", "schema_data"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()
@@ -652,6 +774,16 @@ class RossumMCPServer:
                             automation_enabled=arguments.get("automation_enabled", False),
                             automation_level=arguments.get("automation_level", "never"),
                             training_enabled=arguments.get("training_enabled", True),
+                        )
+                    case "update_queue":
+                        result = await self.update_queue(
+                            queue_id=arguments["queue_id"],
+                            queue_data=arguments["queue_data"],
+                        )
+                    case "update_schema":
+                        result = await self.update_schema(
+                            schema_id=arguments["schema_id"],
+                            schema_data=arguments["schema_data"],
                         )
                     case _:
                         raise ValueError(f"Unknown tool: {name}")
