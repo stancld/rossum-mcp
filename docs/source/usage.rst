@@ -212,3 +212,136 @@ way to get a queue's schema.
      "schema_url": "https://elis.rossum.ai/api/v1/schemas/67890",
      "schema_content": [...]
    }
+
+get_queue_engine
+^^^^^^^^^^^^^^^^
+
+Retrieves the complete engine information for a given queue in a single call. Returns
+engine type (dedicated, generic, or standard) and details.
+
+**Parameters:**
+
+- ``queue_id`` (integer, required): Rossum queue ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "queue_id": "12345",
+     "queue_name": "Invoices",
+     "engine_id": 67890,
+     "engine_name": "My Engine",
+     "engine_url": "https://elis.rossum.ai/api/v1/engines/67890",
+     "engine_type": "dedicated"
+   }
+
+create_queue
+^^^^^^^^^^^^
+
+Creates a new queue with schema and optional engine assignment. Allows full configuration
+of queue settings including automation and training.
+
+**Parameters:**
+
+- ``name`` (string, required): Name of the queue to create
+- ``workspace_id`` (integer, required): Workspace ID where the queue should be created
+- ``schema_id`` (integer, required): Schema ID to assign to the queue
+- ``engine_id`` (integer, optional): Optional engine ID to assign for document processing
+- ``inbox_id`` (integer, optional): Optional inbox ID to assign
+- ``connector_id`` (integer, optional): Optional connector ID to assign
+- ``locale`` (string, optional): Queue locale (default: "en_GB")
+- ``automation_enabled`` (boolean, optional): Enable automation (default: false)
+- ``automation_level`` (string, optional): Automation level - "never", "always", etc. (default: "never")
+- ``training_enabled`` (boolean, optional): Enable training (default: true)
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": "12345",
+     "name": "My New Queue",
+     "url": "https://elis.rossum.ai/api/v1/queues/12345",
+     "workspace": "https://elis.rossum.ai/api/v1/workspaces/11111",
+     "schema": "https://elis.rossum.ai/api/v1/schemas/67890",
+     "engine": "https://elis.rossum.ai/api/v1/engines/54321",
+     "inbox": null,
+     "connector": null,
+     "locale": "en_GB",
+     "automation_enabled": false,
+     "automation_level": "never",
+     "training_enabled": true,
+     "message": "Queue 'My New Queue' created successfully with ID 12345"
+   }
+
+update_queue
+^^^^^^^^^^^^
+
+Updates an existing queue's settings including automation thresholds. Use this to
+configure automation settings like enabling automation, setting automation level,
+and defining the default confidence score threshold.
+
+**Parameters:**
+
+- ``queue_id`` (integer, required): Queue ID to update
+- ``queue_data`` (object, required): Dictionary containing queue fields to update. Common fields:
+
+  - ``name`` (string): Queue name
+  - ``automation_enabled`` (boolean): Enable/disable automation
+  - ``automation_level`` (string): "never", "always", "confident", etc.
+  - ``default_score_threshold`` (float): Default confidence threshold 0.0-1.0 (e.g., 0.90 for 90%)
+  - ``locale`` (string): Queue locale
+  - ``training_enabled`` (boolean): Enable/disable training
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": "12345",
+     "name": "Updated Queue",
+     "url": "https://elis.rossum.ai/api/v1/queues/12345",
+     "automation_enabled": true,
+     "automation_level": "confident",
+     "default_score_threshold": 0.90,
+     "locale": "en_GB",
+     "training_enabled": true,
+     "message": "Queue 'Updated Queue' (ID 12345) updated successfully"
+   }
+
+update_schema
+^^^^^^^^^^^^^
+
+Updates an existing schema, typically used to set field-level automation thresholds.
+Field-level thresholds override the queue's default_score_threshold.
+
+**Workflow:**
+
+1. First get the schema using ``get_queue_schema``
+2. Modify the ``content`` array by adding/updating ``score_threshold`` properties on specific fields
+3. Call this tool with the modified content
+
+**Parameters:**
+
+- ``schema_id`` (integer, required): Schema ID to update
+- ``schema_data`` (object, required): Dictionary containing schema fields to update. Typically contains:
+
+  - ``content`` (array): Full schema content array where each field can have a ``score_threshold`` property (float 0.0-1.0)
+
+**Best Practices:**
+
+- Use higher thresholds (0.95-0.98) for critical fields like amounts and IDs
+- Use lower thresholds (0.80-0.90) for less critical fields
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": "67890",
+     "name": "Invoice Schema",
+     "url": "https://elis.rossum.ai/api/v1/schemas/67890",
+     "content": [...],
+     "message": "Schema 'Invoice Schema' (ID 67890) updated successfully"
+   }

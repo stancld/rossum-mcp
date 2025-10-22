@@ -134,7 +134,105 @@ get_queue_schema
 
 **Implementation:**
   This is a convenience method that retrieves both queue and schema information
-  in a single MCP tool call. See ``rossum_mcp.server:176-205``
+  in a single MCP tool call. See ``rossum_mcp.server:226-263``
+
+get_queue_engine
+^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``get_queue_engine(queue_id: int)``
+
+**Rossum SDK Methods:**
+  Combines two SDK calls:
+
+  1. ``SyncRossumAPIClient.retrieve_queue(queue_id)``
+  2. ``SyncRossumAPIClient.retrieve_engine(engine_id)`` (if engine URL is a string)
+
+**API Endpoints:**
+  1. ``GET /v1/queues/{queue_id}``
+  2. ``GET /v1/engines/{engine_id}`` (if needed)
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  This convenience method retrieves both queue and engine information. It handles
+  three types of engines: dedicated, generic, and standard. If the engine is
+  embedded in the queue response, it deserializes it directly without an additional
+  API call. See ``rossum_mcp.server:265-337``
+
+create_queue
+^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``create_queue(name: str, workspace_id: int, schema_id: int, engine_id: int | None,
+  inbox_id: int | None, connector_id: int | None, locale: str, automation_enabled: bool,
+  automation_level: str, training_enabled: bool)``
+
+**Rossum SDK Method:**
+  ``SyncRossumAPIClient.create_new_queue(queue_data: dict)``
+
+**API Endpoint:**
+  ``POST /v1/queues``
+
+**Request Body:**
+  JSON object with queue configuration including name, workspace URL, schema URL,
+  optional engine URL, inbox URL, connector URL, locale, automation settings, and
+  training settings.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Creates a new queue with full configuration options. Constructs URLs for workspace,
+  schema, and optional resources (engine, inbox, connector) using the base URL.
+  See ``rossum_mcp.server:339-442``
+
+update_queue
+^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``update_queue(queue_id: int, queue_data: dict)``
+
+**Rossum SDK Method:**
+  ``SyncRossumAPIClient.internal_client.update(Resource.Queue, queue_id, queue_data)``
+
+**API Endpoint:**
+  ``PATCH /v1/queues/{queue_id}``
+
+**Request Body:**
+  Partial JSON object with only the fields to update (e.g., automation_enabled,
+  automation_level, default_score_threshold).
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Updates specific queue fields using PATCH semantics. Commonly used to configure
+  automation thresholds and settings. See ``rossum_mcp.server:444-486``
+
+update_schema
+^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``update_schema(schema_id: int, schema_data: dict)``
+
+**Rossum SDK Method:**
+  ``SyncRossumAPIClient.internal_client.update(Resource.Schema, schema_id, schema_data)``
+
+**API Endpoint:**
+  ``PATCH /v1/schemas/{schema_id}``
+
+**Request Body:**
+  Partial JSON object typically containing the 'content' array with field-level
+  configuration including score_threshold properties.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Updates schema configuration, typically used to set field-level automation
+  thresholds that override the queue's default threshold. See ``rossum_mcp.server:488-526``
 
 Async Wrapper Pattern
 ----------------------
