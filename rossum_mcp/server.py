@@ -55,13 +55,37 @@ class RossumMCPServer:
 
         Raises:
             FileNotFoundError: If the specified file does not exist
+            ValueError: If the upload fails or returns unexpected response
         """
         path = Path(file_path)
         if not path.exists():
             logger.error(f"File not found: {file_path}")
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        task = self.client.upload_document(queue_id, [(str(path), path.name)])[0]
+        try:
+            task = self.client.upload_document(queue_id, [(str(path), path.name)])[0]
+        except KeyError as e:
+            logger.error(f"Upload failed - unexpected API response format: {e}")
+            error_msg = (
+                f"Document upload failed - API response missing expected key {e}. "
+                f"This usually means either:\n"
+                f"1. The queue_id ({queue_id}) is invalid or you don't have access to it\n"
+                f"2. The Rossum API returned an error response\n"
+                f"Please verify:\n"
+                f"- The queue_id is correct and exists in your workspace\n"
+                f"- You have permission to upload documents to this queue\n"
+                f"- Your API token has the necessary permissions"
+            )
+            raise ValueError(error_msg) from e
+        except IndexError as e:
+            logger.error(f"Upload failed - no tasks returned: {e}")
+            raise ValueError(
+                f"Document upload failed - no tasks were created. "
+                f"This may indicate the queue_id ({queue_id}) is invalid."
+            ) from e
+        except Exception as e:
+            logger.error(f"Upload failed: {type(e).__name__}: {e}")
+            raise ValueError(f"Document upload failed: {type(e).__name__}: {e!s}") from e
 
         return {
             "task_id": task.id,

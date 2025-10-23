@@ -76,30 +76,58 @@ The generated chart is fully interactive (built with Plotly) - hover over bars t
 
 ## Installation
 
-### Basic Installation (MCP Server Only)
+This repository contains two separate packages:
+- **rossum-mcp**: MCP server for Rossum SDK interactions
+- **rossum-agent**: AI agent with tools for data manipulation and visualization
 
-```bash
-pip install rossum-mcp
-```
+Each package can be installed independently or together for full functionality.
 
-Or install from source:
+### Install MCP Server Only
+
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
-cd rossum-mcp
+cd rossum-mcp/rossum_mcp
 pip install -e .
 ```
 
-### With Agent Tools (smolagents integration)
-
-To use the agent tools for building AI agents with smolagents:
-
+With extras:
 ```bash
-pip install rossum-mcp[tools]
+pip install -e ".[all]"  # All extras (docs, tests)
+pip install -e ".[docs]"  # Documentation only
+pip install -e ".[tests]"  # Testing only
 ```
 
-This includes:
-- `rossum_mcp_tool`: Interface to call MCP server operations from agents
-- `parse_annotation_content`: Utilities for parsing annotation data structures
+See [rossum_mcp/README.md](rossum_mcp/README.md) for detailed MCP server documentation.
+
+### Install Agent Only
+
+```bash
+git clone https://github.com/stancld/rossum-mcp.git
+cd rossum-mcp/rossum_agent
+pip install -e .
+```
+
+With extras:
+```bash
+pip install -e ".[all]"  # All extras (streamlit, docs, tests)
+pip install -e ".[streamlit]"  # Streamlit UI only
+pip install -e ".[docs]"  # Documentation only
+pip install -e ".[tests]"  # Testing only
+```
+
+See [rossum_agent/README.md](rossum_agent/README.md) for detailed agent documentation.
+
+### Install Both Packages (Development)
+
+For full development with both packages:
+
+```bash
+git clone https://github.com/stancld/rossum-mcp.git
+cd rossum-mcp
+pip install -e "rossum_mcp[all]" -e "rossum_agent[all]"
+```
+
+This provides the complete toolkit for document processing, AI agents, and visualizations
 
 ### Set up environment variables:
 ```bash
@@ -113,7 +141,13 @@ export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # or your organizati
 
 Start the server using:
 ```bash
+cd rossum_mcp
 python server.py
+```
+
+Or using the installed script:
+```bash
+rossum-mcp
 ```
 
 ### Using with MCP Clients
@@ -135,38 +169,29 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
 }
 ```
 
-### Using with Smolagents
+### Using the Rossum Agent
 
-Install with agent tools support:
+The `rossum-agent` package provides a complete AI agent with tools for data manipulation and visualization:
 
 ```bash
-pip install rossum-mcp[tools]
+# Install the agent package
+cd rossum_agent
+pip install -e ".[all]"
+
+# Run the CLI agent
+rossum-agent
+
+# Or run the Streamlit UI
+streamlit run app.py
 ```
 
-The package includes ready-to-use tools for building AI agents with smolagents:
+The agent includes:
+- File system tools (read, list files)
+- Plotting tools (bar charts, line charts, scatter plots, etc.)
+- Rossum integration (when MCP server is running)
+- Interactive CLI and web interfaces
 
-```python
-from smolagents import CodeAgent, LiteLLMModel
-from rossum_mcp.tools import rossum_mcp_tool, parse_annotation_content
-
-# Create an agent with Rossum tools
-agent = CodeAgent(
-    tools=[rossum_mcp_tool, parse_annotation_content],
-    model=LiteLLMModel(model_id="anthropic/claude-3-5-sonnet-20241022")
-)
-
-# Use the agent to process documents
-result = agent.run(
-    "Upload all PDFs from /path/to/invoices to queue 12345, "
-    "wait for processing, then extract all line items"
-)
-```
-
-The tools provide:
-- **rossum_mcp_tool**: Call any MCP server operation (upload_document, get_annotation, etc.)
-- **parse_annotation_content**: Extract datapoints and line items from annotation content
-
-See [examples/python/](examples/python/) for complete working examples.
+See [rossum_agent/README.md](rossum_agent/README.md) for detailed agent documentation and [examples/](examples/) for complete working examples.
 
 ### Available Tools
 
@@ -483,8 +508,16 @@ MIT License - see LICENSE file for details
 
 Feel free to submit issues and pull requests.
 
+## Package Documentation
+
+- [rossum_mcp/README.md](rossum_mcp/README.md) - MCP server documentation
+- [rossum_agent/README.md](rossum_agent/README.md) - AI agent documentation
+- [examples/README.md](examples/README.md) - Usage examples and guides
+
 ## Resources
 
+- [Full Documentation](https://stancld.github.io/rossum-mcp/)
 - [Rossum API Documentation](https://elis.rossum.ai/api/docs/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [Rossum SDK](https://github.com/rossumai/rossum-sdk)
+- [Smolagents](https://github.com/huggingface/smolagents)

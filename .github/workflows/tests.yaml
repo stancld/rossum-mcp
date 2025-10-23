@@ -1,4 +1,4 @@
-name: Tests
+name: Rossum MCP Tests
 
 # Trigger on push or pull request to master branch
 on:
@@ -19,12 +19,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv==0.8.18
-          uv pip install --system -e .[tests,tools]
+          uv pip install --system -e '.[tools,tests]'
         shell: bash
 
       - name: Run tests
         run: |
-          coverage run --source=rossum_mcp -m pytest tests/ -v --junitxml=report.xml
+          coverage run --source=rossum_mcp -m pytest tests/rossum_mcp -v --junitxml=report.xml
         shell: bash
         env:
           ROSSUM_API_BASE_URL: https://api.test.rossum.ai

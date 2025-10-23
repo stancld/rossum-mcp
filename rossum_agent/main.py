@@ -1,100 +1,9 @@
 #!/usr/bin/env python3
-"""Rossum Document Processing Agent
-
-AI agent that interacts with the Rossum MCP server to upload and process documents.
-
-Usage:
-    python rossum_agent.py
-
-Environment Variables:
-    ROSSUM_API_TOKEN: Rossum API authentication token
-    ROSSUM_API_BASE_URL: Rossum API base URL
-    LLM_API_BASE_URL: LLM API endpoint URL
-    LLM_MODEL_ID: (Optional) LLM model identifier
-"""
-
 import argparse
-import importlib.resources
-import os
 import sys
 
-import yaml
-from file_system_tools import get_file_info, list_files, read_file
-from instructions import SYSTEM_PROMPT
-from internal_tools import copy_queue_knowledge, retrieve_queue_status
-from plot_tools import plot_data
-from smolagents import CodeAgent, LiteLLMModel
-
-from rossum_mcp.tools import parse_annotation_content, rossum_mcp_tool
-
-# Constants
-DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
-
-
-def create_agent(stream_outputs: bool = False) -> CodeAgent:
-    """Create and configure the Rossum agent with custom tools and instructions."""
-    llm = LiteLLMModel(
-        model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
-        api_base=os.environ["LLM_API_BASE_URL"],
-        api_key="not_needed",
-    )
-
-    prompt_templates = yaml.safe_load(
-        importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
-    )
-
-    prompt_templates["system_prompt"] += "\n" + SYSTEM_PROMPT
-
-    return CodeAgent(
-        tools=[
-            rossum_mcp_tool,
-            parse_annotation_content,
-            list_files,
-            read_file,
-            get_file_info,
-            plot_data,
-            # Rossum internal tools
-            copy_queue_knowledge,
-            retrieve_queue_status,
-        ],
-        model=llm,
-        prompt_templates=prompt_templates,
-        additional_authorized_imports=[
-            "collections",
-            "datetime",
-            "itertools",
-            "json",
-            "math",
-            "os",
-            "pathlib",
-            "queue",
-            "random",
-            "re",
-            "rossum_api.models.annotation",
-            "stat",
-            "statistics",
-            "time",
-            "unicodedata",
-        ],
-        stream_outputs=stream_outputs,
-    )
-
-
-def _check_env_vars() -> None:
-    """Validate required environment variables are set."""
-    required_vars = {
-        "ROSSUM_API_TOKEN": "Rossum API authentication token",
-        "ROSSUM_API_BASE_URL": "Rossum API base URL",
-        "LLM_API_BASE_URL": "LLM API endpoint URL",
-    }
-
-    missing = [var for var in required_vars if not os.getenv(var)]
-    if missing:
-        print("❌ Missing required environment variables:\n")
-        for var in missing:
-            print(f"  {var}: {required_vars[var]}")
-            print(f"  Set with: export {var}=<value>\n")
-        sys.exit(1)
+from rossum_agent.agent import create_agent
+from rossum_agent.utils import check_env_vars
 
 
 def parse_args() -> argparse.Namespace:
@@ -109,7 +18,12 @@ def main(args: argparse.Namespace) -> None:
     print("🤖 Rossum Invoice Processing Agent")
     print("=" * 50)
 
-    _check_env_vars()
+    if missing_vars := check_env_vars():
+        print("❌ Missing required environment variables:\n")
+        for var, description in missing_vars:
+            print(f"  {var}: {description}")
+            print(f"  Set with: export {var}=<value>\n")
+        sys.exit(1)
 
     print("\n🔧 Initializing agent...")
     agent = create_agent(args.stream_outputs)
