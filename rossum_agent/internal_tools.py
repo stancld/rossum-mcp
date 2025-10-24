@@ -3,13 +3,7 @@
 import json
 
 import requests
-
-try:
-    from smolagents import tool
-except ImportError as e:
-    raise ImportError(
-        "The 'smolagents' package is required to use rossum_mcp.tools. Install it with: pip install rossum-mcp[tools]"
-    ) from e
+from smolagents import tool
 
 NEIGHBORS_API_HOST: str = "localhost"
 NEIGHBORS_API_PORT: int = 5000

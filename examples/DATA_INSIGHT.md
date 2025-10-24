@@ -1,4 +1,5 @@
-## Prompt used for reaching our ultimate goal
+# Upload data and get data insight
+
 1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
     - Do not include documents from `knowledge` folder.
 2. Once you send all annotations, wait for a few seconds.
@@ -18,9 +19,3 @@
 10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
 
 Proceed step-by-step and show intermediate results after each major step.
-
-
-Create a new queue. It should satisfy the following:
-1. Be in the same workspace as queue `3899713`
-2. Have the same engine as queue `3899713`
-3. Have the same schema as queue `3899713`

@@ -1,11 +1,17 @@
-# Rossum MCP Server Examples
+# Rossum Examples
 
-This folder contains practical examples demonstrating how to use the Rossum MCP server.
+This folder contains practical examples and data for demonstrating the Rossum MCP server and AI agent capabilities.
 
-## Python Agent Example
+## What's in this folder
 
-The Python example uses [smolagents](https://github.com/huggingface/smolagents) to create an AI agent that can interact
-with your Rossum MCP server to upload and process invoices.
+- **data/**: Sample invoice files for testing document processing
+- **DATA_INSIGHT.md**: Documentation of the data aggregation example
+- **QUEUE_SETUP.md**: Guide for setting up Rossum queues
+- **README.md**: This file
+
+## Using the Rossum Agent
+
+The examples in this folder work with the `rossum-agent` package, which uses [smolagents](https://github.com/huggingface/smolagents) to create an AI agent that can interact with the Rossum MCP server to upload and process invoices.
 
 ### Features
 
@@ -17,11 +23,12 @@ with your Rossum MCP server to upload and process invoices.
 
 ### Setup
 
-1. **Install Python dependencies:**
+1. **Install the Rossum Agent package:**
 
 ```bash
-cd examples/python
-pip install -r requirements.txt
+# From the repository root
+cd rossum_agent
+pip install -e ".[all]"
 ```
 
 2. **Set environment variables:**
@@ -41,11 +48,19 @@ cp ~/my-invoices/*.pdf examples/data/
 
 ### Usage
 
-Run the agent:
+Run the agent CLI:
 
 ```bash
-cd examples/python
-python agent.py
+# From anywhere after installation
+rossum-agent
+```
+
+Or run the Streamlit UI:
+
+```bash
+# From the rossum_agent directory
+cd rossum_agent
+streamlit run app.py
 ```
 
 ### Example Commands
@@ -59,11 +74,11 @@ Once the agent is running, you can say things like:
 
 ### How it Works
 
-1. **MCP Integration**: The agent uses the MCP (Model Context Protocol) client to communicate with your Rossum MCP server
-2. **Tool Wrapping**: The Rossum API tools are exposed to the AI agent via smolagents' tool interface
-3. **Natural Language**: The agent interprets your commands and calls the appropriate tools
-4. **Batch Processing**: The agent can handle multiple files intelligently
-5. **Status Tracking**: After bulk uploads, the agent can use `list_annotations` to check the status of all documents in the queue
+1. **MCP Integration**: The agent connects to the Rossum MCP server to access document processing capabilities
+2. **Tool Suite**: The agent has access to file system tools, plotting tools, and Rossum API operations
+3. **Natural Language**: The agent interprets your commands and calls the appropriate tools automatically
+4. **Batch Processing**: The agent can handle multiple files and operations intelligently
+5. **Visualization**: The agent can create interactive charts from extracted data using Plotly
 
 ### Understanding Annotation States
 
@@ -83,31 +98,25 @@ When documents are uploaded to Rossum, they go through a processing workflow:
 
 ```
 ┌─────────────┐
-│   User      │
-│  Commands   │
+│    User     │
+│  Interface  │
+│ (CLI/Web)   │
 └──────┬──────┘
        │
        ▼
 ┌─────────────────┐
-│  Smolagents     │
-│   AI Agent      │
+│ Rossum Agent    │
+│ (Smolagents)    │
+├─────────────────┤
+│ • File Tools    │
+│ • Plot Tools    │
+│ • Rossum Tools  │
 └────────┬────────┘
          │
          ▼
-┌─────────────────┐
-│  MCP Client     │
-│  (stdio)        │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Rossum MCP     │
-│    Server       │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Rossum API     │
+┌─────────────────┐      ┌──────────────┐
+│  Rossum MCP     │─────▶│  Rossum API  │
+│    Server       │      └──────────────┘
 └─────────────────┘
 ```
 
@@ -123,13 +132,20 @@ export ROSSUM_API_TOKEN="your_token_here"
 Add some PDF, PNG, or JPG files to the `examples/data/` folder.
 
 ### "Connection refused"
-Ensure the Rossum MCP server is accessible. The agent expects to run it via:
+Ensure the Rossum MCP server is running. Start it with:
 ```bash
-python3 ../../server.py
+cd rossum_mcp
+python server.py
 ```
 
-### Python package issues
-Make sure you have Python 3.8+ and install dependencies:
+Or use the installed script:
 ```bash
-pip install -r python/requirements.txt
+rossum-mcp
+```
+
+### Package installation issues
+Make sure you have Python 3.10+ and install the agent package:
+```bash
+cd rossum_agent
+pip install -e ".[all]"
 ```

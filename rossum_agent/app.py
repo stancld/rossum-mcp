@@ -1,39 +1,24 @@
-#!/usr/bin/env python3
 """Rossum Streamlit App
 
 Web interface for the Rossum Document Processing Agent using Streamlit.
 
 Usage:
-    streamlit run examples/python/streamlit_app/app.py
-
-Environment Variables:
-    ROSSUM_API_TOKEN: Rossum API authentication token
-    ROSSUM_API_BASE_URL: Rossum API base URL
-    LLM_API_BASE_URL: LLM API endpoint URL
-    LLM_MODEL_ID: (Optional) LLM model identifier
+    streamlit run rossum_agent/app.py
 """
 
-import importlib.resources
-import os
-import sys
-from pathlib import Path
+import pathlib
 
 import streamlit as st
-import yaml
-from smolagents import CodeAgent, LiteLLMModel
 
-from rossum_mcp.tools import parse_annotation_content, rossum_mcp_tool
+from rossum_agent.agent import create_agent
+from rossum_agent.utils import check_env_vars
 
-# Add parent directory to path to import tools BEFORE importing them
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from file_system_tools import get_file_info, list_files, read_file
-from instructions import SYSTEM_PROMPT
-from internal_tools import copy_queue_knowledge, retrieve_queue_status
-from plot_tools import plot_data
+def load_logo() -> str | None:
+    """Load and display Rossum logo."""
+    logo_path = pathlib.Path(__file__).parent / "assets" / "Primary_light_logo.png"
+    return str(logo_path) if logo_path.exists() else None
 
-# Constants
-DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
 
 # Page config - must be first Streamlit command and at module level
 st.set_page_config(
@@ -42,77 +27,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-
-def load_logo() -> str | None:
-    """Load and display Rossum logo."""
-    logo_path = Path(__file__).parent / "assets" / "Primary_light_logo.png"
-    return str(logo_path) if logo_path.exists() else None
-
-
-def check_env_vars() -> list[tuple[str, str]]:
-    """Check if required environment variables are set."""
-    required_vars = {
-        "ROSSUM_API_TOKEN": "Rossum API authentication token",
-        "ROSSUM_API_BASE_URL": "Rossum API base URL",
-        "LLM_API_BASE_URL": "LLM API endpoint URL",
-    }
-
-    missing = []
-    for var, description in required_vars.items():
-        if not os.getenv(var):
-            missing.append((var, description))
-
-    return missing
-
-
-def create_agent(stream_outputs: bool = False) -> CodeAgent:
-    """Create and configure the Rossum agent with custom tools and instructions."""
-    llm = LiteLLMModel(
-        model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
-        api_base=os.environ["LLM_API_BASE_URL"],
-        api_key="not_needed",
-    )
-
-    prompt_templates = yaml.safe_load(
-        importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
-    )
-
-    prompt_templates["system_prompt"] += "\n" + SYSTEM_PROMPT
-
-    return CodeAgent(
-        tools=[
-            rossum_mcp_tool,
-            parse_annotation_content,
-            list_files,
-            read_file,
-            get_file_info,
-            plot_data,
-            # Rossum internal tools
-            copy_queue_knowledge,
-            retrieve_queue_status,
-        ],
-        model=llm,
-        prompt_templates=prompt_templates,
-        additional_authorized_imports=[
-            "collections",
-            "datetime",
-            "itertools",
-            "json",
-            "math",
-            "os",
-            "pathlib",
-            "queue",
-            "random",
-            "re",
-            "rossum_api.models.annotation",
-            "stat",
-            "statistics",
-            "time",
-            "unicodedata",
-        ],
-        stream_outputs=stream_outputs,
-    )
 
 
 def main() -> None:  # noqa: C901

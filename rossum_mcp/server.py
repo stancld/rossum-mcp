@@ -55,13 +55,37 @@ class RossumMCPServer:
 
         Raises:
             FileNotFoundError: If the specified file does not exist
+            ValueError: If the upload fails or returns unexpected response
         """
         path = Path(file_path)
         if not path.exists():
             logger.error(f"File not found: {file_path}")
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        task = self.client.upload_document(queue_id, [(str(path), path.name)])[0]
+        try:
+            task = self.client.upload_document(queue_id, [(str(path), path.name)])[0]
+        except KeyError as e:
+            logger.error(f"Upload failed - unexpected API response format: {e}")
+            error_msg = (
+                f"Document upload failed - API response missing expected key {e}. "
+                f"This usually means either:\n"
+                f"1. The queue_id ({queue_id}) is invalid or you don't have access to it\n"
+                f"2. The Rossum API returned an error response\n"
+                f"Please verify:\n"
+                f"- The queue_id is correct and exists in your workspace\n"
+                f"- You have permission to upload documents to this queue\n"
+                f"- Your API token has the necessary permissions"
+            )
+            raise ValueError(error_msg) from e
+        except IndexError as e:
+            logger.error(f"Upload failed - no tasks returned: {e}")
+            raise ValueError(
+                f"Document upload failed - no tasks were created. "
+                f"This may indicate the queue_id ({queue_id}) is invalid."
+            ) from e
+        except Exception as e:
+            logger.error(f"Upload failed: {type(e).__name__}: {e}")
+            raise ValueError(f"Document upload failed: {type(e).__name__}: {e!s}") from e
 
         return {
             "task_id": task.id,
@@ -530,6 +554,9 @@ class RossumMCPServer:
 
         Registers the list_tools and call_tool handlers for the MCP server.
         These handlers define the available tools and their execution logic.
+
+        All MCP tools return JSON strings that clients must parse with json.loads().
+        This is the standard MCP protocol behavior - tools return TextContent with JSON.
         """
 
         @self.server.list_tools()
@@ -537,7 +564,7 @@ class RossumMCPServer:
             return [
                 Tool(
                     name="upload_document",
-                    description="Upload a document to Rossum for processing. Returns a task ID. IMPORTANT: To get the annotation ID for the uploaded document, you MUST call list_annotations with the queue_id used in this upload.",
+                    description="Upload a document to Rossum for processing. Returns JSON string with task_id, task_status, queue_id, and message. MUST parse with json.loads(). To get the annotation ID for the uploaded document, call list_annotations with the queue_id.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -555,7 +582,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_annotation",
-                    description="Retrieve full annotation data including extracted content for a specific annotation. After calling list_annotations to get annotation IDs, use this tool to retrieve each annotation's complete data one by one. The response includes the annotation status, URL, document reference, and extracted content.",
+                    description="Retrieve full annotation data including extracted content. Returns JSON string with id, status, url, schema, modifier, document, content, created_at, modified_at. MUST parse with json.loads(). After calling list_annotations to get annotation IDs, use this tool to retrieve complete data.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -574,7 +601,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="list_annotations",
-                    description="List all annotations for a queue with optional filtering. IMPORTANT: After uploading documents, use this tool to get annotation IDs from the queue. The response contains a 'results' array with annotation IDs and their URLs. Use get_annotation to retrieve full details for each annotation one by one.",
+                    description="List all annotations for a queue with optional filtering. Returns JSON string with count and results array. MUST parse with json.loads(). After uploading documents, use this to get annotation IDs. Use get_annotation to retrieve full details for each annotation.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -592,7 +619,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue",
-                    description="Retrieve queue details including the schema_id. Use this to get the schema_id associated with a queue, which can then be used to retrieve the schema with get_schema. Returns: {id, name, url, schema, workspace, inbox, engine}",
+                    description="Retrieve queue details including the schema_id. Returns JSON string with id, name, url, schema, workspace, inbox, engine. MUST parse with json.loads(). Use get_schema to retrieve the schema.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -606,7 +633,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_schema",
-                    description="Retrieve schema details including the schema content/structure. Use get_queue first to obtain the schema_id for a given queue.",
+                    description="Retrieve schema details including the schema content/structure. Returns JSON string with id, name, url, content. MUST parse with json.loads(). Use get_queue first to obtain the schema_id.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -620,7 +647,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue_schema",
-                    description="Retrieve the complete schema for a given queue in a single call. This tool automatically fetches the queue details, extracts the schema_id, and retrieves the full schema including its content. This is the recommended way to get a queue's schema. Returns: {queue_id, queue_name, schema_id, schema_name, schema_url, schema_content (array)}",
+                    description="Retrieve the complete schema for a given queue in a single call. Returns JSON string with queue_id, queue_name, schema_id, schema_name, schema_url, schema_content. MUST parse with json.loads(). Recommended way to get a queue's schema.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -634,7 +661,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue_engine",
-                    description="Retrieve the complete engine information for a given queue in a single call. This tool automatically fetches the queue details, extracts the engine_id, and retrieves the full engine details including its type (dedicated, generic, or standard). If no engine is assigned, returns None for engine fields. Returns: {queue_id, queue_name, engine_id (int|null), engine_name (str|null), engine_url (str|null), engine_type (str|null: 'dedicated'/'generic'/'standard'), message (optional)}",
+                    description="Retrieve the complete engine information for a given queue. Returns JSON string with queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. MUST parse with json.loads(). If no engine is assigned, returns None for engine fields.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -648,7 +675,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="create_queue",
-                    description="Create a new queue with schema and optional engine assignment. This tool allows you to create a queue, assign a schema to it, and optionally assign an engine, inbox, and connector. The queue will be created in the specified workspace.",
+                    description="Create a new queue with schema and optional engine assignment. Returns JSON string with id, name, url, workspace, schema, engine, inbox, connector, locale, automation settings, and message. MUST parse with json.loads().",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -665,15 +692,15 @@ class RossumMCPServer:
                                 "description": "Schema ID to assign to the queue",
                             },
                             "engine_id": {
-                                "type": "integer",
+                                "type": ["integer", "null"],
                                 "description": "Optional engine ID to assign to the queue for document processing",
                             },
                             "inbox_id": {
-                                "type": "integer",
+                                "type": ["integer", "null"],
                                 "description": "Optional inbox ID to assign to the queue",
                             },
                             "connector_id": {
-                                "type": "integer",
+                                "type": ["integer", "null"],
                                 "description": "Optional connector ID to assign to the queue",
                             },
                             "locale": {
@@ -698,7 +725,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="update_queue",
-                    description="Update an existing queue's settings including automation thresholds. Use this to configure automation settings like enabling automation, setting automation level, and defining the default confidence score threshold for automated exports. The default_score_threshold ranges from 0.0 to 1.0 (e.g., 0.90 = 90% confidence). Common automation_level values: 'never' (no automation), 'confident' (auto-export if confidence thresholds met), 'confident' (auto-export if validation passes).",
+                    description="Update an existing queue's settings including automation thresholds. Returns JSON string with updated queue details and message. MUST parse with json.loads(). The default_score_threshold ranges from 0.0 to 1.0 (e.g., 0.90 = 90%). Common automation_level values: 'never', 'confident'.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -717,7 +744,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="update_schema",
-                    description="Update an existing schema, typically used to set field-level automation thresholds. To set custom thresholds for specific fields: 1) First get the schema using get_queue_schema, 2) Modify the 'content' array by adding/updating 'score_threshold' properties on specific fields, 3) Call this tool with the modified content. Field-level thresholds override the queue's default_score_threshold. Use higher thresholds (0.95-0.98) for critical fields like amounts and IDs, and lower thresholds (0.80-0.90) for less critical fields.",
+                    description="Update an existing schema, typically used to set field-level automation thresholds. Returns JSON string with updated schema details and message. MUST parse with json.loads(). Field-level thresholds override the queue's default_score_threshold. Use higher thresholds (0.95-0.98) for critical fields.",
                     inputSchema={
                         "type": "object",
                         "properties": {

@@ -1,7 +1,5 @@
-"""
-File System Tools
+"""Collection of file system utilities for the Rossum Agent.
 
-Collection of file system utilities for the Rossum Agent.
 Provides tools for listing, reading, and getting information about files.
 """
 

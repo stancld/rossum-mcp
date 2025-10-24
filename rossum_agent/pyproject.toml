@@ -1,34 +1,26 @@
-# Workspace pyproject.toml for both rossum-mcp and rossum-agent
-# This file allows installing both packages together during development
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rossum-workspace"
-version = "1.0.0"
-description = "Workspace for rossum-mcp and rossum-agent packages"
+name = "rossum-agent"
+version = "0.1.0"
+description = "AI agent for Rossum document processing with tools for data manipulation and visualization."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
+keywords = ["agent", "rossum", "document-processing", "ai"]
 dependencies = [
-    "mcp>=1.0.0",
-    "rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api",
-]
-
-[project.optional-dependencies]
-# Agent dependencies
-agent = [
     "matplotlib>=3.10",
     "plotly>=6.0",
     "pyyaml>=6.0",
     "requests>=2.32",
+    "rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api",
     "seaborn>=0.13.2",
     "smolagents[litellm]>=1.0.0",
 ]
-# Documentation
+
+[project.optional-dependencies]
 docs = [
     "myst-parser>=2.0.0",
     "sphinx>=7.0.0",
@@ -36,42 +28,22 @@ docs = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
 ]
-# MCP server dependencies
-mcp = [
-    "mcp>=1.0.0",
-]
-# Streamlit UI
 streamlit = [
     "streamlit>=1.28.0",
 ]
-# Testing
 tests = [
     "coverage>=7.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
 ]
-# All dependencies
 all = [
     "coverage>=7.0.0",
-    "matplotlib>=3.10",
-    "mcp>=1.0.0",
     "myst-parser>=2.0.0",
-    "plotly>=6.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "pyyaml>=6.0",
-    "requests>=2.32",
-    "seaborn>=0.13.2",
-    "smolagents[litellm]>=1.0.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
     "streamlit>=1.28.0",
-]
-
-[tool.setuptools]
-packages = [
-    "rossum_mcp",
-    "rossum_agent"
 ]
