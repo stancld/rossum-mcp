@@ -69,7 +69,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     )
 
     # Connect to MCP server and get tools
-    mcp_client = MCPClient(server_params)
+    mcp_client = MCPClient(server_params, structured_output=False)
     mcp_tools = mcp_client.get_tools()
 
     # Combine MCP tools with custom tools
