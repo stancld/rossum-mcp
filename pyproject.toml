@@ -28,9 +28,6 @@ agent = [
     "seaborn>=0.13.2",
     "smolagents[litellm]>=1.0.0",
 ]
-tools = [
-    "smolagents>=1.0.0",
-]
 # Documentation
 docs = [
     "myst-parser>=2.0.0",
