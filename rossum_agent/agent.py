@@ -104,6 +104,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
             "stat",
             "statistics",
             "time",
+            "traceback",
             "unicodedata",
         ],
         stream_outputs=stream_outputs,

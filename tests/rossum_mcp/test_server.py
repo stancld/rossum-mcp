@@ -849,6 +849,115 @@ class TestUpdateEngine:
 
 
 @pytest.mark.unit
+class TestCreateEngine:
+    """Tests for engine creation functionality."""
+
+    @pytest.mark.asyncio
+    async def test_create_engine_extractor(self, server: RossumMCPServer) -> None:
+        """Test successful extractor engine creation."""
+        # Mock the internal client create method
+        mock_created_engine_data = {
+            "id": 100,
+            "url": "https://api.test.rossum.ai/v1/engines/100",
+            "name": "Test Extractor Engine",
+            "type": "extractor",
+            "organization": "https://api.test.rossum.ai/v1/organizations/1",
+            "learning_enabled": True,
+            "training_queues": [],
+            "description": "",
+        }
+
+        mock_created_engine = Mock()
+        mock_created_engine.id = 100
+        mock_created_engine.name = "Test Extractor Engine"
+        mock_created_engine.url = "https://api.test.rossum.ai/v1/engines/100"
+        mock_created_engine.type = "extractor"
+        mock_created_engine.organization = "https://api.test.rossum.ai/v1/organizations/1"
+
+        # Use AsyncMock for async methods
+        server.client.internal_client.create = AsyncMock(return_value=mock_created_engine_data)
+        server.client._deserializer = AsyncMock(return_value=mock_created_engine)
+
+        result = await server.create_engine(name="Test Extractor Engine", organization_id=1, engine_type="extractor")
+
+        # Verify the result
+        assert result["id"] == 100
+        assert result["name"] == "Test Extractor Engine"
+        assert result["type"] == "extractor"
+        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/1"
+        assert "created successfully" in result["message"].lower()
+
+        # Verify the internal client was called correctly
+        server.client.internal_client.create.assert_called_once()
+        call_args = server.client.internal_client.create.call_args
+        assert call_args[0][0] == Resource.Engine
+        engine_data = call_args[0][1]
+        assert engine_data["name"] == "Test Extractor Engine"
+        assert engine_data["organization"] == "https://api.test.rossum.ai/organizations/1"
+        assert engine_data["type"] == "extractor"
+
+    @pytest.mark.asyncio
+    async def test_create_engine_splitter(self, server: RossumMCPServer) -> None:
+        """Test successful splitter engine creation."""
+        # Mock the internal client create method
+        mock_created_engine_data = {
+            "id": 101,
+            "url": "https://api.test.rossum.ai/v1/engines/101",
+            "name": "Test Splitter Engine",
+            "type": "splitter",
+            "organization": "https://api.test.rossum.ai/v1/organizations/2",
+            "learning_enabled": False,
+            "training_queues": [],
+            "description": "",
+        }
+
+        mock_created_engine = Mock()
+        mock_created_engine.id = 101
+        mock_created_engine.name = "Test Splitter Engine"
+        mock_created_engine.url = "https://api.test.rossum.ai/v1/engines/101"
+        mock_created_engine.type = "splitter"
+        mock_created_engine.organization = "https://api.test.rossum.ai/v1/organizations/2"
+
+        # Use AsyncMock for async methods
+        server.client.internal_client.create = AsyncMock(return_value=mock_created_engine_data)
+        server.client._deserializer = AsyncMock(return_value=mock_created_engine)
+
+        result = await server.create_engine(name="Test Splitter Engine", organization_id=2, engine_type="splitter")
+
+        # Verify the result
+        assert result["id"] == 101
+        assert result["name"] == "Test Splitter Engine"
+        assert result["type"] == "splitter"
+        assert "created successfully" in result["message"].lower()
+
+        # Verify the internal client was called correctly
+        server.client.internal_client.create.assert_called_once()
+        call_args = server.client.internal_client.create.call_args
+        engine_data = call_args[0][1]
+        assert engine_data["type"] == "splitter"
+
+    @pytest.mark.asyncio
+    async def test_create_engine_invalid_type(self, server: RossumMCPServer) -> None:
+        """Test that invalid engine type raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            await server.create_engine(name="Invalid Engine", organization_id=1, engine_type="invalid_type")
+
+        assert "Invalid engine_type 'invalid_type'" in str(exc_info.value)
+        assert "Must be 'extractor' or 'splitter'" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_create_engine_api_error(self, server: RossumMCPServer) -> None:
+        """Test that API errors are properly propagated."""
+        # Mock the internal client to raise an exception
+        server.client.internal_client.create = AsyncMock(side_effect=Exception("API Error: Permission denied"))
+
+        with pytest.raises(Exception) as exc_info:
+            await server.create_engine(name="Test Engine", organization_id=1, engine_type="extractor")
+
+        assert "API Error: Permission denied" in str(exc_info.value)
+
+
+@pytest.mark.unit
 class TestMCPHandlers:
     """Tests for MCP protocol handlers."""
 

@@ -24,12 +24,10 @@ CRITICAL FOR LINE ITEMS:
 
 RECOMMENDED APPROACH - Direct parsing:
 ```python
-from rossum_api.models.annotation import Annotation
-
 # Get annotation with content sideload (MCP tool returns JSON string)
 ann_json = get_annotation(annotation_id=12345, sideloads=['content'])
 ann_data = json.loads(ann_json)
-annotation = Annotation(**ann_data)
+content = ann_data["content"]
 
 # Manual parsing for datapoints
 def get_datapoint_value(items, schema_id):
@@ -136,7 +134,7 @@ schema_content = [
                 "id": "document_type",
                 "label": "Document Type",
                 "type": "enum",
-                "rir_field_names": ["document_type"],
+                "rir_field_names": [],  # should be empty list
                 "constraints": {"required": False},
                 "options": [
                     {"value": "air_waybill", "label": "Air Waybill"},
@@ -154,6 +152,10 @@ Key schema requirements:
 - Each datapoint needs: category, id, label, type, rir_field_names, constraints
 - Enum fields must have options array with at least one value/label pair
 - Use snake_case for IDs (max 50 characters)
+
+IMPORTANT: Creating Engine Fields with Schema and Engine:
+When creating a schema and engine together, you MUST create engine fields for each datapoint in the schema.
+Engine fields link the schema fields to the engine for extraction.
 
 IMPORTANT: Annotation Workflow (Start, Update, Confirm):
 After uploading documents, follow this workflow to annotate them:
@@ -187,11 +189,9 @@ if datapoint is None:
 # Create operation with the actual datapoint ID (NOT schema_id!)
 operations = [{
     "op": "replace",
-    "id": datapoint['id'],  # Use actual datapoint ID from content
+    "id": datapoint['id'],  # Use actual integer datapoint ID from content
     "value": {
-        "content": {
-            "value": "air_waybill"  # The new value
-        }
+        "content": {"value": "air_waybill"}
     }
 }]
 

@@ -397,9 +397,8 @@ class RossumMCPServer:
         """
         logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
 
-        # Use the internal client's PATCH method to update specific fields
-        updated_queue_data = await self.client.internal_client.update(Resource.Queue, queue_id, queue_data)
-        updated_queue = await self.client._deserializer(Resource.Queue, updated_queue_data)
+        updated_queue_data = await self.client._http_client.update.update(Resource.Queue, queue_id, queue_data)
+        updated_queue = self.client._deserializer(Resource.Queue, updated_queue_data)
 
         return {
             "id": updated_queue.id,
@@ -435,9 +434,8 @@ class RossumMCPServer:
         """
         logger.debug(f"Updating schema: schema_id={schema_id}")
 
-        # Use the internal client's PATCH method to update specific fields
-        updated_schema_data = await self.client.internal_client.update(Resource.Schema, schema_id, schema_data)
-        updated_schema = await self.client._deserializer(Resource.Schema, updated_schema_data)
+        updated_schema_data = await self.client._http_client.update(Resource.Schema, schema_id, schema_data)
+        updated_schema = self.client._deserializer(Resource.Schema, updated_schema_data)
 
         return {
             "id": updated_schema.id,
@@ -479,9 +477,8 @@ class RossumMCPServer:
         """
         logger.debug(f"Updating engine: engine_id={engine_id}, data={engine_data}")
 
-        # Use the internal client's PATCH method to update specific fields
-        updated_engine_data = await self.client.internal_client.update(Resource.Engine, engine_id, engine_data)
-        updated_engine = await self.client._deserializer(Resource.Engine, updated_engine_data)
+        updated_engine_data = await self.client._http_client.update(Resource.Engine, engine_id, engine_data)
+        updated_engine = self.client._deserializer(Resource.Engine, updated_engine_data)
 
         return {
             "id": updated_engine.id,
@@ -495,7 +492,7 @@ class RossumMCPServer:
         }
 
     async def start_annotation(self, annotation_id: int) -> dict:
-        """Start annotation to move it to 'to_review' status.
+        """Start annotation to move it to 'reviewing' status.
 
         Args:
             annotation_id: Rossum annotation ID to start
@@ -509,7 +506,7 @@ class RossumMCPServer:
 
         return {
             "annotation_id": annotation_id,
-            "message": f"Annotation {annotation_id} started successfully. Status changed to 'to_review'.",
+            "message": f"Annotation {annotation_id} started successfully. Status changed to 'reviewing'.",
         }
 
     async def bulk_update_annotation_fields(self, annotation_id: int, operations: list[dict]) -> dict:
@@ -524,7 +521,7 @@ class RossumMCPServer:
                 [
                     {
                         "op": "replace",
-                        "id": "datapoint_id",  # Actual datapoint ID from annotation.content
+                        "id": 1234,  # Integer datapoint ID from annotation.content
                         "value": {
                             "content": {
                                 "value": "new_value",
@@ -535,7 +532,7 @@ class RossumMCPServer:
                     },
                     {
                         "op": "remove",
-                        "id": "datapoint_id_to_remove"
+                        "id": 5678  # Integer datapoint ID to remove
                     }
                 ]
 
@@ -546,7 +543,7 @@ class RossumMCPServer:
             # First get annotation to find datapoint IDs
             annotation = get_annotation(annotation_id=123, sideloads=['content'])
             # Find datapoint by schema_id in content and get its 'id'
-            datapoint_id = "uuid-here"
+            datapoint_id = 1234
             # Create operation
             operations = [{
                 "op": "replace",
@@ -606,7 +603,7 @@ class RossumMCPServer:
                             "id": "document_type",
                             "label": "Document Type",
                             "type": "enum",
-                            "rir_field_names": ["document_type"],
+                            "rir_field_names": [],
                             "constraints": {"required": False},
                             "options": [
                                 {"value": "invoice", "label": "Invoice"},
@@ -629,6 +626,125 @@ class RossumMCPServer:
             "url": schema.url,
             "content": schema.content,
             "message": f"Schema '{schema.name}' created successfully with ID {schema.id}",
+        }
+
+    async def create_engine(self, name: str, organization_id: int, engine_type: str) -> dict:
+        """Create a new engine.
+
+        Args:
+            name: Engine name
+            organization_id: Organization ID where the engine should be created
+            engine_type: Engine type - either 'extractor' or 'splitter'
+
+        Returns:
+            Dictionary containing created engine details including id, name, url, type, and message
+
+        Raises:
+            ValueError: If engine_type is not 'extractor' or 'splitter'
+        """
+        if engine_type not in ("extractor", "splitter"):
+            raise ValueError(f"Invalid engine_type '{engine_type}'. Must be 'extractor' or 'splitter'")
+
+        logger.debug(f"Creating engine: name={name}, organization_id={organization_id}, type={engine_type}")
+
+        engine_data = {
+            "name": name,
+            "organization": f"{self.base_url}/organizations/{organization_id}",
+            "type": engine_type,
+        }
+
+        engine_response = await self.client._http_client.create(Resource.Engine, engine_data)
+        engine = self.client._deserializer(Resource.Engine, engine_response)
+
+        return {
+            "id": engine.id,
+            "name": engine.name,
+            "url": engine.url,
+            "type": engine.type,
+            "organization": engine_data["organization"],
+            "message": f"Engine '{engine.name}' created successfully with ID {engine.id}",
+        }
+
+    async def create_engine_field(
+        self,
+        engine_id: int,
+        name: str,
+        label: str,
+        field_type: str,
+        schema_ids: list[int],
+        tabular: bool = False,
+        multiline: str = "false",
+        subtype: str | None = None,
+        pre_trained_field_id: str | None = None,
+    ) -> dict:
+        """Create a new engine field and link it to schemas.
+
+        Engine fields define what data the engine extracts. They must be created for each
+        field in the schema when setting up an engine.
+
+        Args:
+            engine_id: Engine ID to which this field belongs
+            name: Field name (slug format, max 50 chars)
+            label: Human-readable label (max 100 chars)
+            field_type: Field type - 'string', 'number', 'date', or 'enum'
+            schema_ids: List of schema IDs to link this engine field to
+            tabular: Whether this field is in a table (default: False)
+            multiline: Multiline setting - 'true', 'false', or '' (default: 'false')
+            subtype: Optional field subtype (max 50 chars)
+            pre_trained_field_id: Optional pre-trained field ID (max 50 chars)
+
+        Returns:
+            Dictionary containing created engine field details including id, name, url, and message
+
+        Raises:
+            ValueError: If field_type is not valid or schema_ids is empty
+        """
+        valid_types = ("string", "number", "date", "enum")
+        if field_type not in valid_types:
+            raise ValueError(f"Invalid field_type '{field_type}'. Must be one of: {', '.join(valid_types)}")
+
+        if not schema_ids:
+            raise ValueError("schema_ids cannot be empty - engine field must be linked to at least one schema")
+
+        logger.debug(
+            f"Creating engine field: engine_id={engine_id}, name={name}, type={field_type}, schemas={schema_ids}"
+        )
+
+        # Prepare engine field data
+        engine_field_data = {
+            "engine": f"{self.base_url}/engines/{engine_id}",
+            "name": name,
+            "label": label,
+            "type": field_type,
+            "tabular": tabular,
+            "multiline": multiline,
+            "schemas": [f"{self.base_url}/schemas/{schema_id}" for schema_id in schema_ids],
+        }
+
+        # Add optional fields if provided
+        if subtype is not None:
+            engine_field_data["subtype"] = subtype
+
+        if pre_trained_field_id is not None:
+            engine_field_data["pre_trained_field_id"] = pre_trained_field_id
+
+        # Create the engine field
+        engine_field_response = await self.client._http_client.create(Resource.EngineField, engine_field_data)
+        engine_field = self.client._deserializer(Resource.EngineField, engine_field_response)
+
+        return {
+            "id": engine_field.id,
+            "name": engine_field.name,
+            "label": engine_field.label,
+            "url": engine_field.url,
+            "type": engine_field.type,
+            "engine": engine_field.engine,
+            "tabular": engine_field.tabular,
+            "multiline": engine_field.multiline,
+            "subtype": engine_field.subtype,
+            "pre_trained_field_id": engine_field.pre_trained_field_id,
+            "schema_ids": schema_ids,
+            "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
         }
 
     def setup_handlers(self) -> None:  # noqa: C901
@@ -818,19 +934,22 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="bulk_update_annotation_fields",
-                    description="Bulk update annotation fields. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id.",
+                    description="Bulk update annotation fields. It can be used after `start_annotation` only. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id.",
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "annotation_id": {"type": "integer", "description": "Annotation ID"},
                             "operations": {
                                 "type": "array",
-                                "description": "JSON Patch operations. Format: {'op': 'replace'|'remove', 'id': 'datapoint_id', 'value': {'content': {'value': 'new_value'}}}. Use actual datapoint ID from annotation.content, NOT schema_id.",
+                                "description": "JSON Patch operations. Format: {'op': 'replace'|'remove', 'id': datapoint_id (int), 'value': {'content': {'value': 'new_value'}}}. Use numeric datapoint ID from annotation.content, NOT schema_id.",
                                 "items": {
                                     "type": "object",
                                     "properties": {
                                         "op": {"type": "string", "enum": ["replace", "remove"]},
-                                        "id": {"type": "string", "description": "Datapoint ID from content"},
+                                        "id": {
+                                            "type": "integer",
+                                            "description": "Datapoint ID (numeric) from annotation content",
+                                        },
                                         "value": {"type": "object"},
                                     },
                                     "required": ["op", "id"],
@@ -842,7 +961,7 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="confirm_annotation",
-                    description="Confirm annotation (move from 'to_review' to 'confirmed'). Returns: annotation_id, message.",
+                    description="Confirm annotation (move to 'confirmed'). It cane be used after `bulk_update_annotation_fields`. Returns: annotation_id, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -865,6 +984,57 @@ class RossumMCPServer:
                             },
                         },
                         "required": ["name", "content"],
+                    },
+                ),
+                Tool(
+                    name="create_engine",
+                    description="Create a new engine. Returns: id, name, url, type, organization, message.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Engine name"},
+                            "organization_id": {"type": "integer", "description": "Organization ID"},
+                            "engine_type": {
+                                "type": "string",
+                                "description": "Engine type: 'extractor' or 'splitter'",
+                                "enum": ["extractor", "splitter"],
+                            },
+                        },
+                        "required": ["name", "organization_id", "engine_type"],
+                    },
+                ),
+                Tool(
+                    name="create_engine_field",
+                    description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, name, label, url, type, engine, tabular, multiline, message.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "engine_id": {"type": "integer", "description": "Engine ID"},
+                            "name": {"type": "string", "description": "Field name (slug, max 50 chars)"},
+                            "label": {"type": "string", "description": "Human-readable label (max 100 chars)"},
+                            "field_type": {
+                                "type": "string",
+                                "description": "Field type",
+                                "enum": ["string", "number", "date", "enum"],
+                            },
+                            "schema_ids": {
+                                "type": "array",
+                                "items": {"type": "integer"},
+                                "description": "Schema IDs to link (≥1 required)",
+                            },
+                            "tabular": {"type": "boolean", "description": "Is in table? Default: false"},
+                            "multiline": {
+                                "type": "string",
+                                "description": "Multiline: 'true', 'false', ''. Default: 'false'",
+                                "enum": ["true", "false", ""],
+                            },
+                            "subtype": {"type": ["string", "null"], "description": "Optional subtype (max 50 chars)"},
+                            "pre_trained_field_id": {
+                                "type": ["string", "null"],
+                                "description": "Optional pre-trained field ID (max 50 chars)",
+                            },
+                        },
+                        "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
                     },
                 ),
             ]
@@ -934,6 +1104,24 @@ class RossumMCPServer:
                         result = await self.confirm_annotation(annotation_id=arguments["annotation_id"])
                     case "create_schema":
                         result = await self.create_schema(name=arguments["name"], content=arguments["content"])
+                    case "create_engine":
+                        result = await self.create_engine(
+                            name=arguments["name"],
+                            organization_id=arguments["organization_id"],
+                            engine_type=arguments["engine_type"],
+                        )
+                    case "create_engine_field":
+                        result = await self.create_engine_field(
+                            engine_id=arguments["engine_id"],
+                            name=arguments["name"],
+                            label=arguments["label"],
+                            field_type=arguments["field_type"],
+                            schema_ids=arguments["schema_ids"],
+                            tabular=arguments.get("tabular", False),
+                            multiline=arguments.get("multiline", "false"),
+                            subtype=arguments.get("subtype"),
+                            pre_trained_field_id=arguments.get("pre_trained_field_id"),
+                        )
                     case _:
                         raise ValueError(f"Unknown tool: {name}")
 

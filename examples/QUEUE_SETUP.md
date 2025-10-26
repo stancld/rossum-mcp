@@ -1,13 +1,17 @@
 # Set up a new queue with warmup
 
-1. Create a new queue in the same namespace as queue `3904204`.
-2. Set up the same schema field as queue `3904204`.
-3. Update schema so that everything with confidence > 90% will be automated.
-4. Rename the queue to: MCP Air Waybills
-5. Copy the queue knowledge from `3904204`.
-6. Return the queue status to check the queue status.
-7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill` to the new queue.
-8. Wait until all annotations are processed.
-9. Finally, return queue URL and an automation rate (exported documents).
+1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
+2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
+4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
+    - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
+5. Create a new engine in organization `1`, with type = 'extractor'.
+6. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
+    - DO NOT copy knowledge.
+    - Update Engine object.
+7. Create a new schema with a single enum field `Document type`.
+8. Create a new queue with the created engine and schema in the same workspace called: Inbox.
+9. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
+10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type.
 
 Proceed step-by-step and show intermediate results after each major step.
