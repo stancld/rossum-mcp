@@ -19,7 +19,6 @@ def list_files(directory_path: str, pattern: str | None = None) -> str:
 
     Returns:
         JSON string with files list. Use json.loads() to parse.
-        Example: files_data = json.loads(list_files("/path", "*.pdf"))
     """
     try:
         dir_path = Path(directory_path).expanduser().resolve()

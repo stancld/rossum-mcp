@@ -112,23 +112,6 @@ def plot_data(
             sort_descending=True
         )
 
-        # Pie chart
-        result = plot_data(
-            json.dumps(data),
-            chart_type='pie',
-            title='Revenue Distribution',
-            output_path='distribution.html'
-        )
-
-        # Line chart with time series
-        time_data = {'Jan': 1000, 'Feb': 1200, 'Mar': 1100, 'Apr': 1400}
-        result = plot_data(
-            json.dumps(time_data),
-            chart_type='line',
-            title='Monthly Revenue Trend',
-            y_label='Revenue ($)'
-        )
-
         # Static plot (PNG output)
         result = plot_data(
             json.dumps(data),

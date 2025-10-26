@@ -39,16 +39,6 @@ def copy_queue_knowledge(
         Errors are returned with an "error" field.
 
     Example:
-        # Copy all knowledge from source to target
-        result = copy_queue_knowledge(
-            source_queue_url="https://api.elis.rossum.ai/v1/queues/12345",
-            target_queue_url="https://api.elis.rossum.ai/v1/queues/67890"
-        )
-        data = json.loads(result)
-        if "error" not in data:
-            print("Knowledge copied successfully")
-
-        # Copy knowledge with filters
         result = copy_queue_knowledge(
             source_queue_url="https://api.elis.rossum.ai/v1/queues/12345",
             target_queue_url="https://api.elis.rossum.ai/v1/queues/67890",
@@ -105,14 +95,10 @@ def retrieve_queue_status(queue_url: str) -> str:
         Errors are returned with an "error" field.
 
     Example:
-        # Get queue status for a specific version
         result = retrieve_queue_status(
             queue_url="https://api.elis.rossum.ai/v1/queues/12345",
             version="v1.0"
         )
-        data = json.loads(result)
-        if "error" not in data:
-            print(f"Queue status: {data}")
     """
     try:
         # Build the endpoint URL

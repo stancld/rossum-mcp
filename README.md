@@ -35,8 +35,6 @@ A Model Context Protocol (MCP) server and AI agent toolkit for intelligent docum
 8. Aggregate across all documents: sum amounts for each unique description
 9. Return the final dictionary: {description: total_amount_across_all_docs}
 10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
-
-Proceed step-by-step and show intermediate results after each major step.
 ```
 
 <div align="center">
@@ -59,8 +57,6 @@ Create a new queue, warm it up with training documents, and test automation perf
 7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill` to the new queue.
 8. Wait until all annotations are processed.
 9. Finally, return queue URL and an automation rate (exported documents).
-
-Proceed step-by-step and show intermediate results after each major step.
 ```
 
 **Result:**
@@ -77,6 +73,56 @@ Proceed step-by-step and show intermediate results after each major step.
 ```
 
 The agent automatically creates the queue, uploads documents, monitors processing, and calculates automation performance - achieving 86.7% automation rate from just 30 training documents.
+
+### Example 3: Multi-Queue Setup with Sorting Engine
+
+Set up multiple queues with training data, create a sorting engine, and test classification performance:
+
+```md
+1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
+2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
+4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
+    - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
+5. Create a new engine in organization `1`, with type = 'extractor'.
+6. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
+    - DO NOT copy knowledge.
+    - Update Engine object.
+7. Create a new schema with a single enum field `Document type`.
+8. Create a new queue with the created engine and schema in the same workspace called: Inbox.
+9. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
+10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type.
+```
+
+**Result:**
+
+```md
+✅ Step 10: Generated accuracy reports
+  • Overall Accuracy: 100.0% (90/90)
+
+  Accuracy by document type:
+    • air_waybill: 100.0% (30/30)
+    • certificate_of_origin: 100.0% (30/30)
+    • invoice: 100.0% (30/30)
+
+📊 Generated Charts:
+  • output/air_waybill_accuracy.html
+  • output/certificate_of_origin_accuracy.html
+  • output/invoice_accuracy.html
+  • output/overall_accuracy_by_type.html
+
+================================================================================
+🎉 ALL TASKS COMPLETED SUCCESSFULLY!
+================================================================================
+
+📝 Key Findings:
+  • The engine achieved 100% accuracy on all document types
+  • All 90 test documents were correctly classified
+  • The training data (88 confirmed annotations) was sufficient
+  • No misclassifications occurred
+
+**Reached max steps.**
+```
 
 ## Installation
 
