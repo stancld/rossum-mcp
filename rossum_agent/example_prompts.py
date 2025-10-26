@@ -10,6 +10,21 @@ SETUP_QUEUE_PROMPT = """1. Create a new queue in the same namespace as queue `39
 
 Proceed step-by-step and show intermediate results after each major step."""
 
+SORTING_WARMUP_PROMPT = """1. Create three new queues in namespace `1777693` - Air Waybills, Certificates of Origin, Invoices.
+2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
+4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
+    - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
+5. Create a new queue with extraction engine in the same namespace - Inbox.
+6. Set up inbox predict a single enum type `Document type`.
+7. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
+    - DO NOT copy knowledge.
+    - Update Engine object.
+8. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
+9. Based on the file names and predicted values, generate a bar plot with correct/wrong for each document type.
+
+Proceed step-by-step and show intermediate results after each major step."""
+
 DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
     - Do not include documents from `knowledge` folder.
 2. Once you send all annotations, wait for a few seconds.
@@ -31,4 +46,8 @@ DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/proje
 Proceed step-by-step and show intermediate results after each major step."""
 
 
-PROMPTS = {"setup_queue": SETUP_QUEUE_PROMPT, "data_insight": DATA_INSIGHT_PROMPT}
+PROMPTS = {
+    "setup_queue": SETUP_QUEUE_PROMPT,
+    "sorting_warmup": SORTING_WARMUP_PROMPT,
+    "data_insight": DATA_INSIGHT_PROMPT,
+}

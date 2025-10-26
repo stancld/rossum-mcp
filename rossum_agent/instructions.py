@@ -136,4 +136,120 @@ Automation level options:
 - "never": No automation - all documents require manual review
 - "always": Automate always
 - "confident": Automate if all thresholds are exceeded and all checks paass
+
+IMPORTANT: Creating Schemas and Queues:
+Schemas define the structure of data extracted from documents. They consist of sections containing datapoints (fields).
+
+Creating a schema with an enum field for document classification:
+```python
+# Schema must have at least one section with children
+schema_content = [
+    {
+        "category": "section",
+        "id": "document_info",
+        "label": "Document Information",
+        "children": [
+            {
+                "category": "datapoint",
+                "id": "document_type",
+                "label": "Document Type",
+                "type": "enum",
+                "rir_field_names": ["document_type"],
+                "constraints": {"required": False},
+                "options": [
+                    {"value": "air_waybill", "label": "Air Waybill"},
+                    {"value": "certificate_of_origin", "label": "Certificate of Origin"},
+                    {"value": "invoice", "label": "Invoice"}
+                ]
+            }
+        ]
+    }
+]
+
+# Create the schema (returns JSON string)
+schema_json = create_schema(name="Document Classification Schema", content=schema_content)
+schema_result = json.loads(schema_json)
+schema_id = schema_result['id']
+print(f"Created schema: {schema_result['name']} (ID: {schema_id})")
+```
+
+Key schema requirements:
+- Must have at least one section (category: "section")
+- Section must have children array with at least one datapoint
+- Each datapoint needs: category, id, label, type, rir_field_names, constraints
+- Enum fields must have options array with at least one value/label pair
+- Use snake_case for IDs (max 50 characters)
+
+Creating a queue with a schema:
+```python
+# Create queue with the schema
+queue_json = create_queue(
+    name="Air Waybills Queue",
+    workspace_id=1777693,  # Must be integer
+    schema_id=schema_id,   # From create_schema result
+    engine_id=None,        # Optional: can be added later
+    locale="en_GB",
+    automation_enabled=False,
+    training_enabled=True
+)
+queue_result = json.loads(queue_json)
+queue_id = queue_result['id']
+print(f"Created queue: {queue_result['name']} (ID: {queue_id})")
+```
+
+IMPORTANT: Annotation Workflow (Start, Update, Confirm):
+After uploading documents, follow this workflow to annotate them:
+
+Step 1: Start annotation (move from 'importing' to 'to_review')
+```python
+start_json = start_annotation(annotation_id=annotation_id)
+start_result = json.loads(start_json)
+print(start_result['message'])
+```
+
+Step 2: Update field values (e.g., set document type)
+```python
+# First, find the datapoint ID by schema_id in the annotation content
+def find_datapoint_by_schema_id(content, schema_id):
+    ''''Recursively find datapoint by schema_id and return the datapoint'''
+    for item in content:
+        if item.get('category') == 'datapoint' and item.get('schema_id') == schema_id:
+            return item
+        if 'children' in item:
+            result = find_datapoint_by_schema_id(item['children'], schema_id)
+            if result:
+                return result
+    return None
+
+# Parse annotation content to get the datapoint
+datapoint = find_datapoint_by_schema_id(ann_data['content'], 'document_type')
+if datapoint is None:
+    raise RuntimeError("Field 'document_type' not found in annotation!")
+
+# Create operation with the actual datapoint ID (NOT schema_id!)
+operations = [{
+    "op": "replace",
+    "id": datapoint['id'],  # Use actual datapoint ID from content
+    "value": {
+        "content": {
+            "value": "air_waybill"  # The new value
+        }
+    }
+}]
+
+# Update using bulk operations endpoint
+update_json = bulk_update_annotation_fields(
+    annotation_id=annotation_id,
+    operations=operations
+)
+update_result = json.loads(update_json)
+print(update_result['message'])
+```
+
+Step 3: Confirm annotation (move to 'confirmed' status)
+```python
+confirm_json = confirm_annotation(annotation_id=annotation_id)
+confirm_result = json.loads(confirm_json)
+print(confirm_result['message'])
+```
 """

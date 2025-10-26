@@ -1,9 +1,10 @@
 from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
+from rossum_api.domain_logic.resources import Resource
 
 from rossum_mcp.server import RossumMCPServer
 
@@ -21,7 +22,7 @@ def mock_env_vars(monkeypatch: MonkeyPatch) -> None:
 @pytest.fixture
 def mock_rossum_client() -> Iterator[Mock]:
     """Create a mock Rossum API client."""
-    with patch("rossum_mcp.server.SyncRossumAPIClient") as mock_client_class:
+    with patch("rossum_mcp.server.AsyncRossumAPIClient") as mock_client_class:
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         yield mock_client
@@ -753,6 +754,98 @@ class TestCreateQueue:
 
         assert result["id"] == 203
         assert result["name"] == "Async Queue"
+
+
+@pytest.mark.unit
+class TestUpdateEngine:
+    """Tests for engine update functionality."""
+
+    @pytest.mark.asyncio
+    async def test_update_engine_training_queues(self, server: RossumMCPServer) -> None:
+        """Test updating engine training queues."""
+        # Mock the internal client update method
+        mock_updated_engine_data = {
+            "id": 36032,
+            "url": "https://api.test.rossum.ai/v1/engines/36032",
+            "name": "Test Engine",
+            "type": "extractor",
+            "learning_enabled": True,
+            "training_queues": [
+                "https://api.test.rossum.ai/v1/queues/12345",
+                "https://api.test.rossum.ai/v1/queues/67890",
+            ],
+            "description": "Updated training queues",
+            "agenda_id": "test_agenda",
+        }
+
+        mock_updated_engine = Mock()
+        mock_updated_engine.id = 36032
+        mock_updated_engine.name = "Test Engine"
+        mock_updated_engine.url = "https://api.test.rossum.ai/v1/engines/36032"
+        mock_updated_engine.type = "extractor"
+        mock_updated_engine.learning_enabled = True
+        mock_updated_engine.training_queues = [
+            "https://api.test.rossum.ai/v1/queues/12345",
+            "https://api.test.rossum.ai/v1/queues/67890",
+        ]
+        mock_updated_engine.description = "Updated training queues"
+
+        # Use AsyncMock for async methods
+        server.client.internal_client.update = AsyncMock(return_value=mock_updated_engine_data)
+        server.client._deserializer = AsyncMock(return_value=mock_updated_engine)
+
+        engine_data = {
+            "training_queues": [
+                "https://api.test.rossum.ai/v1/queues/12345",
+                "https://api.test.rossum.ai/v1/queues/67890",
+            ]
+        }
+
+        result = await server.update_engine(engine_id=36032, engine_data=engine_data)
+
+        assert result["id"] == 36032
+        assert result["name"] == "Test Engine"
+        assert len(result["training_queues"]) == 2
+        assert "https://api.test.rossum.ai/v1/queues/12345" in result["training_queues"]
+        assert "updated successfully" in result["message"].lower()
+
+        # Verify the internal client was called correctly
+        server.client.internal_client.update.assert_called_once_with(Resource.Engine, 36032, engine_data)
+
+    @pytest.mark.asyncio
+    async def test_update_engine_learning_enabled(self, server: RossumMCPServer) -> None:
+        """Test updating engine learning_enabled flag."""
+        mock_updated_engine_data = {
+            "id": 36032,
+            "url": "https://api.test.rossum.ai/v1/engines/36032",
+            "name": "Test Engine",
+            "type": "extractor",
+            "learning_enabled": False,
+            "training_queues": [],
+            "description": "",
+            "agenda_id": "test_agenda",
+        }
+
+        mock_updated_engine = Mock()
+        mock_updated_engine.id = 36032
+        mock_updated_engine.name = "Test Engine"
+        mock_updated_engine.url = "https://api.test.rossum.ai/v1/engines/36032"
+        mock_updated_engine.type = "extractor"
+        mock_updated_engine.learning_enabled = False
+        mock_updated_engine.training_queues = []
+        mock_updated_engine.description = ""
+
+        # Use AsyncMock for async methods
+        server.client.internal_client.update = AsyncMock(return_value=mock_updated_engine_data)
+        server.client._deserializer = AsyncMock(return_value=mock_updated_engine)
+
+        engine_data = {"learning_enabled": False}
+
+        result = await server.update_engine(engine_id=36032, engine_data=engine_data)
+
+        assert result["id"] == 36032
+        assert result["learning_enabled"] is False
+        assert "updated successfully" in result["message"].lower()
 
 
 @pytest.mark.unit

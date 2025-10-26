@@ -234,6 +234,49 @@ update_schema
   Updates schema configuration, typically used to set field-level automation
   thresholds that override the queue's default threshold. See ``rossum_mcp.server:488-526``
 
+update_engine
+^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``update_engine(engine_id: int, engine_data: dict)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.internal_client.update(Resource.Engine, engine_id, engine_data)``
+
+**API Endpoint:**
+  ``PATCH /v1/engines/{engine_id}``
+
+**Request Body:**
+  Partial JSON object with only the fields to update. Supported fields:
+  - ``name`` (str): Engine name
+  - ``description`` (str): Engine description
+  - ``learning_enabled`` (bool): Enable/disable learning
+  - ``training_queues`` (list[str]): List of queue URLs for training
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Updates engine configuration using PATCH semantics. Commonly used to manage
+  training queues and learning settings. See ``rossum_mcp.server:450-495``
+
+**Common Use Case:**
+  Update training queues to specify which queues an engine should learn from:
+
+  .. code-block:: python
+
+     engine_data = {
+         "training_queues": [
+             "https://api.elis.rossum.ai/v1/queues/12345",
+             "https://api.elis.rossum.ai/v1/queues/67890"
+         ]
+     }
+     result = await server.update_engine(engine_id=36032, engine_data=engine_data)
+
+**Important:** When using the SDK directly with ``request_json``, always use the
+``json=`` parameter, not ``data=``. The Rossum API expects JSON-encoded data
+(application/json), not form-encoded data (application/x-www-form-urlencoded).
+
 Async Wrapper Pattern
 ----------------------
 
