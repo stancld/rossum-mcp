@@ -6,9 +6,7 @@ SETUP_QUEUE_PROMPT = """1. Create a new queue in the same namespace as queue `39
 6. Return the queue status to check the queue status.
 7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill` to the new queue.
 8. Wait until all annotations are processed.
-9. Finally, return queue URL and an automation rate (exported documents).
-
-Proceed step-by-step and show intermediate results after each major step."""
+9. Finally, return queue URL and an automation rate (exported documents)."""
 
 SORTING_WARMUP_PROMPT = """1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
 2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
@@ -22,9 +20,7 @@ SORTING_WARMUP_PROMPT = """1. Create three new queues in workspace `1777693` - A
 7. Create a new schema with a single enum field `Document type`.
 8. Create a new queue with the created engine and schema in the same workspace called: Inbox.
 9. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
-10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type.
-
-Proceed step-by-step and show intermediate results after each major step."""
+10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type."""
 
 DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
     - Do not include documents from `knowledge` folder.
@@ -42,9 +38,7 @@ DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/proje
     - Print result for each document
 8. Aggregate across all documents: sum amounts for each unique description
 9. Return the final dictionary: {description: total_amount_across_all_docs}
-10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
-
-Proceed step-by-step and show intermediate results after each major step."""
+10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`."""
 
 
 PROMPTS = {

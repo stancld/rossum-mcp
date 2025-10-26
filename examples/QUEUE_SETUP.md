@@ -13,5 +13,3 @@
 8. Create a new queue with the created engine and schema in the same workspace called: Inbox.
 9. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
 10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type.
-
-Proceed step-by-step and show intermediate results after each major step.

@@ -9,5 +9,3 @@
 7. Set up the engine is trained from three created queues - Air Waybills, Certificates of Origin, Invoices.
 8. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
 9. Based on the file names and predicted values, generate a bar plot with correct/wrong for each document type.
-
-Proceed step-by-step and show intermediate results after each major step.""
