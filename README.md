@@ -185,19 +185,26 @@ The agent includes file system tools, plotting capabilities, and Rossum integrat
 
 ## MCP Tools
 
-The MCP server provides 10 tools organized into two categories:
+The MCP server provides 17 tools organized into three categories:
 
 **Document Processing**
 - `upload_document` - Upload documents for AI extraction
 - `get_annotation` - Retrieve extracted data and status
 - `list_annotations` - List all annotations with filtering
+- `start_annotation` - Start annotation for field updates
+- `bulk_update_annotation_fields` - Update field values with JSON Patch
+- `confirm_annotation` - Confirm and finalize annotations
 
 **Queue & Schema Management**
 - `get_queue`, `get_schema`, `get_queue_schema` - Retrieve configuration
 - `get_queue_engine` - Get engine information
-- `create_queue` - Create new queues with settings
-- `update_queue` - Configure automation thresholds
-- `update_schema` - Set field-level confidence thresholds
+- `create_queue`, `create_schema` - Create new queues and schemas
+- `update_queue`, `update_schema` - Configure automation thresholds
+
+**Engine Management**
+- `create_engine` - Create extraction or splitting engines
+- `update_engine` - Configure learning and training queues
+- `create_engine_field` - Define engine fields and link to schemas
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
 
