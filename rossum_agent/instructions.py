@@ -7,7 +7,6 @@ For Rossum MCP:
 - IDs: queue_id, annotation_id, schema_id must be INTEGERS, not strings
 - Optional parameters: Can be omitted entirely or passed as None
 - OUTPUT: Tools return JSON strings
-- After parsing, you can deserialize annotations into Annotation objects using from rossum_api.models.annotation import Annotation
 
 IMPORTANT: When uploading documents and checking status:
 - After upload, documents enter "importing" state while being processed
@@ -17,10 +16,6 @@ IMPORTANT: When uploading documents and checking status:
 IMPORTANT: Fetching N annotations from a queue:
 1. Call 'list_annotations' with the queue_id and optionally limit the results
 2. For each annotation, perform required operations (extract data, process fields, etc.)
-
-IMPORTANT: Parsing Annotation Content and Datapoints:
-When you get an annotation with `content` sideload:
-- annotation['content'] is a list representing the document structure
 
 CRITICAL FOR LINE ITEMS:
 - Line items are in multivalue fields (e.g., 'line_items')
@@ -36,9 +31,6 @@ ann_json = get_annotation(annotation_id=12345, sideloads=['content'])
 ann_data = json.loads(ann_json)
 annotation = Annotation(**ann_data)
 
-# Access annotation content directly
-content = annotation.content  # List of items
-
 # Manual parsing for datapoints
 def get_datapoint_value(items, schema_id):
     '''Recursively find datapoint value by schema_id'''
@@ -53,7 +45,6 @@ def get_datapoint_value(items, schema_id):
 
 # Extract single field
 sender_name = get_datapoint_value(content, 'sender_name')
-amount_total = get_datapoint_value(content, 'amount_total')
 
 # Extract line items (multivalue field) - preserve grouping!
 def extract_line_items(items, multivalue_schema_id):
@@ -79,15 +70,6 @@ def extract_line_items(items, multivalue_schema_id):
 
 line_items = extract_line_items(content, 'line_items')
 # Result: [{'item_description': 'Item 1', 'item_amount_total': '100'}, ...]
-
-# Process each line item individually
-for item in line_items:
-    desc = item.get('item_description')
-    amount_str = item.get('item_amount_total', '0')
-    # Clean amount string (remove spaces, convert to float)
-    amount = float(amount_str.replace(' ', '').replace(',', '')) if amount_str else 0.0
-    print(f"Description: {desc}, Amount: {amount}")
-```
 
 IMPORTANT: Setting Automation Thresholds:
 Automation thresholds control when documents are automatically exported based on AI confidence.
@@ -166,36 +148,12 @@ schema_content = [
     }
 ]
 
-# Create the schema (returns JSON string)
-schema_json = create_schema(name="Document Classification Schema", content=schema_content)
-schema_result = json.loads(schema_json)
-schema_id = schema_result['id']
-print(f"Created schema: {schema_result['name']} (ID: {schema_id})")
-```
-
 Key schema requirements:
 - Must have at least one section (category: "section")
 - Section must have children array with at least one datapoint
 - Each datapoint needs: category, id, label, type, rir_field_names, constraints
 - Enum fields must have options array with at least one value/label pair
 - Use snake_case for IDs (max 50 characters)
-
-Creating a queue with a schema:
-```python
-# Create queue with the schema
-queue_json = create_queue(
-    name="Air Waybills Queue",
-    workspace_id=1777693,  # Must be integer
-    schema_id=schema_id,   # From create_schema result
-    engine_id=None,        # Optional: can be added later
-    locale="en_GB",
-    automation_enabled=False,
-    training_enabled=True
-)
-queue_result = json.loads(queue_json)
-queue_id = queue_result['id']
-print(f"Created queue: {queue_result['name']} (ID: {queue_id})")
-```
 
 IMPORTANT: Annotation Workflow (Start, Update, Confirm):
 After uploading documents, follow this workflow to annotate them:

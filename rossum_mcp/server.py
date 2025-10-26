@@ -646,36 +646,27 @@ class RossumMCPServer:
             return [
                 Tool(
                     name="upload_document",
-                    description="Upload a document to Rossum for processing. Returns JSON string with task_id, task_status, queue_id, and message. MUST parse with json.loads(). To get the annotation ID for the uploaded document, call list_annotations with the queue_id.",
+                    description="Upload a document to Rossum. Returns: task_id, task_status, queue_id, message. Use list_annotations to get annotation ID.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "Absolute path to the document file to upload",
-                            },
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Rossum queue ID where the document should be uploaded",
-                            },
+                            "file_path": {"type": "string", "description": "Absolute path to document file"},
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                         },
                         "required": ["file_path", "queue_id"],
                     },
                 ),
                 Tool(
                     name="get_annotation",
-                    description="Retrieve full annotation data including extracted content. Returns JSON string with id, status, url, schema, modifier, document, content, created_at, modified_at. MUST parse with json.loads(). After calling list_annotations to get annotation IDs, use this tool to retrieve complete data.",
+                    description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "annotation_id": {
-                                "type": "integer",
-                                "description": "The annotation ID obtained from list_annotations",
-                            },
+                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
                             "sideloads": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Optional list of sideloads to include. Use ['content'] to fetch annotation content with datapoints. Without this, only metadata is returned.",
+                                "description": "Optional sideloads. Use ['content'] for datapoints, otherwise only metadata.",
                             },
                         },
                         "required": ["annotation_id"],
@@ -683,17 +674,14 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="list_annotations",
-                    description="List all annotations for a queue with optional filtering. Returns JSON string with count and results array. MUST parse with json.loads(). After uploading documents, use this to get annotation IDs. Use get_annotation to retrieve full details for each annotation.",
+                    description="List annotations for a queue. Returns: count, results array.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Rossum queue ID to list annotations from (same queue_id used in upload_document)",
-                            },
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                             "status": {
                                 "type": "string",
-                                "description": "Filter by annotation status (e.g., 'importing', 'to_review', 'confirmed', 'exported'). These four are used as default.",
+                                "description": "Filter by status: 'importing', 'to_review', 'confirmed', 'exported'. Default: all four.",
                             },
                         },
                         "required": ["queue_id"],
@@ -701,123 +689,84 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="get_queue",
-                    description="Retrieve queue details including the schema_id. Returns JSON string with id, name, url, schema, workspace, inbox, engine. MUST parse with json.loads(). Use get_schema to retrieve the schema.",
+                    description="Retrieve queue details. Returns: id, name, url, schema, workspace, inbox, engine.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Rossum queue ID to retrieve",
-                            },
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                         },
                         "required": ["queue_id"],
                     },
                 ),
                 Tool(
                     name="get_schema",
-                    description="Retrieve schema details including the schema content/structure. Returns JSON string with id, name, url, content. MUST parse with json.loads(). Use get_queue first to obtain the schema_id.",
+                    description="Retrieve schema details. Returns: id, name, url, content.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "schema_id": {
-                                "type": "integer",
-                                "description": "Rossum schema ID to retrieve (obtained from get_queue)",
-                            },
+                            "schema_id": {"type": "integer", "description": "Schema ID"},
                         },
                         "required": ["schema_id"],
                     },
                 ),
                 Tool(
                     name="get_queue_schema",
-                    description="Retrieve the complete schema for a given queue in a single call. Returns JSON string with queue_id, queue_name, schema_id, schema_name, schema_url, schema_content. MUST parse with json.loads(). Recommended way to get a queue's schema.",
+                    description="Retrieve queue schema in one call. Returns: queue_id, queue_name, schema_id, schema_name, schema_url, schema_content.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Rossum queue ID for which to retrieve the schema",
-                            },
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                         },
                         "required": ["queue_id"],
                     },
                 ),
                 Tool(
                     name="get_queue_engine",
-                    description="Retrieve the complete engine information for a given queue. Returns JSON string with queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. MUST parse with json.loads(). If no engine is assigned, returns None for engine fields.",
+                    description="Retrieve queue engine info. Returns: queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. None if no engine assigned.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Rossum queue ID for which to retrieve the engine",
-                            },
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                         },
                         "required": ["queue_id"],
                     },
                 ),
                 Tool(
                     name="create_queue",
-                    description="Create a new queue with schema and optional engine assignment. Returns JSON string with id, name, url, workspace, schema, engine, inbox, connector, locale, automation settings, and message. MUST parse with json.loads().",
+                    description="Create a queue. Returns: id, name, url, workspace, schema, engine, inbox, connector, locale, automation settings, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "Name of the queue to create",
-                            },
-                            "workspace_id": {
-                                "type": "integer",
-                                "description": "Workspace ID where the queue should be created",
-                            },
-                            "schema_id": {
-                                "type": "integer",
-                                "description": "Schema ID to assign to the queue",
-                            },
-                            "engine_id": {
-                                "type": ["integer", "null"],
-                                "description": "Optional engine ID to assign to the queue for document processing",
-                            },
-                            "inbox_id": {
-                                "type": ["integer", "null"],
-                                "description": "Optional inbox ID to assign to the queue",
-                            },
-                            "connector_id": {
-                                "type": ["integer", "null"],
-                                "description": "Optional connector ID to assign to the queue",
-                            },
-                            "locale": {
-                                "type": "string",
-                                "description": "Queue locale (e.g., 'en_US', 'en_GB'). Default: 'en_GB'",
-                            },
+                            "name": {"type": "string", "description": "Queue name"},
+                            "workspace_id": {"type": "integer", "description": "Workspace ID"},
+                            "schema_id": {"type": "integer", "description": "Schema ID"},
+                            "engine_id": {"type": ["integer", "null"], "description": "Optional engine ID"},
+                            "inbox_id": {"type": ["integer", "null"], "description": "Optional inbox ID"},
+                            "connector_id": {"type": ["integer", "null"], "description": "Optional connector ID"},
+                            "locale": {"type": "string", "description": "Locale. Default: 'en_GB'"},
                             "automation_enabled": {
                                 "type": "boolean",
-                                "description": "Enable automation for the queue. Default: false",
+                                "description": "Enable automation. Default: false",
                             },
                             "automation_level": {
                                 "type": "string",
-                                "description": "Automation level ('never', 'always', etc.). Default: 'never'",
+                                "description": "Level: 'never', 'always'. Default: 'never'",
                             },
-                            "training_enabled": {
-                                "type": "boolean",
-                                "description": "Enable training for the queue. Default: true",
-                            },
+                            "training_enabled": {"type": "boolean", "description": "Enable training. Default: true"},
                         },
                         "required": ["name", "workspace_id", "schema_id"],
                     },
                 ),
                 Tool(
                     name="update_queue",
-                    description="Update an existing queue's settings including automation thresholds. Returns JSON string with updated queue details and message. MUST parse with json.loads(). The default_score_threshold ranges from 0.0 to 1.0 (e.g., 0.90 = 90%). Common automation_level values: 'never', 'confident'.",
+                    description="Update queue settings. Returns: updated queue details, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "queue_id": {
-                                "type": "integer",
-                                "description": "Queue ID to update",
-                            },
+                            "queue_id": {"type": "integer", "description": "Queue ID"},
                             "queue_data": {
                                 "type": "object",
-                                "description": "Dictionary containing queue fields to update. Common fields: 'name' (str), 'automation_enabled' (bool), 'automation_level' (str: 'never'/'always'/'confident'), 'default_score_threshold' (float: 0.0-1.0, e.g., 0.90 for 90%), 'locale' (str), 'training_enabled' (bool)",
+                                "description": "Fields to update: name, automation_enabled, automation_level ('never'/'always'/'confident'), default_score_threshold (0.0-1.0), locale, training_enabled",
                                 "additionalProperties": True,
                             },
                         },
@@ -826,17 +775,14 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="update_schema",
-                    description="Update an existing schema, typically used to set field-level automation thresholds. Returns JSON string with updated schema details and message. MUST parse with json.loads(). Field-level thresholds override the queue's default_score_threshold. Use higher thresholds (0.95-0.98) for critical fields.",
+                    description="Update schema, typically for field-level thresholds. Returns: updated schema details, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "schema_id": {
-                                "type": "integer",
-                                "description": "Schema ID to update",
-                            },
+                            "schema_id": {"type": "integer", "description": "Schema ID"},
                             "schema_data": {
                                 "type": "object",
-                                "description": "Dictionary containing schema fields to update. Typically contains 'content' key with the full schema content array where each field can have a 'score_threshold' property (float 0.0-1.0)",
+                                "description": "Fields to update. Typically 'content' with schema array where fields have 'score_threshold' (0.0-1.0)",
                                 "additionalProperties": True,
                             },
                         },
@@ -845,17 +791,14 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="update_engine",
-                    description="Update an existing engine's settings, including training queues. Returns JSON string with updated engine details and message. MUST parse with json.loads(). Use this to configure which queues an engine should learn from by updating training_queues with a list of queue URLs.",
+                    description="Update engine settings. Returns: updated engine details, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "engine_id": {
-                                "type": "integer",
-                                "description": "Engine ID to update",
-                            },
+                            "engine_id": {"type": "integer", "description": "Engine ID"},
                             "engine_data": {
                                 "type": "object",
-                                "description": "Dictionary containing engine fields to update. Supported fields: 'name' (str), 'description' (str), 'learning_enabled' (bool), 'training_queues' (array of queue URL strings like ['https://api.elis.rossum.ai/v1/queues/12345'])",
+                                "description": "Fields to update: name, description, learning_enabled, training_queues (array of queue URLs)",
                                 "additionalProperties": True,
                             },
                         },
@@ -864,47 +807,31 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="start_annotation",
-                    description="Start annotation to move it from 'importing' to 'to_review' status, making it ready for user review. Returns JSON string with annotation_id and message. MUST parse with json.loads(). Use after uploading a document and waiting for import to complete.",
+                    description="Start annotation (move from 'importing' to 'to_review'). Returns: annotation_id, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "annotation_id": {
-                                "type": "integer",
-                                "description": "Annotation ID to start (obtained from list_annotations or upload_document)",
-                            },
+                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
                         },
                         "required": ["annotation_id"],
                     },
                 ),
                 Tool(
                     name="bulk_update_annotation_fields",
-                    description="RECOMMENDED: Bulk update annotation field values using operations. This is the CORRECT and RELIABLE way to update field values. Returns JSON string with annotation_id, operations_count, and message. MUST parse with json.loads(). First get annotation with get_annotation(sideloads=['content']), find the datapoint by schema_id in content to get its 'id', then use that ID in operations.",
+                    description="Bulk update annotation fields. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "annotation_id": {
-                                "type": "integer",
-                                "description": "Annotation ID to update",
-                            },
+                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
                             "operations": {
                                 "type": "array",
-                                "description": "List of operations in JSON Patch format. Each operation: {'op': 'replace'|'remove', 'id': 'datapoint_id', 'value': {'content': {'value': 'new_value', 'page': 1, 'position': [x,y,w,h]}}}. The 'id' field MUST be the actual datapoint ID from annotation.content (find by schema_id), NOT the schema_id itself. Page and position are optional.",
+                                "description": "JSON Patch operations. Format: {'op': 'replace'|'remove', 'id': 'datapoint_id', 'value': {'content': {'value': 'new_value'}}}. Use actual datapoint ID from annotation.content, NOT schema_id.",
                                 "items": {
                                     "type": "object",
                                     "properties": {
-                                        "op": {
-                                            "type": "string",
-                                            "enum": ["replace", "remove"],
-                                            "description": "Operation type: 'replace' to update value, 'remove' to delete datapoint",
-                                        },
-                                        "id": {
-                                            "type": "string",
-                                            "description": "Datapoint ID from annotation.content (NOT schema_id)",
-                                        },
-                                        "value": {
-                                            "type": "object",
-                                            "description": "Value object with content. Format: {'content': {'value': 'new_value', 'page': 1, 'position': [x,y,w,h]}}",
-                                        },
+                                        "op": {"type": "string", "enum": ["replace", "remove"]},
+                                        "id": {"type": "string", "description": "Datapoint ID from content"},
+                                        "value": {"type": "object"},
                                     },
                                     "required": ["op", "id"],
                                 },
@@ -915,31 +842,25 @@ class RossumMCPServer:
                 ),
                 Tool(
                     name="confirm_annotation",
-                    description="Confirm annotation to move it from 'to_review' to 'confirmed' status. Returns JSON string with annotation_id and message. MUST parse with json.loads(). Use after reviewing and validating the extracted data. The annotation may then proceed to export if configured.",
+                    description="Confirm annotation (move from 'to_review' to 'confirmed'). Returns: annotation_id, message.",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "annotation_id": {
-                                "type": "integer",
-                                "description": "Annotation ID to confirm",
-                            },
+                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
                         },
                         "required": ["annotation_id"],
                     },
                 ),
                 Tool(
                     name="create_schema",
-                    description="Create a new schema with field definitions. Returns JSON string with id, name, url, content, and message. MUST parse with json.loads(). Schema must have at least one section containing children (datapoints). Use this to define document structure before creating queues.",
+                    description="Create a schema. Returns: id, name, url, content, message. Must have ≥1 section with children (datapoints).",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "Schema name (e.g., 'Invoice Schema', 'Air Waybill Schema')",
-                            },
+                            "name": {"type": "string", "description": "Schema name"},
                             "content": {
                                 "type": "array",
-                                "description": "Schema content array with sections containing datapoints. Structure: [{'category': 'section', 'id': 'section_id', 'label': 'Section Label', 'children': [{'category': 'datapoint', 'id': 'field_id', 'label': 'Field Label', 'type': 'string'|'enum'|'date'|'number', 'rir_field_names': ['field_name'], 'constraints': {'required': false}, 'options': [{'value': 'val', 'label': 'Label'}] (for enum only)}]}]. For enum fields, include 'options' array with value/label pairs.",
+                                "description": "Schema sections with datapoints. Structure: [{'category': 'section', 'id': 'section_id', 'label': 'Label', 'children': [{'category': 'datapoint', 'id': 'field_id', 'label': 'Label', 'type': 'string'|'enum'|'date'|'number', 'rir_field_names': ['name'], 'constraints': {'required': false}, 'options': [{'value': 'v', 'label': 'L'}]}]}]",
                                 "items": {"type": "object"},
                             },
                         },
