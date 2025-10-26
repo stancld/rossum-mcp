@@ -204,7 +204,7 @@ update_result = json.loads(update_json)
 print(update_result['message'])
 ```
 
-Step 3: Confirm annotation (move to 'confirmed' status)
+IMPORTANT: Step 3: Confirm annotation (move to 'confirmed' status)
 ```python
 confirm_json = confirm_annotation(annotation_id=annotation_id)
 confirm_result = json.loads(confirm_json)
