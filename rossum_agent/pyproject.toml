@@ -15,7 +15,7 @@ dependencies = [
     "plotly>=6.0",
     "pyyaml>=6.0",
     "requests>=2.32",
-    "rossum-api @ git+https://github.com/rossumai/rossum-sdk#egg=rossum-api",
+    "rossum-api @ git+https://github.com/stancld/rossum-sdk@ds-engine-training-queues",
     "seaborn>=0.13.2",
     "smolagents[litellm]>=1.0.0",
 ]
