@@ -20,16 +20,16 @@ def mock_env_vars(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_rossum_client() -> Iterator[Mock]:
+def mock_rossum_client() -> Iterator[AsyncMock]:
     """Create a mock Rossum API client."""
     with patch("rossum_mcp.server.AsyncRossumAPIClient") as mock_client_class:
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
         yield mock_client
 
 
 @pytest.fixture
-def server(mock_env_vars: None, mock_rossum_client: Mock) -> RossumMCPServer:
+def server(mock_env_vars: None, mock_rossum_client: AsyncMock) -> RossumMCPServer:
     """Create a RossumMCPServer instance for testing."""
     return RossumMCPServer()
 
@@ -38,13 +38,13 @@ def server(mock_env_vars: None, mock_rossum_client: Mock) -> RossumMCPServer:
 class TestRossumMCPServerInit:
     """Tests for RossumMCPServer initialization."""
 
-    def test_init_reads_env_vars(self, mock_env_vars: None, mock_rossum_client: Mock) -> None:
+    def test_init_reads_env_vars(self, mock_env_vars: None, mock_rossum_client: AsyncMock) -> None:
         """Test that __init__ reads environment variables correctly."""
         server = RossumMCPServer()
         assert server.base_url == "https://api.test.rossum.ai"
         assert server.api_token == "test-token-123"
 
-    def test_init_creates_client(self, mock_env_vars: None, mock_rossum_client: Mock) -> None:
+    def test_init_creates_client(self, mock_env_vars: None, mock_rossum_client: AsyncMock) -> None:
         """Test that __init__ creates a Rossum API client."""
         server = RossumMCPServer()
         assert server.client == mock_rossum_client
@@ -63,7 +63,8 @@ class TestRossumMCPServerInit:
 class TestUploadDocument:
     """Tests for document upload functionality."""
 
-    def test_upload_document_sync_success(self, server: RossumMCPServer, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_upload_document_success(self, server: RossumMCPServer, tmp_path: Path) -> None:
         """Test successful document upload."""
         # Create a test file
         test_file = tmp_path / "test.pdf"
@@ -75,8 +76,8 @@ class TestUploadDocument:
         mock_task.status = "importing"
         server.client.upload_document.return_value = [mock_task]
 
-        # Call the sync method
-        result = server._upload_document_sync(str(test_file), 100)
+        # Call the async method
+        result = await server.upload_document(str(test_file), 100)
 
         # Verify the result
         assert result["task_id"] == 12345
@@ -92,15 +93,16 @@ class TestUploadDocument:
         assert call_args[0][1][0][0] == str(test_file)
         assert call_args[0][1][0][1] == "test.pdf"
 
-    def test_upload_document_sync_file_not_found(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_upload_document_file_not_found(self, server: RossumMCPServer) -> None:
         """Test upload fails when file doesn't exist."""
         with pytest.raises(FileNotFoundError) as exc_info:
-            server._upload_document_sync("/nonexistent/file.pdf", 100)
+            await server.upload_document("/nonexistent/file.pdf", 100)
         assert "File not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_upload_document_async(self, server: RossumMCPServer, tmp_path: Path) -> None:
-        """Test async wrapper for document upload."""
+        """Test async document upload."""
         test_file = tmp_path / "test.pdf"
         test_file.write_text("test content")
 
@@ -119,7 +121,8 @@ class TestUploadDocument:
 class TestGetAnnotation:
     """Tests for annotation retrieval functionality."""
 
-    def test_get_annotation_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_annotation_success(self, server: RossumMCPServer) -> None:
         """Test successful annotation retrieval."""
         # Mock the annotation response
         mock_annotation = Mock()
@@ -135,8 +138,8 @@ class TestGetAnnotation:
 
         server.client.retrieve_annotation.return_value = mock_annotation
 
-        # Call the sync method
-        result = server._get_annotation_sync(67890, sideloads=["content"])
+        # Call the async method
+        result = await server.get_annotation(67890, sideloads=["content"])
 
         # Verify the result
         assert result["id"] == 67890
@@ -147,7 +150,8 @@ class TestGetAnnotation:
         # Verify the client was called correctly
         server.client.retrieve_annotation.assert_called_once_with(67890, ["content"])
 
-    def test_get_annotation_sync_no_sideloads(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_annotation_no_sideloads(self, server: RossumMCPServer) -> None:
         """Test annotation retrieval without sideloads."""
         mock_annotation = Mock()
         mock_annotation.id = 67890
@@ -162,7 +166,7 @@ class TestGetAnnotation:
 
         server.client.retrieve_annotation.return_value = mock_annotation
 
-        result = server._get_annotation_sync(67890, sideloads=())
+        result = await server.get_annotation(67890, sideloads=())
 
         assert result["id"] == 67890
         assert result["content"] is None
@@ -170,7 +174,7 @@ class TestGetAnnotation:
 
     @pytest.mark.asyncio
     async def test_get_annotation_async(self, server: RossumMCPServer) -> None:
-        """Test async wrapper for annotation retrieval."""
+        """Test async annotation retrieval."""
         mock_annotation = Mock()
         mock_annotation.id = 67890
         mock_annotation.status = "confirmed"
@@ -193,7 +197,8 @@ class TestGetAnnotation:
 class TestListAnnotations:
     """Tests for listing annotations functionality."""
 
-    def test_list_annotations_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_list_annotations_success(self, server: RossumMCPServer) -> None:
         """Test successful annotations listing."""
         # Mock the annotations response
         mock_ann1 = Mock()
@@ -212,10 +217,16 @@ class TestListAnnotations:
         mock_ann2.created_at = "2025-01-03T00:00:00Z"
         mock_ann2.modified_at = "2025-01-04T00:00:00Z"
 
-        server.client.list_annotations.return_value = iter([mock_ann1, mock_ann2])
+        # Create async iterator factory that returns a new generator each time
+        async def async_iter():
+            for item in [mock_ann1, mock_ann2]:
+                yield item
 
-        # Call the sync method
-        result = server._list_annotations_sync(100, status="confirmed,to_review")
+        # Replace the AsyncMock method with a regular Mock that returns async iter
+        server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        # Call the async method
+        result = await server.list_annotations(100, status="confirmed,to_review")
 
         # Verify the result
         assert result["count"] == 2
@@ -228,11 +239,19 @@ class TestListAnnotations:
         # Verify the client was called correctly
         server.client.list_annotations.assert_called_once_with(queue=100, page_size=100, status="confirmed,to_review")
 
-    def test_list_annotations_sync_no_status_filter(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_list_annotations_no_status_filter(self, server: RossumMCPServer) -> None:
         """Test annotations listing without status filter."""
-        server.client.list_annotations.return_value = iter([])
 
-        result = server._list_annotations_sync(100, status=None)
+        # Create empty async iterator factory
+        async def async_iter():
+            return
+            yield  # This line never executes but makes this a generator
+
+        # Replace the AsyncMock method with a regular Mock that returns async iter
+        server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_annotations(100, status=None)
 
         assert result["count"] == 0
         assert result["results"] == []
@@ -240,7 +259,7 @@ class TestListAnnotations:
 
     @pytest.mark.asyncio
     async def test_list_annotations_async(self, server: RossumMCPServer) -> None:
-        """Test async wrapper for listing annotations."""
+        """Test async listing of annotations."""
         mock_ann = Mock()
         mock_ann.id = 1
         mock_ann.status = "confirmed"
@@ -249,7 +268,12 @@ class TestListAnnotations:
         mock_ann.created_at = "2025-01-01T00:00:00Z"
         mock_ann.modified_at = "2025-01-02T00:00:00Z"
 
-        server.client.list_annotations.return_value = iter([mock_ann])
+        # Create async iterator factory
+        async def async_iter():
+            yield mock_ann
+
+        # Replace the AsyncMock method with a regular Mock that returns async iter
+        server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
 
         result = await server.list_annotations(100)
 
@@ -260,7 +284,8 @@ class TestListAnnotations:
 class TestGetQueue:
     """Tests for queue retrieval functionality."""
 
-    def test_get_queue_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_success(self, server: RossumMCPServer) -> None:
         """Test successful queue retrieval."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -275,7 +300,7 @@ class TestGetQueue:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = server._get_queue_sync(100)
+        result = await server.get_queue(100)
 
         assert result["id"] == 100
         assert result["name"] == "Test Queue"
@@ -286,7 +311,7 @@ class TestGetQueue:
 
     @pytest.mark.asyncio
     async def test_get_queue_async(self, server: RossumMCPServer) -> None:
-        """Test async wrapper for queue retrieval."""
+        """Test async queue retrieval."""
         mock_queue = Mock()
         mock_queue.id = 100
         mock_queue.name = "Test Queue"
@@ -309,7 +334,8 @@ class TestGetQueue:
 class TestGetSchema:
     """Tests for schema retrieval functionality."""
 
-    def test_get_schema_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_schema_success(self, server: RossumMCPServer) -> None:
         """Test successful schema retrieval."""
         mock_schema = Mock()
         mock_schema.id = 50
@@ -319,7 +345,7 @@ class TestGetSchema:
 
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = server._get_schema_sync(50)
+        result = await server.get_schema(50)
 
         assert result["id"] == 50
         assert result["name"] == "Test Schema"
@@ -329,7 +355,7 @@ class TestGetSchema:
 
     @pytest.mark.asyncio
     async def test_get_schema_async(self, server: RossumMCPServer) -> None:
-        """Test async wrapper for schema retrieval."""
+        """Test async schema retrieval."""
         mock_schema = Mock()
         mock_schema.id = 50
         mock_schema.name = "Test Schema"
@@ -347,7 +373,8 @@ class TestGetSchema:
 class TestGetQueueSchema:
     """Tests for combined queue and schema retrieval functionality."""
 
-    def test_get_queue_schema_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_schema_success(self, server: RossumMCPServer) -> None:
         """Test successful queue schema retrieval."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -363,7 +390,7 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = server._get_queue_schema_sync(100)
+        result = await server.get_queue_schema(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -374,7 +401,8 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.assert_called_once_with(100)
         server.client.retrieve_schema.assert_called_once_with(50)
 
-    def test_get_queue_schema_sync_with_trailing_slash(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_schema_with_trailing_slash(self, server: RossumMCPServer) -> None:
         """Test queue schema retrieval with trailing slash in schema URL."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -390,14 +418,14 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = server._get_queue_schema_sync(100)
+        result = await server.get_queue_schema(100)
 
         assert result["schema_id"] == 50
         server.client.retrieve_schema.assert_called_once_with(50)
 
     @pytest.mark.asyncio
     async def test_get_queue_schema_async(self, server: RossumMCPServer) -> None:
-        """Test async wrapper for queue schema retrieval."""
+        """Test async queue schema retrieval."""
         mock_queue = Mock()
         mock_queue.id = 100
         mock_queue.name = "Test Queue"
@@ -422,7 +450,8 @@ class TestGetQueueSchema:
 class TestGetQueueEngine:
     """Tests for combined queue and engine retrieval functionality."""
 
-    def test_get_queue_engine_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_success(self, server: RossumMCPServer) -> None:
         """Test successful queue engine retrieval."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -439,7 +468,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -450,7 +479,8 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.assert_called_once_with(100)
         server.client.retrieve_engine.assert_called_once_with(15)
 
-    def test_get_queue_engine_sync_dedicated_engine(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_dedicated_engine(self, server: RossumMCPServer) -> None:
         """Test queue engine retrieval with dedicated engine."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -467,13 +497,14 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["engine_id"] == 20
         assert result["engine_type"] == "dedicated"
         server.client.retrieve_engine.assert_called_once_with(20)
 
-    def test_get_queue_engine_sync_generic_engine(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_generic_engine(self, server: RossumMCPServer) -> None:
         """Test queue engine retrieval with generic engine."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -490,13 +521,14 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["engine_id"] == 25
         assert result["engine_type"] == "generic"
         server.client.retrieve_engine.assert_called_once_with(25)
 
-    def test_get_queue_engine_sync_no_engine(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_no_engine(self, server: RossumMCPServer) -> None:
         """Test queue engine retrieval when no engine is assigned."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -507,7 +539,7 @@ class TestGetQueueEngine:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -520,7 +552,8 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.assert_called_once_with(100)
         server.client.retrieve_engine.assert_not_called()
 
-    def test_get_queue_engine_sync_with_trailing_slash(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_with_trailing_slash(self, server: RossumMCPServer) -> None:
         """Test queue engine retrieval with trailing slash in engine URL."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -537,12 +570,13 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["engine_id"] == 15
         server.client.retrieve_engine.assert_called_once_with(15)
 
-    def test_get_queue_engine_sync_with_embedded_dict(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_with_embedded_dict(self, server: RossumMCPServer) -> None:
         """Test queue engine retrieval when engine is embedded as a dict."""
         mock_queue = Mock()
         mock_queue.id = 100
@@ -554,6 +588,7 @@ class TestGetQueueEngine:
             "url": "https://api.test.rossum.ai/v1/engines/18",
             "type": "custom",
             "learning_enabled": True,
+            "training_queues": ["https://api.test.rossum.ai/v1/queues/666"],
             "description": "Test embedded engine",
             "agenda_id": "test-agenda",
         }
@@ -562,7 +597,7 @@ class TestGetQueueEngine:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = server._get_queue_engine_sync(100)
+        result = await server.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -603,7 +638,8 @@ class TestGetQueueEngine:
 class TestCreateQueue:
     """Tests for queue creation functionality."""
 
-    def test_create_queue_sync_success(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_create_queue_success(self, server: RossumMCPServer) -> None:
         """Test successful queue creation with schema and engine."""
         # Mock the queue creation response
         mock_queue = Mock()
@@ -622,8 +658,8 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        # Call the sync method
-        result = server._create_queue_sync(
+        # Call the async method
+        result = await server.create_queue(
             name="New Test Queue",
             workspace_id=1,
             schema_id=50,
@@ -651,7 +687,8 @@ class TestCreateQueue:
         assert call_args["automation_enabled"] is True
         assert call_args["automation_level"] == "always"
 
-    def test_create_queue_sync_minimal_params(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_create_queue_minimal_params(self, server: RossumMCPServer) -> None:
         """Test queue creation with minimal required parameters."""
         mock_queue = Mock()
         mock_queue.id = 201
@@ -669,7 +706,7 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        result = server._create_queue_sync(
+        result = await server.create_queue(
             name="Minimal Queue",
             workspace_id=2,
             schema_id=60,
@@ -684,7 +721,8 @@ class TestCreateQueue:
         assert call_args["automation_enabled"] is False
         assert call_args["training_enabled"] is True
 
-    def test_create_queue_sync_with_all_options(self, server: RossumMCPServer) -> None:
+    @pytest.mark.asyncio
+    async def test_create_queue_with_all_options(self, server: RossumMCPServer) -> None:
         """Test queue creation with all optional parameters."""
         mock_queue = Mock()
         mock_queue.id = 202
@@ -702,7 +740,7 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        result = server._create_queue_sync(
+        result = await server.create_queue(
             name="Full Queue",
             workspace_id=3,
             schema_id=70,
@@ -790,9 +828,10 @@ class TestUpdateEngine:
         ]
         mock_updated_engine.description = "Updated training queues"
 
-        # Use AsyncMock for async methods
-        server.client.internal_client.update = AsyncMock(return_value=mock_updated_engine_data)
-        server.client._deserializer = AsyncMock(return_value=mock_updated_engine)
+        # Use AsyncMock for async methods, Mock for sync methods
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock(return_value=mock_updated_engine_data)
+        server.client._deserializer = Mock(return_value=mock_updated_engine)
 
         engine_data = {
             "training_queues": [
@@ -809,8 +848,8 @@ class TestUpdateEngine:
         assert "https://api.test.rossum.ai/v1/queues/12345" in result["training_queues"]
         assert "updated successfully" in result["message"].lower()
 
-        # Verify the internal client was called correctly
-        server.client.internal_client.update.assert_called_once_with(Resource.Engine, 36032, engine_data)
+        # Verify the http client was called correctly
+        server.client._http_client.update.assert_called_once_with(Resource.Engine, 36032, engine_data)
 
     @pytest.mark.asyncio
     async def test_update_engine_learning_enabled(self, server: RossumMCPServer) -> None:
@@ -835,9 +874,10 @@ class TestUpdateEngine:
         mock_updated_engine.training_queues = []
         mock_updated_engine.description = ""
 
-        # Use AsyncMock for async methods
-        server.client.internal_client.update = AsyncMock(return_value=mock_updated_engine_data)
-        server.client._deserializer = AsyncMock(return_value=mock_updated_engine)
+        # Use AsyncMock for async methods, Mock for sync methods
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock(return_value=mock_updated_engine_data)
+        server.client._deserializer = Mock(return_value=mock_updated_engine)
 
         engine_data = {"learning_enabled": False}
 
@@ -874,9 +914,10 @@ class TestCreateEngine:
         mock_created_engine.type = "extractor"
         mock_created_engine.organization = "https://api.test.rossum.ai/v1/organizations/1"
 
-        # Use AsyncMock for async methods
-        server.client.internal_client.create = AsyncMock(return_value=mock_created_engine_data)
-        server.client._deserializer = AsyncMock(return_value=mock_created_engine)
+        # Use AsyncMock for async methods, Mock for sync methods
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(return_value=mock_created_engine_data)
+        server.client._deserializer = Mock(return_value=mock_created_engine)
 
         result = await server.create_engine(name="Test Extractor Engine", organization_id=1, engine_type="extractor")
 
@@ -884,12 +925,13 @@ class TestCreateEngine:
         assert result["id"] == 100
         assert result["name"] == "Test Extractor Engine"
         assert result["type"] == "extractor"
-        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/1"
+        # The organization URL comes from base_url which doesn't include /v1
+        assert result["organization"] == "https://api.test.rossum.ai/organizations/1"
         assert "created successfully" in result["message"].lower()
 
-        # Verify the internal client was called correctly
-        server.client.internal_client.create.assert_called_once()
-        call_args = server.client.internal_client.create.call_args
+        # Verify the http client was called correctly
+        server.client._http_client.create.assert_called_once()
+        call_args = server.client._http_client.create.call_args
         assert call_args[0][0] == Resource.Engine
         engine_data = call_args[0][1]
         assert engine_data["name"] == "Test Extractor Engine"
@@ -918,9 +960,10 @@ class TestCreateEngine:
         mock_created_engine.type = "splitter"
         mock_created_engine.organization = "https://api.test.rossum.ai/v1/organizations/2"
 
-        # Use AsyncMock for async methods
-        server.client.internal_client.create = AsyncMock(return_value=mock_created_engine_data)
-        server.client._deserializer = AsyncMock(return_value=mock_created_engine)
+        # Use AsyncMock for async methods, Mock for sync methods
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(return_value=mock_created_engine_data)
+        server.client._deserializer = Mock(return_value=mock_created_engine)
 
         result = await server.create_engine(name="Test Splitter Engine", organization_id=2, engine_type="splitter")
 
@@ -930,9 +973,9 @@ class TestCreateEngine:
         assert result["type"] == "splitter"
         assert "created successfully" in result["message"].lower()
 
-        # Verify the internal client was called correctly
-        server.client.internal_client.create.assert_called_once()
-        call_args = server.client.internal_client.create.call_args
+        # Verify the http client was called correctly
+        server.client._http_client.create.assert_called_once()
+        call_args = server.client._http_client.create.call_args
         engine_data = call_args[0][1]
         assert engine_data["type"] == "splitter"
 
@@ -948,8 +991,9 @@ class TestCreateEngine:
     @pytest.mark.asyncio
     async def test_create_engine_api_error(self, server: RossumMCPServer) -> None:
         """Test that API errors are properly propagated."""
-        # Mock the internal client to raise an exception
-        server.client.internal_client.create = AsyncMock(side_effect=Exception("API Error: Permission denied"))
+        # Mock the http client to raise an exception
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(side_effect=Exception("API Error: Permission denied"))
 
         with pytest.raises(Exception) as exc_info:
             await server.create_engine(name="Test Engine", organization_id=1, engine_type="extractor")
