@@ -110,4 +110,5 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
             "unicodedata",
         ],
         stream_outputs=stream_outputs,
+        max_steps=50,
     )
