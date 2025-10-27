@@ -49,6 +49,7 @@ tests = [
     "coverage>=7.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
 ]
 # All dependencies
 all = [
@@ -59,6 +60,7 @@ all = [
     "plotly>=6.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "pyyaml>=6.0",
     "requests>=2.32",
     "seaborn>=0.13.2",
@@ -75,3 +77,12 @@ packages = [
     "rossum_mcp",
     "rossum_agent"
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: Unit tests that test individual functions/methods in isolation",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

@@ -1015,3 +1015,637 @@ class TestMCPHandlers:
         # Verify the server has request handlers registered
         assert hasattr(server.server, "request_handlers")
         assert len(server.server.request_handlers) > 0
+
+
+@pytest.mark.unit
+class TestUploadDocumentErrorHandling:
+    """Tests for upload_document error handling."""
+
+    @pytest.mark.asyncio
+    async def test_upload_document_keyerror(self, server: RossumMCPServer, tmp_path: Path) -> None:
+        """Test upload_document handles KeyError from API."""
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        # Mock API to raise KeyError
+        server.client.upload_document.side_effect = KeyError("missing_key")
+
+        with pytest.raises(ValueError) as exc_info:
+            await server.upload_document(str(test_file), 100)
+
+        assert "API response missing expected key" in str(exc_info.value)
+        assert "queue_id (100)" in str(exc_info.value)
+        assert "invalid or you don't have access" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_upload_document_indexerror(self, server: RossumMCPServer, tmp_path: Path) -> None:
+        """Test upload_document handles IndexError from API."""
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        # Mock API to return empty list
+        server.client.upload_document.return_value = []
+
+        with pytest.raises(ValueError) as exc_info:
+            await server.upload_document(str(test_file), 100)
+
+        assert "no tasks were created" in str(exc_info.value)
+        assert "queue_id (100) is invalid" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_upload_document_generic_exception(self, server: RossumMCPServer, tmp_path: Path) -> None:
+        """Test upload_document handles generic exceptions."""
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        # Mock API to raise generic exception
+        server.client.upload_document.side_effect = RuntimeError("Network timeout")
+
+        with pytest.raises(ValueError) as exc_info:
+            await server.upload_document(str(test_file), 100)
+
+        assert "Document upload failed" in str(exc_info.value)
+        assert "RuntimeError" in str(exc_info.value)
+        assert "Network timeout" in str(exc_info.value)
+
+
+@pytest.mark.unit
+class TestUpdateQueue:
+    """Tests for queue update functionality."""
+
+    @pytest.mark.asyncio
+    async def test_update_queue_automation_settings(self, server: RossumMCPServer) -> None:
+        """Test updating queue automation settings."""
+        mock_updated_queue_data = {
+            "id": 100,
+            "name": "Test Queue",
+            "url": "https://api.test.rossum.ai/v1/queues/100",
+            "automation_enabled": True,
+            "automation_level": "auto_if_confident",
+            "default_score_threshold": 0.90,
+            "locale": "en_GB",
+            "training_enabled": True,
+        }
+
+        mock_updated_queue = Mock()
+        mock_updated_queue.id = 100
+        mock_updated_queue.name = "Test Queue"
+        mock_updated_queue.url = "https://api.test.rossum.ai/v1/queues/100"
+        mock_updated_queue.automation_enabled = True
+        mock_updated_queue.automation_level = "auto_if_confident"
+        mock_updated_queue.default_score_threshold = 0.90
+        mock_updated_queue.locale = "en_GB"
+        mock_updated_queue.training_enabled = True
+
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock()
+        server.client._http_client.update.update = AsyncMock(return_value=mock_updated_queue_data)
+        server.client._deserializer = Mock(return_value=mock_updated_queue)
+
+        queue_data = {
+            "automation_enabled": True,
+            "automation_level": "auto_if_confident",
+            "default_score_threshold": 0.90,
+        }
+
+        result = await server.update_queue(queue_id=100, queue_data=queue_data)
+
+        assert result["id"] == 100
+        assert result["automation_enabled"] is True
+        assert result["automation_level"] == "auto_if_confident"
+        assert result["default_score_threshold"] == 0.90
+        assert "updated successfully" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_update_queue_name(self, server: RossumMCPServer) -> None:
+        """Test updating queue name."""
+        mock_updated_queue_data = {
+            "id": 101,
+            "name": "Renamed Queue",
+            "url": "https://api.test.rossum.ai/v1/queues/101",
+            "automation_enabled": False,
+            "automation_level": "never",
+            "default_score_threshold": 0.80,
+            "locale": "en_US",
+            "training_enabled": False,
+        }
+
+        mock_updated_queue = Mock()
+        mock_updated_queue.id = 101
+        mock_updated_queue.name = "Renamed Queue"
+        mock_updated_queue.url = "https://api.test.rossum.ai/v1/queues/101"
+        mock_updated_queue.automation_enabled = False
+        mock_updated_queue.automation_level = "never"
+        mock_updated_queue.default_score_threshold = 0.80
+        mock_updated_queue.locale = "en_US"
+        mock_updated_queue.training_enabled = False
+
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock()
+        server.client._http_client.update.update = AsyncMock(return_value=mock_updated_queue_data)
+        server.client._deserializer = Mock(return_value=mock_updated_queue)
+
+        result = await server.update_queue(queue_id=101, queue_data={"name": "Renamed Queue"})
+
+        assert result["id"] == 101
+        assert result["name"] == "Renamed Queue"
+
+
+@pytest.mark.unit
+class TestUpdateSchema:
+    """Tests for schema update functionality."""
+
+    @pytest.mark.asyncio
+    async def test_update_schema_content(self, server: RossumMCPServer) -> None:
+        """Test updating schema content."""
+        schema_content = [
+            {
+                "category": "section",
+                "id": "invoice_details",
+                "label": "Invoice Details",
+                "children": [
+                    {
+                        "category": "datapoint",
+                        "id": "invoice_id",
+                        "label": "Invoice ID",
+                        "type": "string",
+                        "score_threshold": 0.98,
+                    }
+                ],
+            }
+        ]
+
+        mock_updated_schema_data = {
+            "id": 50,
+            "name": "Updated Schema",
+            "url": "https://api.test.rossum.ai/v1/schemas/50",
+            "content": schema_content,
+        }
+
+        mock_updated_schema = Mock()
+        mock_updated_schema.id = 50
+        mock_updated_schema.name = "Updated Schema"
+        mock_updated_schema.url = "https://api.test.rossum.ai/v1/schemas/50"
+        mock_updated_schema.content = schema_content
+
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock(return_value=mock_updated_schema_data)
+        server.client._deserializer = Mock(return_value=mock_updated_schema)
+
+        result = await server.update_schema(schema_id=50, schema_data={"content": schema_content})
+
+        assert result["id"] == 50
+        assert result["name"] == "Updated Schema"
+        assert result["content"] == schema_content
+        assert "updated successfully" in result["message"].lower()
+
+
+@pytest.mark.unit
+class TestAnnotationWorkflow:
+    """Tests for annotation workflow methods."""
+
+    @pytest.mark.asyncio
+    async def test_start_annotation(self, server: RossumMCPServer) -> None:
+        """Test starting an annotation."""
+        server.client.start_annotation.return_value = None
+
+        result = await server.start_annotation(annotation_id=12345)
+
+        assert result["annotation_id"] == 12345
+        assert "started successfully" in result["message"].lower()
+        assert "reviewing" in result["message"].lower()
+        server.client.start_annotation.assert_called_once_with(12345)
+
+    @pytest.mark.asyncio
+    async def test_bulk_update_annotation_fields(self, server: RossumMCPServer) -> None:
+        """Test bulk updating annotation fields."""
+        operations = [
+            {"op": "replace", "id": 1234, "value": {"content": {"value": "new_value"}}},
+            {"op": "remove", "id": 5678},
+        ]
+
+        server.client.bulk_update_annotation_data.return_value = None
+
+        result = await server.bulk_update_annotation_fields(annotation_id=12345, operations=operations)
+
+        assert result["annotation_id"] == 12345
+        assert result["operations_count"] == 2
+        assert "updated" in result["message"].lower()
+        server.client.bulk_update_annotation_data.assert_called_once_with(12345, operations)
+
+    @pytest.mark.asyncio
+    async def test_confirm_annotation(self, server: RossumMCPServer) -> None:
+        """Test confirming an annotation."""
+        server.client.confirm_annotation.return_value = None
+
+        result = await server.confirm_annotation(annotation_id=12345)
+
+        assert result["annotation_id"] == 12345
+        assert "confirmed successfully" in result["message"].lower()
+        assert "confirmed" in result["message"].lower()
+        server.client.confirm_annotation.assert_called_once_with(12345)
+
+
+@pytest.mark.unit
+class TestCreateSchema:
+    """Tests for schema creation functionality."""
+
+    @pytest.mark.asyncio
+    async def test_create_schema_success(self, server: RossumMCPServer) -> None:
+        """Test successful schema creation."""
+        schema_content = [
+            {
+                "category": "section",
+                "id": "document_info",
+                "label": "Document Information",
+                "children": [
+                    {
+                        "category": "datapoint",
+                        "id": "document_type",
+                        "label": "Document Type",
+                        "type": "enum",
+                        "rir_field_names": [],
+                        "constraints": {"required": False},
+                        "options": [
+                            {"value": "invoice", "label": "Invoice"},
+                            {"value": "receipt", "label": "Receipt"},
+                        ],
+                    }
+                ],
+            }
+        ]
+
+        mock_created_schema = Mock()
+        mock_created_schema.id = 100
+        mock_created_schema.name = "New Schema"
+        mock_created_schema.url = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_created_schema.content = schema_content
+
+        server.client.create_new_schema.return_value = mock_created_schema
+
+        result = await server.create_schema(name="New Schema", content=schema_content)
+
+        assert result["id"] == 100
+        assert result["name"] == "New Schema"
+        assert result["content"] == schema_content
+        assert "created successfully" in result["message"].lower()
+
+        server.client.create_new_schema.assert_called_once()
+        call_args = server.client.create_new_schema.call_args[0][0]
+        assert call_args["name"] == "New Schema"
+        assert call_args["content"] == schema_content
+
+
+@pytest.mark.unit
+class TestCreateEngineField:
+    """Tests for engine field creation functionality."""
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_success(self, server: RossumMCPServer) -> None:
+        """Test successful engine field creation."""
+        mock_created_field_data = {
+            "id": 500,
+            "url": "https://api.test.rossum.ai/v1/engine_fields/500",
+            "engine": "https://api.test.rossum.ai/v1/engines/100",
+            "name": "invoice_id",
+            "label": "Invoice ID",
+            "type": "string",
+            "tabular": False,
+            "multiline": "false",
+            "subtype": None,
+            "pre_trained_field_id": None,
+        }
+
+        mock_created_field = Mock()
+        mock_created_field.id = 500
+        mock_created_field.name = "invoice_id"
+        mock_created_field.label = "Invoice ID"
+        mock_created_field.url = "https://api.test.rossum.ai/v1/engine_fields/500"
+        mock_created_field.type = "string"
+        mock_created_field.engine = "https://api.test.rossum.ai/v1/engines/100"
+        mock_created_field.tabular = False
+        mock_created_field.multiline = "false"
+        mock_created_field.subtype = None
+        mock_created_field.pre_trained_field_id = None
+
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(return_value=mock_created_field_data)
+        server.client._deserializer = Mock(return_value=mock_created_field)
+
+        result = await server.create_engine_field(
+            engine_id=100, name="invoice_id", label="Invoice ID", field_type="string", schema_ids=[50, 60]
+        )
+
+        assert result["id"] == 500
+        assert result["name"] == "invoice_id"
+        assert result["label"] == "Invoice ID"
+        assert result["type"] == "string"
+        assert result["schema_ids"] == [50, 60]
+        assert "created successfully" in result["message"].lower()
+        assert "linked to 2 schema" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_with_options(self, server: RossumMCPServer) -> None:
+        """Test engine field creation with optional parameters."""
+        mock_created_field_data = {
+            "id": 501,
+            "url": "https://api.test.rossum.ai/v1/engine_fields/501",
+            "engine": "https://api.test.rossum.ai/v1/engines/100",
+            "name": "amount_total",
+            "label": "Total Amount",
+            "type": "number",
+            "tabular": True,
+            "multiline": "false",
+            "subtype": "currency",
+            "pre_trained_field_id": "total_amount",
+        }
+
+        mock_created_field = Mock()
+        mock_created_field.id = 501
+        mock_created_field.name = "amount_total"
+        mock_created_field.label = "Total Amount"
+        mock_created_field.url = "https://api.test.rossum.ai/v1/engine_fields/501"
+        mock_created_field.type = "number"
+        mock_created_field.engine = "https://api.test.rossum.ai/v1/engines/100"
+        mock_created_field.tabular = True
+        mock_created_field.multiline = "false"
+        mock_created_field.subtype = "currency"
+        mock_created_field.pre_trained_field_id = "total_amount"
+
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(return_value=mock_created_field_data)
+        server.client._deserializer = Mock(return_value=mock_created_field)
+
+        result = await server.create_engine_field(
+            engine_id=100,
+            name="amount_total",
+            label="Total Amount",
+            field_type="number",
+            schema_ids=[50],
+            tabular=True,
+            subtype="currency",
+            pre_trained_field_id="total_amount",
+        )
+
+        assert result["id"] == 501
+        assert result["tabular"] is True
+        assert result["subtype"] == "currency"
+        assert result["pre_trained_field_id"] == "total_amount"
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_invalid_type(self, server: RossumMCPServer) -> None:
+        """Test that invalid field type raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            await server.create_engine_field(
+                engine_id=100, name="test", label="Test", field_type="invalid", schema_ids=[50]
+            )
+
+        assert "Invalid field_type 'invalid'" in str(exc_info.value)
+        assert "string, number, date, enum" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_empty_schemas(self, server: RossumMCPServer) -> None:
+        """Test that empty schema_ids list raises ValueError."""
+        with pytest.raises(ValueError) as exc_info:
+            await server.create_engine_field(
+                engine_id=100, name="test", label="Test", field_type="string", schema_ids=[]
+            )
+
+        assert "schema_ids cannot be empty" in str(exc_info.value)
+        assert "at least one schema" in str(exc_info.value)
+
+
+@pytest.mark.unit
+class TestIntegration:
+    """Integration tests to cover handler code paths."""
+
+    @pytest.mark.asyncio
+    async def test_full_annotation_workflow_integration(self, server: RossumMCPServer, tmp_path: Path) -> None:
+        """Test full annotation workflow to ensure all routes work together."""
+        # This test exercises many code paths to improve coverage
+
+        # Step 1: Upload a document
+        test_file = tmp_path / "invoice.pdf"
+        test_file.write_text("invoice content")
+
+        mock_task = Mock()
+        mock_task.id = 99999
+        mock_task.status = "importing"
+        server.client.upload_document.return_value = [mock_task]
+
+        upload_result = await server.upload_document(str(test_file), 999)
+        assert upload_result["task_id"] == 99999
+
+        # Step 2: List annotations in the queue
+        async def async_iter():
+            mock_ann = Mock()
+            mock_ann.id = 888
+            mock_ann.status = "to_review"
+            mock_ann.url = "url"
+            mock_ann.document = "doc"
+            mock_ann.created_at = "2025-01-01"
+            mock_ann.modified_at = "2025-01-01"
+            yield mock_ann
+
+        server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
+        list_result = await server.list_annotations(queue_id=999, status="to_review")
+        assert list_result["count"] == 1
+
+        # Step 3: Get annotation with content
+        mock_annotation = Mock()
+        mock_annotation.id = 888
+        mock_annotation.status = "to_review"
+        mock_annotation.url = "url"
+        mock_annotation.schema = "schema"
+        mock_annotation.modifier = None
+        mock_annotation.document = "doc"
+        mock_annotation.content = [{"id": 1234, "schema_id": "invoice_id", "value": "INV-001"}]
+        mock_annotation.created_at = "2025-01-01"
+        mock_annotation.modified_at = "2025-01-01"
+        server.client.retrieve_annotation.return_value = mock_annotation
+
+        annotation_result = await server.get_annotation(888, sideloads=["content"])
+        assert annotation_result["id"] == 888
+
+        # Step 4: Start annotation
+        server.client.start_annotation.return_value = None
+        start_result = await server.start_annotation(888)
+        assert start_result["annotation_id"] == 888
+
+        # Step 5: Update annotation fields
+        server.client.bulk_update_annotation_data.return_value = None
+        operations = [{"op": "replace", "id": 1234, "value": {"content": {"value": "INV-002"}}}]
+        update_result = await server.bulk_update_annotation_fields(888, operations)
+        assert update_result["operations_count"] == 1
+
+        # Step 6: Confirm annotation
+        server.client.confirm_annotation.return_value = None
+        confirm_result = await server.confirm_annotation(888)
+        assert confirm_result["annotation_id"] == 888
+
+    @pytest.mark.asyncio
+    async def test_queue_and_schema_setup_integration(self, server: RossumMCPServer) -> None:
+        """Test queue and schema creation/configuration workflow."""
+        # Create a schema
+        schema_content = [
+            {
+                "category": "section",
+                "id": "invoice_section",
+                "label": "Invoice",
+                "children": [{"category": "datapoint", "id": "invoice_id", "label": "Invoice ID", "type": "string"}],
+            }
+        ]
+
+        mock_schema = Mock()
+        mock_schema.id = 777
+        mock_schema.name = "Test Schema"
+        mock_schema.url = "url"
+        mock_schema.content = schema_content
+        server.client.create_new_schema.return_value = mock_schema
+
+        schema_result = await server.create_schema("Test Schema", schema_content)
+        assert schema_result["id"] == 777
+
+        # Create a queue with the schema
+        mock_queue = Mock()
+        mock_queue.id = 666
+        mock_queue.name = "Test Queue"
+        mock_queue.url = "url"
+        mock_queue.workspace = "ws"
+        mock_queue.schema = f"schema/{schema_result['id']}"
+        mock_queue.engine = None
+        mock_queue.inbox = None
+        mock_queue.connector = None
+        mock_queue.locale = "en_GB"
+        mock_queue.automation_enabled = False
+        mock_queue.automation_level = "never"
+        mock_queue.training_enabled = True
+        server.client.create_new_queue.return_value = mock_queue
+
+        queue_result = await server.create_queue("Test Queue", workspace_id=1, schema_id=777)
+        assert queue_result["id"] == 666
+
+        # Get queue details
+        server.client.retrieve_queue.return_value = mock_queue
+        get_queue_result = await server.get_queue(666)
+        assert get_queue_result["id"] == 666
+
+        # Update queue settings
+        server.client._http_client = AsyncMock()
+        server.client._http_client.update = AsyncMock()
+        server.client._http_client.update.update = AsyncMock(
+            return_value={
+                "id": 666,
+                "name": "Updated Queue",
+                "url": "url",
+                "automation_enabled": True,
+                "automation_level": "always",
+                "default_score_threshold": 0.95,
+                "locale": "en_GB",
+                "training_enabled": True,
+            }
+        )
+        mock_updated_queue = Mock()
+        mock_updated_queue.id = 666
+        mock_updated_queue.name = "Updated Queue"
+        mock_updated_queue.url = "url"
+        mock_updated_queue.automation_enabled = True
+        mock_updated_queue.automation_level = "always"
+        mock_updated_queue.default_score_threshold = 0.95
+        mock_updated_queue.locale = "en_GB"
+        mock_updated_queue.training_enabled = True
+        server.client._deserializer = Mock(return_value=mock_updated_queue)
+
+        update_queue_result = await server.update_queue(
+            666, {"automation_enabled": True, "automation_level": "always"}
+        )
+        assert update_queue_result["automation_enabled"] is True
+
+    @pytest.mark.asyncio
+    async def test_engine_creation_and_field_setup_integration(self, server: RossumMCPServer) -> None:
+        """Test engine creation and field configuration workflow."""
+        # Create an engine
+        server.client._http_client = AsyncMock()
+        server.client._http_client.create = AsyncMock(
+            return_value={
+                "id": 555,
+                "name": "Test Engine",
+                "url": "url",
+                "type": "extractor",
+                "organization": "org",
+                "learning_enabled": True,
+                "training_queues": [],
+                "description": "",
+            }
+        )
+        mock_engine = Mock()
+        mock_engine.id = 555
+        mock_engine.name = "Test Engine"
+        mock_engine.url = "url"
+        mock_engine.type = "extractor"
+        mock_engine.organization = "org"
+        server.client._deserializer = Mock(return_value=mock_engine)
+
+        engine_result = await server.create_engine("Test Engine", organization_id=1, engine_type="extractor")
+        assert engine_result["id"] == 555
+
+        # Create engine fields
+        server.client._http_client.create = AsyncMock(
+            return_value={
+                "id": 444,
+                "name": "invoice_id",
+                "label": "Invoice ID",
+                "url": "url",
+                "type": "string",
+                "engine": "eng",
+                "tabular": False,
+                "multiline": "false",
+                "subtype": None,
+                "pre_trained_field_id": None,
+            }
+        )
+        mock_field = Mock()
+        mock_field.id = 444
+        mock_field.name = "invoice_id"
+        mock_field.label = "Invoice ID"
+        mock_field.url = "url"
+        mock_field.type = "string"
+        mock_field.engine = "eng"
+        mock_field.tabular = False
+        mock_field.multiline = "false"
+        mock_field.subtype = None
+        mock_field.pre_trained_field_id = None
+        server.client._deserializer = Mock(return_value=mock_field)
+
+        field_result = await server.create_engine_field(
+            engine_id=555, name="invoice_id", label="Invoice ID", field_type="string", schema_ids=[777]
+        )
+        assert field_result["id"] == 444
+
+        # Update engine settings
+        server.client._http_client.update = AsyncMock(
+            return_value={
+                "id": 555,
+                "name": "Test Engine",
+                "url": "url",
+                "type": "extractor",
+                "learning_enabled": False,
+                "training_queues": ["queue1", "queue2"],
+                "description": "Updated",
+                "agenda_id": "test",
+            }
+        )
+        mock_updated_engine = Mock()
+        mock_updated_engine.id = 555
+        mock_updated_engine.name = "Test Engine"
+        mock_updated_engine.url = "url"
+        mock_updated_engine.type = "extractor"
+        mock_updated_engine.learning_enabled = False
+        mock_updated_engine.training_queues = ["queue1", "queue2"]
+        mock_updated_engine.description = "Updated"
+        server.client._deserializer = Mock(return_value=mock_updated_engine)
+
+        update_engine_result = await server.update_engine(
+            555, {"learning_enabled": False, "training_queues": ["queue1", "queue2"]}
+        )
+        assert update_engine_result["learning_enabled"] is False
