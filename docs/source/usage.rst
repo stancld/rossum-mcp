@@ -30,14 +30,30 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
      "mcpServers": {
        "rossum": {
          "command": "python",
-         "args": ["/path/to/rossum-mcp/server.py"],
+         "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
          "env": {
            "ROSSUM_API_TOKEN": "your-api-token",
-           "ROSSUM_API_BASE_URL": "https://api.elis.develop.r8.lol/v1"
+           "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1"
          }
        }
      }
    }
+
+Running the AI Agent
+--------------------
+
+The ``rossum_agent`` package provides CLI and web interfaces:
+
+.. code-block:: bash
+
+   # CLI interface
+   rossum-agent
+
+   # Streamlit web UI
+   streamlit run rossum_agent/app.py
+
+The agent includes file system tools, plotting capabilities, and Rossum integration.
+See the :doc:`examples` section for complete workflows.
 
 Using with Smolagents
 ---------------------

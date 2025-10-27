@@ -307,7 +307,7 @@ Authentication
 The server uses token-based authentication configured via environment variables:
 
 * ``ROSSUM_API_TOKEN``: Your Rossum API authentication token
-* ``ROSSUM_API_BASE_URL``: The Rossum API base URL (e.g., https://api.elis.develop.r8.lol/v1)
+* ``ROSSUM_API_BASE_URL``: The Rossum API base URL (e.g., https://api.elis.rossum.ai/v1)
 
 The token is passed to the SDK client as:
 

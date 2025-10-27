@@ -25,45 +25,82 @@ Rossum MCP Server Documentation
 Welcome to Rossum MCP Server
 -----------------------------
 
-A Model Context Protocol (MCP) server that provides tools for uploading documents
-and retrieving annotations using the Rossum API. Built with Python and the official
-`rossum-sdk <https://github.com/rossumai/rossum-sdk>`_.
+A Model Context Protocol (MCP) server and AI agent toolkit for intelligent document processing with Rossum.
+Upload documents, extract data with AI, and create visualizations - all through simple conversational prompts.
+
+Built with Python and the official `rossum-sdk <https://github.com/rossumai/rossum-sdk>`_.
 
 Features
 --------
 
-**MCP Tools:**
+The MCP server provides **17 tools** organized into three categories:
 
-* **upload_document**: Upload a document to Rossum for processing
-* **get_annotation**: Retrieve annotation data for a previously uploaded document
-* **list_annotations**: List all annotations for a queue with optional filtering
-* **get_queue**: Retrieve queue details including schema_id
-* **get_schema**: Retrieve schema details and content
-* **get_queue_schema**: Retrieve complete schema for a queue in a single call
+**Document Processing**
 
-**Examples and Extensions**
+* **upload_document** - Upload documents for AI extraction
+* **get_annotation** - Retrieve extracted data and status
+* **list_annotations** - List all annotations with filtering
+* **start_annotation** - Start annotation for field updates
+* **bulk_update_annotation_fields** - Update field values with JSON Patch
+* **confirm_annotation** - Confirm and finalize annotations
 
-The documentation includes examples demonstrating how to build downstream tools that work with Rossum data:
+**Queue & Schema Management**
 
-* Plotting tool for data visualization (bar, line, pie, scatter, heatmap charts)
-* Integration patterns for AI agents (smolagents)
-* Templates for building custom processing tools
-* See the :doc:`examples` section for details
+* **get_queue**, **get_schema**, **get_queue_schema** - Retrieve configuration
+* **get_queue_engine** - Get engine information
+* **create_queue**, **create_schema** - Create new queues and schemas
+* **update_queue**, **update_schema** - Configure automation thresholds
+
+**Engine Management**
+
+* **create_engine** - Create extraction or splitting engines
+* **update_engine** - Configure learning and training queues
+* **create_engine_field** - Define engine fields and link to schemas
+
+**AI Agent Toolkit**
+
+The ``rossum_agent`` package provides additional capabilities:
+
+* File system tools for document management
+* Data visualization and plotting tools (bar, line, pie, scatter, heatmap charts)
+* Integration with AI agent frameworks (smolagents)
+* CLI and Streamlit web interfaces
+* See the :doc:`examples` section for complete workflows
 
 Quick Start
 -----------
 
-Install the package with documentation dependencies:
+**Prerequisites:** Python 3.10+, Rossum account with API credentials
 
 .. code-block:: bash
 
-   pip install -e ".[docs]"
+   git clone https://github.com/stancld/rossum-mcp.git
+   cd rossum-mcp
+
+   # Install both packages with all features
+   pip install -e "rossum_mcp[all]" -e "rossum_agent[all]"
+
+   # Set up environment variables
+   export ROSSUM_API_TOKEN="your-api-token"
+   export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 
 Run the MCP server:
 
 .. code-block:: bash
 
-   python -m rossum_mcp.server
+   rossum-mcp
+
+Run the AI agent:
+
+.. code-block:: bash
+
+   # CLI interface
+   rossum-agent
+
+   # Streamlit web UI
+   streamlit run rossum_agent/app.py
+
+For detailed installation options, see :doc:`installation`
 
 Indices and tables
 ==================

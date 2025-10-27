@@ -8,10 +8,10 @@ Prerequisites
 * Rossum account with API credentials
 * A Rossum queue ID
 
-The repository contains two separate packages:
+This repository contains two packages:
 
-* **rossum-mcp**: MCP server for Rossum SDK interactions
-* **rossum-agent**: AI agent with tools for data manipulation and visualization
+* **rossum_mcp**: MCP server for Rossum API interactions
+* **rossum_agent**: AI agent with data manipulation and visualization tools
 
 Installation Methods
 --------------------
@@ -91,6 +91,6 @@ Set up the required environment variables:
 .. code-block:: bash
 
    export ROSSUM_API_TOKEN="your-api-token"
-   export ROSSUM_API_BASE_URL="https://api.elis.develop.r8.lol/v1"
+   export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 
-Replace the base URL with your organization's base URL if different.
+Replace the base URL with your organization's Rossum instance URL if different.
