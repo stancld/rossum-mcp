@@ -42,6 +42,18 @@ class RossumMCPServer:
 
         self.setup_handlers()
 
+    def _build_resource_url(self, resource_type: str, resource_id: int) -> str:
+        """Build a full URL for a Rossum API resource.
+
+        Args:
+            resource_type: The resource type (e.g., 'workspaces', 'schemas', 'queues')
+            resource_id: The resource ID
+
+        Returns:
+            Full URL string for the resource
+        """
+        return f"{self.base_url}/{resource_type}/{resource_id}"
+
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum.
 
@@ -338,8 +350,8 @@ class RossumMCPServer:
         # Build queue data with required fields
         queue_data: dict = {
             "name": name,
-            "workspace": f"{self.base_url}/workspaces/{workspace_id}",
-            "schema": f"{self.base_url}/schemas/{schema_id}",
+            "workspace": self._build_resource_url("workspaces", workspace_id),
+            "schema": self._build_resource_url("schemas", schema_id),
             "locale": locale,
             "automation_enabled": automation_enabled,
             "automation_level": automation_level,
@@ -348,13 +360,13 @@ class RossumMCPServer:
 
         # Add optional fields if provided
         if engine_id is not None:
-            queue_data["engine"] = f"{self.base_url}/engines/{engine_id}"
+            queue_data["engine"] = self._build_resource_url("engines", engine_id)
 
         if inbox_id is not None:
-            queue_data["inbox"] = f"{self.base_url}/inboxes/{inbox_id}"
+            queue_data["inbox"] = self._build_resource_url("inboxes", inbox_id)
 
         if connector_id is not None:
-            queue_data["connector"] = f"{self.base_url}/connectors/{connector_id}"
+            queue_data["connector"] = self._build_resource_url("connectors", connector_id)
 
         # Create the queue
         queue = await self.client.create_new_queue(queue_data)
@@ -649,7 +661,7 @@ class RossumMCPServer:
 
         engine_data = {
             "name": name,
-            "organization": f"{self.base_url}/organizations/{organization_id}",
+            "organization": self._build_resource_url("organizations", organization_id),
             "type": engine_type,
         }
 
@@ -712,13 +724,13 @@ class RossumMCPServer:
 
         # Prepare engine field data
         engine_field_data = {
-            "engine": f"{self.base_url}/engines/{engine_id}",
+            "engine": self._build_resource_url("engines", engine_id),
             "name": name,
             "label": label,
             "type": field_type,
             "tabular": tabular,
             "multiline": multiline,
-            "schemas": [f"{self.base_url}/schemas/{schema_id}" for schema_id in schema_ids],
+            "schemas": [self._build_resource_url("schemas", schema_id) for schema_id in schema_ids],
         }
 
         # Add optional fields if provided
