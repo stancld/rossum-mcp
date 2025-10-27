@@ -40,6 +40,9 @@ class RossumMCPServer:
 
         self.client = AsyncRossumAPIClient(base_url=self.base_url, credentials=Token(token=self.api_token))
 
+        # Setup tool registry mapping tool names to handler methods
+        self._tool_registry = self._build_tool_registry()
+
         self.setup_handlers()
 
     def _build_resource_url(self, resource_type: str, resource_id: int) -> str:
@@ -53,6 +56,128 @@ class RossumMCPServer:
             Full URL string for the resource
         """
         return f"{self.base_url}/{resource_type}/{resource_id}"
+
+    def _build_tool_registry(self) -> dict:
+        """Build registry mapping tool names to their handler methods.
+
+        Returns:
+            Dictionary mapping tool names to async handler callables
+        """
+        return {
+            "upload_document": self._handle_upload_document,
+            "get_annotation": self._handle_get_annotation,
+            "list_annotations": self._handle_list_annotations,
+            "get_queue": self._handle_get_queue,
+            "get_schema": self._handle_get_schema,
+            "get_queue_schema": self._handle_get_queue_schema,
+            "get_queue_engine": self._handle_get_queue_engine,
+            "create_queue": self._handle_create_queue,
+            "update_queue": self._handle_update_queue,
+            "update_schema": self._handle_update_schema,
+            "update_engine": self._handle_update_engine,
+            "start_annotation": self._handle_start_annotation,
+            "bulk_update_annotation_fields": self._handle_bulk_update_annotation_fields,
+            "confirm_annotation": self._handle_confirm_annotation,
+            "create_schema": self._handle_create_schema,
+            "create_engine": self._handle_create_engine,
+            "create_engine_field": self._handle_create_engine_field,
+        }
+
+    # Tool handler methods - direct argument passing for better type safety
+    async def _handle_upload_document(self, file_path: str, queue_id: int) -> dict:
+        return await self.upload_document(file_path, queue_id)
+
+    async def _handle_get_annotation(self, annotation_id: int, sideloads: Sequence[str] = ()) -> dict:
+        return await self.get_annotation(annotation_id, sideloads=sideloads)
+
+    async def _handle_list_annotations(self, queue_id: int, status: str | None = None) -> dict:
+        return await self.list_annotations(queue_id=queue_id, status=status)
+
+    async def _handle_get_queue(self, queue_id: int) -> dict:
+        return await self.get_queue(queue_id)
+
+    async def _handle_get_schema(self, schema_id: int) -> dict:
+        return await self.get_schema(schema_id)
+
+    async def _handle_get_queue_schema(self, queue_id: int) -> dict:
+        return await self.get_queue_schema(queue_id)
+
+    async def _handle_get_queue_engine(self, queue_id: int) -> dict:
+        return await self.get_queue_engine(queue_id)
+
+    async def _handle_create_queue(
+        self,
+        name: str,
+        workspace_id: int,
+        schema_id: int,
+        engine_id: int | None = None,
+        inbox_id: int | None = None,
+        connector_id: int | None = None,
+        locale: str = "en_GB",
+        automation_enabled: bool = False,
+        automation_level: str = "never",
+        training_enabled: bool = True,
+    ) -> dict:
+        return await self.create_queue(
+            name=name,
+            workspace_id=workspace_id,
+            schema_id=schema_id,
+            engine_id=engine_id,
+            inbox_id=inbox_id,
+            connector_id=connector_id,
+            locale=locale,
+            automation_enabled=automation_enabled,
+            automation_level=automation_level,
+            training_enabled=training_enabled,
+        )
+
+    async def _handle_update_queue(self, queue_id: int, queue_data: dict) -> dict:
+        return await self.update_queue(queue_id=queue_id, queue_data=queue_data)
+
+    async def _handle_update_schema(self, schema_id: int, schema_data: dict) -> dict:
+        return await self.update_schema(schema_id=schema_id, schema_data=schema_data)
+
+    async def _handle_update_engine(self, engine_id: int, engine_data: dict) -> dict:
+        return await self.update_engine(engine_id=engine_id, engine_data=engine_data)
+
+    async def _handle_start_annotation(self, annotation_id: int) -> dict:
+        return await self.start_annotation(annotation_id=annotation_id)
+
+    async def _handle_bulk_update_annotation_fields(self, annotation_id: int, operations: list[dict]) -> dict:
+        return await self.bulk_update_annotation_fields(annotation_id=annotation_id, operations=operations)
+
+    async def _handle_confirm_annotation(self, annotation_id: int) -> dict:
+        return await self.confirm_annotation(annotation_id=annotation_id)
+
+    async def _handle_create_schema(self, name: str, content: list[dict]) -> dict:
+        return await self.create_schema(name=name, content=content)
+
+    async def _handle_create_engine(self, name: str, organization_id: int, engine_type: str) -> dict:
+        return await self.create_engine(name=name, organization_id=organization_id, engine_type=engine_type)
+
+    async def _handle_create_engine_field(
+        self,
+        engine_id: int,
+        name: str,
+        label: str,
+        field_type: str,
+        schema_ids: list[int],
+        tabular: bool = False,
+        multiline: str = "false",
+        subtype: str | None = None,
+        pre_trained_field_id: str | None = None,
+    ) -> dict:
+        return await self.create_engine_field(
+            engine_id=engine_id,
+            name=name,
+            label=label,
+            field_type=field_type,
+            schema_ids=schema_ids,
+            tabular=tabular,
+            multiline=multiline,
+            subtype=subtype,
+            pre_trained_field_id=pre_trained_field_id,
+        )
 
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum.
@@ -759,7 +884,293 @@ class RossumMCPServer:
             "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
         }
 
-    def setup_handlers(self) -> None:  # noqa: C901
+    def _get_tool_definitions(self) -> list[Tool]:
+        """Get list of tool definitions for MCP protocol.
+
+        Returns:
+            List of Tool objects with their schemas and descriptions
+        """
+        return [
+            Tool(
+                name="upload_document",
+                description="Upload a document to Rossum. Returns: task_id, task_status, queue_id, message. Use list_annotations to get annotation ID.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "file_path": {"type": "string", "description": "Absolute path to document file"},
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                    },
+                    "required": ["file_path", "queue_id"],
+                },
+            ),
+            Tool(
+                name="get_annotation",
+                description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "annotation_id": {"type": "integer", "description": "Annotation ID"},
+                        "sideloads": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional sideloads. Use ['content'] for datapoints, otherwise only metadata.",
+                        },
+                    },
+                    "required": ["annotation_id"],
+                },
+            ),
+            Tool(
+                name="list_annotations",
+                description="List annotations for a queue. Returns: count, results array.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: 'importing', 'to_review', 'confirmed', 'exported'. Default: all four.",
+                        },
+                    },
+                    "required": ["queue_id"],
+                },
+            ),
+            Tool(
+                name="get_queue",
+                description="Retrieve queue details. Returns: id, name, url, schema, workspace, inbox, engine.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                    },
+                    "required": ["queue_id"],
+                },
+            ),
+            Tool(
+                name="get_schema",
+                description="Retrieve schema details. Returns: id, name, url, content.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "schema_id": {"type": "integer", "description": "Schema ID"},
+                    },
+                    "required": ["schema_id"],
+                },
+            ),
+            Tool(
+                name="get_queue_schema",
+                description="Retrieve queue schema in one call. Returns: queue_id, queue_name, schema_id, schema_name, schema_url, schema_content.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                    },
+                    "required": ["queue_id"],
+                },
+            ),
+            Tool(
+                name="get_queue_engine",
+                description="Retrieve queue engine info. Returns: queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. None if no engine assigned.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                    },
+                    "required": ["queue_id"],
+                },
+            ),
+            Tool(
+                name="create_queue",
+                description="Create a queue. Returns: id, name, url, workspace, schema, engine, inbox, connector, locale, automation settings, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Queue name"},
+                        "workspace_id": {"type": "integer", "description": "Workspace ID"},
+                        "schema_id": {"type": "integer", "description": "Schema ID"},
+                        "engine_id": {"type": ["integer", "null"], "description": "Optional engine ID"},
+                        "inbox_id": {"type": ["integer", "null"], "description": "Optional inbox ID"},
+                        "connector_id": {"type": ["integer", "null"], "description": "Optional connector ID"},
+                        "locale": {"type": "string", "description": "Locale. Default: 'en_GB'"},
+                        "automation_enabled": {
+                            "type": "boolean",
+                            "description": "Enable automation. Default: false",
+                        },
+                        "automation_level": {
+                            "type": "string",
+                            "description": "Level: 'never', 'always'. Default: 'never'",
+                        },
+                        "training_enabled": {"type": "boolean", "description": "Enable training. Default: true"},
+                    },
+                    "required": ["name", "workspace_id", "schema_id"],
+                },
+            ),
+            Tool(
+                name="update_queue",
+                description="Update queue settings. Returns: updated queue details, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {"type": "integer", "description": "Queue ID"},
+                        "queue_data": {
+                            "type": "object",
+                            "description": "Fields to update: name, automation_enabled, automation_level ('never'/'always'/'confident'), default_score_threshold (0.0-1.0), locale, training_enabled",
+                            "additionalProperties": True,
+                        },
+                    },
+                    "required": ["queue_id", "queue_data"],
+                },
+            ),
+            Tool(
+                name="update_schema",
+                description="Update schema, typically for field-level thresholds. Returns: updated schema details, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "schema_id": {"type": "integer", "description": "Schema ID"},
+                        "schema_data": {
+                            "type": "object",
+                            "description": "Fields to update. Typically 'content' with schema array where fields have 'score_threshold' (0.0-1.0)",
+                            "additionalProperties": True,
+                        },
+                    },
+                    "required": ["schema_id", "schema_data"],
+                },
+            ),
+            Tool(
+                name="update_engine",
+                description="Update engine settings. Returns: updated engine details, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "engine_id": {"type": "integer", "description": "Engine ID"},
+                        "engine_data": {
+                            "type": "object",
+                            "description": "Fields to update: name, description, learning_enabled, training_queues (array of queue URLs)",
+                            "additionalProperties": True,
+                        },
+                    },
+                    "required": ["engine_id", "engine_data"],
+                },
+            ),
+            Tool(
+                name="start_annotation",
+                description="Start annotation (move from 'importing' to 'to_review'). Returns: annotation_id, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "annotation_id": {"type": "integer", "description": "Annotation ID"},
+                    },
+                    "required": ["annotation_id"],
+                },
+            ),
+            Tool(
+                name="bulk_update_annotation_fields",
+                description="Bulk update annotation fields. It can be used after `start_annotation` only. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "annotation_id": {"type": "integer", "description": "Annotation ID"},
+                        "operations": {
+                            "type": "array",
+                            "description": "JSON Patch operations. Format: {'op': 'replace'|'remove', 'id': datapoint_id (int), 'value': {'content': {'value': 'new_value'}}}. Use numeric datapoint ID from annotation.content, NOT schema_id.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "op": {"type": "string", "enum": ["replace", "remove"]},
+                                    "id": {
+                                        "type": "integer",
+                                        "description": "Datapoint ID (numeric) from annotation content",
+                                    },
+                                    "value": {"type": "object"},
+                                },
+                                "required": ["op", "id"],
+                            },
+                        },
+                    },
+                    "required": ["annotation_id", "operations"],
+                },
+            ),
+            Tool(
+                name="confirm_annotation",
+                description="Confirm annotation (move to 'confirmed'). It cane be used after `bulk_update_annotation_fields`. Returns: annotation_id, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "annotation_id": {"type": "integer", "description": "Annotation ID"},
+                    },
+                    "required": ["annotation_id"],
+                },
+            ),
+            Tool(
+                name="create_schema",
+                description="Create a schema. Returns: id, name, url, content, message. Must have ≥1 section with children (datapoints).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Schema name"},
+                        "content": {
+                            "type": "array",
+                            "description": "Schema sections with datapoints. Structure: [{'category': 'section', 'id': 'section_id', 'label': 'Label', 'children': [{'category': 'datapoint', 'id': 'field_id', 'label': 'Label', 'type': 'string'|'enum'|'date'|'number', 'rir_field_names': ['name'], 'constraints': {'required': false}, 'options': [{'value': 'v', 'label': 'L'}]}]}]",
+                            "items": {"type": "object"},
+                        },
+                    },
+                    "required": ["name", "content"],
+                },
+            ),
+            Tool(
+                name="create_engine",
+                description="Create a new engine. Returns: id, name, url, type, organization, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Engine name"},
+                        "organization_id": {"type": "integer", "description": "Organization ID"},
+                        "engine_type": {
+                            "type": "string",
+                            "description": "Engine type: 'extractor' or 'splitter'",
+                            "enum": ["extractor", "splitter"],
+                        },
+                    },
+                    "required": ["name", "organization_id", "engine_type"],
+                },
+            ),
+            Tool(
+                name="create_engine_field",
+                description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, name, label, url, type, engine, tabular, multiline, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "engine_id": {"type": "integer", "description": "Engine ID"},
+                        "name": {"type": "string", "description": "Field name (slug, max 50 chars)"},
+                        "label": {"type": "string", "description": "Human-readable label (max 100 chars)"},
+                        "field_type": {
+                            "type": "string",
+                            "description": "Field type",
+                            "enum": ["string", "number", "date", "enum"],
+                        },
+                        "schema_ids": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "Schema IDs to link (≥1 required)",
+                        },
+                        "tabular": {"type": "boolean", "description": "Is in table? Default: false"},
+                        "multiline": {
+                            "type": "string",
+                            "description": "Multiline: 'true', 'false', ''. Default: 'false'",
+                            "enum": ["true", "false", ""],
+                        },
+                        "subtype": {"type": ["string", "null"], "description": "Optional subtype (max 50 chars)"},
+                        "pre_trained_field_id": {
+                            "type": ["string", "null"],
+                            "description": "Optional pre-trained field ID (max 50 chars)",
+                        },
+                    },
+                    "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
+                },
+            ),
+        ]
+
+    def setup_handlers(self) -> None:
         """Setup MCP protocol handlers.
 
         Registers the list_tools and call_tool handlers for the MCP server.
@@ -771,371 +1182,20 @@ class RossumMCPServer:
 
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
-            return [
-                Tool(
-                    name="upload_document",
-                    description="Upload a document to Rossum. Returns: task_id, task_status, queue_id, message. Use list_annotations to get annotation ID.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "file_path": {"type": "string", "description": "Absolute path to document file"},
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                        },
-                        "required": ["file_path", "queue_id"],
-                    },
-                ),
-                Tool(
-                    name="get_annotation",
-                    description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
-                            "sideloads": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Optional sideloads. Use ['content'] for datapoints, otherwise only metadata.",
-                            },
-                        },
-                        "required": ["annotation_id"],
-                    },
-                ),
-                Tool(
-                    name="list_annotations",
-                    description="List annotations for a queue. Returns: count, results array.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                            "status": {
-                                "type": "string",
-                                "description": "Filter by status: 'importing', 'to_review', 'confirmed', 'exported'. Default: all four.",
-                            },
-                        },
-                        "required": ["queue_id"],
-                    },
-                ),
-                Tool(
-                    name="get_queue",
-                    description="Retrieve queue details. Returns: id, name, url, schema, workspace, inbox, engine.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                        },
-                        "required": ["queue_id"],
-                    },
-                ),
-                Tool(
-                    name="get_schema",
-                    description="Retrieve schema details. Returns: id, name, url, content.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "schema_id": {"type": "integer", "description": "Schema ID"},
-                        },
-                        "required": ["schema_id"],
-                    },
-                ),
-                Tool(
-                    name="get_queue_schema",
-                    description="Retrieve queue schema in one call. Returns: queue_id, queue_name, schema_id, schema_name, schema_url, schema_content.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                        },
-                        "required": ["queue_id"],
-                    },
-                ),
-                Tool(
-                    name="get_queue_engine",
-                    description="Retrieve queue engine info. Returns: queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. None if no engine assigned.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                        },
-                        "required": ["queue_id"],
-                    },
-                ),
-                Tool(
-                    name="create_queue",
-                    description="Create a queue. Returns: id, name, url, workspace, schema, engine, inbox, connector, locale, automation settings, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string", "description": "Queue name"},
-                            "workspace_id": {"type": "integer", "description": "Workspace ID"},
-                            "schema_id": {"type": "integer", "description": "Schema ID"},
-                            "engine_id": {"type": ["integer", "null"], "description": "Optional engine ID"},
-                            "inbox_id": {"type": ["integer", "null"], "description": "Optional inbox ID"},
-                            "connector_id": {"type": ["integer", "null"], "description": "Optional connector ID"},
-                            "locale": {"type": "string", "description": "Locale. Default: 'en_GB'"},
-                            "automation_enabled": {
-                                "type": "boolean",
-                                "description": "Enable automation. Default: false",
-                            },
-                            "automation_level": {
-                                "type": "string",
-                                "description": "Level: 'never', 'always'. Default: 'never'",
-                            },
-                            "training_enabled": {"type": "boolean", "description": "Enable training. Default: true"},
-                        },
-                        "required": ["name", "workspace_id", "schema_id"],
-                    },
-                ),
-                Tool(
-                    name="update_queue",
-                    description="Update queue settings. Returns: updated queue details, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "queue_id": {"type": "integer", "description": "Queue ID"},
-                            "queue_data": {
-                                "type": "object",
-                                "description": "Fields to update: name, automation_enabled, automation_level ('never'/'always'/'confident'), default_score_threshold (0.0-1.0), locale, training_enabled",
-                                "additionalProperties": True,
-                            },
-                        },
-                        "required": ["queue_id", "queue_data"],
-                    },
-                ),
-                Tool(
-                    name="update_schema",
-                    description="Update schema, typically for field-level thresholds. Returns: updated schema details, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "schema_id": {"type": "integer", "description": "Schema ID"},
-                            "schema_data": {
-                                "type": "object",
-                                "description": "Fields to update. Typically 'content' with schema array where fields have 'score_threshold' (0.0-1.0)",
-                                "additionalProperties": True,
-                            },
-                        },
-                        "required": ["schema_id", "schema_data"],
-                    },
-                ),
-                Tool(
-                    name="update_engine",
-                    description="Update engine settings. Returns: updated engine details, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "engine_id": {"type": "integer", "description": "Engine ID"},
-                            "engine_data": {
-                                "type": "object",
-                                "description": "Fields to update: name, description, learning_enabled, training_queues (array of queue URLs)",
-                                "additionalProperties": True,
-                            },
-                        },
-                        "required": ["engine_id", "engine_data"],
-                    },
-                ),
-                Tool(
-                    name="start_annotation",
-                    description="Start annotation (move from 'importing' to 'to_review'). Returns: annotation_id, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
-                        },
-                        "required": ["annotation_id"],
-                    },
-                ),
-                Tool(
-                    name="bulk_update_annotation_fields",
-                    description="Bulk update annotation fields. It can be used after `start_annotation` only. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
-                            "operations": {
-                                "type": "array",
-                                "description": "JSON Patch operations. Format: {'op': 'replace'|'remove', 'id': datapoint_id (int), 'value': {'content': {'value': 'new_value'}}}. Use numeric datapoint ID from annotation.content, NOT schema_id.",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "op": {"type": "string", "enum": ["replace", "remove"]},
-                                        "id": {
-                                            "type": "integer",
-                                            "description": "Datapoint ID (numeric) from annotation content",
-                                        },
-                                        "value": {"type": "object"},
-                                    },
-                                    "required": ["op", "id"],
-                                },
-                            },
-                        },
-                        "required": ["annotation_id", "operations"],
-                    },
-                ),
-                Tool(
-                    name="confirm_annotation",
-                    description="Confirm annotation (move to 'confirmed'). It cane be used after `bulk_update_annotation_fields`. Returns: annotation_id, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "annotation_id": {"type": "integer", "description": "Annotation ID"},
-                        },
-                        "required": ["annotation_id"],
-                    },
-                ),
-                Tool(
-                    name="create_schema",
-                    description="Create a schema. Returns: id, name, url, content, message. Must have ≥1 section with children (datapoints).",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string", "description": "Schema name"},
-                            "content": {
-                                "type": "array",
-                                "description": "Schema sections with datapoints. Structure: [{'category': 'section', 'id': 'section_id', 'label': 'Label', 'children': [{'category': 'datapoint', 'id': 'field_id', 'label': 'Label', 'type': 'string'|'enum'|'date'|'number', 'rir_field_names': ['name'], 'constraints': {'required': false}, 'options': [{'value': 'v', 'label': 'L'}]}]}]",
-                                "items": {"type": "object"},
-                            },
-                        },
-                        "required": ["name", "content"],
-                    },
-                ),
-                Tool(
-                    name="create_engine",
-                    description="Create a new engine. Returns: id, name, url, type, organization, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string", "description": "Engine name"},
-                            "organization_id": {"type": "integer", "description": "Organization ID"},
-                            "engine_type": {
-                                "type": "string",
-                                "description": "Engine type: 'extractor' or 'splitter'",
-                                "enum": ["extractor", "splitter"],
-                            },
-                        },
-                        "required": ["name", "organization_id", "engine_type"],
-                    },
-                ),
-                Tool(
-                    name="create_engine_field",
-                    description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, name, label, url, type, engine, tabular, multiline, message.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "engine_id": {"type": "integer", "description": "Engine ID"},
-                            "name": {"type": "string", "description": "Field name (slug, max 50 chars)"},
-                            "label": {"type": "string", "description": "Human-readable label (max 100 chars)"},
-                            "field_type": {
-                                "type": "string",
-                                "description": "Field type",
-                                "enum": ["string", "number", "date", "enum"],
-                            },
-                            "schema_ids": {
-                                "type": "array",
-                                "items": {"type": "integer"},
-                                "description": "Schema IDs to link (≥1 required)",
-                            },
-                            "tabular": {"type": "boolean", "description": "Is in table? Default: false"},
-                            "multiline": {
-                                "type": "string",
-                                "description": "Multiline: 'true', 'false', ''. Default: 'false'",
-                                "enum": ["true", "false", ""],
-                            },
-                            "subtype": {"type": ["string", "null"], "description": "Optional subtype (max 50 chars)"},
-                            "pre_trained_field_id": {
-                                "type": ["string", "null"],
-                                "description": "Optional pre-trained field ID (max 50 chars)",
-                            },
-                        },
-                        "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
-                    },
-                ),
-            ]
+            return self._get_tool_definitions()
 
         @self.server.call_tool()
-        async def call_tool(name: str, arguments: dict) -> list[TextContent]:  # noqa: C901
+        async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             try:
                 logger.info(f"Tool called: {name} with arguments: {arguments}")
 
-                match name:
-                    case "upload_document":
-                        result = await self.upload_document(arguments["file_path"], arguments["queue_id"])
-                    case "get_annotation":
-                        result = await self.get_annotation(
-                            arguments["annotation_id"],
-                            sideloads=arguments.get("sideloads", ()),
-                        )
-                    case "list_annotations":
-                        result = await self.list_annotations(
-                            queue_id=arguments["queue_id"],
-                            status=arguments.get("status"),
-                        )
-                    case "get_queue":
-                        result = await self.get_queue(arguments["queue_id"])
-                    case "get_schema":
-                        result = await self.get_schema(arguments["schema_id"])
-                    case "get_queue_schema":
-                        result = await self.get_queue_schema(arguments["queue_id"])
-                    case "get_queue_engine":
-                        result = await self.get_queue_engine(arguments["queue_id"])
-                    case "create_queue":
-                        result = await self.create_queue(
-                            name=arguments["name"],
-                            workspace_id=arguments["workspace_id"],
-                            schema_id=arguments["schema_id"],
-                            engine_id=arguments.get("engine_id"),
-                            inbox_id=arguments.get("inbox_id"),
-                            connector_id=arguments.get("connector_id"),
-                            locale=arguments.get("locale", "en_GB"),
-                            automation_enabled=arguments.get("automation_enabled", False),
-                            automation_level=arguments.get("automation_level", "never"),
-                            training_enabled=arguments.get("training_enabled", True),
-                        )
-                    case "update_queue":
-                        result = await self.update_queue(
-                            queue_id=arguments["queue_id"],
-                            queue_data=arguments["queue_data"],
-                        )
-                    case "update_schema":
-                        result = await self.update_schema(
-                            schema_id=arguments["schema_id"],
-                            schema_data=arguments["schema_data"],
-                        )
-                    case "update_engine":
-                        result = await self.update_engine(
-                            engine_id=arguments["engine_id"],
-                            engine_data=arguments["engine_data"],
-                        )
-                    case "start_annotation":
-                        result = await self.start_annotation(annotation_id=arguments["annotation_id"])
-                    case "bulk_update_annotation_fields":
-                        result = await self.bulk_update_annotation_fields(
-                            annotation_id=arguments["annotation_id"],
-                            operations=arguments["operations"],
-                        )
-                    case "confirm_annotation":
-                        result = await self.confirm_annotation(annotation_id=arguments["annotation_id"])
-                    case "create_schema":
-                        result = await self.create_schema(name=arguments["name"], content=arguments["content"])
-                    case "create_engine":
-                        result = await self.create_engine(
-                            name=arguments["name"],
-                            organization_id=arguments["organization_id"],
-                            engine_type=arguments["engine_type"],
-                        )
-                    case "create_engine_field":
-                        result = await self.create_engine_field(
-                            engine_id=arguments["engine_id"],
-                            name=arguments["name"],
-                            label=arguments["label"],
-                            field_type=arguments["field_type"],
-                            schema_ids=arguments["schema_ids"],
-                            tabular=arguments.get("tabular", False),
-                            multiline=arguments.get("multiline", "false"),
-                            subtype=arguments.get("subtype"),
-                            pre_trained_field_id=arguments.get("pre_trained_field_id"),
-                        )
-                    case _:
-                        raise ValueError(f"Unknown tool: {name}")
+                # Use registry to dispatch to appropriate handler
+                if name not in self._tool_registry:
+                    raise ValueError(f"Unknown tool: {name}")
+
+                handler = self._tool_registry[name]
+                # Unpack arguments dict into keyword arguments for type safety
+                result = await handler(**arguments)
 
                 logger.info(f"Tool {name} completed successfully")
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
