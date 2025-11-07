@@ -17,6 +17,8 @@ def mock_env_vars(monkeypatch: MonkeyPatch) -> None:
     """Set up environment variables for testing."""
     monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
     monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+    # Ensure ROSSUM_MCP_MODE is not set, so default "read-write" is used
+    monkeypatch.delenv("ROSSUM_MCP_MODE", raising=False)
 
 
 @pytest.fixture
@@ -1822,3 +1824,194 @@ class TestListHooks:
         assert len(result["results"]) == 1
         assert result["results"][0]["active"] is False
         server.client.list_hooks.assert_called_once_with(active=False)
+
+
+@pytest.mark.unit
+class TestReadOnlyMode:
+    """Tests for read-only mode configuration."""
+
+    def test_read_write_mode_default(self, mock_env_vars: None, mock_rossum_client: AsyncMock) -> None:
+        """Test that read-write mode is the default."""
+        server = RossumMCPServer()
+        assert server.mode == "read-write"
+
+    def test_read_only_mode_explicit(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
+        """Test that read-only mode can be set explicitly."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+
+        server = RossumMCPServer()
+        assert server.mode == "read-only"
+
+    def test_invalid_mode_raises_error(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
+        """Test that invalid mode raises ValueError."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "invalid-mode")
+
+        with pytest.raises(ValueError) as exc_info:
+            RossumMCPServer()
+        assert "Invalid ROSSUM_MCP_MODE" in str(exc_info.value)
+        assert "read-only" in str(exc_info.value)
+        assert "read-write" in str(exc_info.value)
+
+    def test_mode_case_insensitive(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
+        """Test that mode is case insensitive."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "READ-ONLY")
+
+        server = RossumMCPServer()
+        assert server.mode == "read-only"
+
+    def test_read_only_mode_filters_tool_registry(
+        self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock
+    ) -> None:
+        """Test that read-only mode filters the tool registry."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+
+        server = RossumMCPServer()
+
+        # Read-only tools that should be present
+        read_only_tools = {
+            "get_annotation",
+            "list_annotations",
+            "get_queue",
+            "get_schema",
+            "get_queue_schema",
+            "get_queue_engine",
+            "list_hooks",
+        }
+
+        # Write tools that should NOT be present
+        write_tools = {
+            "upload_document",
+            "start_annotation",
+            "bulk_update_annotation_fields",
+            "confirm_annotation",
+            "create_queue",
+            "update_queue",
+            "update_schema",
+            "create_engine",
+            "update_engine",
+            "create_engine_field",
+            "create_schema",
+        }
+
+        # Check that read-only tools are present
+        for tool in read_only_tools:
+            assert tool in server._tool_registry, f"Read-only tool {tool} should be in registry"
+
+        # Check that write tools are NOT present
+        for tool in write_tools:
+            assert tool not in server._tool_registry, f"Write tool {tool} should NOT be in registry"
+
+    def test_read_write_mode_includes_all_tools(self, server: RossumMCPServer) -> None:
+        """Test that read-write mode includes all tools."""
+        # All tools should be present in read-write mode
+        all_tools = {
+            "upload_document",
+            "get_annotation",
+            "list_annotations",
+            "get_queue",
+            "get_schema",
+            "get_queue_schema",
+            "get_queue_engine",
+            "create_queue",
+            "update_queue",
+            "update_schema",
+            "create_engine",
+            "update_engine",
+            "start_annotation",
+            "bulk_update_annotation_fields",
+            "confirm_annotation",
+            "create_schema",
+            "create_engine_field",
+            "list_hooks",
+        }
+
+        for tool in all_tools:
+            assert tool in server._tool_registry, f"Tool {tool} should be in registry"
+
+    def test_read_only_mode_filters_tool_definitions(
+        self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock
+    ) -> None:
+        """Test that read-only mode filters tool definitions."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+
+        server = RossumMCPServer()
+        tool_definitions = server._get_tool_definitions()
+
+        # Get tool names from definitions
+        tool_names = {tool.name for tool in tool_definitions}
+
+        # Read-only tools that should be present
+        read_only_tools = {
+            "get_annotation",
+            "list_annotations",
+            "get_queue",
+            "get_schema",
+            "get_queue_schema",
+            "get_queue_engine",
+            "list_hooks",
+        }
+
+        # Write tools that should NOT be present
+        write_tools = {
+            "upload_document",
+            "start_annotation",
+            "bulk_update_annotation_fields",
+            "confirm_annotation",
+            "create_queue",
+            "update_queue",
+            "update_schema",
+            "create_engine",
+            "update_engine",
+            "create_engine_field",
+            "create_schema",
+        }
+
+        # Check that read-only tools are present
+        assert tool_names == read_only_tools, "Only read-only tools should be in definitions"
+
+        # Check that write tools are NOT present
+        assert not tool_names.intersection(write_tools), "Write tools should NOT be in definitions"
+
+    def test_read_write_mode_all_tool_definitions(self, server: RossumMCPServer) -> None:
+        """Test that read-write mode includes all tool definitions."""
+        tool_definitions = server._get_tool_definitions()
+        tool_names = {tool.name for tool in tool_definitions}
+
+        # All 18 tools should be present
+        assert len(tool_names) == 18, "Should have all 18 tools in read-write mode"
+
+    def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
+        """Test _is_tool_allowed method in read-only mode."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai")
+        monkeypatch.setenv("ROSSUM_API_TOKEN", "test-token-123")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+
+        server = RossumMCPServer()
+
+        # Read-only tools should be allowed
+        assert server._is_tool_allowed("get_annotation") is True
+        assert server._is_tool_allowed("list_annotations") is True
+        assert server._is_tool_allowed("get_queue") is True
+
+        # Write tools should NOT be allowed
+        assert server._is_tool_allowed("upload_document") is False
+        assert server._is_tool_allowed("create_queue") is False
+        assert server._is_tool_allowed("update_schema") is False
+
+    def test_is_tool_allowed_read_write_mode(self, server: RossumMCPServer) -> None:
+        """Test _is_tool_allowed method in read-write mode."""
+        # All tools should be allowed in read-write mode
+        assert server._is_tool_allowed("get_annotation") is True
+        assert server._is_tool_allowed("upload_document") is True
+        assert server._is_tool_allowed("create_queue") is True
+        assert server._is_tool_allowed("update_schema") is True

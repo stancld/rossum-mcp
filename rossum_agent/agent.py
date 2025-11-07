@@ -66,6 +66,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         env={
             "ROSSUM_API_BASE_URL": os.environ["ROSSUM_API_BASE_URL"],
             "ROSSUM_API_TOKEN": os.environ["ROSSUM_API_TOKEN"],
+            "ROSSUM_MCP_MODE": os.environ.get("ROSSUM_MCP_MODE", "read-write"),
             **os.environ,
         },
     )
