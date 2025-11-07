@@ -33,7 +33,7 @@ Built with Python and the official `rossum-sdk <https://github.com/rossumai/ross
 Features
 --------
 
-The MCP server provides **17 tools** organized into three categories:
+The MCP server provides **18 tools** organized into three categories:
 
 **Document Processing**
 
@@ -48,6 +48,7 @@ The MCP server provides **17 tools** organized into three categories:
 
 * **get_queue**, **get_schema**, **get_queue_schema** - Retrieve configuration
 * **get_queue_engine** - Get engine information
+* **list_hooks** - List webhooks and extensions
 * **create_queue**, **create_schema** - Create new queues and schemas
 * **update_queue**, **update_schema** - Configure automation thresholds
 
@@ -83,6 +84,7 @@ Quick Start
    # Set up environment variables
    export ROSSUM_API_TOKEN="your-api-token"
    export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+   export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
 
 Run the MCP server:
 

@@ -7,7 +7,7 @@ import yaml
 from mcp import StdioServerParameters
 from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
-from rossum_agent.file_system_tools import get_file_info, list_files, read_file
+from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
 from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import copy_queue_knowledge, retrieve_queue_status
 from rossum_agent.plot_tools import plot_data
@@ -42,10 +42,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         llm = LiteLLMModel(model_id=model_id)
     else:
         # OpenAI-compatible models need api_base and optionally api_key
-        llm_kwargs = {
-            "model_id": model_id,
-            "api_base": os.environ["LLM_API_BASE_URL"],
-        }
+        llm_kwargs = {"model_id": model_id, "api_base": os.environ["LLM_API_BASE_URL"]}
         if api_key := os.environ.get("LLM_API_KEY", "not-needed"):
             llm_kwargs["api_key"] = api_key
 
@@ -66,6 +63,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         env={
             "ROSSUM_API_BASE_URL": os.environ["ROSSUM_API_BASE_URL"],
             "ROSSUM_API_TOKEN": os.environ["ROSSUM_API_TOKEN"],
+            "ROSSUM_MCP_MODE": os.environ.get("ROSSUM_MCP_MODE", "read-write"),
             **os.environ,
         },
     )
@@ -79,6 +77,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         *mcp_tools,  # All Rossum MCP tools from server.py
         list_files,
         read_file,
+        write_file,
         get_file_info,
         plot_data,
         # Rossum internal tools

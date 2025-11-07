@@ -277,6 +277,46 @@ update_engine
 ``json=`` parameter, not ``data=``. The Rossum API expects JSON-encoded data
 (application/json), not form-encoded data (application/x-www-form-urlencoded).
 
+list_hooks
+^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_hooks(queue_id: int | None, active: bool | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.list_hooks(**filters)``
+
+**API Endpoint:**
+  ``GET /v1/hooks``
+
+**Query Parameters:**
+  - ``queue``: Filter by queue ID
+  - ``active``: Filter by active status (true/false)
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Lists all hooks/extensions (webhooks or serverless functions) configured in
+  your organization. Optionally filter by queue ID and/or active status.
+  See ``rossum_mcp.server:928-970``
+
+**Common Use Cases:**
+
+  .. code-block:: python
+
+     # List all hooks
+     all_hooks = await server.list_hooks()
+
+     # List hooks for a specific queue
+     queue_hooks = await server.list_hooks(queue_id=12345)
+
+     # List only active hooks
+     active_hooks = await server.list_hooks(active=True)
+
+     # List inactive hooks for a queue
+     inactive_queue_hooks = await server.list_hooks(queue_id=12345, active=False)
+
 Async Wrapper Pattern
 ----------------------
 
@@ -308,6 +348,7 @@ The server uses token-based authentication configured via environment variables:
 
 * ``ROSSUM_API_TOKEN``: Your Rossum API authentication token
 * ``ROSSUM_API_BASE_URL``: The Rossum API base URL (e.g., https://api.elis.rossum.ai/v1)
+* ``ROSSUM_MCP_MODE``: Controls which tools are available (``read-only`` or ``read-write``, default: ``read-write``)
 
 The token is passed to the SDK client as:
 

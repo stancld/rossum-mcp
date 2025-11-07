@@ -7,6 +7,8 @@ This folder contains practical examples and data for demonstrating the Rossum MC
 - **data/**: Sample invoice files for testing document processing
 - **DATA_INSIGHT.md**: Documentation of the data aggregation example
 - **QUEUE_SETUP.md**: Guide for setting up Rossum queues
+- **SORTING_WARMUP.md**: Multi-queue setup with sorting engine
+- **EXPLAIN_HOOKS.md**: Example for explaining hook/extension functionality
 - **README.md**: This file
 
 ## Using the Rossum Agent

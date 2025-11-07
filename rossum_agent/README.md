@@ -14,7 +14,7 @@ AI agent package for Rossum document processing with tools for data manipulation
 ## Features
 
 ### Agent Tools
-- **File System Tools**: Read and list files from the filesystem
+- **File System Tools**: Read, write, and list files from the filesystem
 - **Plotting Tools**: Create interactive charts and visualizations with Plotly
 - **Internal Tools**: Sleep, execute code, and manage agent operations
 - **Rossum Integration**: Connect to Rossum MCP server for document processing
@@ -113,12 +113,26 @@ Read contents of a file from the filesystem.
 **Parameters:**
 - `file_path` (string): Path to the file to read
 
+#### write_file
+Write text or markdown content to a file.
+
+**Parameters:**
+- `file_path` (string): Path to the file to write
+- `content` (string): Text content to write
+- `overwrite` (bool, optional): Whether to overwrite existing file (default: True)
+
 #### list_files
 List files in a directory.
 
 **Parameters:**
 - `directory_path` (string): Path to the directory
 - `pattern` (string, optional): Glob pattern to filter files
+
+#### get_file_info
+Get metadata about a file or directory.
+
+**Parameters:**
+- `path` (string): Path to the file or directory
 
 ### Plotting Tools
 

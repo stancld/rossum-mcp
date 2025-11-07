@@ -66,7 +66,29 @@ pip install -e ".[tests]"  # Testing only
 ```bash
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # or your organization's base URL
+export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
 ```
+
+#### Configuration Options
+
+- **ROSSUM_API_TOKEN** (required): Your Rossum API authentication token
+- **ROSSUM_API_BASE_URL** (required): Base URL for the Rossum API
+- **ROSSUM_MCP_MODE** (optional): Controls which tools are available
+  - `read-write` (default): All tools available (GET, LIST, CREATE, UPDATE operations)
+  - `read-only`: Only read operations available (GET and LIST operations only)
+
+#### Read-Only vs Read-Write Mode
+
+When `ROSSUM_MCP_MODE` is set to `read-only`, only the following tools are available:
+- `get_annotation` - Retrieve annotation data
+- `list_annotations` - List annotations for a queue
+- `get_queue` - Retrieve queue details
+- `get_schema` - Retrieve schema details
+- `get_queue_schema` - Retrieve queue schema in one call
+- `get_queue_engine` - Retrieve engine information
+- `list_hooks` - List webhooks/extensions
+
+All CREATE, UPDATE, and UPLOAD operations are disabled in read-only mode for security purposes.
 
 ## Usage
 
@@ -94,7 +116,26 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
       "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1"
+        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_MCP_MODE": "read-write"
+      }
+    }
+  }
+}
+```
+
+For read-only access (recommended for untrusted environments):
+
+```json
+{
+  "mcpServers": {
+    "rossum-readonly": {
+      "command": "python",
+      "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+      "env": {
+        "ROSSUM_API_TOKEN": "your-api-token",
+        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_MCP_MODE": "read-only"
       }
     }
   }
@@ -394,6 +435,52 @@ Updates an existing engine's settings including learning and training queues.
   "description": "Engine description",
   "message": "Engine 'My Engine' (ID 12345) updated successfully"
 }
+```
+
+#### list_hooks
+
+Lists all hooks/extensions configured in your organization. Hooks (also called extensions) are webhooks or serverless functions that respond to Rossum events.
+
+**Parameters:**
+- `queue_id` (integer, optional): Filter hooks by queue ID
+- `active` (boolean, optional): Filter by active status (true for active hooks, false for inactive)
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "name": "Validation Hook",
+      "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+      "type": "webhook",
+      "active": true,
+      "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+      "events": ["annotation_status", "annotation_content"],
+      "config": {
+        "url": "https://example.com/webhook",
+        "secret": "***"
+      },
+      "extension_source": "rossum_store"
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all hooks
+all_hooks = list_hooks()
+
+# List hooks for a specific queue
+queue_hooks = list_hooks(queue_id=12345)
+
+# List only active hooks
+active_hooks = list_hooks(active=True)
+
+# List inactive hooks for a queue
+inactive_queue_hooks = list_hooks(queue_id=12345, active=False)
 ```
 
 #### create_engine_field

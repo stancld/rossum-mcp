@@ -38,7 +38,25 @@ class RossumMCPServer:
         self.base_url = os.environ["ROSSUM_API_BASE_URL"]
         self.api_token = os.environ["ROSSUM_API_TOKEN"]
 
+        # Read-only mode configuration: "read-only" or "read-write" (default)
+        self.mode = os.environ.get("ROSSUM_MCP_MODE", "read-write").lower()
+        if self.mode not in ("read-only", "read-write"):
+            raise ValueError(f"Invalid ROSSUM_MCP_MODE: {self.mode}. Must be 'read-only' or 'read-write'")
+
+        logger.info(f"Rossum MCP Server starting in {self.mode} mode")
+
         self.client = AsyncRossumAPIClient(base_url=self.base_url, credentials=Token(token=self.api_token))
+
+        # Define read-only tool names (GET/LIST operations)
+        self._read_only_tools = {
+            "get_annotation",
+            "list_annotations",
+            "get_queue",
+            "get_schema",
+            "get_queue_schema",
+            "get_queue_engine",
+            "list_hooks",
+        }
 
         # Setup tool registry mapping tool names to handler methods
         self._tool_registry = self._build_tool_registry()
@@ -57,13 +75,29 @@ class RossumMCPServer:
         """
         return f"{self.base_url}/{resource_type}/{resource_id}"
 
+    def _is_tool_allowed(self, tool_name: str) -> bool:
+        """Check if a tool is allowed based on current mode.
+
+        Args:
+            tool_name: Name of the tool to check
+
+        Returns:
+            True if the tool is allowed in current mode, False otherwise
+        """
+        if self.mode == "read-write":
+            return True
+        # In read-only mode, only allow read-only tools
+        return tool_name in self._read_only_tools
+
     def _build_tool_registry(self) -> dict:
         """Build registry mapping tool names to their handler methods.
+
+        Filters tools based on the current mode (read-only or read-write).
 
         Returns:
             Dictionary mapping tool names to async handler callables
         """
-        return {
+        all_tools = {
             "upload_document": self._handle_upload_document,
             "get_annotation": self._handle_get_annotation,
             "list_annotations": self._handle_list_annotations,
@@ -81,7 +115,11 @@ class RossumMCPServer:
             "create_schema": self._handle_create_schema,
             "create_engine": self._handle_create_engine,
             "create_engine_field": self._handle_create_engine_field,
+            "list_hooks": self._handle_list_hooks,
         }
+
+        # Filter tools based on mode
+        return {name: handler for name, handler in all_tools.items() if self._is_tool_allowed(name)}
 
     # Tool handler methods - direct argument passing for better type safety
     async def _handle_upload_document(self, file_path: str, queue_id: int) -> dict:
@@ -178,6 +216,9 @@ class RossumMCPServer:
             subtype=subtype,
             pre_trained_field_id=pre_trained_field_id,
         )
+
+    async def _handle_list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
+        return await self.list_hooks(queue_id=queue_id, active=active)
 
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum.
@@ -884,13 +925,54 @@ class RossumMCPServer:
             "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
         }
 
+    async def list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
+        """List all hooks/extensions, optionally filtered by queue and active status.
+
+        Args:
+            queue_id: Optional queue ID to filter hooks by queue
+            active: Optional boolean to filter by active status
+
+        Returns:
+            Dictionary containing count and results list of hooks
+        """
+        logger.debug(f"Listing hooks: queue_id={queue_id}, active={active}")
+
+        # Build filter parameters
+        filters: dict = {}
+        if queue_id is not None:
+            filters["queue"] = queue_id
+        if active is not None:
+            filters["active"] = active
+
+        hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
+
+        return {
+            "count": len(hooks_list),
+            "results": [
+                {
+                    "id": hook.id,
+                    "name": hook.name,
+                    "url": hook.url,
+                    "type": hook.type,
+                    "active": hook.active,
+                    "queues": hook.queues,
+                    "events": hook.events,
+                    "config": hook.config,
+                    "extension_source": hook.extension_source,
+                }
+                for hook in hooks_list
+            ],
+        }
+
     def _get_tool_definitions(self) -> list[Tool]:
         """Get list of tool definitions for MCP protocol.
+
+        Filters tools based on the current mode (read-only or read-write).
 
         Returns:
             List of Tool objects with their schemas and descriptions
         """
-        return [
+        all_tool_definitions = [
             Tool(
                 name="upload_document",
                 description="Upload a document to Rossum. Returns: task_id, task_status, queue_id, message. Use list_annotations to get annotation ID.",
@@ -1168,7 +1250,27 @@ class RossumMCPServer:
                     "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
                 },
             ),
+            Tool(
+                name="list_hooks",
+                description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, type, active, queues, events, config, extension_source).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional queue ID to filter hooks by queue",
+                        },
+                        "active": {
+                            "type": ["boolean", "null"],
+                            "description": "Optional filter by active status (true/false)",
+                        },
+                    },
+                },
+            ),
         ]
+
+        # Filter tool definitions based on mode
+        return [tool for tool in all_tool_definitions if self._is_tool_allowed(tool.name)]
 
     def setup_handlers(self) -> None:
         """Setup MCP protocol handlers.
