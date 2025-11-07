@@ -1,4 +1,4 @@
-# Rossum MCP Server
+# Rossum MCP Server & Rossum Agent
 
 <div align="center">
 
