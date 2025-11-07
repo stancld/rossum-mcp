@@ -7,7 +7,7 @@ import yaml
 from mcp import StdioServerParameters
 from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
-from rossum_agent.file_system_tools import get_file_info, list_files, read_file
+from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
 from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import copy_queue_knowledge, retrieve_queue_status
 from rossum_agent.plot_tools import plot_data
@@ -77,6 +77,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         *mcp_tools,  # All Rossum MCP tools from server.py
         list_files,
         read_file,
+        write_file,
         get_file_info,
         plot_data,
         # Rossum internal tools

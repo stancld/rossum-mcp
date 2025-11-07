@@ -103,3 +103,40 @@ def get_file_info(path: str) -> str:
         )
     except Exception as e:
         return json.dumps({"error": f"Failed to get file info: {e!s}"})
+
+
+@tool
+def write_file(file_path: str, content: str, overwrite: bool = True) -> str:
+    """Write text or markdown content to a file.
+
+    Args:
+        file_path: Path to file (absolute or relative)
+        content: Text content to write
+        overwrite: Whether to overwrite existing file (default: True)
+
+    Returns:
+        JSON string with success status. Use json.loads() to parse.
+    """
+    try:
+        path = Path(file_path).expanduser().resolve()
+
+        if path.exists() and not overwrite:
+            return json.dumps({"error": f"File already exists and overwrite=False: {file_path}"})
+
+        # Create parent directories if they don't exist
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        path.write_text(content)
+        stat = path.stat()
+
+        return json.dumps(
+            {
+                "success": True,
+                "path": str(path),
+                "size": stat.st_size,
+                "message": f"Successfully wrote {stat.st_size} bytes to {path.name}",
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": f"Failed to write file: {e!s}"})

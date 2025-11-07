@@ -40,11 +40,11 @@ DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/proje
 9. Return the final dictionary: {description: total_amount_across_all_docs}
 10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`."""
 
-EXPLAIN_EXTENSIONS_PROMPT = """Briefly explain the functionality of every hook based on description and/or code one by one for a queue `3885208`.
+EXPLAIN_EXTENSIONS_PROMPT = """Briefly explain the functionality of every hook based on description and/or code one by one for a queue `2042843`.
 
 Return it as a dictionary: `hook name -> description`.
 
-Important: Include trigger events etc.
+Store output in extestion_explanation.md
 """
 
 
