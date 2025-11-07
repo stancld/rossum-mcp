@@ -33,11 +33,15 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
          "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
          "env": {
            "ROSSUM_API_TOKEN": "your-api-token",
-           "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1"
+           "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+           "ROSSUM_MCP_MODE": "read-write"
          }
        }
      }
    }
+
+For read-only access (recommended for untrusted environments), use ``"ROSSUM_MCP_MODE": "read-only"``
+to restrict access to read-only operations (GET/LIST only).
 
 Running the AI Agent
 --------------------

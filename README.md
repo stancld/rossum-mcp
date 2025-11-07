@@ -144,6 +144,7 @@ pip install -e "rossum_mcp[all]" -e "rossum_agent[all]"
 # Set up environment variables
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
 ```
 
 For individual package installation or other options, see [rossum_mcp/README.md](rossum_mcp/README.md) and [rossum_agent/README.md](rossum_agent/README.md).
@@ -162,7 +163,8 @@ Configure Claude Desktop to use the MCP server:
       "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1"
+        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_MCP_MODE": "read-write"
       }
     }
   }
@@ -170,6 +172,8 @@ Configure Claude Desktop to use the MCP server:
 ```
 
 Or run standalone: `rossum-mcp`
+
+**Security Note:** For untrusted environments, use `"ROSSUM_MCP_MODE": "read-only"` to restrict access to read-only operations (GET/LIST only).
 
 ### AI Agent
 
@@ -185,7 +189,7 @@ The agent includes file system tools, plotting capabilities, and Rossum integrat
 
 ## MCP Tools
 
-The MCP server provides 17 tools organized into three categories:
+The MCP server provides 18 tools organized into three categories:
 
 **Document Processing**
 - `upload_document` - Upload documents for AI extraction
@@ -198,6 +202,7 @@ The MCP server provides 17 tools organized into three categories:
 **Queue & Schema Management**
 - `get_queue`, `get_schema`, `get_queue_schema` - Retrieve configuration
 - `get_queue_engine` - Get engine information
+- `list_hooks` - List webhooks and extensions
 - `create_queue`, `create_schema` - Create new queues and schemas
 - `update_queue`, `update_schema` - Configure automation thresholds
 
