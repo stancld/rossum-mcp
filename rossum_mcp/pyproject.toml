@@ -15,6 +15,9 @@ dependencies = [
     "rossum-api>=3.5.2",
 ]
 
+[project.scripts]
+rossum-mcp = "rossum_mcp.server:main"
+
 [project.optional-dependencies]
 docs = [
     "myst-parser>=2.0.0",

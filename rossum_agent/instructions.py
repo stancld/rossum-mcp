@@ -1,5 +1,10 @@
 SYSTEM_PROMPT = """CRITICAL: JSON String Handling for Tools
 
+ALWAYS import json at the beginning of your code:
+```python
+import json
+```
+
 ALL tools return JSON strings that MUST be parsed with json.loads():
 
 For Rossum MCP:

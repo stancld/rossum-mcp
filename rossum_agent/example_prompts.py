@@ -40,9 +40,17 @@ DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/proje
 9. Return the final dictionary: {description: total_amount_across_all_docs}
 10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`."""
 
+EXPLAIN_EXTENSIONS_PROMPT = """Briefly explain the functionality of every hook based on description and/or code one by one for a queue `3885208`.
+
+Return it as a dictionary: `hook name -> description`.
+
+Important: Include trigger events etc.
+"""
+
 
 PROMPTS = {
     "setup_queue": SETUP_QUEUE_PROMPT,
     "sorting_warmup": SORTING_WARMUP_PROMPT,
     "data_insight": DATA_INSIGHT_PROMPT,
+    "explain_extensions": EXPLAIN_EXTENSIONS_PROMPT,
 }

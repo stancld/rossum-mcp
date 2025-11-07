@@ -437,6 +437,52 @@ Updates an existing engine's settings including learning and training queues.
 }
 ```
 
+#### list_hooks
+
+Lists all hooks/extensions configured in your organization. Hooks (also called extensions) are webhooks or serverless functions that respond to Rossum events.
+
+**Parameters:**
+- `queue_id` (integer, optional): Filter hooks by queue ID
+- `active` (boolean, optional): Filter by active status (true for active hooks, false for inactive)
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "name": "Validation Hook",
+      "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+      "type": "webhook",
+      "active": true,
+      "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+      "events": ["annotation_status", "annotation_content"],
+      "config": {
+        "url": "https://example.com/webhook",
+        "secret": "***"
+      },
+      "extension_source": "rossum_store"
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all hooks
+all_hooks = list_hooks()
+
+# List hooks for a specific queue
+queue_hooks = list_hooks(queue_id=12345)
+
+# List only active hooks
+active_hooks = list_hooks(active=True)
+
+# List inactive hooks for a queue
+inactive_queue_hooks = list_hooks(queue_id=12345, active=False)
+```
+
 #### create_engine_field
 
 Creates a new engine field and links it to schemas. Engine fields define what data the engine extracts and must be created for each field in the schema when setting up an engine.

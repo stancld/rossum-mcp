@@ -42,10 +42,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         llm = LiteLLMModel(model_id=model_id)
     else:
         # OpenAI-compatible models need api_base and optionally api_key
-        llm_kwargs = {
-            "model_id": model_id,
-            "api_base": os.environ["LLM_API_BASE_URL"],
-        }
+        llm_kwargs = {"model_id": model_id, "api_base": os.environ["LLM_API_BASE_URL"]}
         if api_key := os.environ.get("LLM_API_KEY", "not-needed"):
             llm_kwargs["api_key"] = api_key
 
