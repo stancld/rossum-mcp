@@ -15,7 +15,7 @@ license = {text = "MIT"}
 keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
 dependencies = [
     "mcp>=1.0.0",
-    "rossum-api @ git+https://github.com/stancld/rossum-sdk@ds-engine-training-queues",
+    "rossum-api>=3.5.2",
 ]
 
 [project.optional-dependencies]
