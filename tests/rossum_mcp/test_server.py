@@ -1649,3 +1649,176 @@ class TestIntegration:
             555, {"learning_enabled": False, "training_queues": ["queue1", "queue2"]}
         )
         assert update_engine_result["learning_enabled"] is False
+
+
+@pytest.mark.unit
+class TestListHooks:
+    """Tests for listing hooks/extensions functionality."""
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_success(self, server: RossumMCPServer) -> None:
+        """Test successful hooks listing with all hooks."""
+        # Create mock hooks
+        mock_hook1 = Mock()
+        mock_hook1.id = 1
+        mock_hook1.name = "Validation Hook"
+        mock_hook1.url = "https://api.test.rossum.ai/v1/hooks/1"
+        mock_hook1.type = "webhook"
+        mock_hook1.active = True
+        mock_hook1.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_hook1.events = ["annotation_status"]
+        mock_hook1.config = {"url": "https://example.com/webhook"}
+        mock_hook1.extension_source = "rossum_store"
+
+        mock_hook2 = Mock()
+        mock_hook2.id = 2
+        mock_hook2.name = "Export Hook"
+        mock_hook2.url = "https://api.test.rossum.ai/v1/hooks/2"
+        mock_hook2.type = "function"
+        mock_hook2.active = False
+        mock_hook2.queues = ["https://api.test.rossum.ai/v1/queues/200"]
+        mock_hook2.events = ["annotation_content"]
+        mock_hook2.config = {"runtime": "nodejs18.x"}
+        mock_hook2.extension_source = "custom"
+
+        # Create async iterator factory
+        async def async_iter():
+            for hook in [mock_hook1, mock_hook2]:
+                yield hook
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks()
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 1
+        assert result["results"][0]["name"] == "Validation Hook"
+        assert result["results"][0]["type"] == "webhook"
+        assert result["results"][0]["active"] is True
+        assert result["results"][1]["id"] == 2
+        assert result["results"][1]["name"] == "Export Hook"
+        assert result["results"][1]["active"] is False
+        server.client.list_hooks.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_with_queue_id_filter(self, server: RossumMCPServer) -> None:
+        """Test listing hooks filtered by queue_id."""
+        mock_hook = Mock()
+        mock_hook.id = 1
+        mock_hook.name = "Queue Specific Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/1"
+        mock_hook.type = "webhook"
+        mock_hook.active = True
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_hook.events = ["annotation_status"]
+        mock_hook.config = {"url": "https://example.com/webhook"}
+        mock_hook.extension_source = "rossum_store"
+
+        async def async_iter():
+            yield mock_hook
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks(queue_id=100)
+
+        assert result["count"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["id"] == 1
+        assert result["results"][0]["name"] == "Queue Specific Hook"
+        server.client.list_hooks.assert_called_once_with(queue=100)
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_with_active_filter(self, server: RossumMCPServer) -> None:
+        """Test listing hooks filtered by active status."""
+        mock_hook = Mock()
+        mock_hook.id = 3
+        mock_hook.name = "Active Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/3"
+        mock_hook.type = "webhook"
+        mock_hook.active = True
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_hook.events = ["annotation_status"]
+        mock_hook.config = {"url": "https://example.com/webhook"}
+        mock_hook.extension_source = "custom"
+
+        async def async_iter():
+            yield mock_hook
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks(active=True)
+
+        assert result["count"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["active"] is True
+        server.client.list_hooks.assert_called_once_with(active=True)
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_with_multiple_filters(self, server: RossumMCPServer) -> None:
+        """Test listing hooks with both queue_id and active filters."""
+        mock_hook = Mock()
+        mock_hook.id = 4
+        mock_hook.name = "Filtered Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/4"
+        mock_hook.type = "function"
+        mock_hook.active = True
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/200"]
+        mock_hook.events = ["annotation_content", "annotation_status"]
+        mock_hook.config = {"runtime": "python3.9"}
+        mock_hook.extension_source = "rossum_store"
+
+        async def async_iter():
+            yield mock_hook
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks(queue_id=200, active=True)
+
+        assert result["count"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["id"] == 4
+        assert result["results"][0]["queues"] == ["https://api.test.rossum.ai/v1/queues/200"]
+        server.client.list_hooks.assert_called_once_with(queue=200, active=True)
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_empty(self, server: RossumMCPServer) -> None:
+        """Test listing hooks when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks(queue_id=999)
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.list_hooks.assert_called_once_with(queue=999)
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_inactive_only(self, server: RossumMCPServer) -> None:
+        """Test listing only inactive hooks."""
+        mock_hook = Mock()
+        mock_hook.id = 5
+        mock_hook.name = "Inactive Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/5"
+        mock_hook.type = "webhook"
+        mock_hook.active = False
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_hook.events = ["annotation_status"]
+        mock_hook.config = {"url": "https://example.com/webhook"}
+        mock_hook.extension_source = "custom"
+
+        async def async_iter():
+            yield mock_hook
+
+        server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.list_hooks(active=False)
+
+        assert result["count"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["active"] is False
+        server.client.list_hooks.assert_called_once_with(active=False)

@@ -81,6 +81,7 @@ class RossumMCPServer:
             "create_schema": self._handle_create_schema,
             "create_engine": self._handle_create_engine,
             "create_engine_field": self._handle_create_engine_field,
+            "list_hooks": self._handle_list_hooks,
         }
 
     # Tool handler methods - direct argument passing for better type safety
@@ -178,6 +179,9 @@ class RossumMCPServer:
             subtype=subtype,
             pre_trained_field_id=pre_trained_field_id,
         )
+
+    async def _handle_list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
+        return await self.list_hooks(queue_id=queue_id, active=active)
 
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum.
@@ -884,6 +888,45 @@ class RossumMCPServer:
             "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
         }
 
+    async def list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
+        """List all hooks/extensions, optionally filtered by queue and active status.
+
+        Args:
+            queue_id: Optional queue ID to filter hooks by queue
+            active: Optional boolean to filter by active status
+
+        Returns:
+            Dictionary containing count and results list of hooks
+        """
+        logger.debug(f"Listing hooks: queue_id={queue_id}, active={active}")
+
+        # Build filter parameters
+        filters: dict = {}
+        if queue_id is not None:
+            filters["queue"] = queue_id
+        if active is not None:
+            filters["active"] = active
+
+        hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
+
+        return {
+            "count": len(hooks_list),
+            "results": [
+                {
+                    "id": hook.id,
+                    "name": hook.name,
+                    "url": hook.url,
+                    "type": hook.type,
+                    "active": hook.active,
+                    "queues": hook.queues,
+                    "events": hook.events,
+                    "config": hook.config,
+                    "extension_source": hook.extension_source,
+                }
+                for hook in hooks_list
+            ],
+        }
+
     def _get_tool_definitions(self) -> list[Tool]:
         """Get list of tool definitions for MCP protocol.
 
@@ -1166,6 +1209,23 @@ class RossumMCPServer:
                         },
                     },
                     "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
+                },
+            ),
+            Tool(
+                name="list_hooks",
+                description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, type, active, queues, events, config, extension_source).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "queue_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional queue ID to filter hooks by queue",
+                        },
+                        "active": {
+                            "type": ["boolean", "null"],
+                            "description": "Optional filter by active status (true/false)",
+                        },
+                    },
                 },
             ),
         ]
