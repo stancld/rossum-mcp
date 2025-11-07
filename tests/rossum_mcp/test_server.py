@@ -586,7 +586,7 @@ class TestGetQueueEngine:
             "id": 18,
             "name": "Embedded Engine",
             "url": "https://api.test.rossum.ai/v1/engines/18",
-            "type": "custom",
+            "type": "extractor",
             "learning_enabled": True,
             "training_queues": ["https://api.test.rossum.ai/v1/queues/666"],
             "description": "Test embedded engine",
