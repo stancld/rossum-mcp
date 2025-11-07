@@ -13,7 +13,8 @@
 
 A Model Context Protocol (MCP) server and AI agent toolkit for intelligent document processing with Rossum. Upload documents, extract data with AI, and create visualizations - all through simple conversational prompts.
 
-> **Note:** This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
 
 ## What Can You Do?
 
