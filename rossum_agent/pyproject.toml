@@ -15,7 +15,7 @@ dependencies = [
     "plotly>=6.0",
     "pyyaml>=6.0",
     "requests>=2.32",
-    "rossum-api>=3.5.2",
+    "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-rules",
     "seaborn>=0.13.2",
     "smolagents[litellm]>=1.0.0",
 ]

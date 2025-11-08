@@ -81,7 +81,7 @@ regex==2025.10.23
 requests==2.32.5
 rich==14.2.0
 roman-numerals-py==3.1.0
-rossum-api==3.5.2
+rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-rules
 rpds-py==0.28.0
 seaborn==0.13.2
 six==1.17.0

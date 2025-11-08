@@ -42,9 +42,12 @@ DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/proje
 
 EXPLAIN_EXTENSIONS_PROMPT = """Briefly explain the functionality of every hook based on description and/or code one by one for a queue `2042843`.
 
-Return it as a dictionary: `hook name -> description`.
-
 Store output in extestion_explanation.md
+"""
+
+EXPLAIN_RULES_AND_ACTIONS_PROMPT = """Briefly explain the functionality of all rules and their actions for a queue `2042844`.
+
+Store output in extension_explanation.md
 """
 
 
@@ -53,4 +56,5 @@ PROMPTS = {
     "sorting_warmup": SORTING_WARMUP_PROMPT,
     "data_insight": DATA_INSIGHT_PROMPT,
     "explain_extensions": EXPLAIN_EXTENSIONS_PROMPT,
+    "explain_rules_and_actions": EXPLAIN_RULES_AND_ACTIONS_PROMPT,
 }
