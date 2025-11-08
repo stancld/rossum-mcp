@@ -8,3 +8,4 @@ docs/build/
 .vscode/
 .coverage
 build
+extension_explanation.md

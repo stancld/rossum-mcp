@@ -317,6 +317,47 @@ list_hooks
      # List inactive hooks for a queue
      inactive_queue_hooks = await server.list_hooks(queue_id=12345, active=False)
 
+list_rules
+^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_rules(schema_id: int | None, organization_id: int | None, enabled: bool | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.list_rules(**filters)``
+
+**API Endpoint:**
+  ``GET /v1/rules``
+
+**Query Parameters:**
+  - ``schema``: Filter by schema ID
+  - ``organization``: Filter by organization ID
+  - ``enabled``: Filter by enabled status (true/false)
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Lists all business rules configured in your organization. Rules define custom business
+  logic with trigger conditions (TxScript formulas) and actions. Optionally filter by
+  schema ID, organization ID, and/or enabled status. See ``rossum_mcp.server:974-1030``
+
+**Common Use Cases:**
+
+  .. code-block:: python
+
+     # List all rules
+     all_rules = await server.list_rules()
+
+     # List rules for a specific schema
+     schema_rules = await server.list_rules(schema_id=12345)
+
+     # List only enabled rules
+     enabled_rules = await server.list_rules(enabled=True)
+
+     # List enabled rules for a specific schema
+     enabled_schema_rules = await server.list_rules(schema_id=12345, enabled=True)
+
 Async Wrapper Pattern
 ----------------------
 

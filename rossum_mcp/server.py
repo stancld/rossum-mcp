@@ -56,6 +56,7 @@ class RossumMCPServer:
             "get_queue_schema",
             "get_queue_engine",
             "list_hooks",
+            "list_rules",
         }
 
         # Setup tool registry mapping tool names to handler methods
@@ -116,6 +117,7 @@ class RossumMCPServer:
             "create_engine": self._handle_create_engine,
             "create_engine_field": self._handle_create_engine_field,
             "list_hooks": self._handle_list_hooks,
+            "list_rules": self._handle_list_rules,
         }
 
         # Filter tools based on mode
@@ -219,6 +221,11 @@ class RossumMCPServer:
 
     async def _handle_list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
         return await self.list_hooks(queue_id=queue_id, active=active)
+
+    async def _handle_list_rules(
+        self, schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None
+    ) -> dict:
+        return await self.list_rules(schema_id=schema_id, organization_id=organization_id, enabled=enabled)
 
     async def upload_document(self, file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum.
@@ -964,6 +971,64 @@ class RossumMCPServer:
             ],
         }
 
+    async def list_rules(
+        self, schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None
+    ) -> dict:
+        """List all rules, optionally filtered by schema, organization, and enabled status.
+
+        Args:
+            schema_id: Optional schema ID to filter rules by schema
+            organization_id: Optional organization ID to filter rules by organization
+            enabled: Optional boolean to filter by enabled status
+
+        Returns:
+            Dictionary containing count and results list of rules
+        """
+        logger.debug(f"Listing rules: schema_id={schema_id}, organization_id={organization_id}, enabled={enabled}")
+
+        # Build filter parameters
+        filters: dict = {}
+        if schema_id is not None:
+            filters["schema"] = schema_id
+        if organization_id is not None:
+            filters["organization"] = organization_id
+        if enabled is not None:
+            filters["enabled"] = enabled
+
+        rules_list = [rule async for rule in self.client.list_rules(**filters)]
+
+        return {
+            "count": len(rules_list),
+            "results": [
+                {
+                    "id": rule.id,
+                    "name": rule.name,
+                    "url": rule.url,
+                    "enabled": rule.enabled,
+                    "organization": rule.organization,
+                    "schema": rule.schema,
+                    "trigger_condition": rule.trigger_condition,
+                    "created_by": rule.created_by,
+                    "created_at": rule.created_at,
+                    "modified_by": rule.modified_by,
+                    "modified_at": rule.modified_at,
+                    "rule_template": rule.rule_template,
+                    "synchronized_from_template": rule.synchronized_from_template,
+                    "actions": [
+                        {
+                            "id": action.id,
+                            "type": action.type,
+                            "payload": action.payload,
+                            "event": action.event,
+                            "enabled": action.enabled,
+                        }
+                        for action in rule.actions
+                    ],
+                }
+                for rule in rules_list
+            ],
+        }
+
     def _get_tool_definitions(self) -> list[Tool]:
         """Get list of tool definitions for MCP protocol.
 
@@ -1263,6 +1328,27 @@ class RossumMCPServer:
                         "active": {
                             "type": ["boolean", "null"],
                             "description": "Optional filter by active status (true/false)",
+                        },
+                    },
+                },
+            ),
+            Tool(
+                name="list_rules",
+                description="List all rules. Returns: count, results array with rule details (id, name, url, enabled, organization, schema, trigger_condition, created_by, created_at, modified_by, modified_at, rule_template, synchronized_from_template, actions).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "schema_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional schema ID to filter rules by schema",
+                        },
+                        "organization_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional organization ID to filter rules by organization",
+                        },
+                        "enabled": {
+                            "type": ["boolean", "null"],
+                            "description": "Optional filter by enabled status (true/false)",
                         },
                     },
                 },

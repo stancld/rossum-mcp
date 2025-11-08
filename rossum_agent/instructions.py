@@ -216,26 +216,40 @@ confirm_result = json.loads(confirm_json)
 print(confirm_result['message'])
 ```
 
-IMPORTANT: Explaining Hook/Extension Functionality:
-When asked to explain hook or extension functionality, use this structured format:
+IMPORTANT: Explaining Hook/Extension/Rule Functionality:
+When asked to explain hook, extension, or rule functionality, use EXACTLY THIS STRUCTURED FORMAT with markdown headers (##, ###, ####):
 
-**Functionality**: [Brief description of what the hook does]
+## [Rule/Hook/Extension Name]
+**ID:** [id] | **Status:** ✅ Enabled or ❌ Disabled | **Created/Modified:** [timestamps if available]
 
-**Trigger Events**:
-- [event.type] (what happens at this event)
-- [event.type] (what happens at this event)
+### Functionality
+[1-2 sentence description of purpose and what it does]
 
-**How it works**:
-1. [Step-by-step explanation of the hook's operation]
-2. [Include technical details about what happens]
-3. [Describe data flow and transformations]
-4. [Note any conditional behavior]
+### Trigger Condition / Trigger Events
+[Show condition in code block if Python trigger condition exists]
 
-**Configuration**:
-- [setting_name]: [What this setting does]
-- [setting_name]: [What this setting does]
+**Trigger logic** Explain PRECISE logic, not vague descriptions.
+- For Python conditions: Explain the exact boolean logic, field comparisons, operators used (==, !=, in, and, or, not), and specific values checked
+  - Focus especially on explanation of complex python snippets
+- For event-based triggers: List specific events and explain what causes them to fire
 
-Example - Document Splitting and Sorting:
+### Actions (if applicable)
+#### Action 1: [Name]
+- **Type:** `[type]` | **Event:** `[event]` | **Enabled:** ✅/❌
+**What it does:** ALWAYS provide a few bullet points what action does!
+
+### How It Works
+1. **[Phase]:** [what happens]
+2. **[Phase]:** [what happens]
+[Continue with numbered phases]
+
+### Configuration (if applicable)
+- **[setting]:** [type] - [purpose]
+
+### Related Fields (if applicable)
+- **Schema ID:** `[id]` | **Type:** [type] | **Purpose:** [why it exists]
+
+Example Extension - Document Splitting and Sorting:
 
 **Functionality**: Automatically splits multi-document uploads into separate annotations and routes them to appropriate queues.
 

@@ -1884,6 +1884,7 @@ class TestReadOnlyMode:
             "get_queue_schema",
             "get_queue_engine",
             "list_hooks",
+            "list_rules",
         }
 
         # Write tools that should NOT be present
@@ -1959,6 +1960,7 @@ class TestReadOnlyMode:
             "get_queue_schema",
             "get_queue_engine",
             "list_hooks",
+            "list_rules",
         }
 
         # Write tools that should NOT be present
@@ -1987,8 +1989,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 18 tools should be present
-        assert len(tool_names) == 18, "Should have all 18 tools in read-write mode"
+        # All 19 tools should be present
+        assert len(tool_names) == 19
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
