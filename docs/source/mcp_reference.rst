@@ -317,6 +317,69 @@ list_hooks
      # List inactive hooks for a queue
      inactive_queue_hooks = await server.list_hooks(queue_id=12345, active=False)
 
+create_hook
+^^^^^^^^^^^
+
+**MCP Tool:**
+  ``create_hook(name: str, target: str, queues: list[str] | None,
+  events: list[str] | None, config: dict | None, enabled: bool,
+  insecure_ssl: bool, secret: str | None, response_event: dict | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.create_new_hook(hook_data: dict)``
+
+**API Endpoint:**
+  ``POST /v1/hooks``
+
+**Request Body:**
+  JSON object with hook configuration including name, target URL, optional
+  queue URLs, event triggers, configuration, and security settings.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Creates a new webhook or serverless function hook. The hook will trigger on specified
+  events and send requests to the target URL. See ``rossum_mcp.server:972-1046``
+
+**Common Use Cases:**
+
+  .. code-block:: python
+
+     # Create a simple webhook for all queues
+     basic_hook = await server.create_hook(
+         name="Invoice Processing Hook",
+         target="https://example.com/webhook"
+     )
+
+     # Create a hook for specific queues and events
+     advanced_hook = await server.create_hook(
+         name="Status Tracker",
+         target="https://example.com/status",
+         queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+         events=["annotation_status", "annotation_content"],
+         config={"custom_header": "value"},
+         secret="webhook_secret_123"
+     )
+
+**Parameters:**
+  - ``name`` (str): Hook name for identification
+  - ``target`` (str): URL endpoint where webhook requests are sent
+  - ``queues`` (list[str], optional): List of queue URLs to attach the hook to.
+    If not provided, hook applies to all queues
+  - ``events`` (list[str], optional): List of events that trigger the hook:
+
+    * ``annotation_status`` - Annotation status changes
+    * ``annotation_content`` - Content modifications
+    * ``annotation_export`` - Export operations
+    * ``datapoint_value`` - Individual field value changes
+
+  - ``config`` (dict, optional): Additional configuration (e.g., custom headers)
+  - ``enabled`` (bool): Whether the hook is active (default: True)
+  - ``insecure_ssl`` (bool): Skip SSL verification (default: False)
+  - ``secret`` (str, optional): Secret key for securing webhook requests
+  - ``response_event`` (dict, optional): Configuration for response event handling
+
 list_rules
 ^^^^^^^^^^
 

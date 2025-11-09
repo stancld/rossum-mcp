@@ -591,7 +591,7 @@ def _create_matplotlib_pie_chart(
     labels = list(data.keys())
     values = list(data.values())
 
-    _wedges, texts, autotexts = ax.pie(
+    _wedges, texts, autotexts = ax.pie(  # type: ignore[misc]
         values,
         labels=labels,
         colors=colors[: len(labels)],
@@ -606,7 +606,7 @@ def _create_matplotlib_pie_chart(
         for autotext in autotexts:
             autotext.set_color("white")
             autotext.set_fontsize(9)
-            autotext.set_weight("bold")
+            autotext.set_weight("bold")  # type: ignore[union-attr]
 
     ax.axis("equal")
 

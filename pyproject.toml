@@ -23,6 +23,7 @@ dependencies = [
 agent = [
     "matplotlib>=3.10",
     "plotly>=6.0",
+    "python-dotenv",
     "pyyaml>=6.0",
     "requests>=2.32",
     "seaborn>=0.13.2",
@@ -58,6 +59,7 @@ all = [
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",
     "plotly>=6.0",
+    "python-dotenv",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",

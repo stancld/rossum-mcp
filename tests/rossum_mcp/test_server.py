@@ -1827,6 +1827,146 @@ class TestListHooks:
 
 
 @pytest.mark.unit
+class TestCreateHook:
+    """Tests for creating hooks functionality."""
+
+    @pytest.mark.asyncio
+    async def test_create_hook_minimal(self, server: RossumMCPServer, monkeypatch: MonkeyPatch) -> None:
+        """Test creating a hook with minimal required parameters."""
+        monkeypatch.setenv("API_TOKEN_OWNER", "rozum@rozum.ai")
+
+        mock_hook = Mock()
+        mock_hook.id = 123
+        mock_hook.name = "Test Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/123"
+        mock_hook.active = True
+        mock_hook.queues = []
+        mock_hook.events = []
+        mock_hook.config = {}
+        mock_hook.settings = {}
+
+        server.client.create_new_hook = AsyncMock(return_value=mock_hook)
+
+        result = await server.create_hook(name="Test Hook", type="webhook")
+
+        assert result["id"] == 123
+        assert result["name"] == "Test Hook"
+        assert result["url"] == "https://api.test.rossum.ai/v1/hooks/123"
+        assert result["enabled"] is True
+        assert "message" in result
+        assert "created successfully" in result["message"]
+
+        # Verify the hook_data structure passed to create_new_hook
+        call_args = server.client.create_new_hook.call_args[0][0]
+        assert call_args["name"] == "Test Hook"
+        assert call_args["type"] == "webhook"
+        assert "sideload" in call_args
+        assert "token_owner" in call_args
+
+    @pytest.mark.asyncio
+    async def test_create_hook_with_all_parameters(self, server: RossumMCPServer, monkeypatch: MonkeyPatch) -> None:
+        """Test creating a hook with all available parameters."""
+        monkeypatch.setenv("API_TOKEN_OWNER", "rozum@rozum.ai")
+
+        mock_hook = Mock()
+        mock_hook.id = 456
+        mock_hook.name = "Advanced Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/456"
+        mock_hook.active = True
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_hook.events = ["annotation_status", "annotation_content"]
+        mock_hook.config = {"custom_header": "value", "timeout": 30}
+        mock_hook.settings = {"key": "value"}
+
+        server.client.create_new_hook = AsyncMock(return_value=mock_hook)
+
+        result = await server.create_hook(
+            name="Advanced Hook",
+            type="webhook",
+            queues=["https://api.test.rossum.ai/v1/queues/100"],
+            events=["annotation_status", "annotation_content"],
+            config={"custom_header": "value", "timeout": 30},
+            settings={"key": "value"},
+            secret="secret123",
+        )
+
+        assert result["id"] == 456
+        assert result["name"] == "Advanced Hook"
+        assert result["enabled"] is True
+        assert result["queues"] == ["https://api.test.rossum.ai/v1/queues/100"]
+        assert result["events"] == ["annotation_status", "annotation_content"]
+        assert result["config"] == {"custom_header": "value", "timeout": 30}
+        assert result["settings"] == {"key": "value"}
+
+        # Verify the hook_data structure passed to create_new_hook
+        call_args = server.client.create_new_hook.call_args[0][0]
+        assert call_args["name"] == "Advanced Hook"
+        assert call_args["type"] == "webhook"
+        assert call_args["queues"] == ["https://api.test.rossum.ai/v1/queues/100"]
+        assert call_args["events"] == ["annotation_status", "annotation_content"]
+        assert call_args["config"] == {"custom_header": "value", "timeout": 30}
+        assert call_args["settings"] == {"key": "value"}
+        assert call_args["secret"] == "secret123"
+        assert "sideload" in call_args
+        assert "token_owner" in call_args
+
+    @pytest.mark.asyncio
+    async def test_create_hook_disabled(self, server: RossumMCPServer, monkeypatch: MonkeyPatch) -> None:
+        """Test creating a disabled hook."""
+        monkeypatch.setenv("API_TOKEN_OWNER", "rozum@rozum.ai")
+
+        mock_hook = Mock()
+        mock_hook.id = 789
+        mock_hook.name = "Disabled Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/789"
+        mock_hook.active = False
+        mock_hook.queues = []
+        mock_hook.events = []
+        mock_hook.config = {}
+        mock_hook.settings = {}
+
+        server.client.create_new_hook = AsyncMock(return_value=mock_hook)
+
+        result = await server.create_hook(name="Disabled Hook", type="webhook")
+
+        assert result["id"] == 789
+        assert result["enabled"] is False
+
+        # Verify the hook_data structure passed to create_new_hook
+        call_args = server.client.create_new_hook.call_args[0][0]
+        assert call_args["name"] == "Disabled Hook"
+        assert call_args["type"] == "webhook"
+
+    @pytest.mark.asyncio
+    async def test_create_hook_handles_missing_attributes(
+        self, server: RossumMCPServer, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test creating hook when returned object has empty optional attributes."""
+        monkeypatch.setenv("API_TOKEN_OWNER", "rozum@rozum.ai")
+
+        mock_hook = Mock()
+        mock_hook.id = 999
+        mock_hook.name = "Minimal Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/999"
+        mock_hook.active = True
+        # Set optional attributes to empty values
+        mock_hook.queues = []
+        mock_hook.events = []
+        mock_hook.config = {}
+        mock_hook.settings = {}
+
+        server.client.create_new_hook = AsyncMock(return_value=mock_hook)
+
+        result = await server.create_hook(name="Minimal Hook", type="webhook")
+
+        assert result["id"] == 999
+        assert result["queues"] == []
+        assert result["events"] == []
+        assert result["config"] == {}
+        assert result["settings"] == {}
+
+
+@pytest.mark.unit
 class TestReadOnlyMode:
     """Tests for read-only mode configuration."""
 
@@ -1900,6 +2040,7 @@ class TestReadOnlyMode:
             "update_engine",
             "create_engine_field",
             "create_schema",
+            "create_hook",
         }
 
         # Check that read-only tools are present
@@ -1976,6 +2117,7 @@ class TestReadOnlyMode:
             "update_engine",
             "create_engine_field",
             "create_schema",
+            "create_hook",
         }
 
         # Check that read-only tools are present
@@ -1989,8 +2131,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 19 tools should be present
-        assert len(tool_names) == 19
+        # All 20 tools should be present
+        assert len(tool_names) == 20
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
