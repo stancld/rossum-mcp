@@ -117,3 +117,150 @@ def retrieve_queue_status(queue_url: str) -> str:
         return json.dumps({"error": f"Request failed: {e!s}"})
     except Exception as e:
         return json.dumps({"error": f"Unexpected error: {e!s}"})
+
+
+@tool
+def get_splitting_and_sorting_hook_code() -> str:
+    """Return the python hook code for splitting & sorting inbox queue.
+
+    Returns:
+    String contaitning python hook code,
+    """
+    return """from __future__ import annotations
+
+import itertools
+import json
+
+from rossum_api import ElisAPIClientSync
+from txscript import TxScript
+
+
+def rossum_hook_request_handler(payload: dict) -> dict:
+    t = TxScript.from_payload(payload)
+    client = get_rossum_client(payload)
+
+    splits: list[tuple[list[str], int | None]] = get_splits(
+        t,
+        payload["annotation"]["pages"],
+        payload["settings"].get("sorting_queues", {}),
+        payload["settings"].get("max_blank_page_words"),
+    )
+
+    if not splits or (len(splits) == 1 and splits[0][1] is None):
+        splits = [(payload["annotation"]["pages"], None)]
+
+    event = payload["action"]
+    if event in {"confirm", "export"}:
+        split_document(
+            client,
+            payload["base_url"],
+            payload["annotation"]["id"],
+            splits,
+        )
+    elif event == "initialize":
+        suggest_split(
+            client,
+            payload["base_url"],
+            payload["annotation"]["url"],
+            splits,
+        )
+
+    return t.hook_response()
+
+
+def get_splits(
+    t: TxScript,
+    pages: list[str],
+    queue_id_from_document_type: dict[str, int],
+    max_blank_page_words: int | None,
+) -> list[tuple[list[str], int | None]]:
+    subdocuments = sorted(t.field.doc_split_subdocument.all_values, key=lambda v: v.attr.page)
+    if max_blank_page_words is None:
+        blank_page_indices = set()
+    else:
+        # NOTE: constant 10 must match BlankPageClassifier.MAX_WORDS from RIR codebase
+        score_threshold = 10 / (10 + max_blank_page_words)
+        blank_page_indices = {
+            v.attr.page - 1
+            for v in t.field.doc_split_blank_page.all_values
+            if v.attr.rir_confidence >= score_threshold
+        }
+
+    indices = [subdocument.attr.page - 1 for subdocument in subdocuments]
+    indices.append(len(pages))
+    split_boundaries = list(itertools.pairwise(indices))
+
+    splits: list[tuple[list[str], int | None]] = [
+        (
+            [pages[page_i] for page_i in range(begin, end) if page_i not in blank_page_indices],
+            queue_id_from_document_type.get(subdocument),
+        )
+        for (begin, end), subdocument in zip(split_boundaries, subdocuments)
+    ]
+    # NOTE: filter out all-blank splits
+    return [split for split in splits if split[0]]
+
+
+def split_document(
+    client: ElisAPIClientSync,
+    base_url: str,
+    annotation_id: int,
+    splits: list[tuple[list[str], int | None]],
+) -> None:
+    documents = []
+
+    for pages, target_queue in splits:
+        document: dict = {
+            "parent_pages": [{"page": page} for page in pages],
+        }
+        if target_queue:
+            document["target_queue"] = f"{base_url}/api/v1/queues/{target_queue}"
+        documents.append(document)
+
+    body = {"edit": documents}
+    # NOTE: shows up in extension logs for convenience
+    print(json.dumps(body, indent=2))
+    client.request_json("POST", f"annotations/{annotation_id}/edit_pages", json=body)
+
+
+def suggest_split(
+    client: ElisAPIClientSync,
+    base_url: str,
+    annotation_url: str,
+    splits: list[tuple[list[str], int | None]],
+) -> None:
+    documents = []
+
+    for pages, target_queue in splits:
+        document: dict[str, list[dict[str, str]] | str] = {
+            "pages": [{"page": page} for page in pages],
+        }
+        if target_queue:
+            document["target_queue"] = f"{base_url}/api/v1/queues/{target_queue}"
+        documents.append(document)
+
+    body = {
+        "annotation": annotation_url,
+        "documents": documents,
+    }
+    # NOTE: shows up in extension logs for convenience
+    print(json.dumps(body, indent=2))
+    response = client.request_json("POST", "suggested_edits", json=body)
+    print(response)
+
+
+def get_rossum_client(payload: dict) -> ElisAPIClientSync:
+    return ElisAPIClientSync(
+        token=get_auth_token_from_payload(payload),
+        base_url=payload["base_url"] + "/api/v1",
+    )
+
+
+def get_auth_token_from_payload(payload: dict) -> str:
+    auth_token = payload.get("rossum_authorization_token")
+    if not auth_token:
+        raise RuntimeError(
+            "Authorization token not found in the payload. "
+            f"Configure Rossum API access at {payload['hook']}."
+        )
+    return auth_token"""

@@ -4,15 +4,18 @@
 Provides tools for uploading documents and retrieving annotations using Rossum API
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
 import sys
 import traceback
-from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
+from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
@@ -20,6 +23,18 @@ from rossum_api import AsyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.dtos import Token
 from rossum_api.models import deserialize_default
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Any
+
+    from rossum_api.models.annotation import Annotation
+    from rossum_api.models.engine import Engine, EngineField
+    from rossum_api.models.hook import Hook
+    from rossum_api.models.queue import Queue
+    from rossum_api.models.rule import Rule
+    from rossum_api.models.schema import Schema
+    from rossum_api.types import Sideload
 
 # Set up logging to a file (since stdout is used for MCP)
 logging.basicConfig(
@@ -63,6 +78,8 @@ class RossumMCPServer:
         self._tool_registry = self._build_tool_registry()
 
         self.setup_handlers()
+
+        load_dotenv()
 
     def _build_resource_url(self, resource_type: str, resource_id: int) -> str:
         """Build a full URL for a Rossum API resource.
@@ -116,6 +133,7 @@ class RossumMCPServer:
             "create_schema": self._handle_create_schema,
             "create_engine": self._handle_create_engine,
             "create_engine_field": self._handle_create_engine_field,
+            "create_hook": self._handle_create_hook,
             "list_hooks": self._handle_list_hooks,
             "list_rules": self._handle_list_rules,
         }
@@ -127,7 +145,7 @@ class RossumMCPServer:
     async def _handle_upload_document(self, file_path: str, queue_id: int) -> dict:
         return await self.upload_document(file_path, queue_id)
 
-    async def _handle_get_annotation(self, annotation_id: int, sideloads: Sequence[str] = ()) -> dict:
+    async def _handle_get_annotation(self, annotation_id: int, sideloads: Sequence[Sideload] = ()) -> dict:
         return await self.get_annotation(annotation_id, sideloads=sideloads)
 
     async def _handle_list_annotations(self, queue_id: int, status: str | None = None) -> dict:
@@ -157,6 +175,7 @@ class RossumMCPServer:
         automation_enabled: bool = False,
         automation_level: str = "never",
         training_enabled: bool = True,
+        splitting_screen_feature_flag: bool = False,
     ) -> dict:
         return await self.create_queue(
             name=name,
@@ -169,6 +188,7 @@ class RossumMCPServer:
             automation_enabled=automation_enabled,
             automation_level=automation_level,
             training_enabled=training_enabled,
+            splitting_screen_feature_flag=splitting_screen_feature_flag,
         )
 
     async def _handle_update_queue(self, queue_id: int, queue_data: dict) -> dict:
@@ -219,8 +239,24 @@ class RossumMCPServer:
             pre_trained_field_id=pre_trained_field_id,
         )
 
-    async def _handle_list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
-        return await self.list_hooks(queue_id=queue_id, active=active)
+    async def _handle_list_hooks(
+        self, queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
+    ) -> dict:
+        return await self.list_hooks(queue_id=queue_id, active=active, first_n=first_n)
+
+    async def _handle_create_hook(
+        self,
+        name: str,
+        type: Literal["webhook", "function"],
+        queues: list[str] | None = None,
+        events: list[str] | None = None,
+        config: dict | None = None,
+        settings: dict | None = None,
+        secret: str | None = None,
+    ) -> dict:
+        return await self.create_hook(
+            name=name, type=type, queues=queues, events=events, config=config, settings=settings, secret=secret
+        )
 
     async def _handle_list_rules(
         self, schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None
@@ -278,7 +314,7 @@ class RossumMCPServer:
             "message": "Document upload initiated. Use `list_annotations` to find the annotation ID for this queue.",
         }
 
-    async def get_annotation(self, annotation_id: int, sideloads: Sequence[str] = ()) -> dict:
+    async def get_annotation(self, annotation_id: int, sideloads: Sequence[Sideload] = ()) -> dict:
         """Retrieve annotation data from Rossum.
 
         Args:
@@ -290,7 +326,7 @@ class RossumMCPServer:
         """
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
 
-        annotation = await self.client.retrieve_annotation(annotation_id, sideloads)
+        annotation: Annotation = await self.client.retrieve_annotation(annotation_id, sideloads)
 
         return {
             "id": annotation.id,
@@ -305,9 +341,7 @@ class RossumMCPServer:
         }
 
     async def list_annotations(
-        self,
-        queue_id: int,
-        status: str | None = "importing,to_review,confirmed,exported",
+        self, queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
     ) -> dict:
         """List annotations for a queue with optional filtering.
 
@@ -325,7 +359,7 @@ class RossumMCPServer:
         if status:
             params["status"] = status
 
-        annotations_list = [item async for item in self.client.list_annotations(**params)]
+        annotations_list: list[Annotation] = [item async for item in self.client.list_annotations(**params)]
 
         return {
             "count": len(annotations_list),
@@ -353,8 +387,7 @@ class RossumMCPServer:
         """
         logger.debug(f"Retrieving queue: queue_id={queue_id}")
 
-        queue = await self.client.retrieve_queue(queue_id)
-
+        queue: Queue = await self.client.retrieve_queue(queue_id)
         return {
             "id": queue.id,
             "name": queue.name,
@@ -376,14 +409,8 @@ class RossumMCPServer:
         """
         logger.debug(f"Retrieving schema: schema_id={schema_id}")
 
-        schema = await self.client.retrieve_schema(schema_id)
-
-        return {
-            "id": schema.id,
-            "name": schema.name,
-            "url": schema.url,
-            "content": schema.content,
-        }
+        schema: Schema = await self.client.retrieve_schema(schema_id)
+        return {"id": schema.id, "name": schema.name, "url": schema.url, "content": schema.content}
 
     async def get_queue_schema(self, queue_id: int) -> dict:
         """Retrieve complete schema for a queue.
@@ -399,7 +426,7 @@ class RossumMCPServer:
         logger.debug(f"Retrieving queue schema: queue_id={queue_id}")
 
         # First retrieve the queue to get the schema URL/ID
-        queue = await self.client.retrieve_queue(queue_id)
+        queue: Queue = await self.client.retrieve_queue(queue_id)
 
         # Extract schema ID from the schema URL
         # The schema field is a URL like "https://api.elis.rossum.ai/v1/schemas/12345"
@@ -407,7 +434,7 @@ class RossumMCPServer:
         schema_id = int(schema_url.rstrip("/").split("/")[-1])
 
         # Now retrieve the schema
-        schema = await self.client.retrieve_schema(schema_id)
+        schema: Schema = await self.client.retrieve_schema(schema_id)
 
         return {
             "queue_id": queue.id,
@@ -433,7 +460,7 @@ class RossumMCPServer:
         logger.debug(f"Retrieving queue engine: queue_id={queue_id}")
 
         # First retrieve the queue to get the engine URL/ID
-        queue = await self.client.retrieve_queue(queue_id)
+        queue: Queue = await self.client.retrieve_queue(queue_id)
 
         # Check if an engine is assigned and determine its type
         engine_url = None
@@ -466,7 +493,7 @@ class RossumMCPServer:
         if isinstance(engine_url, str):
             engine_id = int(engine_url.rstrip("/").split("/")[-1])
             # Retrieve the engine from API
-            engine = await self.client.retrieve_engine(engine_id)
+            engine: Engine = await self.client.retrieve_engine(engine_id)
         else:
             # If it's a dict, it's an embedded engine object - deserialize it using the SDK
             # No need to make an additional API call
@@ -498,6 +525,7 @@ class RossumMCPServer:
         automation_enabled: bool = False,
         automation_level: str = "never",
         training_enabled: bool = True,
+        splitting_screen_feature_flag: bool = False,
     ) -> dict:
         """Create a new queue with schema and optional engine assignment.
 
@@ -508,10 +536,11 @@ class RossumMCPServer:
             engine_id: Optional engine ID to assign to the queue
             inbox_id: Optional inbox ID to assign to the queue
             connector_id: Optional connector ID to assign to the queue
-            locale: Queue locale (default: en_GB)
-            automation_enabled: Enable automation for the queue (default: False)
-            automation_level: Automation level ('never', 'always', etc.) (default: never)
-            training_enabled: Enable training for the queue (default: True)
+            locale: Queue locale
+            automation_enabled: Enable automation for the queue
+            automation_level: Automation level ('never', 'always', etc.)
+            training_enabled: Enable training for the queue
+            splitting_screen_feature_flag: Enable splitting screen for inbox queue in UI
 
         Returns:
             Dictionary containing created queue details including id, name, schema, and engine
@@ -541,8 +570,15 @@ class RossumMCPServer:
         if connector_id is not None:
             queue_data["connector"] = self._build_resource_url("connectors", connector_id)
 
+        if splitting_screen_feature_flag:
+            if not (os.environ.get("SPLITTING_SCREEN_FLAG_NAME") and os.environ.get("SPLITTING_SCREEN_FLAG_VALUE")):
+                logger.error("Splitting screen failed to update")
+            queue_data["settings"] = {
+                os.environ["SPLITTING_SCREEN_FLAG_NAME"]: os.environ["SPLITTING_SCREEN_FLAG_VALUE"]
+            }
+
         # Create the queue
-        queue = await self.client.create_new_queue(queue_data)
+        queue: Queue = await self.client.create_new_queue(queue_data)
 
         return {
             "id": queue.id,
@@ -582,8 +618,8 @@ class RossumMCPServer:
         """
         logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
 
-        updated_queue_data = await self.client._http_client.update.update(Resource.Queue, queue_id, queue_data)
-        updated_queue = self.client._deserializer(Resource.Queue, updated_queue_data)
+        updated_queue_data = await self.client._http_client.update(Resource.Queue, queue_id, queue_data)
+        updated_queue: Queue = self.client._deserializer(Resource.Queue, updated_queue_data)
 
         return {
             "id": updated_queue.id,
@@ -620,7 +656,7 @@ class RossumMCPServer:
         logger.debug(f"Updating schema: schema_id={schema_id}")
 
         updated_schema_data = await self.client._http_client.update(Resource.Schema, schema_id, schema_data)
-        updated_schema = self.client._deserializer(Resource.Schema, updated_schema_data)
+        updated_schema: Schema = self.client._deserializer(Resource.Schema, updated_schema_data)
 
         return {
             "id": updated_schema.id,
@@ -663,7 +699,7 @@ class RossumMCPServer:
         logger.debug(f"Updating engine: engine_id={engine_id}, data={engine_data}")
 
         updated_engine_data = await self.client._http_client.update(Resource.Engine, engine_id, engine_data)
-        updated_engine = self.client._deserializer(Resource.Engine, updated_engine_data)
+        updated_engine: Engine = self.client._deserializer(Resource.Engine, updated_engine_data)
 
         return {
             "id": updated_engine.id,
@@ -803,7 +839,7 @@ class RossumMCPServer:
 
         schema_data = {"name": name, "content": content}
 
-        schema = await self.client.create_new_schema(schema_data)
+        schema: Schema = await self.client.create_new_schema(schema_data)
 
         return {
             "id": schema.id,
@@ -839,7 +875,7 @@ class RossumMCPServer:
         }
 
         engine_response = await self.client._http_client.create(Resource.Engine, engine_data)
-        engine = self.client._deserializer(Resource.Engine, engine_response)
+        engine: Engine = self.client._deserializer(Resource.Engine, engine_response)
 
         return {
             "id": engine.id,
@@ -915,7 +951,7 @@ class RossumMCPServer:
 
         # Create the engine field
         engine_field_response = await self.client._http_client.create(Resource.EngineField, engine_field_data)
-        engine_field = self.client._deserializer(Resource.EngineField, engine_field_response)
+        engine_field: EngineField = self.client._deserializer(Resource.EngineField, engine_field_response)
 
         return {
             "id": engine_field.id,
@@ -932,7 +968,9 @@ class RossumMCPServer:
             "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
         }
 
-    async def list_hooks(self, queue_id: int | None = None, active: bool | None = None) -> dict:
+    async def list_hooks(
+        self, queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
+    ) -> dict:
         """List all hooks/extensions, optionally filtered by queue and active status.
 
         Args:
@@ -951,7 +989,15 @@ class RossumMCPServer:
         if active is not None:
             filters["active"] = active
 
-        hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
+        if first_n is not None:
+            hooks_iter = self.client.list_hooks(**filters)
+            hooks_list: list[Hook] = []
+            n = 0
+            while n < first_n:
+                hooks_list.append(await anext(hooks_iter))
+                n + 1
+        else:
+            hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
 
         return {
             "count": len(hooks_list),
@@ -969,6 +1015,86 @@ class RossumMCPServer:
                 }
                 for hook in hooks_list
             ],
+        }
+
+    async def create_hook(
+        self,
+        name: str,
+        type: Literal["webhook", "function"],
+        queues: list[str] | None = None,
+        events: list[str] | None = None,
+        config: dict | None = None,
+        settings: dict | None = None,
+        secret: str | None = None,
+    ) -> dict:
+        """Create a new hook.
+
+        Args:
+            name: Hook name
+            type: Definition of whether a hook will call a url endpoint or call a python function.
+            queues: List of queue URLs to attach the hook to. If not provided, hook will apply to all queues.
+                Format: ["https://api.elis.rossum.ai/v1/queues/12345", ...]
+            events: List of events that trigger the hook. Common events:
+                - "annotation_status"
+                - "annotation_content"
+                - "annotation_export"
+                - "datapoint_value"
+            config: Definition of whether a hook will call a url endpoint or call a python function.
+            settings: Specific settings that will be included in the payload when executing the hook.
+            secret: Secret key for securing webhook requests
+            response_event: Configuration for response event handling
+
+        Returns:
+            Dictionary containing created hook details
+
+        Example:
+            create_hook(
+                name="Splitting & Sortuing",
+                queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+                events=["annotation_content.initialize", "annotation_content.confirm"],
+                config={"runtime": "python3.12", "code": "import json"}
+                settings: {"sorting_queues": {"A": 1, "B": 2}}
+            )
+        """
+        logger.debug(f"Creating hook: name={name}")
+
+        hook_data: dict[str, Any] = {
+            "name": name,
+            "type": type,
+            "sideload": ["schemas"],
+            "token_owner": os.environ["API_TOKEN_OWNER"],
+        }
+
+        # Add optional fields if provided
+        if queues is not None:
+            hook_data["queues"] = queues
+        if events is not None:
+            hook_data["events"] = events
+        if config is None:
+            config = {}
+        # Claude sometimes fail :)
+        if type == "function" and "source" in config:
+            config["function"] = config.pop("source")
+        if type == "function" and "runtime" not in config:
+            config["runtime"] = "python3.12"
+        hook_data["config"] = config
+        if settings is not None:
+            hook_data["settings"] = settings
+        if secret is not None:
+            hook_data["secret"] = secret
+
+        hook: Hook = await self.client.create_new_hook(hook_data)
+
+        return {
+            "id": hook.id,
+            "name": hook.name,
+            "url": hook.url,
+            "enabled": hook.active,
+            "queues": hook.queues,
+            "events": hook.events,
+            "config": hook.config,
+            "settings": hook.settings,
+            "message": f"Hook '{hook.name}' created successfully with ID {hook.id}",
         }
 
     async def list_rules(
@@ -995,7 +1121,7 @@ class RossumMCPServer:
         if enabled is not None:
             filters["enabled"] = enabled
 
-        rules_list = [rule async for rule in self.client.list_rules(**filters)]
+        rules_list: list[Rule] = [rule async for rule in self.client.list_rules(**filters)]
 
         return {
             "count": len(rules_list),
@@ -1086,9 +1212,7 @@ class RossumMCPServer:
                 description="Retrieve queue details. Returns: id, name, url, schema, workspace, inbox, engine.",
                 inputSchema={
                     "type": "object",
-                    "properties": {
-                        "queue_id": {"type": "integer", "description": "Queue ID"},
-                    },
+                    "properties": {"queue_id": {"type": "integer", "description": "Queue ID"}},
                     "required": ["queue_id"],
                 },
             ),
@@ -1097,9 +1221,7 @@ class RossumMCPServer:
                 description="Retrieve schema details. Returns: id, name, url, content.",
                 inputSchema={
                     "type": "object",
-                    "properties": {
-                        "schema_id": {"type": "integer", "description": "Schema ID"},
-                    },
+                    "properties": {"schema_id": {"type": "integer", "description": "Schema ID"}},
                     "required": ["schema_id"],
                 },
             ),
@@ -1108,9 +1230,7 @@ class RossumMCPServer:
                 description="Retrieve queue schema in one call. Returns: queue_id, queue_name, schema_id, schema_name, schema_url, schema_content.",
                 inputSchema={
                     "type": "object",
-                    "properties": {
-                        "queue_id": {"type": "integer", "description": "Queue ID"},
-                    },
+                    "properties": {"queue_id": {"type": "integer", "description": "Queue ID"}},
                     "required": ["queue_id"],
                 },
             ),
@@ -1147,6 +1267,10 @@ class RossumMCPServer:
                             "description": "Level: 'never', 'always'. Default: 'never'",
                         },
                         "training_enabled": {"type": "boolean", "description": "Enable training. Default: true"},
+                        "splitting_screen_feature_flag": {
+                            "type": "boolean",
+                            "description": "Enable splitting screen for inbox queue in UI. Default: false",
+                        },
                     },
                     "required": ["name", "workspace_id", "schema_id"],
                 },
@@ -1266,7 +1390,7 @@ class RossumMCPServer:
             ),
             Tool(
                 name="create_engine",
-                description="Create a new engine. Returns: id, name, url, type, organization, message.",
+                description="Create a new engine. Returns: id, name, url, type, organization, message. IMPORTANT: When creating a new engine, check the schema to be used and create contained Engine fields immediately!",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -1292,7 +1416,7 @@ class RossumMCPServer:
                         "label": {"type": "string", "description": "Human-readable label (max 100 chars)"},
                         "field_type": {
                             "type": "string",
-                            "description": "Field type",
+                            "description": "Field type, IMPORTANT: Follow exactly referenced schema if asked.",
                             "enum": ["string", "number", "date", "enum"],
                         },
                         "schema_ids": {
@@ -1300,7 +1424,10 @@ class RossumMCPServer:
                             "items": {"type": "integer"},
                             "description": "Schema IDs to link (≥1 required)",
                         },
-                        "tabular": {"type": "boolean", "description": "Is in table? Default: false"},
+                        "tabular": {
+                            "type": "boolean",
+                            "description": "Is in table? Default: false. IMPORTANT: Follow exactly referenced schema if asked.",
+                        },
                         "multiline": {
                             "type": "string",
                             "description": "Multiline: 'true', 'false', ''. Default: 'false'",
@@ -1316,6 +1443,47 @@ class RossumMCPServer:
                 },
             ),
             Tool(
+                name="create_hook",
+                description="Create a new hook. Returns: id, name, url, enabled, queues, events, config, setting, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Hook name",
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "Definition of whether a hook will call a url endpoint or call a python function.",
+                            "enum": ["webhook", "function"],
+                        },
+                        "queues": {
+                            "type": ["array", "null"],
+                            "items": {"type": "string"},
+                            "description": "List of queue URLs to attach the hook to. If not provided, hook applies to all queues. Format: ['https://api.elis.rossum.ai/v1/queues/12345']",
+                        },
+                        "events": {
+                            "type": ["array", "null"],
+                            "items": {"type": "string"},
+                            "description": "List of events that trigger the hook. Common events: annotation_status, annotation_content, annotation_export, datapoint_value, annotation_content.initialize, annotation_content.confirm, annotation_content.export",
+                        },
+                        "config": {
+                            "type": ["object", "null"],
+                            "description": "Configuration dict - code for a function or URL for a webhook",
+                        },
+                        "settings": {
+                            "type": ["object", "null"],
+                            "description": "Specific settings that will be included in the payload when executing the hook.",
+                        },
+                        "secret": {
+                            "type": ["string", "null"],
+                            "description": "Secret key for securing webhook requests",
+                        },
+                    },
+                    "required": ["name"],
+                },
+            ),
+            Tool(
                 name="list_hooks",
                 description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, type, active, queues, events, config, extension_source).",
                 inputSchema={
@@ -1328,6 +1496,10 @@ class RossumMCPServer:
                         "active": {
                             "type": ["boolean", "null"],
                             "description": "Optional filter by active status (true/false)",
+                        },
+                        "first_n": {
+                            "type": ["integer", "null"],
+                            "description": "Optional parameter defining max number of outputs. Useful when getting just an example.",
                         },
                     },
                 },

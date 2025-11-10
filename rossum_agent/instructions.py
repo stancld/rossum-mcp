@@ -22,10 +22,12 @@ IMPORTANT: Fetching N annotations from a queue:
 1. Call 'list_annotations' with the queue_id and optionally limit the results
 2. For each annotation, perform required operations (extract data, process fields, etc.)
 
-CRITICAL FOR LINE ITEMS:
-- Line items are in multivalue fields (e.g., 'line_items')
-- Each line item is a 'tuple' category with datapoint children
-- DO NOT flatten - preserve the line item grouping!
+CRITICAL FOR MULTIVALUE FIELDS:
+- Multivalue fields can have two different structures:
+  1. List of tuples: children is a list where each item is a 'tuple' category with datapoint children (standard line items)
+  2. Single datapoint: children is a single dict with 'datapoint' category (single multivalue field)
+- Always check isinstance(children, list) vs isinstance(children, dict) before processing
+- DO NOT flatten line items - preserve the grouping!
 
 RECOMMENDED APPROACH - Direct parsing:
 ```python
@@ -37,7 +39,15 @@ content = ann_data["content"]
 # Manual parsing for datapoints
 def get_datapoint_value(items, schema_id):
     '''Recursively find datapoint value by schema_id'''
+    # Handle if content is a single dict instead of list
+      if isinstance(content, dict):
+          content = [content]
+
     for item in items:
+        # Pass over plain strings
+        if not isinstance(item, dict):
+              continue
+
         if item.get('category') == 'datapoint' and item.get('schema_id') == schema_id:
             return item.get('content', {}).get('value')
         if 'children' in item:
@@ -54,17 +64,30 @@ def extract_line_items(items, multivalue_schema_id):
     '''Extract line items from a multivalue field'''
     for item in items:
         if item.get('category') == 'multivalue' and item.get('schema_id') == multivalue_schema_id:
-            result = []
-            for tuple_item in item.get('children', []):
-                if tuple_item.get('category') == 'tuple':
-                    item_data = {}
-                    for datapoint in tuple_item.get('children', []):
-                        if datapoint.get('category') == 'datapoint':
-                            schema_id = datapoint.get('schema_id')
-                            value = datapoint.get('content', {}).get('value')
-                            item_data[schema_id] = value
-                    result.append(item_data)
-            return result
+            children = item.get('children', [])
+
+            # Handle two possible structures:
+            # 1. children is a list of tuples (standard line items)
+            # 2. children is a single dict datapoint (single multivalue field)
+            if isinstance(children, list):
+                # Standard case: list of tuples with datapoint children
+                result = []
+                for tuple_item in children:
+                    if tuple_item.get('category') == 'tuple':
+                        item_data = {}
+                        for datapoint in tuple_item.get('children', []):
+                            if datapoint.get('category') == 'datapoint':
+                                schema_id = datapoint.get('schema_id')
+                                value = datapoint.get('content', {}).get('value')
+                                item_data[schema_id] = value
+                        result.append(item_data)
+                return result
+            elif isinstance(children, dict) and children.get('category') == 'datapoint':
+                # Single datapoint case: children is directly a datapoint dict
+                schema_id = children.get('schema_id')
+                value = children.get('content', {}).get('value')
+                return {schema_id: value}  # Retuwrn single value, not list
+            return None
         if 'children' in item:
             nested = extract_line_items(item['children'], multivalue_schema_id)
             if nested is not None:
@@ -161,11 +184,13 @@ Key schema requirements:
 IMPORTANT: Creating Engine Fields with Schema and Engine:
 When creating a schema and engine together, you MUST create engine fields for each datapoint in the schema.
 Engine fields link the schema fields to the engine for extraction.
+Engine fields must be created before the engine.
+IMPORTANT: Multivalue fields from schema should not be tabular automatically. It holds only for: Children is a list of tuples (standard line items)!
 
 IMPORTANT: Annotation Workflow (Start, Update, Confirm):
 After uploading documents, follow this workflow to annotate them:
 
-Step 1: Start annotation (move from 'importing' to 'to_review')
+Step 1: Start annotation (move from 'to_review' to 'reviewing')
 ```python
 start_json = start_annotation(annotation_id=annotation_id)
 start_result = json.loads(start_json)
@@ -270,4 +295,6 @@ Example Extension - Document Splitting and Sorting:
 **Configuration**:
 - sorting_queues: Maps document types to target queue IDs for routing
 - max_blank_page_words: Threshold for blank page detection (pages with fewer words are considered blank)
+
+IMPORTANT: For generating hook functions use available tools.
 """

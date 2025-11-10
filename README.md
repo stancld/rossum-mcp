@@ -18,51 +18,129 @@ A Model Context Protocol (MCP) server and AI agent toolkit for intelligent docum
 
 ## What Can You Do?
 
-### Example 1: Bulk Processing & Visualization
+### Example 1: Aurora Splitting & Sorting Demo
+
+Set up a complete document splitting and sorting pipeline with training queues, splitter engine, automated hooks, and intelligent routing:
 
 ```md
-1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
-    - Do not include documents from `knowledge` folder.
-2. Once you send all annotations, wait for a few seconds.
+1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
+2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
+4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
+    - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
+    - IMPORTANT: After confirming all annotations, double check, that all are confirmed/exported, and fix those that are not.
+5. Create three new queues in workspace `1777693` - Air Waybills Test, Certificates of Origin Test, Invoices Test.
+6. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+7. Create a new engine in organization `1`, with type = 'splitter'.
+8. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
+    - DO NOT copy knowledge.
+    - Update Engine object.
+9. Create a new schema that will be the same as the schema from the queue `3885208`.
+10. Create a new queue (with splitting UI feature flag!) with the created engine and schema in the same workspace called: Inbox.
+11. Create a python function-based the **`Splitting & Sorting`** hook on the new inbox queue with this settings:
+    **Functionality**: Automatically splits multi-document uploads into separate annotations and routes them to appropriate queues.
+    Split documents should be routed to the following queues: Air Waybills Test, Certificates of Origin Test, Invoices Test
+
+    **Trigger Events**:
+    - annotation_content.initialize (suggests split to user)
+    - annotation_content.confirm (performs actual split)
+    - annotation_content.export (performs actual split)
+
+    **How it works**: Python code
+
+    **Settings**:
+    - sorting_queues: Maps document types to target queue IDs for routing
+    - max_blank_page_words: Threshold for blank page detection (pages with fewer words are considered blank)
+12. Upload 10 documents from `examples/data/splitting_and_sorting/testing` folder to inbox queues.
+```
+
+**What This Demonstrates:**
+
+- **Queue Orchestration**: Creates 7 queues (3 training + 3 test + 1 inbox) with consistent schemas
+- **Knowledge Warmup**: Uploads and annotates 90 training documents to teach the engine
+- **Splitter Engine**: Configures an AI engine to detect document boundaries and types
+- **Hook Automation**: Sets up a sophisticated webhook that automatically:
+
+  - Splits multi-document PDFs into individual annotations
+  - Removes blank pages intelligently
+  - Routes split documents to correct queues by type
+  - Suggests splits on initialization and executes on confirmation
+
+- **End-to-End Testing**: Validates the entire pipeline with test documents
+
+This example showcases the agent's ability to orchestrate complex workflows involving multiple queues, engines, schemas, automated hooks with custom logic, and intelligent document routing - all from a single conversational prompt.
+
+### Example 2: Hook Analysis & Documentation
+
+Automatically analyze and document all hooks/extensions configured on a queue:
+
+```md
+Briefly explain the functionality of every hook based on description and/or code one by one for a queue `2042843`.
+
+Store output in extension_explanation.md
+```
+
+**What This Does:**
+- Lists all hooks/extensions on the specified queue
+- Analyzes each hook's description and code
+- Generates clear, concise explanations of functionality
+- Documents trigger events and settings
+- Saves comprehensive documentation to a markdown file
+
+This example shows how the agent can analyze existing automation to help teams understand their configured workflows.
+
+### Example 3: Bulk Processing & Visualization
+
+Process multiple invoices and generate revenue analysis charts through a single conversational prompt:
+
+```md
+1. Upload all invoices from `/path/to/examples/data` folder to Rossum queue 3901094
+   - Do not include documents from `knowledge` folder
+2. Once you send all annotations, wait for a few seconds
 3. Then, start checking annotation status. Once all are imported, return a list of all annotations_urls
-4. Fetch the schema for the target queue.
+4. Fetch the schema for the target queue
 5. Identify the schema field IDs for:
-    - Line item description field
-    - Line item total amount field
+   - Line item description field
+   - Line item total amount field
 6. Retrieve all annotations in 'to_review' state from queue 3901094
 7. For each document:
-    - Extract all line items
-    - Create a dictionary mapping {item_description: item_amount_total}
-    - If multiple line items share the same description, sum their amounts
-    - Print result for each document
+   - Extract all line items
+   - Create a dictionary mapping {item_description: item_amount_total}
+   - If multiple line items share the same description, sum their amounts
+   - Print result for each document
 8. Aggregate across all documents: sum amounts for each unique description
 9. Return the final dictionary: {description: total_amount_across_all_docs}
-10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.
+10. Using the retrieved data, generate bar plot displaying revenue by services.
+    Sort it in descending order. Store it interactive `revenue.html`.
 ```
 
 <div align="center">
   <img src="revenue.png" alt="Revenue by Services Chart" width="700">
 </div>
 
-See the [complete example](examples/PROMPT.md) showing how a single prompt processed 30 invoices and generated this chart.
+**Result:** Automatically processes 30 invoices and generates an interactive visualization showing revenue breakdown by service category.
 
-### Example 2: Queue Setup with Knowledge Warmup
+See the [complete example](examples/PROMPT.md) for the full prompt and results.
+
+### Example 4: Queue Setup with Knowledge Warmup
 
 Create a new queue, warm it up with training documents, and test automation performance:
 
 ```md
-1. Create a new queue in the same namespace as queue `3904204`.
-2. Set up the same schema field as queue `3904204`.
-3. Update schema so that everything with confidence > 90% will be automated.
+1. Create a new queue in the same namespace as queue `3904204`
+2. Set up the same schema field as queue `3904204`
+3. Update schema so that everything with confidence > 90% will be automated
 4. Rename the queue to: MCP Air Waybills
-5. Copy the queue knowledge from `3904204`.
-6. Return the queue status to check the queue status.
-7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill` to the new queue.
-8. Wait until all annotations are processed.
-9. Finally, return queue URL and an automation rate (exported documents).
+5. Copy the queue knowledge from `3904204`
+6. Return the queue status to check the queue status
+7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill`
+   to the new queue
+8. Wait until all annotations are processed
+9. Finally, return queue URL and an automation rate (exported documents)
 ```
 
 **Result:**
+
 ```json
 {
   "queue_url": "https://api.elis.rossum.ai/v1/queues/3920572",
@@ -75,57 +153,8 @@ Create a new queue, warm it up with training documents, and test automation perf
 }
 ```
 
-The agent automatically creates the queue, uploads documents, monitors processing, and calculates automation performance - achieving 86.7% automation rate from just 30 training documents.
+The agent automatically creates the queue, uploads documents, monitors processing, and calculates automation performance - achieving **86.7% automation rate** from just 30 training documents.
 
-### Example 3: Multi-Queue Setup with Sorting Engine
-
-Set up multiple queues with training data, create a sorting engine, and test classification performance:
-
-```md
-1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
-2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
-3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
-4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
-    - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
-5. Create a new engine in organization `1`, with type = 'extractor'.
-6. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
-    - DO NOT copy knowledge.
-    - Update Engine object.
-7. Create a new schema with a single enum field `Document type`.
-8. Create a new queue with the created engine and schema in the same workspace called: Inbox.
-9. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queues.
-10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type.
-```
-
-**Result:**
-
-```md
-✅ Step 10: Generated accuracy reports
-  • Overall Accuracy: 100.0% (90/90)
-
-  Accuracy by document type:
-    • air_waybill: 100.0% (30/30)
-    • certificate_of_origin: 100.0% (30/30)
-    • invoice: 100.0% (30/30)
-
-📊 Generated Charts:
-  • output/air_waybill_accuracy.html
-  • output/certificate_of_origin_accuracy.html
-  • output/invoice_accuracy.html
-  • output/overall_accuracy_by_type.html
-
-================================================================================
-🎉 ALL TASKS COMPLETED SUCCESSFULLY!
-================================================================================
-
-📝 Key Findings:
-  • The engine achieved 100% accuracy on all document types
-  • All 90 test documents were correctly classified
-  • The training data (88 confirmed annotations) was sufficient
-  • No misclassifications occurred
-
-**Reached max steps.**
-```
 
 ## Installation
 

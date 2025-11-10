@@ -9,3 +9,4 @@ docs/build/
 .coverage
 build
 extension_explanation.md
+.env

@@ -11,7 +11,81 @@ The examples show real-world use cases from simple document processing to comple
 Real-World Use Cases
 --------------------
 
-Example 1: Bulk Processing & Visualization
+Example 1: Aurora Splitting & Sorting Demo
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Set up a complete document splitting and sorting pipeline with training queues, splitter engine, automated hooks, and intelligent routing:
+
+.. code-block:: text
+
+   1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices.
+   2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+   3. Upload documents from folders air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to corresponding queues.
+   4. Annotate all uploaded documents with a correct Document type, and confirm the annotation.
+       - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores).
+       - IMPORTANT: After confirming all annotations, double check, that all are confirmed/exported, and fix those that are not.
+   5. Create three new queues in workspace `1777693` - Air Waybills Test, Certificates of Origin Test, Invoices Test.
+   6. Set up the schema with a single enum field on each queue with a name Document type (`document_type`).
+   7. Create a new engine in organization `1`, with type = 'splitter'.
+   8. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices.
+       - DO NOT copy knowledge.
+       - Update Engine object.
+   9. Create a new schema that will be the same as the schema from the queue `3885208`.
+   10. Create a new queue (with splitting UI feature flag!) with the created engine and schema in the same workspace called: Inbox.
+   11. Create a python function-based the **`Splitting & Sorting`** hook on the new inbox queue with this settings:
+       **Functionality**: Automatically splits multi-document uploads into separate annotations and routes them to appropriate queues.
+       Split documents should be routed to the following queues: Air Waybills Test, Certificates of Origin Test, Invoices Test
+
+       **Trigger Events**:
+       - annotation_content.initialize (suggests split to user)
+       - annotation_content.confirm (performs actual split)
+       - annotation_content.export (performs actual split)
+
+       **How it works**: Python code
+
+       **Settings**:
+       - sorting_queues: Maps document types to target queue IDs for routing
+       - max_blank_page_words: Threshold for blank page detection (pages with fewer words are considered blank)
+   12. Upload 10 documents from `examples/data/splitting_and_sorting/testing` folder to inbox queues.
+
+**What This Demonstrates:**
+
+- **Queue Orchestration**: Creates 7 queues (3 training + 3 test + 1 inbox) with consistent schemas
+- **Knowledge Warmup**: Uploads and annotates 90 training documents to teach the engine
+- **Splitter Engine**: Configures an AI engine to detect document boundaries and types
+- **Hook Automation**: Sets up a sophisticated webhook that automatically:
+
+  - Splits multi-document PDFs into individual annotations
+  - Removes blank pages intelligently
+  - Routes split documents to correct queues by type
+  - Suggests splits on initialization and executes on confirmation
+
+- **End-to-End Testing**: Validates the entire pipeline with test documents
+
+This example showcases the agent's ability to orchestrate complex workflows involving multiple queues, engines, schemas, automated hooks with custom logic, and intelligent document routing - all from a single conversational prompt.
+
+Example 2: Hook Analysis & Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Automatically analyze and document all hooks/extensions configured on a queue:
+
+.. code-block:: text
+
+   Briefly explain the functionality of every hook based on description and/or code one by one for a queue `2042843`.
+
+   Store output in extension_explanation.md
+
+**What This Does:**
+
+- Lists all hooks/extensions on the specified queue
+- Analyzes each hook's description and code
+- Generates clear, concise explanations of functionality
+- Documents trigger events and settings
+- Saves comprehensive documentation to a markdown file
+
+This example shows how the agent can analyze existing automation to help teams understand their configured workflows.
+
+Example 3: Bulk Processing & Visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Process multiple invoices and generate revenue analysis charts through a single conversational prompt:
@@ -43,7 +117,7 @@ revenue breakdown by service category.
 See the `complete example <https://github.com/stancld/rossum-mcp/blob/master/examples/PROMPT.md>`_
 for the full prompt and results.
 
-Example 2: Queue Setup with Knowledge Warmup
+Example 4: Queue Setup with Knowledge Warmup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Create a new queue, warm it up with training documents, and test automation performance:
@@ -77,60 +151,6 @@ Create a new queue, warm it up with training documents, and test automation perf
 
 The agent automatically creates the queue, uploads documents, monitors processing, and calculates
 automation performance - achieving **86.7% automation rate** from just 30 training documents.
-
-Example 3: Multi-Queue Setup with Sorting Engine
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Set up multiple queues with training data, create a sorting engine, and test classification performance:
-
-.. code-block:: text
-
-   1. Create three new queues in workspace `1777693` - Air Waybills, Certificates of Origin, Invoices
-   2. Set up the schema with a single enum field on each queue with a name Document type (`document_type`)
-   3. Upload documents from folders air_waybill, certificate_of_origin, invoice in
-      `examples/data/splitting_and_sorting/knowledge` to corresponding queues
-   4. Annotate all uploaded documents with a correct Document type, and confirm the annotation
-      - Beware document types are air_waybill, invoice and certificate_of_origin (lower-case, underscores)
-   5. Create a new engine in organization `1`, with type = 'extractor'
-   6. Configure engine training queues to be - Air Waybills, Certificates of Origin, Invoices
-      - DO NOT copy knowledge
-      - Update Engine object
-   7. Create a new schema with a single enum field `Document type`
-   8. Create a new queue with the created engine and schema in the same workspace called: Inbox
-   9. Upload documents from folders air_waybill, certificate_of_origin, invoice in
-      `examples/data/splitting_and_sorting/knowledge` to inbox queues
-   10. Based on the file names and predicted values, generate a pie plot with correct/wrong
-       for each document type
-
-**Result:**
-
-.. code-block:: text
-
-   ✅ Step 10: Generated accuracy reports
-     • Overall Accuracy: 100.0% (90/90)
-
-     Accuracy by document type:
-       • air_waybill: 100.0% (30/30)
-       • certificate_of_origin: 100.0% (30/30)
-       • invoice: 100.0% (30/30)
-
-   📊 Generated Charts:
-     • output/air_waybill_accuracy.html
-     • output/certificate_of_origin_accuracy.html
-     • output/invoice_accuracy.html
-     • output/overall_accuracy_by_type.html
-
-   ================================================================================
-   🎉 ALL TASKS COMPLETED SUCCESSFULLY!
-   ================================================================================
-
-   📝 Key Findings:
-     • The engine achieved 100% accuracy on all document types
-     • All 90 test documents were correctly classified
-     • The training data (88 confirmed annotations) was sufficient
-     • No misclassifications occurred
-
-The agent achieved **100% classification accuracy** across all document types.
 
 Building Custom Tools
 ----------------------

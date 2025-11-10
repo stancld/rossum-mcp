@@ -9,7 +9,11 @@ from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
 from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
 from rossum_agent.instructions import SYSTEM_PROMPT
-from rossum_agent.internal_tools import copy_queue_knowledge, retrieve_queue_status
+from rossum_agent.internal_tools import (
+    copy_queue_knowledge,
+    get_splitting_and_sorting_hook_code,
+    retrieve_queue_status,
+)
 from rossum_agent.plot_tools import plot_data
 
 DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
@@ -39,7 +43,11 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     # Configure LLM based on model type
     if model_id.startswith("bedrock/"):
         # Bedrock models only need model_id
-        llm = LiteLLMModel(model_id=model_id)
+        llm = LiteLLMModel(
+            model_id=model_id,
+            # Limit the number of requests to avoid being kicked by AWS Bedrock
+            requests_per_minute=5.0,
+        )
     else:
         # OpenAI-compatible models need api_base and optionally api_key
         llm_kwargs = {"model_id": model_id, "api_base": os.environ["LLM_API_BASE_URL"]}
@@ -83,6 +91,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         # Rossum internal tools
         copy_queue_knowledge,
         retrieve_queue_status,
+        get_splitting_and_sorting_hook_code,
     ]
 
     return CodeAgent(
@@ -91,6 +100,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         prompt_templates=prompt_templates,
         additional_authorized_imports=[
             "collections",
+            "copy",
             "datetime",
             "itertools",
             "json",
@@ -98,6 +108,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
             "os",
             "pathlib",
             "posixpath",
+            "pprint",
             "queue",
             "random",
             "re",
