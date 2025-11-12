@@ -33,7 +33,7 @@ Built with Python and the official `rossum-sdk <https://github.com/rossumai/ross
 Features
 --------
 
-The MCP server provides **18 tools** organized into three categories:
+The MCP server provides **20 tools** organized into four categories:
 
 **Document Processing**
 
@@ -48,7 +48,6 @@ The MCP server provides **18 tools** organized into three categories:
 
 * **get_queue**, **get_schema**, **get_queue_schema** - Retrieve configuration
 * **get_queue_engine** - Get engine information
-* **list_hooks** - List webhooks and extensions
 * **create_queue**, **create_schema** - Create new queues and schemas
 * **update_queue**, **update_schema** - Configure automation thresholds
 
@@ -57,6 +56,12 @@ The MCP server provides **18 tools** organized into three categories:
 * **create_engine** - Create extraction or splitting engines
 * **update_engine** - Configure learning and training queues
 * **create_engine_field** - Define engine fields and link to schemas
+
+**Extensions & Rules**
+
+* **list_hooks** - List webhooks and extensions
+* **create_hook** - Create webhooks or serverless function hooks
+* **list_rules** - List business rules with trigger conditions and actions
 
 **AI Agent Toolkit**
 

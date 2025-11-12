@@ -37,6 +37,11 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **update_engine**: Update engine settings including learning and training queues
 - **create_engine_field**: Create engine fields and link them to schemas
 
+### Extensions & Rules
+- **list_hooks**: List webhooks and serverless functions (extensions)
+- **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **list_rules**: List business rules with trigger conditions and actions
+
 ## Prerequisites
 
 - Python 3.10 or higher
@@ -483,6 +488,66 @@ active_hooks = list_hooks(active=True)
 inactive_queue_hooks = list_hooks(queue_id=12345, active=False)
 ```
 
+#### create_hook
+
+Creates a new hook (webhook or serverless function). Hooks respond to Rossum events and can be used for custom validation, data enrichment, or integration with external systems.
+
+**Parameters:**
+- `name` (string, required): Hook name
+- `type` (string, required): Hook type - either 'webhook' or 'function'
+- `queues` (array, optional): List of queue URLs to attach the hook to. If not provided, hook applies to all queues
+  - Format: `["https://api.elis.rossum.ai/v1/queues/12345"]`
+- `events` (array, optional): List of events that trigger the hook. Common events:
+  - `annotation_content.initialize` - When annotation is first created
+  - `annotation_content.confirm` - When annotation is confirmed
+  - `annotation_content.export` - When annotation is exported
+  - `annotation_status` - When annotation status changes
+  - `annotation_content` - When annotation content changes
+  - `datapoint_value` - When individual field value changes
+- `config` (object, optional): Hook configuration
+  - For webhook: `{"url": "https://example.com/webhook"}`
+  - For function: `{"runtime": "python3.12", "function": "import json\ndef rossum_hook_request_handler(payload):\n    return {}"}`
+- `settings` (object, optional): Specific settings included in the payload when executing the hook
+- `secret` (string, optional): Secret key for securing webhook requests
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "My Hook",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "enabled": true,
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_content.initialize"],
+  "config": {"runtime": "python3.12", "function": "..."},
+  "settings": {"custom_key": "custom_value"},
+  "message": "Hook 'My Hook' created successfully with ID 12345"
+}
+```
+
+**Example usage:**
+```python
+# Create a serverless function hook
+create_hook(
+    name="Splitting & Sorting",
+    type="function",
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    events=["annotation_content.initialize", "annotation_content.confirm"],
+    config={"runtime": "python3.12", "function": "import json\ndef rossum_hook_request_handler(payload):\n    return {}"},
+    settings={"sorting_queues": {"A": 1, "B": 2}}
+)
+
+# Create a webhook hook
+create_hook(
+    name="External Validation",
+    type="webhook",
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    events=["annotation_content.confirm"],
+    config={"url": "https://example.com/validate"},
+    secret="webhook_secret_123"
+)
+```
+
 #### create_engine_field
 
 Creates a new engine field and links it to schemas. Engine fields define what data the engine extracts and must be created for each field in the schema when setting up an engine.
@@ -512,6 +577,68 @@ Creates a new engine field and links it to schemas. Engine fields define what da
   "schema_ids": [456, 789],
   "message": "Engine field 'Invoice Number' created successfully with ID 12345 and linked to 2 schema(s)"
 }
+```
+
+### Rules Management
+
+#### list_rules
+
+Lists all business rules configured in your organization. Rules define custom business logic with trigger conditions (TxScript formulas) and actions that execute when conditions are met.
+
+**Parameters:**
+- `schema_id` (integer, optional): Filter rules by schema ID
+- `organization_id` (integer, optional): Filter rules by organization ID
+- `enabled` (boolean, optional): Filter by enabled status (true for enabled rules, false for disabled)
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "name": "Auto-calculate Total",
+      "url": "https://elis.rossum.ai/api/v1/rules/12345",
+      "enabled": true,
+      "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+      "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+      "trigger_condition": "field.amount_total.changed",
+      "created_by": "https://elis.rossum.ai/api/v1/users/300",
+      "created_at": "2024-01-01T00:00:00Z",
+      "modified_by": "https://elis.rossum.ai/api/v1/users/300",
+      "modified_at": "2024-01-01T00:00:00Z",
+      "rule_template": null,
+      "synchronized_from_template": false,
+      "actions": [
+        {
+          "id": 54321,
+          "type": "set_datapoint_value",
+          "payload": {
+            "datapoint_id": "tax_amount",
+            "value": "field.amount_total.value * 0.2"
+          },
+          "event": "trigger",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all rules
+all_rules = list_rules()
+
+# List rules for a specific schema
+schema_rules = list_rules(schema_id=12345)
+
+# List only enabled rules
+enabled_rules = list_rules(enabled=True)
+
+# List enabled rules for a specific organization
+org_enabled_rules = list_rules(organization_id=100, enabled=True)
 ```
 
 ## Annotation Status Workflow
