@@ -13,6 +13,57 @@
 - Sync API client wrapped in async executors for MCP compatibility
 - Examples in `examples/` directory
 
+## Documentation Updates
+
+**CRITICAL**: When adding, removing, or modifying MCP tools, you MUST update documentation to keep it in sync with the code.
+
+### Files to Update When Adding/Modifying Tools:
+
+1. **`rossum_mcp/README.md`**:
+   - Update the Features section to list the new tool
+   - Add complete tool documentation under "Available Tools" section:
+     - Tool name and description
+     - Parameters (with types and descriptions)
+     - Return format (with JSON examples)
+     - Usage examples
+
+2. **`docs/source/index.rst`**:
+   - Update the tool count in "Features" section (e.g., "20 tools" → "21 tools")
+   - Add the new tool to the appropriate category bullet list:
+     - Document Processing
+     - Queue & Schema Management
+     - Engine Management
+     - Extensions & Rules
+
+3. **`docs/source/usage.rst`**:
+   - Add full tool documentation in reStructuredText format:
+     - Tool heading (using `^^^^^` underline)
+     - Description paragraph
+     - Parameters section with proper RST formatting
+     - Returns section with `.. code-block:: json` examples
+     - Optional example usage with `.. code-block:: python`
+
+4. **`docs/source/mcp_reference.rst`** (if applicable):
+   - Add SDK mapping documentation if the tool uses new SDK methods
+   - Document API endpoints and query parameters
+   - Include implementation notes
+
+### Documentation Checklist:
+- [ ] Updated tool count in `docs/source/index.rst`
+- [ ] Added tool to appropriate category in `index.rst` and `README.md`
+- [ ] Documented parameters, return values, and examples in all three files
+- [ ] Verified examples match actual tool signatures in `server.py`
+- [ ] Built and reviewed generated documentation locally (if docs changes)
+
+### Verification:
+After updating documentation, verify consistency by checking:
+```bash
+# Check that tool definitions in server.py match documentation
+grep -A5 "Tool(" rossum_mcp/server.py | grep "name="
+grep "^\*\*" docs/source/index.rst
+grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
+```
+
 ## Code Style
 - **Python version**: 3.12+ syntax required
 - **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`). Avoid using `Any` type annotation as much as possible - use specific types instead
