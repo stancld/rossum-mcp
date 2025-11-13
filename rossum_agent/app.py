@@ -87,7 +87,9 @@ def main() -> None:  # noqa: C901
                 output_placeholder = st.empty()
 
                 # Stream the response
-                result_generator = st.session_state.agent.run(prompt, return_full_result=True, stream=True)
+                result_generator = st.session_state.agent.run(
+                    prompt, return_full_result=True, stream=True, reset=False
+                )
 
                 for chunk in result_generator:
                     if hasattr(chunk, "model_output") and chunk.model_output:

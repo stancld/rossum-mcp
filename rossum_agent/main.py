@@ -36,7 +36,7 @@ def main(args: argparse.Namespace) -> None:
     print("=" * 50 + "\n")
 
     if args.hardcoded_prompt:
-        agent.run(PROMPTS[args.hardcoded_prompt])
+        agent.run(PROMPTS[args.hardcoded_prompt], reset=False)
 
     while True:
         try:
@@ -49,7 +49,7 @@ def main(args: argparse.Namespace) -> None:
             if not user_input:
                 continue
 
-            response = agent.run(user_input)
+            response = agent.run(user_input, reset=False)
             print(f"\n🤖 Agent: {response}\n")
 
         except KeyboardInterrupt:
