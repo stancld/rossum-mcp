@@ -1,10 +1,10 @@
 # Explain Hook Functionality
 
+```
 Briefly explain the functionality of every hook based on description and/or code one by one for a queue `3885208`.
 
-Return it as a dictionary: `hook name -> description`.
-
-Important: Include trigger events etc.
+Store output in extestion_explanation.md
+```
 
 ## Expected Format for Hook Descriptions
 
