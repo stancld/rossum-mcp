@@ -12,7 +12,7 @@ license = {text = "MIT"}
 keywords = ["mcp", "rossum", "document-processing"]
 dependencies = [
     "mcp>=1.0.0",
-    "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-rules",
+    "rossum-api>3.6.1",
 ]
 
 [project.scripts]
@@ -37,7 +37,7 @@ all = [
     "myst-parser>=2.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
-    "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-rules",
+    "rossum-api>3.6.1",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",

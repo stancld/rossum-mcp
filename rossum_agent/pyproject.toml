@@ -16,7 +16,7 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv",
     "requests>=2.32",
-    "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-rules",
+    "rossum-api>3.6.1",
     "seaborn>=0.13.2",
     "smolagents[litellm]>=1.0.0",
 ]
