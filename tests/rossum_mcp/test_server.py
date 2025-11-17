@@ -79,7 +79,7 @@ class TestUploadDocument:
         server.client.upload_document.return_value = [mock_task]
 
         # Call the async method
-        result = await server.upload_document(str(test_file), 100)
+        result = await server.annotations_handler.upload_document(str(test_file), 100)
 
         # Verify the result
         assert result["task_id"] == 12345
@@ -99,7 +99,7 @@ class TestUploadDocument:
     async def test_upload_document_file_not_found(self, server: RossumMCPServer) -> None:
         """Test upload fails when file doesn't exist."""
         with pytest.raises(FileNotFoundError) as exc_info:
-            await server.upload_document("/nonexistent/file.pdf", 100)
+            await server.annotations_handler.upload_document("/nonexistent/file.pdf", 100)
         assert "File not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -113,7 +113,7 @@ class TestUploadDocument:
         mock_task.status = "importing"
         server.client.upload_document.return_value = [mock_task]
 
-        result = await server.upload_document(str(test_file), 100)
+        result = await server.annotations_handler.upload_document(str(test_file), 100)
 
         assert result["task_id"] == 12345
         assert result["queue_id"] == 100
@@ -141,7 +141,7 @@ class TestGetAnnotation:
         server.client.retrieve_annotation.return_value = mock_annotation
 
         # Call the async method
-        result = await server.get_annotation(67890, sideloads=["content"])
+        result = await server.annotations_handler.get_annotation(67890, sideloads=["content"])
 
         # Verify the result
         assert result["id"] == 67890
@@ -168,7 +168,7 @@ class TestGetAnnotation:
 
         server.client.retrieve_annotation.return_value = mock_annotation
 
-        result = await server.get_annotation(67890, sideloads=())
+        result = await server.annotations_handler.get_annotation(67890, sideloads=())
 
         assert result["id"] == 67890
         assert result["content"] is None
@@ -190,7 +190,7 @@ class TestGetAnnotation:
 
         server.client.retrieve_annotation.return_value = mock_annotation
 
-        result = await server.get_annotation(67890, sideloads=["content"])
+        result = await server.annotations_handler.get_annotation(67890, sideloads=["content"])
 
         assert result["id"] == 67890
 
@@ -228,7 +228,7 @@ class TestListAnnotations:
         server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
 
         # Call the async method
-        result = await server.list_annotations(100, status="confirmed,to_review")
+        result = await server.annotations_handler.list_annotations(100, status="confirmed,to_review")
 
         # Verify the result
         assert result["count"] == 2
@@ -253,7 +253,7 @@ class TestListAnnotations:
         # Replace the AsyncMock method with a regular Mock that returns async iter
         server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_annotations(100, status=None)
+        result = await server.annotations_handler.list_annotations(100, status=None)
 
         assert result["count"] == 0
         assert result["results"] == []
@@ -277,7 +277,7 @@ class TestListAnnotations:
         # Replace the AsyncMock method with a regular Mock that returns async iter
         server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_annotations(100)
+        result = await server.annotations_handler.list_annotations(100)
 
         assert result["count"] == 1
 
@@ -302,7 +302,7 @@ class TestGetQueue:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = await server.get_queue(100)
+        result = await server.queues_handler.get_queue(100)
 
         assert result["id"] == 100
         assert result["name"] == "Test Queue"
@@ -327,7 +327,7 @@ class TestGetQueue:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = await server.get_queue(100)
+        result = await server.queues_handler.get_queue(100)
 
         assert result["id"] == 100
 
@@ -347,7 +347,7 @@ class TestGetSchema:
 
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = await server.get_schema(50)
+        result = await server.schemas_handler.get_schema(50)
 
         assert result["id"] == 50
         assert result["name"] == "Test Schema"
@@ -366,7 +366,7 @@ class TestGetSchema:
 
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = await server.get_schema(50)
+        result = await server.schemas_handler.get_schema(50)
 
         assert result["id"] == 50
 
@@ -392,7 +392,7 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = await server.get_queue_schema(100)
+        result = await server.queues_handler.get_queue_schema(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -420,7 +420,7 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = await server.get_queue_schema(100)
+        result = await server.queues_handler.get_queue_schema(100)
 
         assert result["schema_id"] == 50
         server.client.retrieve_schema.assert_called_once_with(50)
@@ -442,7 +442,7 @@ class TestGetQueueSchema:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_schema.return_value = mock_schema
 
-        result = await server.get_queue_schema(100)
+        result = await server.queues_handler.get_queue_schema(100)
 
         assert result["queue_id"] == 100
         assert result["schema_id"] == 50
@@ -470,7 +470,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -499,7 +499,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["engine_id"] == 20
         assert result["engine_type"] == "dedicated"
@@ -523,7 +523,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["engine_id"] == 25
         assert result["engine_type"] == "generic"
@@ -541,7 +541,7 @@ class TestGetQueueEngine:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -572,7 +572,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["engine_id"] == 15
         server.client.retrieve_engine.assert_called_once_with(15)
@@ -599,7 +599,7 @@ class TestGetQueueEngine:
 
         server.client.retrieve_queue.return_value = mock_queue
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["queue_name"] == "Test Queue"
@@ -630,7 +630,7 @@ class TestGetQueueEngine:
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
-        result = await server.get_queue_engine(100)
+        result = await server.queues_handler.get_queue_engine(100)
 
         assert result["queue_id"] == 100
         assert result["engine_id"] == 15
@@ -661,7 +661,7 @@ class TestCreateQueue:
         server.client.create_new_queue.return_value = mock_queue
 
         # Call the async method
-        result = await server.create_queue(
+        result = await server.queues_handler.create_queue(
             name="New Test Queue",
             workspace_id=1,
             schema_id=50,
@@ -708,7 +708,7 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        result = await server.create_queue(
+        result = await server.queues_handler.create_queue(
             name="Minimal Queue",
             workspace_id=2,
             schema_id=60,
@@ -742,7 +742,7 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        result = await server.create_queue(
+        result = await server.queues_handler.create_queue(
             name="Full Queue",
             workspace_id=3,
             schema_id=70,
@@ -785,7 +785,7 @@ class TestCreateQueue:
 
         server.client.create_new_queue.return_value = mock_queue
 
-        result = await server.create_queue(
+        result = await server.queues_handler.create_queue(
             name="Async Queue",
             workspace_id=4,
             schema_id=80,
@@ -842,7 +842,7 @@ class TestUpdateEngine:
             ]
         }
 
-        result = await server.update_engine(engine_id=36032, engine_data=engine_data)
+        result = await server.engines_handler.update_engine(engine_id=36032, engine_data=engine_data)
 
         assert result["id"] == 36032
         assert result["name"] == "Test Engine"
@@ -883,7 +883,7 @@ class TestUpdateEngine:
 
         engine_data = {"learning_enabled": False}
 
-        result = await server.update_engine(engine_id=36032, engine_data=engine_data)
+        result = await server.engines_handler.update_engine(engine_id=36032, engine_data=engine_data)
 
         assert result["id"] == 36032
         assert result["learning_enabled"] is False
@@ -921,7 +921,9 @@ class TestCreateEngine:
         server.client._http_client.create = AsyncMock(return_value=mock_created_engine_data)
         server.client._deserializer = Mock(return_value=mock_created_engine)
 
-        result = await server.create_engine(name="Test Extractor Engine", organization_id=1, engine_type="extractor")
+        result = await server.engines_handler.create_engine(
+            name="Test Extractor Engine", organization_id=1, engine_type="extractor"
+        )
 
         # Verify the result
         assert result["id"] == 100
@@ -967,7 +969,9 @@ class TestCreateEngine:
         server.client._http_client.create = AsyncMock(return_value=mock_created_engine_data)
         server.client._deserializer = Mock(return_value=mock_created_engine)
 
-        result = await server.create_engine(name="Test Splitter Engine", organization_id=2, engine_type="splitter")
+        result = await server.engines_handler.create_engine(
+            name="Test Splitter Engine", organization_id=2, engine_type="splitter"
+        )
 
         # Verify the result
         assert result["id"] == 101
@@ -985,7 +989,9 @@ class TestCreateEngine:
     async def test_create_engine_invalid_type(self, server: RossumMCPServer) -> None:
         """Test that invalid engine type raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
-            await server.create_engine(name="Invalid Engine", organization_id=1, engine_type="invalid_type")
+            await server.engines_handler.create_engine(
+                name="Invalid Engine", organization_id=1, engine_type="invalid_type"
+            )
 
         assert "Invalid engine_type 'invalid_type'" in str(exc_info.value)
         assert "Must be 'extractor' or 'splitter'" in str(exc_info.value)
@@ -998,7 +1004,7 @@ class TestCreateEngine:
         server.client._http_client.create = AsyncMock(side_effect=Exception("API Error: Permission denied"))
 
         with pytest.raises(Exception) as exc_info:
-            await server.create_engine(name="Test Engine", organization_id=1, engine_type="extractor")
+            await server.engines_handler.create_engine(name="Test Engine", organization_id=1, engine_type="extractor")
 
         assert "API Error: Permission denied" in str(exc_info.value)
 
@@ -1033,7 +1039,7 @@ class TestUploadDocumentErrorHandling:
         server.client.upload_document.side_effect = KeyError("missing_key")
 
         with pytest.raises(ValueError) as exc_info:
-            await server.upload_document(str(test_file), 100)
+            await server.annotations_handler.upload_document(str(test_file), 100)
 
         assert "API response missing expected key" in str(exc_info.value)
         assert "queue_id (100)" in str(exc_info.value)
@@ -1049,7 +1055,7 @@ class TestUploadDocumentErrorHandling:
         server.client.upload_document.return_value = []
 
         with pytest.raises(ValueError) as exc_info:
-            await server.upload_document(str(test_file), 100)
+            await server.annotations_handler.upload_document(str(test_file), 100)
 
         assert "no tasks were created" in str(exc_info.value)
         assert "queue_id (100) is invalid" in str(exc_info.value)
@@ -1064,7 +1070,7 @@ class TestUploadDocumentErrorHandling:
         server.client.upload_document.side_effect = RuntimeError("Network timeout")
 
         with pytest.raises(ValueError) as exc_info:
-            await server.upload_document(str(test_file), 100)
+            await server.annotations_handler.upload_document(str(test_file), 100)
 
         assert "Document upload failed" in str(exc_info.value)
         assert "RuntimeError" in str(exc_info.value)
@@ -1110,7 +1116,7 @@ class TestUpdateQueue:
             "default_score_threshold": 0.90,
         }
 
-        result = await server.update_queue(queue_id=100, queue_data=queue_data)
+        result = await server.queues_handler.update_queue(queue_id=100, queue_data=queue_data)
 
         assert result["id"] == 100
         assert result["automation_enabled"] is True
@@ -1147,7 +1153,7 @@ class TestUpdateQueue:
         server.client._http_client.update.update = AsyncMock(return_value=mock_updated_queue_data)
         server.client._deserializer = Mock(return_value=mock_updated_queue)
 
-        result = await server.update_queue(queue_id=101, queue_data={"name": "Renamed Queue"})
+        result = await server.queues_handler.update_queue(queue_id=101, queue_data={"name": "Renamed Queue"})
 
         assert result["id"] == 101
         assert result["name"] == "Renamed Queue"
@@ -1194,7 +1200,7 @@ class TestUpdateSchema:
         server.client._http_client.update = AsyncMock(return_value=mock_updated_schema_data)
         server.client._deserializer = Mock(return_value=mock_updated_schema)
 
-        result = await server.update_schema(schema_id=50, schema_data={"content": schema_content})
+        result = await server.schemas_handler.update_schema(schema_id=50, schema_data={"content": schema_content})
 
         assert result["id"] == 50
         assert result["name"] == "Updated Schema"
@@ -1211,7 +1217,7 @@ class TestAnnotationWorkflow:
         """Test starting an annotation."""
         server.client.start_annotation.return_value = None
 
-        result = await server.start_annotation(annotation_id=12345)
+        result = await server.annotations_handler.start_annotation(annotation_id=12345)
 
         assert result["annotation_id"] == 12345
         assert "started successfully" in result["message"].lower()
@@ -1228,7 +1234,9 @@ class TestAnnotationWorkflow:
 
         server.client.bulk_update_annotation_data.return_value = None
 
-        result = await server.bulk_update_annotation_fields(annotation_id=12345, operations=operations)
+        result = await server.annotations_handler.bulk_update_annotation_fields(
+            annotation_id=12345, operations=operations
+        )
 
         assert result["annotation_id"] == 12345
         assert result["operations_count"] == 2
@@ -1240,7 +1248,7 @@ class TestAnnotationWorkflow:
         """Test confirming an annotation."""
         server.client.confirm_annotation.return_value = None
 
-        result = await server.confirm_annotation(annotation_id=12345)
+        result = await server.annotations_handler.confirm_annotation(annotation_id=12345)
 
         assert result["annotation_id"] == 12345
         assert "confirmed successfully" in result["message"].lower()
@@ -1285,7 +1293,7 @@ class TestCreateSchema:
 
         server.client.create_new_schema.return_value = mock_created_schema
 
-        result = await server.create_schema(name="New Schema", content=schema_content)
+        result = await server.schemas_handler.create_schema(name="New Schema", content=schema_content)
 
         assert result["id"] == 100
         assert result["name"] == "New Schema"
@@ -1334,7 +1342,7 @@ class TestCreateEngineField:
         server.client._http_client.create = AsyncMock(return_value=mock_created_field_data)
         server.client._deserializer = Mock(return_value=mock_created_field)
 
-        result = await server.create_engine_field(
+        result = await server.engines_handler.create_engine_field(
             engine_id=100, name="invoice_id", label="Invoice ID", field_type="string", schema_ids=[50, 60]
         )
 
@@ -1378,7 +1386,7 @@ class TestCreateEngineField:
         server.client._http_client.create = AsyncMock(return_value=mock_created_field_data)
         server.client._deserializer = Mock(return_value=mock_created_field)
 
-        result = await server.create_engine_field(
+        result = await server.engines_handler.create_engine_field(
             engine_id=100,
             name="amount_total",
             label="Total Amount",
@@ -1398,7 +1406,7 @@ class TestCreateEngineField:
     async def test_create_engine_field_invalid_type(self, server: RossumMCPServer) -> None:
         """Test that invalid field type raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
-            await server.create_engine_field(
+            await server.engines_handler.create_engine_field(
                 engine_id=100, name="test", label="Test", field_type="invalid", schema_ids=[50]
             )
 
@@ -1409,7 +1417,7 @@ class TestCreateEngineField:
     async def test_create_engine_field_empty_schemas(self, server: RossumMCPServer) -> None:
         """Test that empty schema_ids list raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
-            await server.create_engine_field(
+            await server.engines_handler.create_engine_field(
                 engine_id=100, name="test", label="Test", field_type="string", schema_ids=[]
             )
 
@@ -1435,7 +1443,7 @@ class TestIntegration:
         mock_task.status = "importing"
         server.client.upload_document.return_value = [mock_task]
 
-        upload_result = await server.upload_document(str(test_file), 999)
+        upload_result = await server.annotations_handler.upload_document(str(test_file), 999)
         assert upload_result["task_id"] == 99999
 
         # Step 2: List annotations in the queue
@@ -1450,7 +1458,7 @@ class TestIntegration:
             yield mock_ann
 
         server.client.list_annotations = Mock(side_effect=lambda **kwargs: async_iter())
-        list_result = await server.list_annotations(queue_id=999, status="to_review")
+        list_result = await server.annotations_handler.list_annotations(queue_id=999, status="to_review")
         assert list_result["count"] == 1
 
         # Step 3: Get annotation with content
@@ -1466,23 +1474,23 @@ class TestIntegration:
         mock_annotation.modified_at = "2025-01-01"
         server.client.retrieve_annotation.return_value = mock_annotation
 
-        annotation_result = await server.get_annotation(888, sideloads=["content"])
+        annotation_result = await server.annotations_handler.get_annotation(888, sideloads=["content"])
         assert annotation_result["id"] == 888
 
         # Step 4: Start annotation
         server.client.start_annotation.return_value = None
-        start_result = await server.start_annotation(888)
+        start_result = await server.annotations_handler.start_annotation(888)
         assert start_result["annotation_id"] == 888
 
         # Step 5: Update annotation fields
         server.client.bulk_update_annotation_data.return_value = None
         operations = [{"op": "replace", "id": 1234, "value": {"content": {"value": "INV-002"}}}]
-        update_result = await server.bulk_update_annotation_fields(888, operations)
+        update_result = await server.annotations_handler.bulk_update_annotation_fields(888, operations)
         assert update_result["operations_count"] == 1
 
         # Step 6: Confirm annotation
         server.client.confirm_annotation.return_value = None
-        confirm_result = await server.confirm_annotation(888)
+        confirm_result = await server.annotations_handler.confirm_annotation(888)
         assert confirm_result["annotation_id"] == 888
 
     @pytest.mark.asyncio
@@ -1505,7 +1513,7 @@ class TestIntegration:
         mock_schema.content = schema_content
         server.client.create_new_schema.return_value = mock_schema
 
-        schema_result = await server.create_schema("Test Schema", schema_content)
+        schema_result = await server.schemas_handler.create_schema("Test Schema", schema_content)
         assert schema_result["id"] == 777
 
         # Create a queue with the schema
@@ -1524,12 +1532,12 @@ class TestIntegration:
         mock_queue.training_enabled = True
         server.client.create_new_queue.return_value = mock_queue
 
-        queue_result = await server.create_queue("Test Queue", workspace_id=1, schema_id=777)
+        queue_result = await server.queues_handler.create_queue("Test Queue", workspace_id=1, schema_id=777)
         assert queue_result["id"] == 666
 
         # Get queue details
         server.client.retrieve_queue.return_value = mock_queue
-        get_queue_result = await server.get_queue(666)
+        get_queue_result = await server.queues_handler.get_queue(666)
         assert get_queue_result["id"] == 666
 
         # Update queue settings
@@ -1558,7 +1566,7 @@ class TestIntegration:
         mock_updated_queue.training_enabled = True
         server.client._deserializer = Mock(return_value=mock_updated_queue)
 
-        update_queue_result = await server.update_queue(
+        update_queue_result = await server.queues_handler.update_queue(
             666, {"automation_enabled": True, "automation_level": "always"}
         )
         assert update_queue_result["automation_enabled"] is True
@@ -1588,7 +1596,9 @@ class TestIntegration:
         mock_engine.organization = "org"
         server.client._deserializer = Mock(return_value=mock_engine)
 
-        engine_result = await server.create_engine("Test Engine", organization_id=1, engine_type="extractor")
+        engine_result = await server.engines_handler.create_engine(
+            "Test Engine", organization_id=1, engine_type="extractor"
+        )
         assert engine_result["id"] == 555
 
         # Create engine fields
@@ -1619,7 +1629,7 @@ class TestIntegration:
         mock_field.pre_trained_field_id = None
         server.client._deserializer = Mock(return_value=mock_field)
 
-        field_result = await server.create_engine_field(
+        field_result = await server.engines_handler.create_engine_field(
             engine_id=555, name="invoice_id", label="Invoice ID", field_type="string", schema_ids=[777]
         )
         assert field_result["id"] == 444
@@ -1647,7 +1657,7 @@ class TestIntegration:
         mock_updated_engine.description = "Updated"
         server.client._deserializer = Mock(return_value=mock_updated_engine)
 
-        update_engine_result = await server.update_engine(
+        update_engine_result = await server.engines_handler.update_engine(
             555, {"learning_enabled": False, "training_queues": ["queue1", "queue2"]}
         )
         assert update_engine_result["learning_enabled"] is False
@@ -1690,7 +1700,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks()
+        result = await server.hooks_handler.list_hooks()
 
         assert result["count"] == 2
         assert len(result["results"]) == 2
@@ -1722,7 +1732,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks(queue_id=100)
+        result = await server.hooks_handler.list_hooks(queue_id=100)
 
         assert result["count"] == 1
         assert len(result["results"]) == 1
@@ -1749,7 +1759,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks(active=True)
+        result = await server.hooks_handler.list_hooks(active=True)
 
         assert result["count"] == 1
         assert len(result["results"]) == 1
@@ -1775,7 +1785,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks(queue_id=200, active=True)
+        result = await server.hooks_handler.list_hooks(queue_id=200, active=True)
 
         assert result["count"] == 1
         assert len(result["results"]) == 1
@@ -1793,7 +1803,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks(queue_id=999)
+        result = await server.hooks_handler.list_hooks(queue_id=999)
 
         assert result["count"] == 0
         assert result["results"] == []
@@ -1818,7 +1828,7 @@ class TestListHooks:
 
         server.client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
 
-        result = await server.list_hooks(active=False)
+        result = await server.hooks_handler.list_hooks(active=False)
 
         assert result["count"] == 1
         assert len(result["results"]) == 1
@@ -1847,7 +1857,7 @@ class TestCreateHook:
 
         server.client.create_new_hook = AsyncMock(return_value=mock_hook)
 
-        result = await server.create_hook(name="Test Hook", type="webhook")
+        result = await server.hooks_handler.create_hook(name="Test Hook", type="webhook")
 
         assert result["id"] == 123
         assert result["name"] == "Test Hook"
@@ -1880,7 +1890,7 @@ class TestCreateHook:
 
         server.client.create_new_hook = AsyncMock(return_value=mock_hook)
 
-        result = await server.create_hook(
+        result = await server.hooks_handler.create_hook(
             name="Advanced Hook",
             type="webhook",
             queues=["https://api.test.rossum.ai/v1/queues/100"],
@@ -1927,7 +1937,7 @@ class TestCreateHook:
 
         server.client.create_new_hook = AsyncMock(return_value=mock_hook)
 
-        result = await server.create_hook(name="Disabled Hook", type="webhook")
+        result = await server.hooks_handler.create_hook(name="Disabled Hook", type="webhook")
 
         assert result["id"] == 789
         assert result["enabled"] is False
@@ -1957,7 +1967,7 @@ class TestCreateHook:
 
         server.client.create_new_hook = AsyncMock(return_value=mock_hook)
 
-        result = await server.create_hook(name="Minimal Hook", type="webhook")
+        result = await server.hooks_handler.create_hook(name="Minimal Hook", type="webhook")
 
         assert result["id"] == 999
         assert result["queues"] == []
