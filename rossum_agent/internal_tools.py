@@ -1,6 +1,7 @@
 """Rossum internal tools for not yet publish endpoints."""
 
 import json
+import os
 
 import requests
 from smolagents import tool
@@ -55,6 +56,7 @@ def copy_queue_knowledge(
             "source_queue_url": source_queue_url,
             "target_queue_url": target_queue_url,
             "delete_existing": delete_existing,
+            "username": f"rossum-agent:{os.environ.get('USER', '')}",
         }
 
         # Add optional datetime filters
