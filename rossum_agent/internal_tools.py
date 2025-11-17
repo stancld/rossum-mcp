@@ -8,7 +8,7 @@ from smolagents import tool
 
 NEIGHBORS_API_HOST: str = "localhost"
 NEIGHBORS_API_PORT: int = 5000
-DEFAULT_BACKBONE = "240219T122821-great-hawking.135k.tenet"
+DEFAULT_BACKBONE = "tender-fermat"
 
 
 @tool
@@ -32,7 +32,7 @@ def copy_queue_knowledge(
         confirmed_after: ISO format datetime string to filter annotations confirmed after this date
         confirmed_before: ISO format datetime string to filter annotations confirmed before this date
         backbone_ids: Comma-separated string of backbone IDs to filter (e.g., "id1,id2,id3")
-            Default backbone_ids = 240219T122821-great-hawking.135k.tenet.
+            Default backbone_ids = "tender-fermat".
         delete_existing: Whether to delete existing knowledge in target queue (default: False)
 
     Returns:

@@ -1,7 +1,7 @@
 SETUP_QUEUE_PROMPT = """1. Create a new queue in the same namespace as queue `3947889`.
 2. Set up the same schema field as queue `3947889`.
 3. Update schema so that everything with confidence > 90% will be automated.
-4. Rename the queue to: MCP Air Waybills
+4. Rename the queue to: MCP Air Waybills (Regression test)
 5. Copy the queue knowledge from `3947889`.
 6. Return the queue status to check the queue status.
 7. Upload all documents from `examples/data/splitting_and_sorting/knowledge/air_waybill` to the new queue.
