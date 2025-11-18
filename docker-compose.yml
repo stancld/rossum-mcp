@@ -6,5 +6,10 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment:
+      - AWS_PROFILE=${AWS_PROFILE}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
     ports:
       - 127.0.0.1:8501:8501
+    volumes:
+      - ~/.aws:/root/.aws:ro
