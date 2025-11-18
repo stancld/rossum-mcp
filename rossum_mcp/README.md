@@ -55,15 +55,15 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
 cd rossum-mcp/rossum_mcp
-pip install -e .
+uv sync
 ```
 
 ### Install with extras
 
 ```bash
-pip install -e ".[all]"  # All extras (docs, tests)
-pip install -e ".[docs]"  # Documentation only
-pip install -e ".[tests]"  # Testing only
+uv sync --extra all  # All extras (docs, tests)
+uv sync --extra docs  # Documentation only
+uv sync --extra tests  # Testing only
 ```
 
 ### Set up environment variables

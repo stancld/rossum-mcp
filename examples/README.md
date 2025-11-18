@@ -30,7 +30,7 @@ The examples in this folder work with the `rossum-agent` package, which uses [sm
 ```bash
 # From the repository root
 cd rossum_agent
-pip install -e ".[all]"
+uv sync --extra all
 ```
 
 2. **Set environment variables:**
@@ -149,5 +149,5 @@ rossum-mcp
 Make sure you have Python 3.10+ and install the agent package:
 ```bash
 cd rossum_agent
-pip install -e ".[all]"
+uv sync --extra all
 ```

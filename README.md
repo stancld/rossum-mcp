@@ -171,7 +171,7 @@ git clone https://github.com/stancld/rossum-mcp.git
 cd rossum-mcp
 
 # Install both packages with all features
-pip install -e "rossum_mcp[all]" -e "rossum_agent[all]"
+uv sync --extra all --no-install-project
 
 # Set up environment variables
 export ROSSUM_API_TOKEN="your-api-token"
@@ -215,6 +215,9 @@ rossum-agent
 
 # Streamlit web UI
 streamlit run rossum_agent/app.py
+
+# Or run with Docker Compose
+docker-compose up rossum-agent
 ```
 
 The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.

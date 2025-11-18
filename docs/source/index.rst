@@ -84,7 +84,7 @@ Quick Start
    cd rossum-mcp
 
    # Install both packages with all features
-   pip install -e "rossum_mcp[all]" -e "rossum_agent[all]"
+   uv sync --extra all --no-install-project
 
    # Set up environment variables
    export ROSSUM_API_TOKEN="your-api-token"
@@ -106,6 +106,9 @@ Run the AI agent:
 
    # Streamlit web UI
    streamlit run rossum_agent/app.py
+
+   # Or run with Docker Compose
+   docker-compose up rossum-agent
 
 For detailed installation options, see :doc:`installation`
 

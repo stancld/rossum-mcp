@@ -1,10 +1,10 @@
 services:
-  get_constraints:
-    image: ghcr.io/astral-sh/uv:python3.12-alpine
-    volumes:
-      - .:/workspace
-    working_dir: /workspace
-    command: sh -c "
-      apk add --no-cache git &&
-      uv pip compile --system -o constraints.txt --no-annotate --no-header --all-extras pyproject.toml
-      "
+  rossum-agent:
+    image: rossum-agent
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - 127.0.0.1:8501:8501

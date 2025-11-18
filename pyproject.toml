@@ -27,7 +27,7 @@ agent = [
     "pyyaml>=6.0",
     "requests>=2.32",
     "seaborn>=0.13.2",
-    "smolagents[litellm]>=1.0.0",
+    "smolagents[mcp,litellm]>=1.0.0",
 ]
 # Documentation
 docs = [
@@ -65,9 +65,9 @@ all = [
     "pytest-cov>=4.0.0",
     "pyyaml>=6.0",
     "requests>=2.32",
-    "rossum-api>3.6.1",
+    "rossum-api>=3.6.1",
     "seaborn>=0.13.2",
-    "smolagents[litellm]>=1.0.0",
+    "smolagents[mcp,litellm]>=1.0.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
@@ -80,6 +80,9 @@ packages = [
     "rossum_mcp",
     "rossum_agent"
 ]
+
+[project.scripts]
+rossum-mcp = "rossum_mcp.server:main"
 
 [tool.pytest.ini_options]
 markers = [
