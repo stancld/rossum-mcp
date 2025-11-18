@@ -51,6 +51,7 @@ streamlit = [
 ]
 # Testing
 tests = [
+    "elasticsearch>=9.0",
     "coverage>=7.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
