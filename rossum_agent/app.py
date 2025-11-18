@@ -15,6 +15,7 @@ import streamlit as st
 
 from rossum_agent.agent import create_agent
 from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.file_system_tools import clear_generated_files, get_generated_files
 from rossum_agent.utils import check_env_vars
 from rossum_mcp.logging_config import setup_logging
 
@@ -154,7 +155,36 @@ def main() -> None:  # noqa: C901
             st.session_state.messages = []
             if "agent" in st.session_state:
                 del st.session_state.agent
+            clear_generated_files()
             st.rerun()
+
+        # Generated files section
+        st.markdown("---")
+        st.subheader("Generated Files")
+        generated_files = get_generated_files()
+
+        if generated_files:
+            st.write(f"📁 {len(generated_files)} file(s) generated:")
+            for file_path in generated_files:
+                file_name = pathlib.Path(file_path).name
+                try:
+                    with open(file_path, "rb") as f:
+                        file_content = f.read()
+
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.text(file_name)
+                    with col2:
+                        st.download_button(
+                            label="⬇️",
+                            data=file_content,
+                            file_name=file_name,
+                            key=f"download_{file_path}",
+                        )
+                except Exception as e:
+                    st.error(f"Error loading {file_name}: {e}")
+        else:
+            st.info("No files generated yet")
 
     # Stop if credentials not saved
     if not st.session_state.credentials_saved:
@@ -232,6 +262,11 @@ def main() -> None:  # noqa: C901
                     # Log complete result to Elasticsearch
                     log_agent_result(result, prompt, duration)
                     logger.info("Agent response generated successfully")
+
+                    # Check if new files were generated and rerun to update sidebar
+                    current_files = get_generated_files()
+                    if current_files != generated_files:
+                        st.rerun()
 
             except Exception as e:
                 logger.error(f"Error processing user request: {e}", exc_info=True)
