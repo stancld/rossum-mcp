@@ -18,13 +18,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install uv==0.8.18
-          uv pip install --system -e '.[agent, tests]'
+          pip install uv
+          uv sync --extra agent --extra tests --no-install-project
         shell: bash
 
       - name: Run tests
         run: |
-          coverage run --source=. -m pytest tests/rossum_agent -v --junitxml=report.xml
+          uv run coverage run --source=. -m pytest tests/rossum_agent -v --junitxml=report.xml
         shell: bash
 
       - name: Upload pytest results
@@ -37,6 +37,6 @@ jobs:
       - name: Coverage statistics
         if: success()
         run: |
-          coverage xml
-          coverage report
+          uv run coverage xml
+          uv run coverage report
         shell: bash

@@ -18,13 +18,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install uv==0.8.18
-          uv pip install --system -e '.[tools,tests]'
+          pip install uv
+          uv sync --extra tests --no-install-project
         shell: bash
 
       - name: Run tests
         run: |
-          coverage run --source=rossum_mcp -m pytest tests/rossum_mcp -v --junitxml=report.xml
+          uv run coverage run --source=rossum_mcp -m pytest tests/rossum_mcp -v --junitxml=report.xml
         shell: bash
         env:
           ROSSUM_API_BASE_URL: https://api.test.rossum.ai
@@ -40,8 +40,8 @@ jobs:
       - name: Coverage statistics
         if: success()
         run: |
-          coverage xml
-          coverage report
+          uv run coverage xml
+          uv run coverage report
         shell: bash
 
       - name: Upload coverage to Codecov

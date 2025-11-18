@@ -25,15 +25,15 @@ To install only the MCP server:
 
    git clone https://github.com/stancld/rossum-mcp.git
    cd rossum-mcp/rossum_mcp
-   pip install -e .
+   uv sync
 
 With extras:
 
 .. code-block:: bash
 
-   pip install -e ".[all]"  # Install all extras (docs, tests)
-   pip install -e ".[docs]"  # Install documentation dependencies
-   pip install -e ".[tests]"  # Install testing dependencies
+   uv sync --extra all  # Install all extras (docs, tests)
+   uv sync --extra docs  # Install documentation dependencies
+   uv sync --extra tests  # Install testing dependencies
 
 Installing Agent Only
 ^^^^^^^^^^^^^^^^^^^^^
@@ -44,15 +44,15 @@ To install only the agent package:
 
    git clone https://github.com/stancld/rossum-mcp.git
    cd rossum-mcp/rossum_agent
-   pip install -e .
+   uv sync
 
 With extras:
 
 .. code-block:: bash
 
-   pip install -e ".[all]"  # Install all extras (streamlit, docs, tests)
-   pip install -e ".[streamlit]"  # Install Streamlit UI
-   pip install -e ".[tests]"  # Install testing dependencies
+   uv sync --extra all  # Install all extras (streamlit, docs, tests)
+   uv sync --extra streamlit  # Install Streamlit UI
+   uv sync --extra tests  # Install testing dependencies
 
 Installing Both Packages (Workspace)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,7 +63,7 @@ For development work with both packages:
 
    git clone https://github.com/stancld/rossum-mcp.git
    cd rossum-mcp
-   pip install -e ".[all]"
+   uv sync --extra all --no-install-project
 
 This installs both packages together with all dependencies.
 
@@ -75,13 +75,13 @@ Install directly from GitHub:
 .. code-block:: bash
 
    # MCP server only
-   pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_mcp"
+   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_mcp"
 
    # Agent only
-   pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_agent"
+   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_agent"
 
    # Both packages (workspace)
-   pip install "git+https://github.com/stancld/rossum-mcp.git"
+   uv pip install "git+https://github.com/stancld/rossum-mcp.git"
 
 Environment Variables
 ---------------------
