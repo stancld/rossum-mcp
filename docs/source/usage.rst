@@ -40,8 +40,7 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
      }
    }
 
-For read-only access (recommended for untrusted environments), use ``"ROSSUM_MCP_MODE": "read-only"``
-to restrict access to read-only operations (GET/LIST only).
+For read-only access , use ``"ROSSUM_MCP_MODE": "read-only"`` to restrict access to read-only operations (GET/LIST only).
 
 Running the AI Agent
 --------------------

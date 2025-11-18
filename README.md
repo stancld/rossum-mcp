@@ -216,8 +216,6 @@ Configure Claude Desktop to use the MCP server:
 
 Or run standalone: `rossum-mcp`
 
-**Security Note:** For untrusted environments, use `"ROSSUM_MCP_MODE": "read-only"` to restrict access to read-only operations (GET/LIST only).
-
 ### AI Agent
 
 ```bash

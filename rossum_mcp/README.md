@@ -129,7 +129,7 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
 }
 ```
 
-For read-only access (recommended for untrusted environments):
+For read-only access:
 
 ```json
 {
