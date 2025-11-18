@@ -50,7 +50,23 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 
 ## Installation
 
-### Install from source
+### Docker (Recommended)
+
+```bash
+git clone https://github.com/stancld/rossum-mcp.git
+cd rossum-mcp
+
+# Set up environment variables
+export ROSSUM_API_TOKEN="your-api-token"
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
+
+# Run the MCP server
+docker-compose up rossum-agent
+```
+
+<details>
+<summary>Install from source (alternative)</summary>
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
@@ -58,23 +74,16 @@ cd rossum-mcp/rossum_mcp
 uv sync
 ```
 
-### Install with extras
-
+Install with extras:
 ```bash
 uv sync --extra all  # All extras (docs, tests)
 uv sync --extra docs  # Documentation only
 uv sync --extra tests  # Testing only
 ```
 
-### Set up environment variables
+</details>
 
-```bash
-export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"  # or your organization's base URL
-export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
-```
-
-#### Configuration Options
+### Environment Variables
 
 - **ROSSUM_API_TOKEN** (required): Your Rossum API authentication token
 - **ROSSUM_API_BASE_URL** (required): Base URL for the Rossum API
@@ -97,7 +106,8 @@ All CREATE, UPDATE, and UPLOAD operations are disabled in read-only mode for sec
 
 ## Usage
 
-### Running the MCP Server
+<details>
+<summary>Running the MCP Server</summary>
 
 Start the server using:
 ```bash
@@ -109,10 +119,14 @@ Or using the installed script:
 rossum-mcp
 ```
 
-### Using with MCP Clients
+</details>
 
-Configure your MCP client to use this server. For example, in Claude Desktop's config:
+<details>
+<summary>Claude Desktop Configuration</summary>
 
+Configure your MCP client to use this server. In Claude Desktop's config:
+
+**Read-write mode:**
 ```json
 {
   "mcpServers": {
@@ -129,8 +143,7 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
 }
 ```
 
-For read-only access:
-
+**Read-only mode:**
 ```json
 {
   "mcpServers": {
@@ -146,6 +159,8 @@ For read-only access:
   }
 }
 ```
+
+</details>
 
 ## Available Tools
 
@@ -661,14 +676,18 @@ Other possible states include: `created`, `failed_import`, `split`, `in_workflow
 
 ## Example Workflows
 
-### Single Document Upload
+<details>
+<summary>Single Document Upload</summary>
 
 1. Upload a document using `upload_document`
 2. Get the annotation ID using `list_annotations`
 3. Check annotation status using `get_annotation`
 4. Wait until status is `to_review`, `confirmed`, or `exported`
 
-### Document Upload with Field Updates
+</details>
+
+<details>
+<summary>Document Upload with Field Updates</summary>
 
 1. Upload a document using `upload_document`
 2. Get the annotation ID using `list_annotations`
@@ -678,19 +697,27 @@ Other possible states include: `created`, `failed_import`, `split`, `in_workflow
 6. Update field values using `bulk_update_annotation_fields` with datapoint IDs from content
 7. Confirm the annotation using `confirm_annotation` (moves to 'confirmed')
 
-### Bulk Document Upload
+</details>
+
+<details>
+<summary>Bulk Document Upload</summary>
 
 1. Upload all documents in bulk using `upload_document` for each file
 2. Check status of all annotations using `list_annotations`
 3. Monitor until all documents finish processing
 
-### Create Queue with Engine
+</details>
+
+<details>
+<summary>Create Queue with Engine</summary>
 
 1. Create a schema using `create_schema` with sections and datapoints
 2. Create an engine using `create_engine` with type 'extractor' or 'splitter'
 3. Create engine fields using `create_engine_field` for each schema field
 4. Create a queue using `create_queue` linking the schema and engine
 5. Optionally update engine training queues using `update_engine`
+
+</details>
 
 ## Error Handling
 

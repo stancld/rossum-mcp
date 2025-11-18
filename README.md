@@ -175,7 +175,23 @@ This repository contains two packages:
 - **rossum_mcp**: MCP server for Rossum API interactions
 - **rossum_agent**: AI agent with data manipulation and visualization tools
 
-### Quick Start
+### Docker (Recommended)
+
+```bash
+git clone https://github.com/stancld/rossum-mcp.git
+cd rossum-mcp
+
+# Set up environment variables
+export ROSSUM_API_TOKEN="your-api-token"
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
+
+# Run the agent with Streamlit UI
+docker-compose up rossum-agent
+```
+
+<details>
+<summary>Install from source (alternative)</summary>
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
@@ -192,9 +208,34 @@ export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (de
 
 For individual package installation or other options, see [rossum_mcp/README.md](rossum_mcp/README.md) and [rossum_agent/README.md](rossum_agent/README.md).
 
+</details>
+
 ## Usage
 
-### MCP Server with Claude Desktop
+### AI Agent
+
+```bash
+# Docker (recommended)
+docker-compose up rossum-agent
+
+# CLI interface
+rossum-agent
+
+# Streamlit web UI
+uv run streamlit run rossum_agent/app.py
+```
+
+> **Note:** The Streamlit UI is currently hard-coded for AWS Bedrock usage. You need to configure AWS credentials:
+> ```bash
+> export AWS_ACCESS_KEY_ID="your-access-key"
+> export AWS_SECRET_ACCESS_KEY="your-secret-key"
+> export AWS_DEFAULT_REGION="your-region"  # e.g., us-east-1
+> ```
+
+The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
+
+<details>
+<summary>MCP Server with Claude Desktop</summary>
 
 Configure Claude Desktop to use the MCP server:
 
@@ -216,29 +257,10 @@ Configure Claude Desktop to use the MCP server:
 
 Or run standalone: `rossum-mcp`
 
-### AI Agent
+</details>
 
-```bash
-# CLI interface
-rossum-agent
-
-# Streamlit web UI
-uv run streamlit run rossum_agent/app.py
-
-> **Note:** The Streamlit UI is currently hard-coded for AWS Bedrock usage. You need to configure AWS credentials to run it:
-> ```bash
-> export AWS_ACCESS_KEY_ID="your-access-key"
-> export AWS_SECRET_ACCESS_KEY="your-secret-key"
-> export AWS_DEFAULT_REGION="your-region"  # e.g., us-east-1
-> ```
-
-# Or run with Docker Compose
-docker-compose up rossum-agent
-```
-
-The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
-
-### Running with Elasticsearch Logging and Kibana UI
+<details>
+<summary>Running with Elasticsearch Logging and Kibana UI</summary>
 
 To run the application locally with Elasticsearch logging and Kibana UI for monitoring:
 
@@ -268,6 +290,8 @@ Once running:
 - **Elasticsearch**: http://localhost:9200
 
 The services include health checks and will wait for Elasticsearch to be fully ready before starting the dependent services.
+
+</details>
 
 ## MCP Tools
 
