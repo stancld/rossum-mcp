@@ -36,6 +36,8 @@ def main() -> None:  # noqa: C901
         st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "")
     if "rossum_api_base_url" not in st.session_state:
         st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "")
+    if "mcp_mode" not in st.session_state:
+        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
     if "credentials_saved" not in st.session_state:
         st.session_state.credentials_saved = bool(
             st.session_state.rossum_api_token and st.session_state.rossum_api_base_url
@@ -101,6 +103,28 @@ def main() -> None:  # noqa: C901
                 if "agent" in st.session_state:
                     del st.session_state.agent
                 st.rerun()
+
+        # MCP Mode selection
+        st.markdown("---")
+        st.subheader("Agent Mode")
+
+        new_mode = st.radio(
+            "Select mode:",
+            options=["read-write", "read-only"],
+            index=0 if st.session_state.mcp_mode == "read-write" else 1,
+            help="Read-only mode prevents the agent from making changes to Rossum. "
+            "Read-write mode allows full operations including creating/updating resources.",
+        )
+
+        if new_mode != st.session_state.mcp_mode:
+            st.session_state.mcp_mode = new_mode
+            os.environ["ROSSUM_MCP_MODE"] = new_mode
+            if "agent" in st.session_state:
+                del st.session_state.agent
+            st.rerun()
+
+        mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
+        st.info(f"Current mode: **{mode_indicator}**")
 
         if missing_vars := check_env_vars():
             st.markdown("---")
