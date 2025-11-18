@@ -29,6 +29,9 @@ docs = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
 ]
+bedrock = [
+    "boto3>=1.0"
+]
 streamlit = [
     "streamlit>=1.28.0",
 ]

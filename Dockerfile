@@ -9,7 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY rossum_agent rossum_agent
 COPY rossum_mcp rossum_mcp
 COPY pyproject.toml uv.lock ./
-RUN uv sync --extra agent --extra streamlit --no-install-project
+RUN uv sync --extra agent --extra bedrock --extra streamlit --no-install-project
 
 # Expose the port the app runs on
 EXPOSE 8501

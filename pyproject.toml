@@ -29,6 +29,9 @@ agent = [
     "seaborn>=0.13.2",
     "smolagents[mcp,litellm]>=1.0.0",
 ]
+bedrock = [
+    "boto3>=1.0"
+]
 # Documentation
 docs = [
     "myst-parser>=2.0.0",
@@ -54,6 +57,7 @@ tests = [
 ]
 # All dependencies
 all = [
+    "boto3>=1.0",
     "coverage>=7.0.0",
     "matplotlib>=3.10",
     "mcp>=1.0.0",
