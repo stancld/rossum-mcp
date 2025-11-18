@@ -225,7 +225,7 @@ Or run standalone: `rossum-mcp`
 rossum-agent
 
 # Streamlit web UI
-streamlit run rossum_agent/app.py
+uv run streamlit run rossum_agent/app.py
 
 # Or run with Docker Compose
 docker-compose up rossum-agent
