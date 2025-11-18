@@ -6,13 +6,24 @@ Usage:
     streamlit run rossum_agent/app.py
 """
 
+import logging
 import os
 import pathlib
+import time
 
 import streamlit as st
 
 from rossum_agent.agent import create_agent
+from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.utils import check_env_vars
+from rossum_mcp.logging_config import setup_logging
+
+# Configure logging with Elasticsearch integration
+setup_logging(
+    app_name="rossum-agent",
+    log_level=os.getenv("LOG_LEVEL", "INFO"),
+)
+logger = logging.getLogger(__name__)
 
 
 def load_logo() -> str | None:
@@ -161,8 +172,11 @@ def main() -> None:  # noqa: C901
     if "agent" not in st.session_state:
         with st.spinner("Initializing agent..."):
             try:
+                logger.info("Initializing Rossum agent")
                 st.session_state.agent = create_agent(stream_outputs=False)
+                logger.info("Agent initialized successfully")
             except Exception as e:
+                logger.error(f"Failed to initialize agent: {e}", exc_info=True)
                 st.error(f"Failed to initialize agent: {e}")
                 st.stop()
 
@@ -173,6 +187,7 @@ def main() -> None:  # noqa: C901
 
     # Process user input
     if prompt := st.chat_input("Enter your instruction..."):
+        logger.info(f"User prompt received: {prompt[:100]}...")  # Log first 100 chars
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -183,6 +198,7 @@ def main() -> None:  # noqa: C901
             try:
                 # Create placeholder for streaming output
                 output_placeholder = st.empty()
+                start_time = time.time()
 
                 # Stream the response
                 result_generator = st.session_state.agent.run(
@@ -201,14 +217,24 @@ def main() -> None:  # noqa: C901
 
                         output_placeholder.markdown(display_text, unsafe_allow_html=True)
 
+                        # Log individual step to Elasticsearch
+                        duration = time.time() - start_time
+                        log_agent_result(chunk, prompt, duration)
+
                     result = chunk  # Keep the last chunk as final result
 
                 # Save final output to chat history
                 if hasattr(result, "output") and result.output:
+                    duration = time.time() - start_time
                     output_placeholder.markdown(result.output, unsafe_allow_html=True)
                     st.session_state.messages.append({"role": "assistant", "content": result.output})
 
+                    # Log complete result to Elasticsearch
+                    log_agent_result(result, prompt, duration)
+                    logger.info("Agent response generated successfully")
+
             except Exception as e:
+                logger.error(f"Error processing user request: {e}", exc_info=True)
                 error_msg = f"❌ Error: {e!s}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})

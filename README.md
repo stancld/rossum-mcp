@@ -227,11 +227,49 @@ rossum-agent
 # Streamlit web UI
 uv run streamlit run rossum_agent/app.py
 
+> **Note:** The Streamlit UI is currently hard-coded for AWS Bedrock usage. You need to configure AWS credentials to run it:
+> ```bash
+> export AWS_ACCESS_KEY_ID="your-access-key"
+> export AWS_SECRET_ACCESS_KEY="your-secret-key"
+> export AWS_DEFAULT_REGION="your-region"  # e.g., us-east-1
+> ```
+
 # Or run with Docker Compose
 docker-compose up rossum-agent
 ```
 
 The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
+
+### Running with Elasticsearch Logging and Kibana UI
+
+To run the application locally with Elasticsearch logging and Kibana UI for monitoring:
+
+**Standard (amd64) systems:**
+```bash
+# Set the required encryption key (32+ random characters)
+export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-encryption-key-here"
+
+# Start the agent with Kibana UI
+docker-compose up rossum-agent kibana
+```
+
+**ARM Mac alternative:**
+```bash
+# Set the required encryption key (32+ random characters)
+export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-encryption-key-here"
+
+# Start the ARM-compatible services
+docker-compose up rossum-agent-mac kibana-mac
+```
+
+> **Note:** The `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY` environment variable must be specified before starting Kibana. This key is used to encrypt saved objects in Kibana and must be at least 32 characters long.
+
+Once running:
+- **Application UI**: http://localhost:8501
+- **Kibana Dashboard**: http://localhost:5601
+- **Elasticsearch**: http://localhost:9200
+
+The services include health checks and will wait for Elasticsearch to be fully ready before starting the dependent services.
 
 ## MCP Tools
 

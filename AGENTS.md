@@ -77,4 +77,16 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 
 ## Environment
 - Required: `ROSSUM_API_TOKEN`, `ROSSUM_API_BASE_URL`
+- Optional Elasticsearch: `ELASTICSEARCH_HOST`, `ELASTICSEARCH_PORT` (default: 9200)
+- Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
 - MCP client configuration in Claude Desktop or smolagents
+
+## Elasticsearch Logging Setup
+1. **Start Elasticsearch/Kibana**: `docker-compose up elasticsearch-mac kibana-mac -d` (or use `elasticsearch`/`kibana` for linux/amd64)
+2. **Set environment variables**:
+   ```bash
+   export ELASTICSEARCH_HOST=localhost
+   export ELASTICSEARCH_PORT=9200
+   ```
+3. **Access Kibana**: http://localhost:5601
+4. **View logs**: Navigate to Discover → Create index pattern `logstash-*` → View logs filtered by `application: rossum-mcp-server`

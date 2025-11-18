@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 # Agent dependencies
 agent = [
+    "elasticsearch>=9.0",
     "matplotlib>=3.10",
     "plotly>=6.0",
     "python-dotenv",
@@ -59,6 +60,7 @@ tests = [
 all = [
     "boto3>=1.0",
     "coverage>=7.0.0",
+    "elasticsearch>=9.0",
     "matplotlib>=3.10",
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",

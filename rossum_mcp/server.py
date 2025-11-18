@@ -29,16 +29,18 @@ from rossum_mcp.handlers import (
     RulesHandler,
     SchemasHandler,
 )
+from rossum_mcp.logging_config import setup_logging
 
 if TYPE_CHECKING:
     from rossum_mcp.handlers.base import BaseHandler
 
-# Set up logging to a file (since stdout is used for MCP)
-logging.basicConfig(
-    filename="/tmp/rossum_mcp_debug.log",
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+setup_logging(
+    app_name="rossum-mcp-server",
+    log_level="DEBUG",
+    log_file="/tmp/rossum_mcp_debug.log",
+    use_console=False,
 )
+
 logger = logging.getLogger(__name__)
 
 
