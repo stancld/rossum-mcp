@@ -18,7 +18,8 @@ A Model Context Protocol (MCP) server and AI agent toolkit for intelligent docum
 
 ## What Can You Do?
 
-### Example 1: Aurora Splitting & Sorting Demo
+<details>
+<summary><strong>Example 1: Aurora Splitting & Sorting Demo</strong></summary>
 
 Set up a complete document splitting and sorting pipeline with training queues, splitter engine, automated hooks, and intelligent routing:
 
@@ -70,7 +71,10 @@ Set up a complete document splitting and sorting pipeline with training queues, 
 
 This example showcases the agent's ability to orchestrate complex workflows involving multiple queues, engines, schemas, automated hooks with custom logic, and intelligent document routing - all from a single conversational prompt.
 
-### Example 2: Hook Analysis & Documentation
+</details>
+
+<details>
+<summary><strong>Example 2: Hook Analysis & Documentation</strong></summary>
 
 Automatically analyze and document all hooks/extensions configured on a queue:
 
@@ -89,7 +93,10 @@ Store output in extension_explanation.md
 
 This example shows how the agent can analyze existing automation to help teams understand their configured workflows.
 
-### Example 3: Bulk Processing & Visualization
+</details>
+
+<details>
+<summary><strong>Example 3: Bulk Processing & Visualization</strong></summary>
 
 Process multiple invoices and generate revenue analysis charts through a single conversational prompt:
 
@@ -122,7 +129,10 @@ Process multiple invoices and generate revenue analysis charts through a single 
 
 See the [complete example](examples/PROMPT.md) for the full prompt and results.
 
-### Example 4: Queue Setup with Knowledge Warmup
+</details>
+
+<details>
+<summary><strong>Example 4: Queue Setup with Knowledge Warmup</strong></summary>
 
 Create a new queue, warm it up with training documents, and test automation performance:
 
@@ -155,6 +165,7 @@ Create a new queue, warm it up with training documents, and test automation perf
 
 The agent automatically creates the queue, uploads documents, monitors processing, and calculates automation performance - achieving **86.7% automation rate** from just 30 training documents.
 
+</details>
 
 ## Installation
 
