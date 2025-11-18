@@ -1,0 +1,10 @@
+services:
+  rossum-agent:
+    image: rossum-agent
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - 127.0.0.1:8501:8501

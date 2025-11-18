@@ -215,6 +215,9 @@ rossum-agent
 
 # Streamlit web UI
 streamlit run rossum_agent/app.py
+
+# Or run with Docker Compose
+docker-compose up rossum-agent
 ```
 
 The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
