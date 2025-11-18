@@ -6,6 +6,7 @@ Usage:
     streamlit run rossum_agent/app.py
 """
 
+import os
 import pathlib
 
 import streamlit as st
@@ -30,18 +31,86 @@ st.set_page_config(
 
 
 def main() -> None:  # noqa: C901
+    # Initialize credentials in session state
+    if "rossum_api_token" not in st.session_state:
+        st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "")
+    if "rossum_api_base_url" not in st.session_state:
+        st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "")
+    if "credentials_saved" not in st.session_state:
+        st.session_state.credentials_saved = bool(
+            st.session_state.rossum_api_token and st.session_state.rossum_api_base_url
+        )
+
     # Sidebar
     with st.sidebar:
         logo_path = load_logo()
         st.image(logo_path, width=200)
 
+        # Credentials section
+        st.markdown("---")
+        st.subheader("Rossum API Credentials")
+
+        if not st.session_state.credentials_saved:
+            st.warning("⚠️ Please enter your Rossum API credentials")
+
+            api_base_url = st.text_input(
+                "API Base URL",
+                value=st.session_state.rossum_api_base_url,
+                placeholder="https://your-instance.rossum.app",
+                type="default",
+            )
+
+            api_token = st.text_input(
+                "API Token",
+                value=st.session_state.rossum_api_token,
+                placeholder="Your Rossum API token",
+                type="password",
+            )
+
+            if st.button("Save Credentials", type="primary"):
+                if api_base_url and api_token:
+                    st.session_state.rossum_api_token = api_token
+                    st.session_state.rossum_api_base_url = api_base_url
+                    st.session_state.credentials_saved = True
+                    os.environ["ROSSUM_API_TOKEN"] = api_token
+                    os.environ["ROSSUM_API_BASE_URL"] = api_base_url
+                    if "agent" in st.session_state:
+                        del st.session_state.agent
+                    st.rerun()
+                else:
+                    st.error("Both fields are required")
+        else:
+            st.success("✅ Credentials configured")
+
+            with st.expander("View Credentials"):
+                st.text_input(
+                    "API Base URL",
+                    value=st.session_state.rossum_api_base_url,
+                    disabled=True,
+                )
+                st.text_input(
+                    "API Token",
+                    value=st.session_state.rossum_api_token[:8] + "..."
+                    if len(st.session_state.rossum_api_token) > 8
+                    else st.session_state.rossum_api_token,
+                    disabled=True,
+                )
+
+            if st.button("Update Credentials"):
+                st.session_state.credentials_saved = False
+                if "agent" in st.session_state:
+                    del st.session_state.agent
+                st.rerun()
+
         if missing_vars := check_env_vars():
             st.markdown("---")
             st.error("❌ Missing environment variables:")
             for var, desc in missing_vars:
-                st.code(f"export {var}=<value>")
-                st.caption(desc)
-            st.stop()
+                if var not in ["ROSSUM_API_TOKEN", "ROSSUM_API_BASE_URL"]:
+                    st.code(f"export {var}=<value>")
+                    st.caption(desc)
+            if any(var not in ["ROSSUM_API_TOKEN", "ROSSUM_API_BASE_URL"] for var, _ in missing_vars):
+                st.stop()
             st.markdown("---")
 
         # Quick actions
@@ -51,6 +120,11 @@ def main() -> None:  # noqa: C901
             if "agent" in st.session_state:
                 del st.session_state.agent
             st.rerun()
+
+    # Stop if credentials not saved
+    if not st.session_state.credentials_saved:
+        st.info("👈 Please enter your Rossum API credentials in the sidebar to continue")
+        st.stop()
 
     # Main content
     st.title("Rossum Agent")
