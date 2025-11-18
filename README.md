@@ -295,9 +295,9 @@ The services include health checks and will wait for Elasticsearch to be fully r
 
 ## MCP Tools
 
-The MCP server provides 18 tools organized into three categories:
+The MCP server provides 20 tools organized into five categories:
 
-**Document Processing**
+**Document Processing (6 tools)**
 - `upload_document` - Upload documents for AI extraction
 - `get_annotation` - Retrieve extracted data and status
 - `list_annotations` - List all annotations with filtering
@@ -305,17 +305,27 @@ The MCP server provides 18 tools organized into three categories:
 - `bulk_update_annotation_fields` - Update field values with JSON Patch
 - `confirm_annotation` - Confirm and finalize annotations
 
-**Queue & Schema Management**
-- `get_queue`, `get_schema`, `get_queue_schema` - Retrieve configuration
+**Queue Management (5 tools)**
+- `get_queue` - Retrieve queue details
+- `get_queue_schema` - Retrieve queue schema in one call
 - `get_queue_engine` - Get engine information
-- `list_hooks` - List webhooks and extensions
-- `create_queue`, `create_schema` - Create new queues and schemas
-- `update_queue`, `update_schema` - Configure automation thresholds
+- `create_queue` - Create new queues
+- `update_queue` - Configure automation thresholds
 
-**Engine Management**
+**Schema Management (3 tools)**
+- `get_schema` - Retrieve schema details
+- `create_schema` - Create new schemas
+- `update_schema` - Configure field-level thresholds
+
+**Engine Management (3 tools)**
 - `create_engine` - Create extraction or splitting engines
 - `update_engine` - Configure learning and training queues
 - `create_engine_field` - Define engine fields and link to schemas
+
+**Automation Management (3 tools)**
+- `list_hooks` - List webhooks and extensions
+- `create_hook` - Create new hooks/extensions
+- `list_rules` - List validation rules
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
 
