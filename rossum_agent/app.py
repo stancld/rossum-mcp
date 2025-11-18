@@ -6,13 +6,25 @@ Usage:
     streamlit run rossum_agent/app.py
 """
 
+import logging
 import os
 import pathlib
+import time
 
 import streamlit as st
 
 from rossum_agent.agent import create_agent
+from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.file_system_tools import clear_generated_files, get_generated_files
 from rossum_agent.utils import check_env_vars
+from rossum_mcp.logging_config import setup_logging
+
+# Configure logging with Elasticsearch integration
+setup_logging(
+    app_name="rossum-agent",
+    log_level=os.getenv("LOG_LEVEL", "INFO"),
+)
+logger = logging.getLogger(__name__)
 
 
 def load_logo() -> str | None:
@@ -143,7 +155,36 @@ def main() -> None:  # noqa: C901
             st.session_state.messages = []
             if "agent" in st.session_state:
                 del st.session_state.agent
+            clear_generated_files()
             st.rerun()
+
+        # Generated files section
+        st.markdown("---")
+        st.subheader("Generated Files")
+        generated_files = get_generated_files()
+
+        if generated_files:
+            st.write(f"📁 {len(generated_files)} file(s) generated:")
+            for file_path in generated_files:
+                file_name = pathlib.Path(file_path).name
+                try:
+                    with open(file_path, "rb") as f:
+                        file_content = f.read()
+
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.text(file_name)
+                    with col2:
+                        st.download_button(
+                            label="⬇️",
+                            data=file_content,
+                            file_name=file_name,
+                            key=f"download_{file_path}",
+                        )
+                except Exception as e:
+                    st.error(f"Error loading {file_name}: {e}")
+        else:
+            st.info("No files generated yet")
 
     # Stop if credentials not saved
     if not st.session_state.credentials_saved:
@@ -161,8 +202,11 @@ def main() -> None:  # noqa: C901
     if "agent" not in st.session_state:
         with st.spinner("Initializing agent..."):
             try:
+                logger.info("Initializing Rossum agent")
                 st.session_state.agent = create_agent(stream_outputs=False)
+                logger.info("Agent initialized successfully")
             except Exception as e:
+                logger.error(f"Failed to initialize agent: {e}", exc_info=True)
                 st.error(f"Failed to initialize agent: {e}")
                 st.stop()
 
@@ -173,6 +217,7 @@ def main() -> None:  # noqa: C901
 
     # Process user input
     if prompt := st.chat_input("Enter your instruction..."):
+        logger.info(f"User prompt received: {prompt[:100]}...")  # Log first 100 chars
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -183,6 +228,7 @@ def main() -> None:  # noqa: C901
             try:
                 # Create placeholder for streaming output
                 output_placeholder = st.empty()
+                start_time = time.time()
 
                 # Stream the response
                 result_generator = st.session_state.agent.run(
@@ -201,14 +247,29 @@ def main() -> None:  # noqa: C901
 
                         output_placeholder.markdown(display_text, unsafe_allow_html=True)
 
+                        # Log individual step to Elasticsearch
+                        duration = time.time() - start_time
+                        log_agent_result(chunk, prompt, duration)
+
                     result = chunk  # Keep the last chunk as final result
 
                 # Save final output to chat history
                 if hasattr(result, "output") and result.output:
+                    duration = time.time() - start_time
                     output_placeholder.markdown(result.output, unsafe_allow_html=True)
                     st.session_state.messages.append({"role": "assistant", "content": result.output})
 
+                    # Log complete result to Elasticsearch
+                    log_agent_result(result, prompt, duration)
+                    logger.info("Agent response generated successfully")
+
+                    # Check if new files were generated and rerun to update sidebar
+                    current_files = get_generated_files()
+                    if current_files != generated_files:
+                        st.rerun()
+
             except Exception as e:
+                logger.error(f"Error processing user request: {e}", exc_info=True)
                 error_msg = f"❌ Error: {e!s}"
                 st.error(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})

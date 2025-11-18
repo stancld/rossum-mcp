@@ -1,5 +1,7 @@
 """Create and configure the Rossum agent with custom tools and instructions."""
 
+from __future__ import annotations
+
 import importlib.resources
 import os
 
@@ -16,7 +18,7 @@ from rossum_agent.internal_tools import (
 )
 from rossum_agent.plot_tools import plot_data
 
-DEFAULT_LLM_MODEL = "openai/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8"
+DEFAULT_LLM_MODEL = "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
 def create_agent(stream_outputs: bool = False) -> CodeAgent:

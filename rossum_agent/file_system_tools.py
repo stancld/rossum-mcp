@@ -8,6 +8,32 @@ from pathlib import Path
 
 from smolagents import tool
 
+# Output directory for generated files
+OUTPUT_DIR = Path("./outputs")
+
+
+def get_generated_files() -> list[str]:
+    """Get list of files in the outputs directory.
+
+    Returns:
+        List of absolute file paths for all files in the outputs directory.
+        Returns empty list if directory doesn't exist.
+    """
+    if not OUTPUT_DIR.exists():
+        return []
+
+    return [str(f.resolve()) for f in OUTPUT_DIR.iterdir() if f.is_file()]
+
+
+def clear_generated_files() -> None:
+    """Delete all files in the outputs directory."""
+    if not OUTPUT_DIR.exists():
+        return
+
+    for file_path in OUTPUT_DIR.iterdir():
+        if file_path.is_file():
+            file_path.unlink()
+
 
 @tool
 def list_files(directory_path: str, pattern: str | None = None) -> str:
@@ -107,10 +133,10 @@ def get_file_info(path: str) -> str:
 
 @tool
 def write_file(file_path: str, content: str, overwrite: bool = True) -> str:
-    """Write text or markdown content to a file.
+    """Write text or markdown content to a file in the ./outputs/ directory.
 
     Args:
-        file_path: Path to file (absolute or relative)
+        file_path: Path to file (absolute or relative). Will be saved to ./outputs/ directory.
         content: Text content to write
         overwrite: Whether to overwrite existing file (default: True)
 
@@ -118,13 +144,17 @@ def write_file(file_path: str, content: str, overwrite: bool = True) -> str:
         JSON string with success status. Use json.loads() to parse.
     """
     try:
-        path = Path(file_path).expanduser().resolve()
+        # Ensure output directory exists
+        OUTPUT_DIR.mkdir(exist_ok=True)
+
+        # Get the filename and construct path in outputs directory
+        input_path = Path(file_path)
+        # Always use just the filename (basename) for simplicity and safety
+        filename = input_path.name
+        path = OUTPUT_DIR / filename
 
         if path.exists() and not overwrite:
             return json.dumps({"error": f"File already exists and overwrite=False: {file_path}"})
-
-        # Create parent directories if they don't exist
-        path.parent.mkdir(parents=True, exist_ok=True)
 
         path.write_text(content)
         stat = path.stat()
