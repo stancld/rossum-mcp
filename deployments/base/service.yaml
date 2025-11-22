@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: rossum-agent
+
+spec:
+  selector:
+    app.kubernetes.io/component: rossum-agent
+  ports:
+  - name:
+    port: 80
+    protocol: TCP
+    targetPort: http
+  type: ClusterIP

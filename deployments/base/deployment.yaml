@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: rossum-agent
+  labels:
+    app.kubernetes.io/app: rossum-agent
+    app.kubernetes.io/component: agent-ui
+    app.kubernetes.io/version: latest
+
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: rossum-agent
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: rossum-agent
+  spec:
+    serviceAccountName: rossum-agent
+    containers:
+    - name: agent
+      image: rossum-agent
+      imagePullPolicy: Always
+      command: ["uv", "run", "streamlit", "run", "rossum_agent/app.py"]
+      args:
+      - --server.headless=true
+      - --server.enableCORS=false
+      - --server.enableXsrfProtection=true
+      ports:
+      - name: http
+        containerPort: 8501
+        protocol: TCP
+      resources:
+        cpu: 0.5
+        requests: 2Gi
+      limits:
+        cpu: 1
+        requests: 2Gi
