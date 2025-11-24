@@ -69,6 +69,7 @@ The ``rossum_agent`` package provides additional capabilities:
 
 * File system tools for document management
 * Data visualization and plotting tools (bar, line, pie, scatter, heatmap charts)
+* Hook analysis tools for understanding workflow dependencies and execution flow
 * Integration with AI agent frameworks (smolagents)
 * CLI and Streamlit web interfaces
 * See the :doc:`examples` section for complete workflows

@@ -15,9 +15,9 @@
 
 ## Documentation Updates
 
-**CRITICAL**: When adding, removing, or modifying MCP tools, you MUST update documentation to keep it in sync with the code.
+**CRITICAL**: When adding, removing, or modifying tools (MCP or agent tools), you MUST update documentation to keep it in sync with the code.
 
-### Files to Update When Adding/Modifying Tools:
+### Files to Update When Adding/Modifying MCP Tools:
 
 1. **`rossum_mcp/README.md`**:
    - Update the Features section to list the new tool
@@ -48,11 +48,31 @@
    - Document API endpoints and query parameters
    - Include implementation notes
 
+### Files to Update When Adding/Modifying Agent Tools:
+
+1. **`rossum_agent/README.md`**:
+   - Update the Features section to list the new tool category (if new)
+   - Add complete tool documentation under the appropriate section:
+     - File System Tools
+     - Plotting Tools
+     - Hook Analysis Tools
+     - Internal Tools
+   - Include parameters, return values, and usage examples
+
+2. **`docs/source/index.rst`**:
+   - Add the new tool to the "AI Agent Toolkit" feature list if it represents a new category
+
+3. **`docs/source/usage.rst`**:
+   - Add full tool documentation in the "Agent Tools" section
+   - Use proper RST formatting with tool name as heading
+   - Include parameters, returns, and example code blocks
+   - Place under appropriate category subsection
+
 ### Documentation Checklist:
-- [ ] Updated tool count in `docs/source/index.rst`
-- [ ] Added tool to appropriate category in `index.rst` and `README.md`
-- [ ] Documented parameters, return values, and examples in all three files
-- [ ] Verified examples match actual tool signatures in `server.py`
+- [ ] Updated tool count/features in `docs/source/index.rst` (if applicable)
+- [ ] Added tool to appropriate category in `index.rst` and corresponding README.md
+- [ ] Documented parameters, return values, and examples in all relevant files
+- [ ] Verified examples match actual tool signatures in code
 - [ ] Built and reviewed generated documentation locally (if docs changes)
 
 ### Verification:

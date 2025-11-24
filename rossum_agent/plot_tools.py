@@ -54,6 +54,9 @@ def plot_data(
 ) -> str:
     """Create beautiful data visualizations from dictionary data.
 
+    This tool should be invoked if and only if a user explicitly ask to plot some accuracy
+    or revenue data.
+
     This tool creates professional-quality charts using Plotly (interactive) or
     Matplotlib/Seaborn (static). Supports various chart types with smart defaults.
 

@@ -749,3 +749,185 @@ logic with trigger conditions (TxScript formulas) and actions that execute when 
 
    # List only enabled rules
    enabled_rules = list_rules(enabled=True)
+
+   Agent Tools
+   -----------
+
+   The ``rossum_agent`` package provides additional tools beyond the MCP server.
+
+   File System Tools
+   ^^^^^^^^^^^^^^^^^
+
+   - **read_file** - Read file contents
+   - **write_file** - Write content to files
+   - **list_files** - List directory contents
+   - **get_file_info** - Get file metadata
+
+   Plotting Tools
+   ^^^^^^^^^^^^^^
+
+   See :doc:`plotting` for complete plotting tool documentation including:
+
+   - **plot_data** - Create interactive charts (bar, line, pie, scatter, heatmap)
+
+   Hook Analysis Tools
+   ^^^^^^^^^^^^^^^^^^^
+
+   analyze_hook_dependencies
+   """"""""""""""""""""""""""
+
+   Analyze hook dependencies from a list of hooks and generate a dependency tree.
+
+   This tool helps understand the workflow and execution order of hooks in a Rossum queue
+   by analyzing their trigger events, types, and relationships.
+
+   **Parameters:**
+
+   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool.
+   Expected format: ``{"count": N, "results": [{"id": ..., "name": ..., "events": [...], ...}]}``
+
+   **Returns:**
+
+   JSON string containing dependency analysis with:
+
+   - ``execution_phases``: Hooks grouped by trigger event
+   - ``dependency_tree``: Visual tree representation
+   - ``hook_details``: Detailed information about each hook
+   - ``workflow_summary``: Overall workflow description
+
+   .. code-block:: json
+
+   {
+    "total_hooks": 5,
+    "active_hooks": 4,
+    "execution_phases": [
+      {
+        "event": "annotation_content.initialize",
+        "description": "Initial setup when annotation is first created",
+        "hooks": [
+          {
+            "id": 12345,
+            "name": "Data Enrichment",
+            "type": "function",
+            "queues": [...],
+            "config": {...}
+          }
+        ]
+      }
+    ],
+    "dependency_tree": "...",
+    "workflow_summary": "...",
+    "hook_details": [...]
+   }
+
+   **Example usage:**
+
+   .. code-block:: python
+
+   # First get hooks from MCP server
+   hooks_data = mcp.list_hooks(queue_id=12345)
+
+   # Analyze dependencies
+   analysis = analyze_hook_dependencies(hooks_data)
+   print(analysis)
+
+   visualize_hook_tree
+   """""""""""""""""""
+
+   Generate a visual tree diagram of hook execution flow.
+
+   Creates an easy-to-read tree visualization showing how hooks are triggered
+   throughout the document lifecycle in a Rossum queue.
+
+   **Parameters:**
+
+   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool
+   - ``output_format`` (string, optional): Format for the tree visualization. Options:
+
+   - ``"ascii"``: Simple ASCII art tree (default)
+   - ``"markdown"``: Markdown-formatted tree with indentation
+   - ``"mermaid"``: Mermaid diagram syntax for rendering
+
+   **Returns:**
+
+   String containing the tree visualization in the requested format.
+
+   **Example ASCII output:**
+
+   .. code-block:: text
+
+   Document Lifecycle Flow:
+
+   ├── [annotation_content.initialize] Initial setup when annotation is first created
+   │   ├── [function] Data Enrichment (ID: 12345)
+   │   └── [webhook] External Validation (ID: 12346)
+   └── [annotation_content.confirm] User confirms the annotation
+      └── [function] Final Check (ID: 12347)
+
+   **Example usage:**
+
+   .. code-block:: python
+
+   hooks_data = mcp.list_hooks(queue_id=12345)
+
+   # ASCII tree
+   tree = visualize_hook_tree(hooks_data, output_format="ascii")
+   print(tree)
+
+   # Markdown tree
+   md_tree = visualize_hook_tree(hooks_data, output_format="markdown")
+
+   # Mermaid diagram
+   mermaid = visualize_hook_tree(hooks_data, output_format="mermaid")
+
+   explain_hook_execution_order
+   """""""""""""""""""""""""""""
+
+   Explain the execution order and timing of hooks in plain language.
+
+   Provides a narrative explanation of when and why each hook executes,
+   helping users understand the automation workflow.
+
+   **Parameters:**
+
+   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool
+
+   **Returns:**
+
+   Plain text explanation of hook execution flow and dependencies.
+
+   **Example output:**
+
+   .. code-block:: text
+
+   HOOK EXECUTION FLOW EXPLANATION
+   ==================================================
+
+   This queue has 4 active hooks configured across 3 different trigger events.
+
+   Here's how the hooks execute throughout the document lifecycle:
+
+   1. ANNOTATION_CONTENT.INITIALIZE
+     When: Initial setup when annotation is first created
+     Hooks triggered (2):
+     - Data Enrichment (Python function)
+     - External Validation (Webhook call)
+
+   2. ANNOTATION_CONTENT.CONFIRM
+     When: User confirms the annotation
+     Hooks triggered (1):
+     - Final Check (Python function)
+
+   WORKFLOW INSIGHTS
+   --------------------------------------------------
+
+   • Initial automation: 2 hook(s) run when documents first arrive to set up data
+   • Pre-export processing: 1 hook(s) run final checks before export
+
+   **Example usage:**
+
+   .. code-block:: python
+
+   hooks_data = mcp.list_hooks(queue_id=12345)
+   explanation = explain_hook_execution_order(hooks_data)
+   print(explanation)
