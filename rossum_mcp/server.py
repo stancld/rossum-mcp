@@ -28,6 +28,7 @@ from rossum_mcp.handlers import (
     QueuesHandler,
     RulesHandler,
     SchemasHandler,
+    WorkspacesHandler,
 )
 from rossum_mcp.logging_config import setup_logging
 
@@ -71,6 +72,8 @@ class RossumMCPServer:
             "get_queue_engine",
             "list_hooks",
             "list_rules",
+            "get_workspace",
+            "list_workspaces",
         }
 
         # Initialize handlers
@@ -80,6 +83,7 @@ class RossumMCPServer:
         self.engines_handler = EnginesHandler(self.client, self.base_url)
         self.hooks_handler = HooksHandler(self.client, self.base_url)
         self.rules_handler = RulesHandler(self.client, self.base_url)
+        self.workspaces_handler = WorkspacesHandler(self.client, self.base_url)
 
         self.handlers: list[BaseHandler] = [
             self.annotations_handler,
@@ -88,6 +92,7 @@ class RossumMCPServer:
             self.engines_handler,
             self.hooks_handler,
             self.rules_handler,
+            self.workspaces_handler,
         ]
 
         # Setup tool registry mapping tool names to handler methods

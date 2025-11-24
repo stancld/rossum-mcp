@@ -2035,6 +2035,8 @@ class TestReadOnlyMode:
             "get_queue_engine",
             "list_hooks",
             "list_rules",
+            "get_workspace",
+            "list_workspaces",
         }
 
         # Write tools that should NOT be present
@@ -2051,6 +2053,7 @@ class TestReadOnlyMode:
             "create_engine_field",
             "create_schema",
             "create_hook",
+            "create_workspace",
         }
 
         # Check that read-only tools are present
@@ -2083,6 +2086,9 @@ class TestReadOnlyMode:
             "create_schema",
             "create_engine_field",
             "list_hooks",
+            "get_workspace",
+            "list_workspaces",
+            "create_workspace",
         }
 
         for tool in all_tools:
@@ -2112,6 +2118,8 @@ class TestReadOnlyMode:
             "get_queue_engine",
             "list_hooks",
             "list_rules",
+            "get_workspace",
+            "list_workspaces",
         }
 
         # Write tools that should NOT be present
@@ -2128,6 +2136,7 @@ class TestReadOnlyMode:
             "create_engine_field",
             "create_schema",
             "create_hook",
+            "create_workspace",
         }
 
         # Check that read-only tools are present
@@ -2141,8 +2150,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 20 tools should be present
-        assert len(tool_names) == 20
+        # All 23 tools should be present
+        assert len(tool_names) == 23
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -2169,3 +2178,230 @@ class TestReadOnlyMode:
         assert server._is_tool_allowed("upload_document") is True
         assert server._is_tool_allowed("create_queue") is True
         assert server._is_tool_allowed("update_schema") is True
+
+
+@pytest.mark.unit
+class TestGetWorkspace:
+    """Tests for workspace retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_success(self, server: RossumMCPServer) -> None:
+        """Test successful workspace retrieval."""
+        mock_workspace = Mock()
+        mock_workspace.id = 1000
+        mock_workspace.name = "Test Workspace"
+        mock_workspace.url = "https://api.test.rossum.ai/v1/workspaces/1000"
+        mock_workspace.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_workspace.queues = [
+            "https://api.test.rossum.ai/v1/queues/100",
+            "https://api.test.rossum.ai/v1/queues/200",
+        ]
+        mock_workspace.autopilot = True
+        mock_workspace.metadata = {"key": "value"}
+
+        server.client.retrieve_workspace.return_value = mock_workspace
+
+        result = await server.workspaces_handler.get_workspace(1000)
+
+        assert result["id"] == 1000
+        assert result["name"] == "Test Workspace"
+        assert result["url"] == mock_workspace.url
+        assert result["organization"] == mock_workspace.organization
+        assert result["queues"] == mock_workspace.queues
+        assert result["autopilot"] is True
+        assert result["metadata"] == {"key": "value"}
+
+        server.client.retrieve_workspace.assert_called_once_with(1000)
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_empty_metadata(self, server: RossumMCPServer) -> None:
+        """Test workspace retrieval with empty metadata."""
+        mock_workspace = Mock()
+        mock_workspace.id = 1001
+        mock_workspace.name = "Empty Workspace"
+        mock_workspace.url = "https://api.test.rossum.ai/v1/workspaces/1001"
+        mock_workspace.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_workspace.queues = []
+        mock_workspace.autopilot = False
+        mock_workspace.metadata = {}
+
+        server.client.retrieve_workspace.return_value = mock_workspace
+
+        result = await server.workspaces_handler.get_workspace(1001)
+
+        assert result["id"] == 1001
+        assert result["metadata"] == {}
+        assert result["queues"] == []
+
+
+@pytest.mark.unit
+class TestListWorkspaces:
+    """Tests for listing workspaces functionality."""
+
+    @pytest.mark.asyncio
+    async def test_list_workspaces_success(self, server: RossumMCPServer) -> None:
+        """Test successful workspaces listing."""
+        mock_ws1 = Mock()
+        mock_ws1.id = 1
+        mock_ws1.name = "Workspace 1"
+        mock_ws1.url = "https://api.test.rossum.ai/v1/workspaces/1"
+        mock_ws1.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_ws1.queues = ["https://api.test.rossum.ai/v1/queues/100"]
+        mock_ws1.autopilot = True
+        mock_ws1.metadata = {}
+
+        mock_ws2 = Mock()
+        mock_ws2.id = 2
+        mock_ws2.name = "Workspace 2"
+        mock_ws2.url = "https://api.test.rossum.ai/v1/workspaces/2"
+        mock_ws2.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_ws2.queues = []
+        mock_ws2.autopilot = False
+        mock_ws2.metadata = {"key": "value"}
+
+        async def async_iter():
+            for ws in [mock_ws1, mock_ws2]:
+                yield ws
+
+        server.client.list_workspaces = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.workspaces_handler.list_workspaces()
+
+        assert result["count"] == 2
+        assert len(result["workspaces"]) == 2
+        assert result["workspaces"][0]["id"] == 1
+        assert result["workspaces"][0]["name"] == "Workspace 1"
+        assert result["workspaces"][1]["id"] == 2
+        assert result["workspaces"][1]["name"] == "Workspace 2"
+        assert "Retrieved 2 workspace(s)" in result["message"]
+
+        server.client.list_workspaces.assert_called_once_with()
+
+    @pytest.mark.asyncio
+    async def test_list_workspaces_with_organization_filter(self, server: RossumMCPServer) -> None:
+        """Test listing workspaces filtered by organization."""
+        mock_ws = Mock()
+        mock_ws.id = 1
+        mock_ws.name = "Org Workspace"
+        mock_ws.url = "https://api.test.rossum.ai/v1/workspaces/1"
+        mock_ws.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_ws.queues = []
+        mock_ws.autopilot = False
+        mock_ws.metadata = {}
+
+        async def async_iter():
+            yield mock_ws
+
+        server.client.list_workspaces = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.workspaces_handler.list_workspaces(organization_id=10)
+
+        assert result["count"] == 1
+        assert len(result["workspaces"]) == 1
+        assert result["workspaces"][0]["id"] == 1
+        server.client.list_workspaces.assert_called_once_with(organization=10)
+
+    @pytest.mark.asyncio
+    async def test_list_workspaces_with_name_filter(self, server: RossumMCPServer) -> None:
+        """Test listing workspaces filtered by name."""
+        mock_ws = Mock()
+        mock_ws.id = 2
+        mock_ws.name = "Specific Workspace"
+        mock_ws.url = "https://api.test.rossum.ai/v1/workspaces/2"
+        mock_ws.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_ws.queues = []
+        mock_ws.autopilot = True
+        mock_ws.metadata = {}
+
+        async def async_iter():
+            yield mock_ws
+
+        server.client.list_workspaces = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.workspaces_handler.list_workspaces(name="Specific Workspace")
+
+        assert result["count"] == 1
+        assert result["workspaces"][0]["name"] == "Specific Workspace"
+        server.client.list_workspaces.assert_called_once_with(name="Specific Workspace")
+
+    @pytest.mark.asyncio
+    async def test_list_workspaces_empty(self, server: RossumMCPServer) -> None:
+        """Test listing workspaces when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.list_workspaces = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.workspaces_handler.list_workspaces()
+
+        assert result["count"] == 0
+        assert result["workspaces"] == []
+        assert "Retrieved 0 workspace(s)" in result["message"]
+
+
+@pytest.mark.unit
+class TestCreateWorkspace:
+    """Tests for workspace creation functionality."""
+
+    @pytest.mark.asyncio
+    async def test_create_workspace_success(self, server: RossumMCPServer) -> None:
+        """Test successful workspace creation."""
+        mock_workspace = Mock()
+        mock_workspace.id = 3000
+        mock_workspace.name = "New Workspace"
+        mock_workspace.url = "https://api.test.rossum.ai/v1/workspaces/3000"
+        mock_workspace.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_workspace.queues = []
+        mock_workspace.autopilot = False
+        mock_workspace.metadata = {}
+
+        server.client.create_new_workspace.return_value = mock_workspace
+
+        result = await server.workspaces_handler.create_workspace(name="New Workspace", organization_id=10)
+
+        assert result["id"] == 3000
+        assert result["name"] == "New Workspace"
+        assert result["url"] == mock_workspace.url
+        assert result["organization"] == mock_workspace.organization
+        assert result["queues"] == []
+        assert result["autopilot"] is False
+        assert result["metadata"] == {}
+        assert "created successfully" in result["message"]
+        assert "3000" in result["message"]
+
+        server.client.create_new_workspace.assert_called_once()
+        call_args = server.client.create_new_workspace.call_args[0][0]
+        assert call_args["name"] == "New Workspace"
+        assert call_args["organization"] == "https://api.test.rossum.ai/organizations/10"
+
+    @pytest.mark.asyncio
+    async def test_create_workspace_with_metadata(self, server: RossumMCPServer) -> None:
+        """Test workspace creation with metadata."""
+        mock_workspace = Mock()
+        mock_workspace.id = 3001
+        mock_workspace.name = "Metadata Workspace"
+        mock_workspace.url = "https://api.test.rossum.ai/v1/workspaces/3001"
+        mock_workspace.organization = "https://api.test.rossum.ai/v1/organizations/20"
+        mock_workspace.queues = []
+        mock_workspace.autopilot = False
+        mock_workspace.metadata = {"department": "finance", "region": "us-west"}
+
+        server.client.create_new_workspace.return_value = mock_workspace
+
+        result = await server.workspaces_handler.create_workspace(
+            name="Metadata Workspace",
+            organization_id=20,
+            metadata={"department": "finance", "region": "us-west"},
+        )
+
+        assert result["id"] == 3001
+        assert result["name"] == "Metadata Workspace"
+        assert result["metadata"] == {"department": "finance", "region": "us-west"}
+        assert "created successfully" in result["message"]
+
+        call_args = server.client.create_new_workspace.call_args[0][0]
+        assert call_args["name"] == "Metadata Workspace"
+        assert call_args["organization"] == "https://api.test.rossum.ai/organizations/20"
+        assert call_args["metadata"] == {"department": "finance", "region": "us-west"}

@@ -295,7 +295,7 @@ The services include health checks and will wait for Elasticsearch to be fully r
 
 ## MCP Tools
 
-The MCP server provides 20 tools organized into five categories:
+The MCP server provides 23 tools organized into six categories:
 
 **Document Processing (6 tools)**
 - `upload_document` - Upload documents for AI extraction
@@ -326,6 +326,11 @@ The MCP server provides 20 tools organized into five categories:
 - `list_hooks` - List webhooks and extensions
 - `create_hook` - Create new hooks/extensions
 - `list_rules` - List validation rules
+
+**Workspace Management (3 tools)**
+- `get_workspace` - Retrieve workspace details
+- `list_workspaces` - List all workspaces with filtering
+- `create_workspace` - Create new workspaces
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
 
