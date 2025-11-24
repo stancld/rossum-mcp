@@ -16,6 +16,7 @@ AI agent package for Rossum document processing with tools for data manipulation
 ### Agent Tools
 - **File System Tools**: Read, write, and list files from the filesystem
 - **Plotting Tools**: Create interactive charts and visualizations with Plotly
+- **Hook Analysis Tools**: Analyze and visualize Rossum hook dependencies and workflows
 - **Internal Tools**: Sleep, execute code, and manage agent operations
 - **Rossum Integration**: Connect to Rossum MCP server for document processing
 
@@ -167,6 +168,63 @@ Create an interactive pie chart.
 **Parameters:**
 - `data` (dict): Data for plotting
 - Additional styling parameters
+
+### Hook Analysis Tools
+
+#### analyze_hook_dependencies
+Analyze hook dependencies from a list of hooks and generate a dependency tree.
+
+**Parameters:**
+- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
+
+**Returns:**
+- JSON string containing:
+  - `execution_phases`: Hooks grouped by trigger event
+  - `dependency_tree`: Visual tree representation
+  - `hook_details`: Detailed information about each hook
+  - `workflow_summary`: Overall workflow description
+
+**Example:**
+```python
+hooks_data = mcp.list_hooks(queue_id=12345)
+analysis = analyze_hook_dependencies(hooks_data)
+```
+
+#### visualize_hook_tree
+Generate a visual tree diagram of hook execution flow.
+
+**Parameters:**
+- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
+- `output_format` (string, optional): Format for visualization:
+  - `"ascii"`: Simple ASCII art tree (default)
+  - `"markdown"`: Markdown-formatted tree with indentation
+  - `"mermaid"`: Mermaid diagram syntax for rendering
+
+**Returns:**
+- String containing the tree visualization in the requested format
+
+**Example:**
+```python
+hooks_data = mcp.list_hooks(queue_id=12345)
+tree = visualize_hook_tree(hooks_data, output_format="markdown")
+print(tree)
+```
+
+#### explain_hook_execution_order
+Explain the execution order and timing of hooks in plain language.
+
+**Parameters:**
+- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
+
+**Returns:**
+- Plain text explanation of hook execution flow and dependencies
+
+**Example:**
+```python
+hooks_data = mcp.list_hooks(queue_id=12345)
+explanation = explain_hook_execution_order(hooks_data)
+print(explanation)
+```
 
 ### Internal Tools
 

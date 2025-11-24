@@ -10,6 +10,11 @@ from mcp import StdioServerParameters
 from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
 from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
+from rossum_agent.hook_analysis_tools import (
+    analyze_hook_dependencies,
+    explain_hook_execution_order,
+    visualize_hook_tree,
+)
 from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import (
     copy_queue_knowledge,
@@ -94,6 +99,10 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         copy_queue_knowledge,
         retrieve_queue_status,
         get_splitting_and_sorting_hook_code,
+        # Hook analysis tools
+        analyze_hook_dependencies,
+        visualize_hook_tree,
+        explain_hook_execution_order,
     ]
 
     return CodeAgent(
