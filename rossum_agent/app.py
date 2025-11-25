@@ -15,8 +15,12 @@ import streamlit as st
 
 from rossum_agent.agent import create_agent
 from rossum_agent.agent_logging import log_agent_result
-from rossum_agent.file_system_tools import clear_generated_files, get_generated_files
-from rossum_agent.utils import check_env_vars
+from rossum_agent.utils import (
+    check_env_vars,
+    clear_generated_files,
+    get_generated_files,
+    get_generated_files_with_metadata,
+)
 from rossum_mcp.logging_config import setup_logging
 
 # Configure logging with Elasticsearch integration
@@ -162,6 +166,7 @@ def main() -> None:  # noqa: C901
         st.markdown("---")
         st.subheader("Generated Files")
         generated_files = get_generated_files()
+        generated_files_metadata = get_generated_files_with_metadata()
 
         if generated_files:
             st.write(f"📁 {len(generated_files)} file(s) generated:")
@@ -263,9 +268,9 @@ def main() -> None:  # noqa: C901
                     log_agent_result(result, prompt, duration)
                     logger.info("Agent response generated successfully")
 
-                    # Check if new files were generated and rerun to update sidebar
-                    current_files = get_generated_files()
-                    if current_files != generated_files:
+                    # Check if files were generated/modified and rerun to update sidebar
+                    current_files_metadata = get_generated_files_with_metadata()
+                    if current_files_metadata != generated_files_metadata:
                         st.rerun()
 
             except Exception as e:
