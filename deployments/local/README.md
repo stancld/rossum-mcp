@@ -12,7 +12,16 @@ Install one of the following local Kubernetes distributions:
 - [kind](https://kind.sigs.k8s.io/)
 - [k3d](https://k3d.io/)
 
-### 2. Build the Docker Image
+### 2. Choose Image Source
+
+**Option A: Use Published Image (Recommended)**
+The deployment is configured to use `ghcr.io/stancld/rossum-mcp:master` by default.
+- Image is automatically built and published on every push to master
+- No local build required
+- Skip to step 3
+
+**Option B: Build Local Image**
+For local development or testing custom changes:
 
 **For Docker Desktop / kind:**
 ```bash
@@ -29,6 +38,14 @@ kind load docker-image rossum-agent:local
 ```bash
 docker build -t rossum-agent:local .
 minikube image load rossum-agent:local
+```
+
+Then update `kustomization.yaml` to use local image:
+```yaml
+images:
+  - name: ghcr.io/stancld/rossum-mcp
+    newName: rossum-agent
+    newTag: local
 ```
 
 ### 3. Configure LLM API Keys (Optional)
@@ -196,6 +213,16 @@ kubectl get svc rossum-agent
 
 ## Development Workflow
 
+### Using Published Image (Fast)
+1. Make code changes and push to master
+2. Wait for GitHub Actions to build and publish
+3. Update image tag in kustomization.yaml (or use `:master` for latest)
+4. Restart deployment:
+   ```bash
+   kubectl rollout restart deployment rossum-agent
+   ```
+
+### Using Local Image (For Testing)
 1. Make code changes
 2. Rebuild Docker image:
    ```bash

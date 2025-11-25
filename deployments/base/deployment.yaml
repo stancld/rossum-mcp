@@ -26,7 +26,7 @@ spec:
                 name: rossum-agent
             - secretRef:
                 name: rossum-agent
-          image: app-image
+          image: ghcr.io/stancld/rossum-mcp:master
           imagePullPolicy: Always
           name: rossum-agent
           command: ["uv", "run", "streamlit", "run", "rossum_agent/app.py"]

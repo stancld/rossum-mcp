@@ -107,7 +107,13 @@ See [new-deployment/README.md](new-deployment/README.md) for detailed documentat
 **Best for:** Quick local testing with minimal configuration
 
 1. Edit [local/kustomization.yaml](local/kustomization.yaml) with your API key
-2. Build and deploy:
+2. Deploy using published image (recommended):
+   ```bash
+   kubectl apply -k deployments/local
+   kubectl port-forward service/rossum-agent 8501:8501
+   ```
+
+   Or build locally first:
    ```bash
    docker build -t rossum-agent:local .
    kubectl apply -k deployments/local
@@ -129,7 +135,11 @@ Create your own overlay in a new directory following the structure of existing e
    minikube start
    ```
 
-2. **Build the Docker image locally** (if not using a registry):
+2. **Use the published image from GitHub Container Registry** (recommended):
+   - Image is automatically built and published on every push to master
+   - Available at: `ghcr.io/stancld/rossum-mcp:master`
+
+   **Or build locally** (for development):
    ```bash
    eval $(minikube docker-env)
    docker build -t rossum-agent:local .
@@ -207,8 +217,11 @@ Create your own overlay in a new directory following the structure of existing e
    kind create cluster --name rossum-agent
    ```
 
-2. **Load the image into kind**:
+2. **Use published image** (recommended) or load local image:
    ```bash
+   # Option A: Published image (no action needed, will pull automatically)
+
+   # Option B: Build and load local image
    docker build -t rossum-agent:local .
    kind load docker-image rossum-agent:local --name rossum-agent
    ```
@@ -219,8 +232,11 @@ Create your own overlay in a new directory following the structure of existing e
 
 1. **Enable Kubernetes** in Docker Desktop settings
 
-2. **Build the image**:
+2. **Use published image** (recommended) or build locally:
    ```bash
+   # Option A: Published image (no action needed, will pull automatically)
+
+   # Option B: Build local image
    docker build -t rossum-agent:local .
    ```
 

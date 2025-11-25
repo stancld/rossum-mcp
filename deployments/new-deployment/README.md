@@ -170,10 +170,12 @@ cookiecutter cookiecutter-template \
 
 1. **Review generated files** in `deployments/<environment_name>/`
 2. **Update API keys** if using local secrets
-3. **Build Docker image:**
-   ```bash
-   docker build -t <image-name>:<tag> .
-   ```
+3. **Use Docker image:**
+   - **Recommended:** Use published image `ghcr.io/stancld/rossum-mcp:master` (default)
+   - **Alternative:** Build custom image:
+     ```bash
+     docker build -t <image-name>:<tag> .
+     ```
 4. **Deploy:**
    ```bash
    kubectl apply -k deployments/<environment_name>

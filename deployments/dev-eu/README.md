@@ -8,8 +8,14 @@
 
 ## Quick Start
 
-### 1. Build and Load Docker Image
+### 1. Use Docker Image
 
+**Option A: GitHub Container Registry (Recommended)**
+The deployment uses `ghcr.io/stancld/rossum-mcp:master` by default.
+- Image is automatically built and published by CI on every push to master
+- Available tags: `master`, `v*`, `sha-*`
+
+**Option B: Build and Push to ECR (Custom Builds)**
 ```bash
 # Build and push to ECR
 aws ecr get-login-password --region eu-west-1 | \
@@ -18,6 +24,8 @@ aws ecr get-login-password --region eu-west-1 | \
 docker build -t /rossum-agent:latest .
 docker push /rossum-agent:latest
 ```
+
+Then update the image in kustomization.yaml accordingly.
 
 ### 2. Deploy to Kubernetes
 
