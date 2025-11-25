@@ -8,31 +8,7 @@ from pathlib import Path
 
 from smolagents import tool
 
-# Output directory for generated files
-OUTPUT_DIR = Path("./outputs")
-
-
-def get_generated_files() -> list[str]:
-    """Get list of files in the outputs directory.
-
-    Returns:
-        List of absolute file paths for all files in the outputs directory.
-        Returns empty list if directory doesn't exist.
-    """
-    if not OUTPUT_DIR.exists():
-        return []
-
-    return [str(f.resolve()) for f in OUTPUT_DIR.iterdir() if f.is_file()]
-
-
-def clear_generated_files() -> None:
-    """Delete all files in the outputs directory."""
-    if not OUTPUT_DIR.exists():
-        return
-
-    for file_path in OUTPUT_DIR.iterdir():
-        if file_path.is_file():
-            file_path.unlink()
+from rossum_agent.utils import OUTPUT_DIR
 
 
 @tool
