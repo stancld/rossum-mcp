@@ -235,7 +235,7 @@ def _create_plotly_chart(
         # Save to file
         output_file = Path(output_path)
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        result.write_html(str(output_file))
+        result.write_html(str(output_file), include_plotlyjs="cdn")
 
         return {
             "status": "success",
