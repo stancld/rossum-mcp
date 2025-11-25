@@ -88,14 +88,14 @@ streamlit run rossum_agent/app.py
 ### Using in Python Scripts
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+import os
 from rossum_agent.agent import create_agent
 
-# Create an agent
-agent = create_agent(
-    model_id="anthropic/claude-3-5-sonnet-20241022",
-    additional_tools=[]  # Add any custom tools here
-)
+# Set Bedrock model (optional, uses default if not set)
+os.environ["LLM_MODEL_ID"] = "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+# Create an agent (requires AWS credentials configured)
+agent = create_agent()
 
 # Use the agent
 result = agent.run(
