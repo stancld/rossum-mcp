@@ -365,7 +365,9 @@ The agent includes file system tools, plotting capabilities, and Rossum integrat
 
 The MCP server provides 23 tools organized into six categories:
 
-**Document Processing (6 tools)**
+<details>
+<summary><strong>Document Processing (6 tools)</strong></summary>
+
 - `upload_document` - Upload documents for AI extraction
 - `get_annotation` - Retrieve extracted data and status
 - `list_annotations` - List all annotations with filtering
@@ -373,32 +375,54 @@ The MCP server provides 23 tools organized into six categories:
 - `bulk_update_annotation_fields` - Update field values with JSON Patch
 - `confirm_annotation` - Confirm and finalize annotations
 
-**Queue Management (5 tools)**
+</details>
+
+<details>
+<summary><strong>Queue Management (5 tools)</strong></summary>
+
 - `get_queue` - Retrieve queue details
 - `get_queue_schema` - Retrieve queue schema in one call
 - `get_queue_engine` - Get engine information
 - `create_queue` - Create new queues
 - `update_queue` - Configure automation thresholds
 
-**Schema Management (3 tools)**
+</details>
+
+<details>
+<summary><strong>Schema Management (3 tools)</strong></summary>
+
 - `get_schema` - Retrieve schema details
 - `create_schema` - Create new schemas
 - `update_schema` - Configure field-level thresholds
 
-**Engine Management (3 tools)**
+</details>
+
+<details>
+<summary><strong>Engine Management (3 tools)</strong></summary>
+
 - `create_engine` - Create extraction or splitting engines
 - `update_engine` - Configure learning and training queues
 - `create_engine_field` - Define engine fields and link to schemas
 
-**Automation Management (3 tools)**
+</details>
+
+<details>
+<summary><strong>Automation Management (3 tools)</strong></summary>
+
 - `list_hooks` - List webhooks and extensions
 - `create_hook` - Create new hooks/extensions
 - `list_rules` - List validation rules
 
-**Workspace Management (3 tools)**
+</details>
+
+<details>
+<summary><strong>Workspace Management (3 tools)</strong></summary>
+
 - `get_workspace` - Retrieve workspace details
 - `list_workspaces` - List all workspaces with filtering
 - `create_workspace` - Create new workspaces
+
+</details>
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
 
