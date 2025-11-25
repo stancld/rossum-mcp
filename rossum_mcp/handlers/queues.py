@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 from typing import TYPE_CHECKING
@@ -38,7 +39,7 @@ class QueuesHandler(BaseHandler):
             ),
             Tool(
                 name="get_queue_schema",
-                description="Retrieve queue schema in one call. Returns: queue_id, queue_name, schema_id, schema_name, schema_url, schema_content.",
+                description="Retrieve queue schema. Returns Schema model fields: id, name, queues, url, content, metadata, modified_by, modified_at.",
                 inputSchema={
                     "type": "object",
                     "properties": {"queue_id": {"type": "integer", "description": "Queue ID"}},
@@ -47,7 +48,7 @@ class QueuesHandler(BaseHandler):
             ),
             Tool(
                 name="get_queue_engine",
-                description="Retrieve queue engine info. Returns: queue_id, queue_name, engine_id, engine_name, engine_url, engine_type. None if no engine assigned.",
+                description="Retrieve queue engine. Returns Engine model fields: id, url, name, type, learning_enabled, training_queues, description, agenda_id. None if no engine assigned.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -150,14 +151,7 @@ class QueuesHandler(BaseHandler):
         # Now retrieve the schema
         schema: Schema = await self.client.retrieve_schema(schema_id)
 
-        return {
-            "queue_id": queue.id,
-            "queue_name": queue.name,
-            "schema_id": schema.id,
-            "schema_name": schema.name,
-            "schema_url": schema.url,
-            "schema_content": schema.content,
-        }
+        return dataclasses.asdict(schema)
 
     async def get_queue_engine(self, queue_id: int) -> dict:
         """Retrieve complete engine information for a queue.
@@ -178,28 +172,16 @@ class QueuesHandler(BaseHandler):
 
         # Check if an engine is assigned and determine its type
         engine_url = None
-        engine_type = None
 
         if queue.dedicated_engine:
             engine_url = queue.dedicated_engine
-            engine_type = "dedicated"
         elif queue.generic_engine:
             engine_url = queue.generic_engine
-            engine_type = "generic"
         elif queue.engine:
             engine_url = queue.engine
-            engine_type = "standard"
 
         if not engine_url:
-            return {
-                "queue_id": queue.id,
-                "queue_name": queue.name,
-                "engine_id": None,
-                "engine_name": None,
-                "engine_url": None,
-                "engine_type": None,
-                "message": "No engine assigned to this queue",
-            }
+            return {"message": "No engine assigned to this queue"}
 
         # Extract engine ID from the engine URL or use the embedded object
         # The engine field can be a URL like "https://api.elis.rossum.ai/v1/engines/12345"
@@ -214,18 +196,7 @@ class QueuesHandler(BaseHandler):
             engine = deserialize_default(Resource.Engine, engine_url)
 
         # Now engine is always an Engine model object
-        engine_id = engine.id
-        engine_name = engine.name
-        engine_url_final = engine.url
-
-        return {
-            "queue_id": queue.id,
-            "queue_name": queue.name,
-            "engine_id": engine_id,
-            "engine_name": engine_name,
-            "engine_url": engine_url_final,
-            "engine_type": engine_type,
-        }
+        return dataclasses.asdict(engine)
 
     async def create_queue(
         self,
@@ -335,14 +306,6 @@ class QueuesHandler(BaseHandler):
         updated_queue_data = await self.client._http_client.update(Resource.Queue, queue_id, queue_data)
         updated_queue: Queue = self.client._deserializer(Resource.Queue, updated_queue_data)
 
-        return {
-            "id": updated_queue.id,
-            "name": updated_queue.name,
-            "url": updated_queue.url,
-            "automation_enabled": updated_queue.automation_enabled,
-            "automation_level": updated_queue.automation_level,
-            "default_score_threshold": updated_queue.default_score_threshold,
-            "locale": updated_queue.locale,
-            "training_enabled": updated_queue.training_enabled,
-            "message": f"Queue '{updated_queue.name}' (ID {updated_queue.id}) updated successfully",
-        }
+        result = dataclasses.asdict(updated_queue)
+        result["message"] = f"Queue '{updated_queue.name}' (ID {updated_queue.id}) updated successfully"
+        return result

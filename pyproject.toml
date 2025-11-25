@@ -99,3 +99,6 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-schema-content" }

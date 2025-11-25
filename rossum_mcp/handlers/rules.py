@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
@@ -73,32 +74,5 @@ class RulesHandler(BaseHandler):
 
         return {
             "count": len(rules_list),
-            "results": [
-                {
-                    "id": rule.id,
-                    "name": rule.name,
-                    "url": rule.url,
-                    "enabled": rule.enabled,
-                    "organization": rule.organization,
-                    "schema": rule.schema,
-                    "trigger_condition": rule.trigger_condition,
-                    "created_by": rule.created_by,
-                    "created_at": rule.created_at,
-                    "modified_by": rule.modified_by,
-                    "modified_at": rule.modified_at,
-                    "rule_template": rule.rule_template,
-                    "synchronized_from_template": rule.synchronized_from_template,
-                    "actions": [
-                        {
-                            "id": action.id,
-                            "type": action.type,
-                            "payload": action.payload,
-                            "event": action.event,
-                            "enabled": action.enabled,
-                        }
-                        for action in rule.actions
-                    ],
-                }
-                for rule in rules_list
-            ],
+            "results": [dataclasses.asdict(rule) for rule in rules_list],
         }

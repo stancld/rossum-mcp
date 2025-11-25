@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
@@ -78,15 +79,7 @@ class WorkspacesHandler(BaseHandler):
         logger.debug(f"Retrieving workspace: workspace_id={workspace_id}")
 
         workspace: Workspace = await self.client.retrieve_workspace(workspace_id)
-        return {
-            "id": workspace.id,
-            "name": workspace.name,
-            "url": workspace.url,
-            "organization": workspace.organization,
-            "queues": workspace.queues,
-            "autopilot": workspace.autopilot,
-            "metadata": workspace.metadata,
-        }
+        return dataclasses.asdict(workspace)
 
     async def list_workspaces(self, organization_id: int | None = None, name: str | None = None) -> dict:
         """List all workspaces with optional filters.
@@ -108,17 +101,7 @@ class WorkspacesHandler(BaseHandler):
 
         workspaces_list = []
         async for workspace in self.client.list_workspaces(**filters):  # type: ignore[arg-type]
-            workspaces_list.append(
-                {
-                    "id": workspace.id,
-                    "name": workspace.name,
-                    "url": workspace.url,
-                    "organization": workspace.organization,
-                    "queues": workspace.queues,
-                    "autopilot": workspace.autopilot,
-                    "metadata": workspace.metadata,
-                }
-            )
+            workspaces_list.append(dataclasses.asdict(workspace))
 
         return {
             "workspaces": workspaces_list,
@@ -152,13 +135,6 @@ class WorkspacesHandler(BaseHandler):
         # Create the workspace
         workspace: Workspace = await self.client.create_new_workspace(workspace_data)
 
-        return {
-            "id": workspace.id,
-            "name": workspace.name,
-            "url": workspace.url,
-            "organization": workspace.organization,
-            "queues": workspace.queues,
-            "autopilot": workspace.autopilot,
-            "metadata": workspace.metadata,
-            "message": f"Workspace '{workspace.name}' created successfully with ID {workspace.id}",
-        }
+        result = dataclasses.asdict(workspace)
+        result["message"] = f"Workspace '{workspace.name}' created successfully with ID {workspace.id}"
+        return result

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 from typing import TYPE_CHECKING, Literal
@@ -27,7 +28,7 @@ class HooksHandler(BaseHandler):
         return [
             Tool(
                 name="list_hooks",
-                description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, type, active, queues, events, config, extension_source).",
+                description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description).",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -48,7 +49,7 @@ class HooksHandler(BaseHandler):
             ),
             Tool(
                 name="create_hook",
-                description="Create a new hook. Returns: id, name, url, enabled, queues, events, config, setting, message.",
+                description="Create a new hook. Returns: id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description, message.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -123,20 +124,7 @@ class HooksHandler(BaseHandler):
 
         return {
             "count": len(hooks_list),
-            "results": [
-                {
-                    "id": hook.id,
-                    "name": hook.name,
-                    "url": hook.url,
-                    "type": hook.type,
-                    "active": hook.active,
-                    "queues": hook.queues,
-                    "events": hook.events,
-                    "config": hook.config,
-                    "extension_source": hook.extension_source,
-                }
-                for hook in hooks_list
-            ],
+            "results": [dataclasses.asdict(hook) for hook in hooks_list],
         }
 
     async def create_hook(
@@ -207,14 +195,6 @@ class HooksHandler(BaseHandler):
 
         hook: Hook = await self.client.create_new_hook(hook_data)
 
-        return {
-            "id": hook.id,
-            "name": hook.name,
-            "url": hook.url,
-            "enabled": hook.active,
-            "queues": hook.queues,
-            "events": hook.events,
-            "config": hook.config,
-            "settings": hook.settings,
-            "message": f"Hook '{hook.name}' created successfully with ID {hook.id}",
-        }
+        result = dataclasses.asdict(hook)
+        result["message"] = f"Hook '{hook.name}' created successfully with ID {hook.id}"
+        return result

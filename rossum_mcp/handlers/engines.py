@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
@@ -25,7 +26,7 @@ class EnginesHandler(BaseHandler):
         return [
             Tool(
                 name="update_engine",
-                description="Update engine settings. Returns: updated engine details, message.",
+                description="Update engine settings. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, message.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -41,7 +42,7 @@ class EnginesHandler(BaseHandler):
             ),
             Tool(
                 name="create_engine",
-                description="Create a new engine. Returns: id, name, url, type, organization, message. IMPORTANT: When creating a new engine, check the schema to be used and create contained Engine fields immediately!",
+                description="Create a new engine. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, message. IMPORTANT: When creating a new engine, check the schema to be used and create contained Engine fields immediately!",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -58,7 +59,7 @@ class EnginesHandler(BaseHandler):
             ),
             Tool(
                 name="create_engine_field",
-                description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, name, label, url, type, engine, tabular, multiline, message.",
+                description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, url, engine, name, tabular, label, type, subtype, pre_trained_field_id, multiline, schema_ids (added), message.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -130,16 +131,9 @@ class EnginesHandler(BaseHandler):
         updated_engine_data = await self.client._http_client.update(Resource.Engine, engine_id, engine_data)
         updated_engine: Engine = self.client._deserializer(Resource.Engine, updated_engine_data)
 
-        return {
-            "id": updated_engine.id,
-            "name": updated_engine.name,
-            "url": updated_engine.url,
-            "type": updated_engine.type,
-            "learning_enabled": updated_engine.learning_enabled,
-            "training_queues": updated_engine.training_queues,
-            "description": updated_engine.description,
-            "message": f"Engine '{updated_engine.name}' (ID {updated_engine.id}) updated successfully",
-        }
+        result = dataclasses.asdict(updated_engine)
+        result["message"] = f"Engine '{updated_engine.name}' (ID {updated_engine.id}) updated successfully"
+        return result
 
     async def create_engine(self, name: str, organization_id: int, engine_type: str) -> dict:
         """Create a new engine.
@@ -169,14 +163,9 @@ class EnginesHandler(BaseHandler):
         engine_response = await self.client._http_client.create(Resource.Engine, engine_data)
         engine: Engine = self.client._deserializer(Resource.Engine, engine_response)
 
-        return {
-            "id": engine.id,
-            "name": engine.name,
-            "url": engine.url,
-            "type": engine.type,
-            "organization": engine_data["organization"],
-            "message": f"Engine '{engine.name}' created successfully with ID {engine.id}",
-        }
+        result = dataclasses.asdict(engine)
+        result["message"] = f"Engine '{engine.name}' created successfully with ID {engine.id}"
+        return result
 
     async def create_engine_field(
         self,
@@ -245,17 +234,9 @@ class EnginesHandler(BaseHandler):
         engine_field_response = await self.client._http_client.create(Resource.EngineField, engine_field_data)
         engine_field: EngineField = self.client._deserializer(Resource.EngineField, engine_field_response)
 
-        return {
-            "id": engine_field.id,
-            "name": engine_field.name,
-            "label": engine_field.label,
-            "url": engine_field.url,
-            "type": engine_field.type,
-            "engine": engine_field.engine,
-            "tabular": engine_field.tabular,
-            "multiline": engine_field.multiline,
-            "subtype": engine_field.subtype,
-            "pre_trained_field_id": engine_field.pre_trained_field_id,
-            "schema_ids": schema_ids,
-            "message": f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)",
-        }
+        result = dataclasses.asdict(engine_field)
+        result["schema_ids"] = schema_ids
+        result["message"] = (
+            f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)"
+        )
+        return result

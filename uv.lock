@@ -3085,16 +3085,12 @@ wheels = [
 [[package]]
 name = "rossum-api"
 version = "3.6.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content#fb04f2177094777e387b59c96fca94bb918e6f6c" }
 dependencies = [
     { name = "aiofiles" },
     { name = "dacite" },
     { name = "httpx" },
     { name = "tenacity" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/94/30/5ef4b4d9b2120b874d39f26421939a0767bf82fda88556de6236e7c20963/rossum_api-3.6.1.tar.gz", hash = "sha256:514ab53ec23b1dafa059d1b9e0f0a708f8ec5ac8598f0e6d77c83bc14073e0d0", size = 147175, upload-time = "2025-11-13T09:06:51.28Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/ad/af1af0f802565c9d8c8b414f3bcfb5487a7d1e760590617e758a236f4f24/rossum_api-3.6.1-py3-none-any.whl", hash = "sha256:78f1538923d83b37ffc1971d11a18dc0f01bf88ad8ff5942e010499a883597c2", size = 63246, upload-time = "2025-11-13T09:06:50.31Z" },
 ]
 
 [[package]]
@@ -3198,8 +3194,8 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'all'", specifier = ">=6.0" },
     { name = "requests", marker = "extra == 'agent'", specifier = ">=2.32" },
     { name = "requests", marker = "extra == 'all'", specifier = ">=2.32" },
-    { name = "rossum-api", specifier = ">=3.6.1" },
-    { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.6.1" },
+    { name = "rossum-api", git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content" },
+    { name = "rossum-api", marker = "extra == 'all'", git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content" },
     { name = "seaborn", marker = "extra == 'agent'", specifier = ">=0.13.2" },
     { name = "seaborn", marker = "extra == 'all'", specifier = ">=0.13.2" },
     { name = "smolagents", extras = ["mcp", "litellm"], marker = "extra == 'agent'", specifier = ">=1.0.0" },

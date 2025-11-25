@@ -108,7 +108,7 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
             "queue",
             "random",
             "re",
-            "rossum_api.models.annotation",
+            "rossum_api.*",
             "stat",
             "statistics",
             "time",

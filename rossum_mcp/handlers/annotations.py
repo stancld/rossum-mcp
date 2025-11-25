@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -185,17 +186,7 @@ class AnnotationsHandler(BaseHandler):
 
         annotation: Annotation = await self.client.retrieve_annotation(annotation_id, sideloads)
 
-        return {
-            "id": annotation.id,
-            "status": annotation.status,
-            "url": annotation.url,
-            "schema": annotation.schema,
-            "modifier": annotation.modifier,
-            "document": annotation.document,
-            "content": annotation.content,
-            "created_at": annotation.created_at,
-            "modified_at": annotation.modified_at,
-        }
+        return dataclasses.asdict(annotation)
 
     async def list_annotations(
         self, queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
@@ -220,17 +211,7 @@ class AnnotationsHandler(BaseHandler):
 
         return {
             "count": len(annotations_list),
-            "results": [
-                {
-                    "id": ann.id,
-                    "status": ann.status,
-                    "url": ann.url,
-                    "document": ann.document,
-                    "created_at": ann.created_at,
-                    "modified_at": ann.modified_at,
-                }
-                for ann in annotations_list
-            ],
+            "results": [dataclasses.asdict(ann) for ann in annotations_list],
         }
 
     async def start_annotation(self, annotation_id: int) -> dict:
