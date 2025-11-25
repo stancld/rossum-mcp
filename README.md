@@ -26,6 +26,9 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
 
+> [!WARNING]
+> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+
 ## What Can You Do?
 
 <details>

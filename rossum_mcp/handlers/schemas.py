@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import TYPE_CHECKING
 
@@ -25,7 +26,7 @@ class SchemasHandler(BaseHandler):
         return [
             Tool(
                 name="get_schema",
-                description="Retrieve schema details. Returns: id, name, url, content.",
+                description="Retrieve schema details. Returns: id, name, queues, url, content (sections with datapoints), metadata, modified_by, modified_at.",
                 inputSchema={
                     "type": "object",
                     "properties": {"schema_id": {"type": "integer", "description": "Schema ID"}},
@@ -34,7 +35,7 @@ class SchemasHandler(BaseHandler):
             ),
             Tool(
                 name="update_schema",
-                description="Update schema, typically for field-level thresholds. Returns: updated schema details, message.",
+                description="Update schema, typically for field-level thresholds. Returns: id, name, queues, url, content (sections with datapoints), metadata, modified_by, modified_at.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -50,7 +51,7 @@ class SchemasHandler(BaseHandler):
             ),
             Tool(
                 name="create_schema",
-                description="Create a schema. Returns: id, name, url, content, message. Must have ≥1 section with children (datapoints).",
+                description="Create a schema. Returns: id, name, queues, url, content (sections with datapoints), metadata, modified_by, modified_at. Must have ≥1 section with children (datapoints).",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -67,96 +68,21 @@ class SchemasHandler(BaseHandler):
         ]
 
     async def get_schema(self, schema_id: int) -> dict:
-        """Retrieve schema details.
-
-        Args:
-            schema_id: Rossum schema ID to retrieve
-
-        Returns:
-            Dictionary containing schema details and content
-        """
+        """Retrieve schema details."""
         logger.debug(f"Retrieving schema: schema_id={schema_id}")
-
         schema: Schema = await self.client.retrieve_schema(schema_id)
-        return {"id": schema.id, "name": schema.name, "url": schema.url, "content": schema.content}
+        return dataclasses.asdict(schema)
 
     async def update_schema(self, schema_id: int, schema_data: dict) -> dict:
-        """Update an existing schema.
-
-        Args:
-            schema_id: Rossum schema ID to update
-            schema_data: Dictionary containing schema fields to update
-                Typically contains 'content' - the schema content array
-
-        Returns:
-            Dictionary containing updated schema details
-
-        Example:
-            Update field-level thresholds:
-            {
-                "content": [
-                    {"id": "invoice_id", "score_threshold": 0.98, ...},
-                    {"id": "amount_total", "score_threshold": 0.95, ...},
-                ]
-            }
-        """
+        """Update an existing schema."""
         logger.debug(f"Updating schema: schema_id={schema_id}")
-
-        updated_schema_data = await self.client._http_client.update(Resource.Schema, schema_id, schema_data)
-        updated_schema: Schema = self.client._deserializer(Resource.Schema, updated_schema_data)
-
-        return {
-            "id": updated_schema.id,
-            "name": updated_schema.name,
-            "url": updated_schema.url,
-            "content": updated_schema.content,
-            "message": f"Schema '{updated_schema.name}' (ID {updated_schema.id}) updated successfully",
-        }
+        await self.client._http_client.update(Resource.Schema, schema_id, schema_data)
+        updated_schema: Schema = await self.client.retrieve_schema(schema_id)
+        return dataclasses.asdict(updated_schema)
 
     async def create_schema(self, name: str, content: list[dict]) -> dict:
-        """Create a new schema.
-
-        Args:
-            name: Schema name
-            content: Schema content array containing sections with datapoints.
-                Must follow Rossum schema structure with sections containing children.
-
-        Returns:
-            Dictionary containing created schema details including id, name, url, and content
-
-        Example content structure:
-            [
-                {
-                    "category": "section",
-                    "id": "document_info",
-                    "label": "Document Information",
-                    "children": [
-                        {
-                            "category": "datapoint",
-                            "id": "document_type",
-                            "label": "Document Type",
-                            "type": "enum",
-                            "rir_field_names": [],
-                            "constraints": {"required": False},
-                            "options": [
-                                {"value": "invoice", "label": "Invoice"},
-                                {"value": "receipt", "label": "Receipt"}
-                            ]
-                        }
-                    ]
-                }
-            ]
-        """
+        """Create a new schema."""
         logger.debug(f"Creating schema: name={name}")
-
         schema_data = {"name": name, "content": content}
-
         schema: Schema = await self.client.create_new_schema(schema_data)
-
-        return {
-            "id": schema.id,
-            "name": schema.name,
-            "url": schema.url,
-            "content": schema.content,
-            "message": f"Schema '{schema.name}' created successfully with ID {schema.id}",
-        }
+        return dataclasses.asdict(schema)

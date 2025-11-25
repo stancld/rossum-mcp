@@ -394,11 +394,11 @@ class TestGetQueueSchema:
 
         result = await server.queues_handler.get_queue_schema(100)
 
-        assert result["queue_id"] == 100
-        assert result["queue_name"] == "Test Queue"
-        assert result["schema_id"] == 50
-        assert result["schema_name"] == "Test Schema"
-        assert result["schema_content"] == mock_schema.content
+        # Handler now returns dataclasses.asdict(schema)
+        assert result["id"] == 50
+        assert result["name"] == "Test Schema"
+        assert result["url"] == "https://api.test.rossum.ai/v1/schemas/50"
+        assert result["content"] == mock_schema.content
 
         server.client.retrieve_queue.assert_called_once_with(100)
         server.client.retrieve_schema.assert_called_once_with(50)
@@ -422,7 +422,7 @@ class TestGetQueueSchema:
 
         result = await server.queues_handler.get_queue_schema(100)
 
-        assert result["schema_id"] == 50
+        assert result["id"] == 50
         server.client.retrieve_schema.assert_called_once_with(50)
 
     @pytest.mark.asyncio
@@ -444,8 +444,7 @@ class TestGetQueueSchema:
 
         result = await server.queues_handler.get_queue_schema(100)
 
-        assert result["queue_id"] == 100
-        assert result["schema_id"] == 50
+        assert result["id"] == 50
 
 
 @pytest.mark.unit
@@ -466,17 +465,16 @@ class TestGetQueueEngine:
         mock_engine.id = 15
         mock_engine.name = "Test Engine"
         mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+        mock_engine.type = "standard"
 
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["queue_id"] == 100
-        assert result["queue_name"] == "Test Queue"
-        assert result["engine_id"] == 15
-        assert result["engine_name"] == "Test Engine"
-        assert result["engine_type"] == "standard"
+        assert result["id"] == 15
+        assert result["name"] == "Test Engine"
+        assert result["type"] == "standard"
 
         server.client.retrieve_queue.assert_called_once_with(100)
         server.client.retrieve_engine.assert_called_once_with(15)
@@ -495,14 +493,15 @@ class TestGetQueueEngine:
         mock_engine.id = 20
         mock_engine.name = "Dedicated Engine"
         mock_engine.url = "https://api.test.rossum.ai/v1/engines/20"
+        mock_engine.type = "dedicated"
 
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["engine_id"] == 20
-        assert result["engine_type"] == "dedicated"
+        assert result["id"] == 20
+        assert result["type"] == "dedicated"
         server.client.retrieve_engine.assert_called_once_with(20)
 
     @pytest.mark.asyncio
@@ -519,14 +518,15 @@ class TestGetQueueEngine:
         mock_engine.id = 25
         mock_engine.name = "Generic Engine"
         mock_engine.url = "https://api.test.rossum.ai/v1/engines/25"
+        mock_engine.type = "generic"
 
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["engine_id"] == 25
-        assert result["engine_type"] == "generic"
+        assert result["id"] == 25
+        assert result["type"] == "generic"
         server.client.retrieve_engine.assert_called_once_with(25)
 
     @pytest.mark.asyncio
@@ -543,12 +543,8 @@ class TestGetQueueEngine:
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["queue_id"] == 100
-        assert result["queue_name"] == "Test Queue"
-        assert result["engine_id"] is None
-        assert result["engine_name"] is None
-        assert result["engine_url"] is None
-        assert result["engine_type"] is None
+        # Handler now returns just a message when no engine is assigned
+        assert "message" in result
         assert "No engine assigned" in result["message"]
 
         server.client.retrieve_queue.assert_called_once_with(100)
@@ -568,13 +564,14 @@ class TestGetQueueEngine:
         mock_engine.id = 15
         mock_engine.name = "Test Engine"
         mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+        mock_engine.type = "standard"
 
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["engine_id"] == 15
+        assert result["id"] == 15
         server.client.retrieve_engine.assert_called_once_with(15)
 
     @pytest.mark.asyncio
@@ -601,12 +598,10 @@ class TestGetQueueEngine:
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["queue_id"] == 100
-        assert result["queue_name"] == "Test Queue"
-        assert result["engine_id"] == 18
-        assert result["engine_name"] == "Embedded Engine"
-        assert result["engine_url"] == "https://api.test.rossum.ai/v1/engines/18"
-        assert result["engine_type"] == "standard"
+        assert result["id"] == 18
+        assert result["name"] == "Embedded Engine"
+        assert result["url"] == "https://api.test.rossum.ai/v1/engines/18"
+        assert result["type"] == "extractor"
 
         server.client.retrieve_queue.assert_called_once_with(100)
         # Should NOT call retrieve_engine since engine is embedded
@@ -626,14 +621,14 @@ class TestGetQueueEngine:
         mock_engine.id = 15
         mock_engine.name = "Test Engine"
         mock_engine.url = "https://api.test.rossum.ai/v1/engines/15"
+        mock_engine.type = "standard"
 
         server.client.retrieve_queue.return_value = mock_queue
         server.client.retrieve_engine.return_value = mock_engine
 
         result = await server.queues_handler.get_queue_engine(100)
 
-        assert result["queue_id"] == 100
-        assert result["engine_id"] == 15
+        assert result["id"] == 15
 
 
 @pytest.mark.unit
@@ -677,7 +672,6 @@ class TestCreateQueue:
         assert result["engine"] == mock_queue.engine
         assert result["automation_enabled"] is True
         assert result["automation_level"] == "always"
-        assert "created successfully" in result["message"]
 
         # Verify the client was called correctly
         server.client.create_new_queue.assert_called_once()
@@ -848,7 +842,6 @@ class TestUpdateEngine:
         assert result["name"] == "Test Engine"
         assert len(result["training_queues"]) == 2
         assert "https://api.test.rossum.ai/v1/queues/12345" in result["training_queues"]
-        assert "updated successfully" in result["message"].lower()
 
         # Verify the http client was called correctly
         server.client._http_client.update.assert_called_once_with(Resource.Engine, 36032, engine_data)
@@ -887,7 +880,6 @@ class TestUpdateEngine:
 
         assert result["id"] == 36032
         assert result["learning_enabled"] is False
-        assert "updated successfully" in result["message"].lower()
 
 
 @pytest.mark.unit
@@ -929,9 +921,8 @@ class TestCreateEngine:
         assert result["id"] == 100
         assert result["name"] == "Test Extractor Engine"
         assert result["type"] == "extractor"
-        # The organization URL comes from base_url which doesn't include /v1
-        assert result["organization"] == "https://api.test.rossum.ai/organizations/1"
-        assert "created successfully" in result["message"].lower()
+        # The organization URL includes /v1
+        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/1"
 
         # Verify the http client was called correctly
         server.client._http_client.create.assert_called_once()
@@ -977,7 +968,6 @@ class TestCreateEngine:
         assert result["id"] == 101
         assert result["name"] == "Test Splitter Engine"
         assert result["type"] == "splitter"
-        assert "created successfully" in result["message"].lower()
 
         # Verify the http client was called correctly
         server.client._http_client.create.assert_called_once()
@@ -1122,7 +1112,6 @@ class TestUpdateQueue:
         assert result["automation_enabled"] is True
         assert result["automation_level"] == "auto_if_confident"
         assert result["default_score_threshold"] == 0.90
-        assert "updated successfully" in result["message"].lower()
 
     @pytest.mark.asyncio
     async def test_update_queue_name(self, server: RossumMCPServer) -> None:
@@ -1198,14 +1187,13 @@ class TestUpdateSchema:
 
         server.client._http_client = AsyncMock()
         server.client._http_client.update = AsyncMock(return_value=mock_updated_schema_data)
-        server.client._deserializer = Mock(return_value=mock_updated_schema)
+        server.client.retrieve_schema = AsyncMock(return_value=mock_updated_schema)
 
         result = await server.schemas_handler.update_schema(schema_id=50, schema_data={"content": schema_content})
 
         assert result["id"] == 50
         assert result["name"] == "Updated Schema"
         assert result["content"] == schema_content
-        assert "updated successfully" in result["message"].lower()
 
 
 @pytest.mark.unit
@@ -1298,7 +1286,6 @@ class TestCreateSchema:
         assert result["id"] == 100
         assert result["name"] == "New Schema"
         assert result["content"] == schema_content
-        assert "created successfully" in result["message"].lower()
 
         server.client.create_new_schema.assert_called_once()
         call_args = server.client.create_new_schema.call_args[0][0]
@@ -1351,7 +1338,6 @@ class TestCreateEngineField:
         assert result["label"] == "Invoice ID"
         assert result["type"] == "string"
         assert result["schema_ids"] == [50, 60]
-        assert "created successfully" in result["message"].lower()
         assert "linked to 2 schema" in result["message"].lower()
 
     @pytest.mark.asyncio
@@ -1862,9 +1848,8 @@ class TestCreateHook:
         assert result["id"] == 123
         assert result["name"] == "Test Hook"
         assert result["url"] == "https://api.test.rossum.ai/v1/hooks/123"
-        assert result["enabled"] is True
+        assert result["active"] is True
         assert "message" in result
-        assert "created successfully" in result["message"]
 
         # Verify the hook_data structure passed to create_new_hook
         call_args = server.client.create_new_hook.call_args[0][0]
@@ -1902,7 +1887,7 @@ class TestCreateHook:
 
         assert result["id"] == 456
         assert result["name"] == "Advanced Hook"
-        assert result["enabled"] is True
+        assert result["active"] is True
         assert result["queues"] == ["https://api.test.rossum.ai/v1/queues/100"]
         assert result["events"] == ["annotation_status", "annotation_content"]
         assert result["config"] == {"custom_header": "value", "timeout": 30}
@@ -1940,7 +1925,7 @@ class TestCreateHook:
         result = await server.hooks_handler.create_hook(name="Disabled Hook", type="webhook")
 
         assert result["id"] == 789
-        assert result["enabled"] is False
+        assert result["active"] is False
 
         # Verify the hook_data structure passed to create_new_hook
         call_args = server.client.create_new_hook.call_args[0][0]
@@ -2368,7 +2353,6 @@ class TestCreateWorkspace:
         assert result["queues"] == []
         assert result["autopilot"] is False
         assert result["metadata"] == {}
-        assert "created successfully" in result["message"]
         assert "3000" in result["message"]
 
         server.client.create_new_workspace.assert_called_once()
@@ -2399,7 +2383,6 @@ class TestCreateWorkspace:
         assert result["id"] == 3001
         assert result["name"] == "Metadata Workspace"
         assert result["metadata"] == {"department": "finance", "region": "us-west"}
-        assert "created successfully" in result["message"]
 
         call_args = server.client.create_new_workspace.call_args[0][0]
         assert call_args["name"] == "Metadata Workspace"

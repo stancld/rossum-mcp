@@ -36,7 +36,7 @@ repos:
         args: [--config-file=mypy.ini]
         additional_dependencies: [
           numpy==2.3.3,
-          rossum-api==3.6.1,
+          "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-schema-content",
           types-seaborn==0.13.2.20250914,
           types-requests==2.32.4.20250913
         ]

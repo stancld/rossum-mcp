@@ -459,11 +459,41 @@ wheels = [
 ]
 
 [[package]]
+name = "elastic-transport"
+version = "9.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "sniffio" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/0c/b48a9041e921a75e4c0d17e0dfe929f4d72c4e523084cbe5574101b7a40d/elastic_transport-9.2.0.tar.gz", hash = "sha256:0331466ca8febdb7d168c0fbf159294b0066492733b51da94f4dd28a0ee596cd", size = 77332, upload-time = "2025-10-17T16:12:49.906Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/4a/6a1cc529ec609dae4d681baddde9ad965b8952d1f56dadbb1d27fbb50ec9/elastic_transport-9.2.0-py3-none-any.whl", hash = "sha256:f52b961e58e6b76d488993286907f61a6ddccbdae8e0135ce8d369227b6282d8", size = 65317, upload-time = "2025-10-17T16:12:48.437Z" },
+]
+
+[[package]]
+name = "elasticsearch"
+version = "9.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "elastic-transport" },
+    { name = "python-dateutil" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7c/87/6e70b8dac9c781c53edba944b50545431e2bb937d21c06d6009ef18b5f91/elasticsearch-9.2.0.tar.gz", hash = "sha256:99656baa34b10130402b6c38429feddf7aee1c3247566e8f95f0d0267fe9f9ab", size = 875370, upload-time = "2025-10-28T16:57:25.437Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/f2/6b44ee99e90c9d9e183aafeea0c3af87176d4acef446c286223704ea8f2e/elasticsearch-9.2.0-py3-none-any.whl", hash = "sha256:87090fe98c515ec0fce82f633fe11d7e90e04d93581b6b3e05de29efe4cc8b74", size = 960522, upload-time = "2025-10-28T16:57:20.979Z" },
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -973,6 +1003,18 @@ wheels = [
 ]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
 name = "python-dotenv"
 version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1117,16 +1159,12 @@ wheels = [
 [[package]]
 name = "rossum-api"
 version = "3.6.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content#448fa6cb7cbb13107866348287218915c90ba1e5" }
 dependencies = [
     { name = "aiofiles" },
     { name = "dacite" },
     { name = "httpx" },
     { name = "tenacity" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/94/30/5ef4b4d9b2120b874d39f26421939a0767bf82fda88556de6236e7c20963/rossum_api-3.6.1.tar.gz", hash = "sha256:514ab53ec23b1dafa059d1b9e0f0a708f8ec5ac8598f0e6d77c83bc14073e0d0", size = 147175, upload-time = "2025-11-13T09:06:51.28Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/ad/af1af0f802565c9d8c8b414f3bcfb5487a7d1e760590617e758a236f4f24/rossum_api-3.6.1-py3-none-any.whl", hash = "sha256:78f1538923d83b37ffc1971d11a18dc0f01bf88ad8ff5942e010499a883597c2", size = 63246, upload-time = "2025-11-13T09:06:50.31Z" },
 ]
 
 [[package]]
@@ -1162,8 +1200,12 @@ docs = [
     { name = "sphinx-copybutton" },
     { name = "sphinx-rtd-theme" },
 ]
+elastic = [
+    { name = "elasticsearch" },
+]
 tests = [
     { name = "coverage" },
+    { name = "elasticsearch" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -1172,6 +1214,8 @@ tests = [
 requires-dist = [
     { name = "coverage", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.0.0" },
+    { name = "elasticsearch", marker = "extra == 'elastic'", specifier = ">=9.0" },
+    { name = "elasticsearch", marker = "extra == 'tests'", specifier = ">=9.0" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mcp", marker = "extra == 'all'", specifier = ">=1.0.0" },
     { name = "myst-parser", marker = "extra == 'all'", specifier = ">=2.0.0" },
@@ -1180,8 +1224,8 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'all'", specifier = ">=0.21.0" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.21.0" },
-    { name = "rossum-api", specifier = ">=3.6.1" },
-    { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.6.1" },
+    { name = "rossum-api", git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content" },
+    { name = "rossum-api", marker = "extra == 'all'", git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-schema-content" },
     { name = "sphinx", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0.0" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'all'", specifier = ">=1.25.0" },
@@ -1191,7 +1235,7 @@ requires-dist = [
     { name = "sphinx-rtd-theme", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0.0" },
 ]
-provides-extras = ["docs", "tests", "all"]
+provides-extras = ["docs", "elastic", "tests", "all"]
 
 [[package]]
 name = "rpds-py"
@@ -1313,6 +1357,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/e0/cf95478881fc88ca2fdbf56381d7df36567cccc39a05394beac72182cd62/rpds_py-0.29.0-pp311-pypy311_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:9f84c549746a5be3bc7415830747a3a0312573afc9f95785eb35228bb17742ec", size = 575871, upload-time = "2025-11-16T14:50:33.428Z" },
     { url = "https://files.pythonhosted.org/packages/ea/c0/df88097e64339a0218b57bd5f9ca49898e4c394db756c67fccc64add850a/rpds_py-0.29.0-pp311-pypy311_pp73-musllinux_1_2_i686.whl", hash = "sha256:0ea962671af5cb9a260489e311fa22b2e97103e3f9f0caaea6f81390af96a9ed", size = 601702, upload-time = "2025-11-16T14:50:36.051Z" },
     { url = "https://files.pythonhosted.org/packages/87/f4/09ffb3ebd0cbb9e2c7c9b84d252557ecf434cd71584ee1e32f66013824df/rpds_py-0.29.0-pp311-pypy311_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:f7728653900035fb7b8d06e1e5900545d8088efc9d5d4545782da7df03ec803f", size = 564054, upload-time = "2025-11-16T14:50:37.733Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]

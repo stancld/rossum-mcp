@@ -51,3 +51,6 @@ all = [
     "sphinx-rtd-theme>=2.0.0",
     "streamlit>=1.28.0",
 ]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-schema-content" }

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any, Literal
+from typing import Any
 
 from smolagents import tool
 
@@ -23,7 +23,7 @@ def analyze_hook_dependencies(hooks_json: str) -> str:
     Returns:
         JSON string containing dependency analysis with:
         - execution_phases: Hooks grouped by trigger event
-        - dependency_tree: Visual tree representation
+        - dependency_tree: Mermaid diagram representation
         - hook_details: Detailed information about each hook
         - workflow_summary: Overall workflow description
 
@@ -96,8 +96,8 @@ def analyze_hook_dependencies(hooks_json: str) -> str:
                     }
                 )
 
-        # Generate visual dependency tree
-        dependency_tree = _generate_tree_visualization(execution_phases)
+        # Generate visual dependency tree (Mermaid diagram)
+        dependency_tree = _generate_mermaid_diagram(execution_phases)
 
         # Generate workflow summary
         workflow_summary = _generate_workflow_summary(hooks, execution_phases)
@@ -135,25 +135,21 @@ def analyze_hook_dependencies(hooks_json: str) -> str:
 
 
 @tool
-def visualize_hook_tree(hooks_json: str, output_format: Literal["ascii", "markdown", "mermaid"] = "ascii") -> str:
-    """Generate a visual tree diagram of hook execution flow.
+def visualize_hook_tree(hooks_json: str) -> str:
+    """Generate a Mermaid diagram of hook execution flow.
 
-    Creates an easy-to-read tree visualization showing how hooks are triggered
+    Creates a visual Mermaid diagram showing how hooks are triggered
     throughout the document lifecycle in a Rossum queue.
 
     Args:
         hooks_json: JSON string containing hooks data from list_hooks MCP tool
-        output_format: Format for the tree visualization. Options:
-            - "ascii": Simple ASCII art tree (default)
-            - "markdown": Markdown-formatted tree with indentation
-            - "mermaid": Mermaid diagram syntax for rendering
 
     Returns:
-        String containing the tree visualization in the requested format
+        String containing Mermaid diagram syntax for rendering
 
     Example:
         hooks_data = mcp.list_hooks(queue_id=12345)
-        tree = visualize_hook_tree(hooks_data, output_format="markdown")
+        tree = visualize_hook_tree(hooks_data)
         print(tree)
     """
     try:
@@ -164,13 +160,7 @@ def visualize_hook_tree(hooks_json: str, output_format: Literal["ascii", "markdo
             return analysis["error"]  # type: ignore[no-any-return]
 
         execution_phases = analysis["execution_phases"]
-
-        if output_format == "markdown":
-            return _generate_markdown_tree(execution_phases)
-        if output_format == "mermaid":
-            return _generate_mermaid_diagram(execution_phases)
-        # ascii
-        return _generate_ascii_tree(execution_phases)
+        return _generate_mermaid_diagram(execution_phases)
 
     except Exception as e:
         return f"Error generating tree visualization: {e}"
@@ -192,61 +182,6 @@ def _get_event_description(event: str) -> str:
         "datapoint_value": "Individual field value is modified",
     }
     return descriptions.get(event, "Custom trigger event")
-
-
-def _generate_tree_visualization(execution_phases: list[dict[str, Any]]) -> str:
-    """Generate simple ASCII tree visualization."""
-    lines = ["Document Lifecycle Flow:", ""]
-
-    for i, phase in enumerate(execution_phases):
-        is_last_phase = i == len(execution_phases) - 1
-        prefix = "└── " if is_last_phase else "├── "
-
-        lines.append(f"{prefix}[{phase['event']}] {phase['description']}")
-
-        hooks = phase["hooks"]
-        for j, hook in enumerate(hooks):
-            is_last_hook = j == len(hooks) - 1
-            hook_prefix = "    └── " if is_last_phase else "│   └── " if is_last_hook else "│   ├── "
-            if not is_last_phase and not is_last_hook:
-                hook_prefix = "│   ├── "
-            elif not is_last_phase and is_last_hook:
-                hook_prefix = "│   └── "
-            elif is_last_phase and not is_last_hook:
-                hook_prefix = "    ├── "
-            else:
-                hook_prefix = "    └── "
-
-            hook_type = f"[{hook['type']}]"
-            lines.append(f"{hook_prefix}{hook_type} {hook['name']} (ID: {hook['id']})")
-
-    return "\n".join(lines)
-
-
-def _generate_ascii_tree(execution_phases: list[dict[str, Any]]) -> str:
-    """Generate ASCII art tree."""
-    return _generate_tree_visualization(execution_phases)
-
-
-def _generate_markdown_tree(execution_phases: list[dict[str, Any]]) -> str:
-    """Generate Markdown-formatted tree."""
-    lines = ["# Hook Dependency Tree", "", "## Document Lifecycle Flow", ""]
-
-    for phase in execution_phases:
-        lines.append(f"### {phase['event']}")
-        lines.append(f"*{phase['description']}*")
-        lines.append("")
-
-        if phase["hooks"]:
-            for hook in phase["hooks"]:
-                hook_type_badge = f"`{hook['type']}`"
-                lines.append(f"- {hook_type_badge} **{hook['name']}** (ID: {hook['id']})")
-        else:
-            lines.append("- *(no hooks configured)*")
-
-        lines.append("")
-
-    return "\n".join(lines)
 
 
 def _generate_mermaid_diagram(execution_phases: list[dict[str, Any]]) -> str:
