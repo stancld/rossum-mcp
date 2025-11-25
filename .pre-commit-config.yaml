@@ -5,6 +5,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^deployments/new-deployment/
       - id: check-added-large-files
         args: [--maxkb=1000]
       - id: check-toml
@@ -21,6 +22,7 @@ repos:
     rev: v2.4.1
     hooks:
       - id: codespell
+        args: ["--ignore-words", ".codespell-ignore"]
         exclude: >
           (?x)^(
             .*\.html|

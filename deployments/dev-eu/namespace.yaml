@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tools-rossum-agent
+  labels:
+    name: tools-rossum-agent
+    environment: dev-eu

@@ -177,7 +177,7 @@ The agent automatically creates the queue, uploads documents, monitors processin
 
 </details>
 
-## Installation
+## Installation & Deployment
 
 **Prerequisites**: Python 3.10+, Rossum account with API credentials
 
@@ -185,23 +185,110 @@ This repository contains two packages:
 - **rossum_mcp**: MCP server for Rossum API interactions
 - **rossum_agent**: AI agent with data manipulation and visualization tools
 
-### Docker (Recommended)
+Choose your deployment method based on your needs:
+
+| Deployment Type | Best For | Setup Time | Documentation |
+|----------------|----------|------------|---------------|
+| 🐳 **Docker Compose** | Local development, quick testing | 2 minutes | [See below](#docker-compose-local) |
+| ☸️ **Kubernetes** | Production, multi-environment | 10 minutes | [See deployments/](deployments/) |
+| 📦 **From Source** | Development, customization | 5 minutes | [See below](#from-source) |
+| 💬 **MCP Server** | Claude Desktop integration | 3 minutes | [See below](#mcp-server-with-claude-desktop) |
+
+---
+
+### 🐳 Docker Compose (Local)
+
+**Recommended for**: Quick local testing and development
+
+#### Basic Setup
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
 cd rossum-mcp
 
-# Set up environment variables
-export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
+# Create .env file with required variables
+cat > .env << EOF
+ROSSUM_API_TOKEN=your-api-token
+ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1
+ROSSUM_MCP_MODE=read-write
+AWS_PROFILE=default
+AWS_DEFAULT_REGION=us-east-1
+EOF
 
 # Run the agent with Streamlit UI
 docker-compose up rossum-agent
 ```
 
-<details>
-<summary>Install from source (alternative)</summary>
+Access the application at **http://localhost:8501**
+
+#### With Elasticsearch Logging + Kibana
+
+For production-like monitoring locally:
+
+**amd64/x86 systems:**
+```bash
+# Set encryption key for Kibana (32+ characters)
+export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-random-encryption-key"
+
+# Start with logging stack
+docker-compose up rossum-agent kibana
+```
+
+**ARM Mac (M1/M2/M3):**
+```bash
+# Set encryption key for Kibana
+export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-random-encryption-key"
+
+# Start ARM-compatible services
+docker-compose up rossum-agent-mac kibana-mac
+```
+
+Access points:
+- **Application**: http://localhost:8501
+- **Kibana**: http://localhost:5601
+- **Elasticsearch**: http://localhost:9200
+
+---
+
+### ☸️ Kubernetes Deployment
+
+**Recommended for**: Production environments, team deployments, CI/CD pipelines
+
+Complete Kubernetes deployment with:
+- ✅ Multiple environment support (local, dev, staging, prod)
+- ✅ Secrets management (Vault/External Secrets)
+- ✅ AWS EKS integration with IAM roles
+- ✅ Ingress & TLS configuration
+- ✅ Resource limits & autoscaling
+- ✅ CloudWatch logging
+
+**Quick Start:**
+```bash
+# Install cookiecutter template
+uv tool install cookiecutter
+
+# Generate environment-specific deployment
+cd deployments
+cookiecutter new-deployment
+
+# Deploy to your cluster
+kubectl apply -k deployments/<your-environment-name>
+```
+
+**See [deployments/README.md](deployments/README.md)** for:
+- Local Kubernetes (minikube, kind, Docker Desktop, k3d)
+- AWS EKS deployment
+- Secrets management
+- Custom configurations
+- Troubleshooting
+
+> **Note:** The [deployments/dev-eu/](deployments/dev-eu/) directory contains an example deployment generated with the cookiecutter template.
+
+---
+
+### 📦 From Source
+
+**Recommended for**: Development, customization, contributing
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
@@ -213,41 +300,22 @@ uv sync --extra all --no-install-project
 # Set up environment variables
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-export ROSSUM_MCP_MODE="read-write"  # Optional: "read-only" or "read-write" (default)
+export ROSSUM_MCP_MODE="read-write"
+
+# Run the agent
+rossum-agent                                    # CLI interface
+uv run streamlit run rossum_agent/app.py        # Web UI
 ```
 
-For individual package installation or other options, see [rossum_mcp/README.md](rossum_mcp/README.md) and [rossum_agent/README.md](rossum_agent/README.md).
+For individual package installation, see [rossum_mcp/README.md](rossum_mcp/README.md) and [rossum_agent/README.md](rossum_agent/README.md).
 
-</details>
+---
 
-## Usage
+### 💬 MCP Server with Claude Desktop
 
-### AI Agent
+**Recommended for**: Interactive use with Claude Desktop
 
-```bash
-# Docker (recommended)
-docker-compose up rossum-agent
-
-# CLI interface
-rossum-agent
-
-# Streamlit web UI
-uv run streamlit run rossum_agent/app.py
-```
-
-> **Note:** The Streamlit UI is currently hard-coded for AWS Bedrock usage. You need to configure AWS credentials:
-> ```bash
-> export AWS_ACCESS_KEY_ID="your-access-key"
-> export AWS_SECRET_ACCESS_KEY="your-secret-key"
-> export AWS_DEFAULT_REGION="your-region"  # e.g., us-east-1
-> ```
-
-The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
-
-<details>
-<summary>MCP Server with Claude Desktop</summary>
-
-Configure Claude Desktop to use the MCP server:
+Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac):
 
 ```json
 {
@@ -267,41 +335,31 @@ Configure Claude Desktop to use the MCP server:
 
 Or run standalone: `rossum-mcp`
 
-</details>
+---
 
-<details>
-<summary>Running with Elasticsearch Logging and Kibana UI</summary>
+## Usage
 
-To run the application locally with Elasticsearch logging and Kibana UI for monitoring:
+### AI Agent Interfaces
 
-**Standard (amd64) systems:**
 ```bash
-# Set the required encryption key (32+ random characters)
-export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-encryption-key-here"
+# Docker (recommended for local)
+docker-compose up rossum-agent
 
-# Start the agent with Kibana UI
-docker-compose up rossum-agent kibana
+# CLI interface (from source)
+rossum-agent
+
+# Streamlit web UI (from source)
+uv run streamlit run rossum_agent/app.py
 ```
 
-**ARM Mac alternative:**
-```bash
-# Set the required encryption key (32+ random characters)
-export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-encryption-key-here"
+> **AWS Bedrock Note:** The Streamlit UI uses AWS Bedrock by default. Configure AWS credentials:
+> ```bash
+> export AWS_PROFILE=default
+> export AWS_DEFAULT_REGION=us-east-1
+> ```
+> Or mount credentials in Docker: `~/.aws:/root/.aws:ro`
 
-# Start the ARM-compatible services
-docker-compose up rossum-agent-mac kibana-mac
-```
-
-> **Note:** The `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY` environment variable must be specified before starting Kibana. This key is used to encrypt saved objects in Kibana and must be at least 32 characters long.
-
-Once running:
-- **Application UI**: http://localhost:8501
-- **Kibana Dashboard**: http://localhost:5601
-- **Elasticsearch**: http://localhost:9200
-
-The services include health checks and will wait for Elasticsearch to be fully ready before starting the dependent services.
-
-</details>
+The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
 
 ## MCP Tools
 
