@@ -1,58 +1,64 @@
-# Local Kubernetes Deployment
+# Local Kubernetes Deployment (Non-Working Example)
 
-This directory contains a ready-to-use template for deploying Rossum Agent locally on Kubernetes.
+> **⚠️ IMPORTANT:** This configuration is kept as a reference example only. Local Kubernetes deployment is overly complex when connecting to AWS Bedrock due to credential management challenges. **For local development, use Docker Compose instead** - see the [main README](../../README.md#-docker-compose-local).
 
-## Quick Start
+This directory shows how a local Kubernetes deployment would be configured, but is not recommended for actual use.
+
+## Why Not Use This?
+
+Connecting to AWS Bedrock from local Kubernetes requires:
+- Manually obtaining temporary AWS credentials via `aws sts assume-role`
+- Updating `kustomization.yaml` with these credentials
+- Credentials expire after a few hours, requiring manual renewal
+- Complex debugging when credentials fail
+
+**Docker Compose is simpler:** Just mount your `~/.aws` directory and it works automatically.
+
+## Reference Configuration (If You Really Want To Try)
 
 ### 1. Prerequisites
 
 Install one of the following local Kubernetes distributions:
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (easiest)
-- [minikube](https://minikube.sigs.k8s.io/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [kind](https://kind.sigs.k8s.io/)
 - [k3d](https://k3d.io/)
 
-### 2. Choose Image Source
-
-**Option A: Use Published Image (Recommended)**
-The deployment is configured to use `ghcr.io/stancld/rossum-mcp:master` by default.
-- Image is automatically built and published on every push to master
-- No local build required
-- Skip to step 3
-
-**Option B: Build Local Image**
-For local development or testing custom changes:
-
-**For Docker Desktop / kind:**
+**Get temporary AWS credentials:**
 ```bash
-cd /Users/daniel.stancl/projects/rossum-agent-combo/rossum-mcp
-docker build -t rossum-agent:local .
+aws sts assume-role \
+  --role-arn arn:aws:iam::494114742120:role/app-dev-eu-tools-rossum-agent \
+  --role-session-name local-dev
 ```
 
-**For kind (additional step to load image):**
-```bash
-kind load docker-image rossum-agent:local
-```
+Copy the `AccessKeyId`, `SecretAccessKey`, and `SessionToken` from the output and paste them into [kustomization.yaml](kustomization.yaml) under `secretGenerator`.
 
-**For minikube:**
+### 2. Build or Pull Image
+
+The deployment uses `ghcr.io/stancld/rossum-mcp:master` by default (automatically pulled).
+
+For local development:
 ```bash
 docker build -t rossum-agent:local .
-minikube image load rossum-agent:local
+# For kind: kind load docker-image rossum-agent:local
+# For k3d: k3d image import rossum-agent:local
 ```
 
-Then update `kustomization.yaml` to use local image:
-```yaml
-images:
-  - name: ghcr.io/stancld/rossum-mcp
-    newName: rossum-agent
-    newTag: local
-```
-
-### 3. Configure LLM API Keys (Optional)
+### 3. Configure Secrets
 
 **Note**: Rossum API credentials are entered in the application UI after deployment, not in the deployment configuration.
 
-If you're using LLM providers that require API keys (Anthropic, OpenAI, HuggingFace), edit [kustomization.yaml](kustomization.yaml):
+**AWS Bedrock**: Update the secretGenerator in [kustomization.yaml](kustomization.yaml) with the credentials from step 1:
+
+```yaml
+secretGenerator:
+  - name: rossum-agent
+    literals:
+      - AWS_ACCESS_KEY_ID=ASIA...  # From assume-role output
+      - AWS_SECRET_ACCESS_KEY=wJa...  # From assume-role output
+      - AWS_SESSION_TOKEN=IQo...  # From assume-role output
+```
+
+If you're using other LLM providers that require API keys (Anthropic, OpenAI, HuggingFace), add them to [kustomization.yaml](kustomization.yaml):
 
 ```yaml
 secretGenerator:
@@ -181,75 +187,25 @@ kubectl delete -k deployments/local
 
 ## Troubleshooting
 
-### Pod won't start (ImagePullBackOff)
+Common issues when using this configuration (reminder: use Docker Compose instead):
+
+### AWS Credentials Expired
 ```bash
-# Check if image exists
-docker images | grep rossum-agent
-
-# For kind, reload the image
-kind load docker-image rossum-agent:local
-
-# For minikube, reload the image
-minikube image load rossum-agent:local
+# Re-run assume-role and update kustomization.yaml
+aws sts assume-role \
+  --role-arn arn:aws:iam::494114742120:role/app-dev-eu-tools-rossum-agent \
+  --role-session-name local-dev
 ```
 
-### Pod crashes (CrashLoopBackOff)
+### Pod won't start
 ```bash
-# Check logs for errors
 kubectl logs -l app=rossum-agent --tail=100
-
-# Check if secrets are set correctly
-kubectl get secret rossum-agent -o yaml
+kubectl describe pod -l app=rossum-agent
 ```
-
-### Can't connect to localhost:8501
-```bash
-# Make sure port-forward is running
-kubectl port-forward service/rossum-agent 8501:8501
-
-# Check if service is running
-kubectl get svc rossum-agent
-```
-
-## Development Workflow
-
-### Using Published Image (Fast)
-1. Make code changes and push to master
-2. Wait for GitHub Actions to build and publish
-3. Update image tag in kustomization.yaml (or use `:master` for latest)
-4. Restart deployment:
-   ```bash
-   kubectl rollout restart deployment rossum-agent
-   ```
-
-### Using Local Image (For Testing)
-1. Make code changes
-2. Rebuild Docker image:
-   ```bash
-   docker build -t rossum-agent:local .
-   # For kind:
-   kind load docker-image rossum-agent:local
-   # For minikube:
-   minikube image load rossum-agent:local
-   ```
-3. Restart deployment:
-   ```bash
-   kubectl rollout restart deployment rossum-agent
-   ```
-4. Watch logs:
-   ```bash
-   kubectl logs -l app=rossum-agent -f
-   ```
 
 ## Clean Up
 
 ```bash
-# Delete the deployment
 kubectl delete -k deployments/local
-
-# For kind, delete the cluster
-kind delete cluster
-
-# For minikube, stop the cluster
-minikube stop
+kind delete cluster  # if using kind
 ```

@@ -128,119 +128,24 @@ Create your own overlay in a new directory following the structure of existing e
 
 ## Local Deployment
 
-### Option 1: Using minikube
+> **Note:** Local Kubernetes deployment (minikube, kind, k3d) is complex when connecting to AWS Bedrock. For local development, we recommend using Docker Compose instead. See the [main README](../README.md) for Docker Compose setup instructions.
 
-1. **Start minikube**:
-   ```bash
-   minikube start
-   ```
+### Example: Using kind (Non-Working Example for Reference)
 
-2. **Use the published image from GitHub Container Registry** (recommended):
-   - Image is automatically built and published on every push to master
-   - Available at: `ghcr.io/stancld/rossum-mcp:master`
-
-   **Or build locally** (for development):
-   ```bash
-   eval $(minikube docker-env)
-   docker build -t rossum-agent:local .
-   ```
-
-3. **Create a local overlay** (create `deployments/local/kustomization.yaml`):
-   ```yaml
-   apiVersion: kustomize.config.k8s.io/v1beta1
-   kind: Kustomization
-
-   resources:
-     - ../base
-
-   components:
-     - ../_shared
-
-   images:
-     - name: app-image
-       newName: rossum-agent
-       newTag: local
-
-   configMapGenerator:
-     - name: rossum-agent
-       behavior: merge
-       literals:
-         - REGION_NAME=local
-         - AWS_REGION=local
-         - LLM_MODEL_ID=your-model-id
-         - BASE_URL=http://localhost:8501
-
-   # Remove AWS-specific resources for local development
-   patches:
-     - patch: |-
-         $patch: delete
-         apiVersion: external-secrets.io/v1
-         kind: ExternalSecret
-         metadata:
-           name: rossum-agent
-     - patch: |-
-         apiVersion: v1
-         kind: ServiceAccount
-         metadata:
-           name: rossum-agent
-           annotations:
-             eks.amazonaws.com/role-arn: null
-     - patch: |-
-         $patch: delete
-         apiVersion: networking.k8s.io/v1
-         kind: Ingress
-         metadata:
-           name: rossum-agent
-
-   secretGenerator:
-     - name: rossum-agent
-       literals:
-         - ROSSUM_API_TOKEN=your-token-here
-         - ROSSUM_API_BASE_URL=https://api.elis.rossum.ai
-   ```
-
-4. **Deploy**:
-   ```bash
-   kubectl apply -k deployments/local
-   ```
-
-5. **Access the application**:
-   ```bash
-   kubectl port-forward service/rossum-agent 8501:8501
-   ```
-   Then open http://localhost:8501
-
-### Option 2: Using kind
+This is kept as a reference example only. The configuration is complex due to AWS Bedrock credential management. For actual local development, use Docker Compose.
 
 1. **Create a cluster**:
    ```bash
    kind create cluster --name rossum-agent
    ```
 
-2. **Use published image** (recommended) or load local image:
+2. **Configure AWS credentials** - This is the complex part that makes local K8s deployment impractical
+
+3. **Deploy** (reference only):
    ```bash
-   # Option A: Published image (no action needed, will pull automatically)
-
-   # Option B: Build and load local image
-   docker build -t rossum-agent:local .
-   kind load docker-image rossum-agent:local --name rossum-agent
+   kubectl apply -k deployments/local
+   kubectl port-forward service/rossum-agent 8501:8501
    ```
-
-3. **Follow steps 3-5 from minikube option above**
-
-### Option 3: Using Docker Desktop
-
-1. **Enable Kubernetes** in Docker Desktop settings
-
-2. **Use published image** (recommended) or build locally:
-   ```bash
-   # Option A: Published image (no action needed, will pull automatically)
-
-   # Option B: Build local image
-   docker build -t rossum-agent:local .
-   ```
-
-3. **Follow steps 3-5 from minikube option above**
 
 ## AWS Logging Configuration
 

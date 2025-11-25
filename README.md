@@ -252,10 +252,10 @@ Access points:
 
 ### ☸️ Kubernetes Deployment
 
-**Recommended for**: Production environments, team deployments, CI/CD pipelines
+**Recommended for**: Production environments (AWS EKS), team deployments, CI/CD pipelines
 
 Complete Kubernetes deployment with:
-- ✅ Multiple environment support (local, dev, staging, prod)
+- ✅ Multiple environment support (dev, staging, prod)
 - ✅ Secrets management (Vault/External Secrets)
 - ✅ AWS EKS integration with IAM roles
 - ✅ Ingress & TLS configuration
@@ -275,8 +275,9 @@ cookiecutter new-deployment
 kubectl apply -k deployments/<your-environment-name>
 ```
 
+> **Note for Local Development:** Local Kubernetes (minikube, kind, k3d) is complex when connecting to AWS Bedrock. Use Docker Compose instead for local development.
+
 **See [deployments/README.md](deployments/README.md)** for:
-- Local Kubernetes (minikube, kind, Docker Desktop, k3d)
 - AWS EKS deployment
 - Secrets management
 - Custom configurations

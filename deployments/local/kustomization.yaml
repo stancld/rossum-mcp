@@ -1,19 +1,25 @@
 ---
 # ==============================================================================
-# Rossum Agent - Local Deployment Configuration
+# Rossum Agent - Local Deployment Configuration (NON-WORKING EXAMPLE)
 # ==============================================================================
-# This file configures the Rossum Agent for local Kubernetes deployment.
+# ⚠️ WARNING: This configuration is kept as a reference example ONLY.
 #
-# Quick Start:
-#   1. Build image: docker build -t rossum-agent:local .
-#   2. Load to cluster (if using kind): kind load docker-image rossum-agent:local
-#   3. Deploy: kubectl apply -k deployments/local
-#   4. Access: kubectl port-forward service/rossum-agent 8501:8501
-#   5. Open: http://localhost:8501
+# Local Kubernetes deployment is overly complex when connecting to AWS Bedrock.
+# For local development, use Docker Compose instead - see README.md
 #
-# Configuration:
-#   - Rossum API credentials are entered in the app UI (no need to set here)
-#   - AWS Bedrock uses IAM credentials (configure AWS CLI before deployment)
+# Why not use this?
+#   - Requires manual AWS credential management via `aws sts assume-role`
+#   - Credentials expire after a few hours
+#   - Complex debugging when things fail
+#   - Docker Compose is much simpler (just mount ~/.aws directory)
+#
+# If you really want to try this (not recommended):
+#   1. Get AWS credentials: aws sts assume-role --role-arn ... --role-session-name local-dev
+#   2. Update secretGenerator below with AccessKeyId, SecretAccessKey, SessionToken
+#   3. Build image: docker build -t rossum-agent:local .
+#   4. Load to cluster (if using kind): kind load docker-image rossum-agent:local
+#   5. Deploy: kubectl apply -k deployments/local
+#   6. Access: kubectl port-forward service/rossum-agent 8501:8501
 # ==============================================================================
 
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -55,14 +61,22 @@ configMapGenerator:
 # ==============================================================================
 # Secrets Configuration
 # ==============================================================================
-# AWS Bedrock uses IAM credentials - no API key needed
+# AWS Bedrock with assumed role credentials from dev-eu environment
 # Note: Rossum API credentials are configured in the app UI, not here.
+# ==============================================================================
+# To get credentials, run:
+#   aws sts assume-role \
+#     --role-arn arn:aws:iam::494114742120:role/app-dev-eu-tools-rossum-agent \
+#     --role-session-name local-dev
+# Then paste the credentials below.
 # ==============================================================================
 secretGenerator:
   - name: rossum-agent
     literals:
-      # AWS Bedrock uses IAM credentials from environment (no API key needed)
-      - PLACEHOLDER=bedrock-uses-iam
+      # Replace with credentials from assume-role output:
+      - AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID_HERE
+      - AWS_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY_HERE
+      - AWS_SESSION_TOKEN=YOUR_SESSION_TOKEN_HERE
 
 # ==============================================================================
 # Resource Optimization for Local Development
