@@ -32,12 +32,9 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     This agent uses MCP (Model Context Protocol) to connect directly to the Rossum MCP server,
     which provides tools for document processing via the Rossum API.
 
-    The agent supports two LLM configurations:
-    1. AWS Bedrock: Set LLM_MODEL_ID to a bedrock model (e.g., "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0")
-       - Only requires LLM_MODEL_ID
-       - Furthermore, it requires being logged in you AWS account.
-    2. OpenAI-compatible API: Set LLM_MODEL_ID to an OpenAI model
-       - Requires LLM_MODEL_ID, LLM_API_BASE_URL, and optionally LLM_API_KEY
+    The agent uses AWS Bedrock for LLM capabilities. Set LLM_MODEL_ID environment variable
+    to specify a Bedrock model (e.g., "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0").
+    You must be logged into your AWS account with appropriate Bedrock access.
 
     Args:
         stream_outputs: Whether to stream outputs from the agent
@@ -45,23 +42,11 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     Returns:
         Configured CodeAgent with Rossum MCP tools and custom tools
     """
-    model_id = os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL)
-
-    # Configure LLM based on model type
-    if model_id.startswith("bedrock/"):
-        # Bedrock models only need model_id
-        llm = LiteLLMModel(
-            model_id=model_id,
-            # Limit the number of requests to avoid being kicked by AWS Bedrock
-            requests_per_minute=5.0,
-        )
-    else:
-        # OpenAI-compatible models need api_base and optionally api_key
-        llm_kwargs = {"model_id": model_id, "api_base": os.environ["LLM_API_BASE_URL"]}
-        if api_key := os.environ.get("LLM_API_KEY", "not-needed"):
-            llm_kwargs["api_key"] = api_key
-
-        llm = LiteLLMModel(**llm_kwargs)
+    llm = LiteLLMModel(
+        model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
+        # Limit the number of requests to avoid being kicked by AWS Bedrock
+        requests_per_minute=5.0,
+    )
 
     prompt_templates = yaml.safe_load(
         importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
