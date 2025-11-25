@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rossum-agent"
 version = "0.1.0"
-description = "AI agent for Rossum document processing with tools for data manipulation and visualization."
+description = "AI agent toolkit for Rossum: document workflows conversationally, debug pipelines automatically, and enable agentic configuration of intelligent document processing."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
