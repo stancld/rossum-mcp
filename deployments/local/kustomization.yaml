@@ -1,0 +1,119 @@
+---
+# ==============================================================================
+# Rossum Agent - Local Deployment Configuration
+# ==============================================================================
+# This file configures the Rossum Agent for local Kubernetes deployment.
+#
+# Quick Start:
+#   1. Build image: docker build -t rossum-agent:local .
+#   2. Load to cluster (if using kind): kind load docker-image rossum-agent:local
+#   3. Deploy: kubectl apply -k deployments/local
+#   4. Access: kubectl port-forward service/rossum-agent 8501:8501
+#   5. Open: http://localhost:8501
+#
+# Configuration:
+#   - Rossum API credentials are entered in the app UI (no need to set here)
+#   - AWS Bedrock uses IAM credentials (configure AWS CLI before deployment)
+# ==============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base resources
+resources:
+  - ../base
+
+# Shared labels
+components:
+  - ../_shared
+
+# ==============================================================================
+# Docker Image Configuration
+# ==============================================================================
+images:
+  - name: app-image
+    newName: rossum-agent
+    newTag: local
+
+# ==============================================================================
+# Application Configuration
+# ==============================================================================
+configMapGenerator:
+  - name: rossum-agent
+    behavior: merge
+    literals:
+      # Local region settings
+      - REGION_NAME=local
+      - AWS_REGION=eu-central-1
+
+      # LLM Model Configuration (Bedrock only)
+      - LLM_MODEL_ID=bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+
+      # Application URL
+      - BASE_URL=http://localhost:8501
+
+# ==============================================================================
+# Secrets Configuration
+# ==============================================================================
+# AWS Bedrock uses IAM credentials - no API key needed
+# Note: Rossum API credentials are configured in the app UI, not here.
+# ==============================================================================
+secretGenerator:
+  - name: rossum-agent
+    literals:
+      # AWS Bedrock uses IAM credentials from environment (no API key needed)
+      - PLACEHOLDER=bedrock-uses-iam
+
+# ==============================================================================
+# Resource Optimization for Local Development
+# ==============================================================================
+# These patches customize the deployment for local environments:
+#   - Remove AWS-specific resources (IAM roles, ExternalSecrets, Ingress)
+#   - Reduce CPU/memory requirements for local development
+# ==============================================================================
+patches:
+  # Remove ExternalSecret (not needed for local - we use secretGenerator)
+  - patch: |-
+      $patch: delete
+      apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      metadata:
+        name: rossum-agent
+
+  # Remove AWS IAM role from ServiceAccount
+  - patch: |-
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: rossum-agent
+        annotations:
+          eks.amazonaws.com/role-arn: null
+
+  # Remove Ingress (use port-forward instead)
+  - patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: rossum-agent
+
+  # Reduce resource requirements for local development
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "0.25"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "2Gi"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: "Never"
+    target:
+      kind: Deployment
+      name: rossum-agent

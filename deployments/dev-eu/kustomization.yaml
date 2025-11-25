@@ -1,0 +1,85 @@
+---
+# ==============================================================================
+# Rossum Agent - dev-eu Environment
+# ==============================================================================
+# Generated for: aws-eks deployment
+# Namespace: tools-rossum-agent
+# LLM Provider: bedrock
+# ==============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tools-rossum-agent
+
+# Base resources
+resources:
+  - namespace.yaml
+  - ../base
+
+# Shared labels
+components:
+  - ../_shared
+
+# ==============================================================================
+# Docker Image Configuration
+# ==============================================================================
+images:
+  - name: app-image
+    newName: rossum-agent
+    newTag: latest
+
+# ==============================================================================
+# Application Configuration
+# ==============================================================================
+configMapGenerator:
+  - name: rossum-agent
+    behavior: merge
+    literals:
+      - REGION_NAME=eu-west-1
+      - AWS_REGION=eu-west-1
+      - LLM_MODEL_ID=bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+      - BASE_URL=https://rossum-agent.tools.r8.lol
+
+# ==============================================================================
+# Secrets Configuration
+# ==============================================================================
+
+# ==============================================================================
+# Patches and Customizations
+# ==============================================================================
+patches:
+  # Configure Ingress hostname
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: rossum-agent.tools.r8.lol
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: rossum-agent.tools.r8.lol
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: rossum-agent-tls
+    target:
+      kind: Ingress
+      name: rossum-agent
+# Resource limits
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "0.5"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "2Gi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "2Gi"
+    target:
+      kind: Deployment
+      name: rossum-agent
