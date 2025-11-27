@@ -55,3 +55,6 @@ all = [
 
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-schema-content" }
+
+[tool.setuptools.package-data]
+rossum_agent = ["assets/*.png"]
