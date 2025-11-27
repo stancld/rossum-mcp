@@ -48,5 +48,9 @@ all = [
     "sphinx-rtd-theme>=2.0.0",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rossum_mcp*"]
+
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-schema-content" }
