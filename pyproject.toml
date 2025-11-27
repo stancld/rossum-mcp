@@ -90,6 +90,7 @@ packages = [
 
 [project.scripts]
 rossum-mcp = "rossum_mcp.server:main"
+rossum-agent = "rossum_agent.streamlit_app:main"
 
 [tool.pytest.ini_options]
 markers = [

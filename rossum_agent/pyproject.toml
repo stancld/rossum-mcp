@@ -21,6 +21,9 @@ dependencies = [
     "smolagents[litellm]>=1.0.0",
 ]
 
+[project.scripts]
+rossum-agent = "rossum_agent.streamlit_app:main"
+
 [project.optional-dependencies]
 docs = [
     "myst-parser>=2.0.0",
