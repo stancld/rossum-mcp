@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 # Agent dependencies
 agent = [
+    "boto3>=1.0",
     "elasticsearch>=9.0",
     "matplotlib>=3.10",
     "plotly>=6.0",
@@ -29,9 +30,6 @@ agent = [
     "requests>=2.32",
     "seaborn>=0.13.2",
     "smolagents[mcp,litellm]>=1.0.0",
-]
-bedrock = [
-    "boto3>=1.0"
 ]
 # Documentation
 docs = [
