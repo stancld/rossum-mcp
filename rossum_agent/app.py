@@ -58,6 +58,12 @@ def main() -> None:  # noqa: C901
         st.session_state.credentials_saved = bool(
             st.session_state.rossum_api_token and st.session_state.rossum_api_base_url
         )
+    if "read_write_disabled" not in st.session_state:
+        st.session_state.read_write_disabled = os.getenv("ROSSUM_DISABLE_READ_WRITE", "").lower() in [
+            "true",
+            "1",
+            "yes",
+        ]
 
     # Sidebar
     with st.sidebar:
@@ -124,13 +130,24 @@ def main() -> None:  # noqa: C901
         st.markdown("---")
         st.subheader("Agent Mode")
 
-        new_mode = st.radio(
-            "Select mode:",
-            options=["read-write", "read-only"],
-            index=0 if st.session_state.mcp_mode == "read-write" else 1,
-            help="Read-only mode prevents the agent from making changes to Rossum. "
-            "Read-write mode allows full operations including creating/updating resources.",
-        )
+        if st.session_state.read_write_disabled:
+            st.info("ℹ️ Read-write mode has been disabled by the administrator.")  # noqa: RUF001
+            new_mode = "read-only"
+            st.radio(
+                "Select mode:",
+                options=["read-only"],
+                index=0,
+                help="Read-only mode prevents the agent from making changes to Rossum.",
+                disabled=False,
+            )
+        else:
+            new_mode = st.radio(
+                "Select mode:",
+                options=["read-write", "read-only"],
+                index=0 if st.session_state.mcp_mode == "read-write" else 1,
+                help="Read-only mode prevents the agent from making changes to Rossum. "
+                "Read-write mode allows full operations including creating/updating resources.",
+            )
 
         if new_mode != st.session_state.mcp_mode:
             st.session_state.mcp_mode = new_mode
