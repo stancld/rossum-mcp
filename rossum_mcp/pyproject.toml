@@ -9,6 +9,9 @@ description = "MCP server for AI-powered Rossum orchestration: document workflow
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
+authors = [
+    {name = "Dan Stancl (Rossum AI)", email = "daniel.stancl@gmail.com"}
+]
 keywords = ["mcp", "rossum", "document-processing"]
 dependencies = [
     "mcp>=1.0.0",
