@@ -10,11 +10,14 @@ import logging
 import os
 import pathlib
 import time
+from typing import TYPE_CHECKING
 
 import streamlit as st
+from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 
 from rossum_agent.agent import create_agent
 from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.utils import (
     check_env_vars,
     clear_generated_files,
@@ -22,6 +25,9 @@ from rossum_agent.utils import (
     get_generated_files_with_metadata,
 )
 from rossum_mcp.logging_config import setup_logging
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 # Configure logging with Elasticsearch integration
 setup_logging(
@@ -39,7 +45,7 @@ def load_logo() -> str | None:
 
 # Page config - must be first Streamlit command and at module level
 st.set_page_config(
-    page_title="Rossum AI Agent",
+    page_title="Rossum Agent",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -131,7 +137,7 @@ def main() -> None:  # noqa: C901
         st.subheader("Agent Mode")
 
         if st.session_state.read_write_disabled:
-            st.info("ℹ️ Read-write mode has been disabled by the administrator.")  # noqa: RUF001
+            st.info("ℹ️ Read-write mode is disabled for current release.")  # noqa: RUF001
             new_mode = "read-only"
             st.radio(
                 "Select mode:",
@@ -245,44 +251,32 @@ def main() -> None:  # noqa: C901
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate response
         with st.chat_message("assistant"):
+            final_answer_text = None
+
             try:
-                # Create placeholder for streaming output
-                output_placeholder = st.empty()
                 start_time = time.time()
 
-                # Stream the response
-                result_generator = st.session_state.agent.run(
+                result_generator: Iterator[ActionStep | PlanningStep] = st.session_state.agent.run(
                     prompt, return_full_result=True, stream=True, reset=False
                 )
 
-                for chunk in result_generator:
-                    if hasattr(chunk, "model_output") and chunk.model_output:
-                        # Format the output with proper markdown/code handling
-                        display_text = chunk.model_output
+                chat_response = ChatResponse(prompt, output_placeholder=st.empty(), start_time=start_time)
 
-                        # Check if this is not the final chunk
-                        is_final_answer = hasattr(chunk, "is_final_answer") and chunk.is_final_answer
-                        if not is_final_answer:
-                            display_text += "\n\n🤖 _Agent is running..._"
+                for step in result_generator:
+                    chat_response.process_step(step)
 
-                        output_placeholder.markdown(display_text, unsafe_allow_html=True)
+                    if isinstance(chat_response.result, FinalAnswerStep) and chat_response.result.output:
+                        raw_answer = str(chat_response.result.output)
+                        final_answer_text = parse_and_format_final_answer(raw_answer)
 
-                        # Log individual step to Elasticsearch
-                        duration = time.time() - start_time
-                        log_agent_result(chunk, prompt, duration)
+                    # Save final answer to chat history
+                if final_answer_text:
+                    st.session_state.messages.append({"role": "assistant", "content": final_answer_text})
 
-                    result = chunk  # Keep the last chunk as final result
-
-                # Save final output to chat history
-                if hasattr(result, "output") and result.output:
+                    # Log final result
                     duration = time.time() - start_time
-                    output_placeholder.markdown(result.output, unsafe_allow_html=True)
-                    st.session_state.messages.append({"role": "assistant", "content": result.output})
-
-                    # Log complete result to Elasticsearch
-                    log_agent_result(result, prompt, duration)
+                    log_agent_result(chat_response.result, prompt, duration)
                     logger.info("Agent response generated successfully")
 
                     # Check if files were generated/modified and rerun to update sidebar
