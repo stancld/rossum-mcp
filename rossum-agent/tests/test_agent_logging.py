@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from unittest.mock import Mock, patch
 
-from smolagents.memory import ActionStep, FinalAnswerStep
-
 from rossum_agent.agent_logging import log_agent_result
+from smolagents.memory import ActionStep, FinalAnswerStep
 
 
 def create_mock_final_answer(output: str) -> Mock:
