@@ -1,4 +1,4 @@
-"""System instructions for the Rossum AI Agent.
+"""System instructions for the Rossum Agent.
 
 This module defines the system prompt that guides the agent's behavior
 for documentation, debugging, and configuration tasks.

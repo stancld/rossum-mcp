@@ -44,7 +44,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Python 3.12 or higher
 - Rossum account with API credentials
 - A Rossum queue ID
 
