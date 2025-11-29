@@ -45,6 +45,7 @@ docs = [
 # MCP server dependencies
 mcp = [
     "mcp>=1.0.0",
+    "elasticsearch>=9.0",
 ]
 # Streamlit UI
 streamlit = [
@@ -84,7 +85,7 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["rossum-mcp", "rossum-agent"]
 include = ["rossum_mcp*", "rossum_agent*"]
 
 [project.scripts]
@@ -95,7 +96,7 @@ rossum-agent = "rossum_agent.streamlit_app:main"
 markers = [
     "unit: Unit tests that test individual functions/methods in isolation",
 ]
-testpaths = ["tests"]
+testpaths = ["rossum-mcp/tests", "rossum-agent/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

@@ -2395,6 +2395,7 @@ docs = [
     { name = "sphinx-rtd-theme" },
 ]
 mcp = [
+    { name = "elasticsearch" },
     { name = "mcp" },
 ]
 streamlit = [
@@ -2416,6 +2417,7 @@ requires-dist = [
     { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "elasticsearch", marker = "extra == 'agent'", specifier = ">=9.0" },
     { name = "elasticsearch", marker = "extra == 'all'", specifier = ">=9.0" },
+    { name = "elasticsearch", marker = "extra == 'mcp'", specifier = ">=9.0" },
     { name = "elasticsearch", marker = "extra == 'tests'", specifier = ">=9.0" },
     { name = "matplotlib", marker = "extra == 'agent'", specifier = ">=3.10" },
     { name = "matplotlib", marker = "extra == 'all'", specifier = ">=3.10" },

@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from rossum_agent.plot_tools import plot_data
 
 

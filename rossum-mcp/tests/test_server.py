@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from rossum_api.domain_logic.resources import Resource
-
 from rossum_mcp.server import RossumMCPServer
 
 # Configure pytest-asyncio

@@ -26,13 +26,13 @@ jobs:
       - name: Extract package version from pyproject.toml
         id: package_version
         run: |
-          VERSION=$(grep -E '^version\s*=\s*".*"' rossum_agent/pyproject.toml | sed -E 's/version\s*=\s*"(.*)"/\1/')
+          VERSION=$(grep -E '^version\s*=\s*".*"' rossum-agent/pyproject.toml | sed -E 's/version\s*=\s*"(.*)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted pyproject.toml version: $VERSION"
 
       - name: Build package
         run: |
-          cd rossum_agent
+          cd rossum-agent
           uv build
 
       - name: Create GitHub Release
@@ -43,6 +43,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.package_version.outputs.version, '-') }}
           files: |
-            rossum_agent/dist/*
+            rossum-agent/dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

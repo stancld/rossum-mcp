@@ -116,7 +116,7 @@ Run the AI agent:
    rossum-agent
 
    # Streamlit web UI
-   streamlit run rossum_agent/app.py
+   streamlit run rossum-agent/rossum_agent/app.py
 
    # Or run with Docker Compose
    docker-compose up rossum-agent

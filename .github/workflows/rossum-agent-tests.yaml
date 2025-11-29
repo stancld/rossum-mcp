@@ -24,7 +24,7 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run coverage run --source=rossum_agent -m pytest tests/rossum_agent -v --junitxml=report.xml
+          uv run coverage run --source=rossum-agent/rossum_agent -m pytest rossum-agent/tests -v --junitxml=report.xml
         shell: bash
 
       - name: Upload pytest results

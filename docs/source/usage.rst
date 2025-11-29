@@ -30,7 +30,7 @@ Configure your MCP client to use this server. For example, in Claude Desktop's c
      "mcpServers": {
        "rossum": {
          "command": "python",
-         "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+         "args": ["/path/to/rossum-mcp/rossum-mcp/rossum_mcp/server.py"],
          "env": {
            "ROSSUM_API_TOKEN": "your-api-token",
            "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
@@ -53,7 +53,7 @@ The ``rossum_agent`` package provides CLI and web interfaces:
    rossum-agent
 
    # Streamlit web UI
-   streamlit run rossum_agent/app.py
+   streamlit run rossum-agent/rossum_agent/app.py
 
    # Or run with Docker Compose
    docker-compose up rossum-agent

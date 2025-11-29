@@ -24,7 +24,7 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run coverage run --source=rossum_mcp -m pytest tests/rossum_mcp -v --junitxml=report.xml
+          uv run coverage run --source=rossum-mcp/rossum_mcp -m pytest rossum-mcp/tests -v --junitxml=report.xml
         shell: bash
         env:
           ROSSUM_API_BASE_URL: https://api.test.rossum.ai

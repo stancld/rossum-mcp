@@ -6,10 +6,9 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from rossum_agent.app_llm_response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
 from smolagents.memory import ActionStep, PlanningStep
 from smolagents.monitoring import Timing
-
-from rossum_agent.app_llm_response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
 
 
 class TestParseAndFormatFinalAnswer:

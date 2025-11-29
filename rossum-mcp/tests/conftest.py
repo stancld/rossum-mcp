@@ -12,7 +12,6 @@ from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 from rossum_api.models.workspace import Workspace
-
 from rossum_mcp.server import RossumMCPServer
 
 # Store the original asdict function

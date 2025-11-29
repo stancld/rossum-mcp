@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING
 
 import streamlit as st
+from rossum_mcp.logging_config import setup_logging
 from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 
 from rossum_agent.agent import create_agent
@@ -24,7 +25,6 @@ from rossum_agent.utils import (
     get_generated_files,
     get_generated_files_with_metadata,
 )
-from rossum_mcp.logging_config import setup_logging
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
