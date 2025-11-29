@@ -87,7 +87,7 @@ The ``rossum_agent`` package provides additional capabilities:
 Quick Start
 -----------
 
-**Prerequisites:** Python 3.10+, Rossum account with API credentials
+**Prerequisites:** Python 3.12+, Rossum account with API credentials
 
 .. code-block:: bash
 

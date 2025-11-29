@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Rossum SDK](https://img.shields.io/badge/Rossum-SDK-orange.svg)](https://github.com/rossumai/rossum-sdk)
@@ -182,7 +182,7 @@ The agent automatically creates the queue, uploads documents, monitors processin
 
 ## Installation & Deployment
 
-**Prerequisites**: Python 3.10+, Rossum account with API credentials
+**Prerequisites**: Python 3.12+, Rossum account with API credentials
 
 This repository contains two packages:
 - **rossum_mcp**: MCP server for Rossum API interactions

@@ -146,7 +146,7 @@ rossum-mcp
 ```
 
 ### Package installation issues
-Make sure you have Python 3.10+ and install the agent package:
+Make sure you have Python 3.12+ and install the agent package:
 ```bash
 cd rossum_agent
 uv sync --extra all
