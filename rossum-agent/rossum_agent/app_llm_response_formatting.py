@@ -9,6 +9,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 
+import streamlit.components.v1 as components
 from smolagents.memory import ActionStep, PlanningStep
 
 from rossum_agent.agent_logging import log_agent_result
@@ -17,6 +18,9 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
     type AgentStep = ActionStep | PlanningStep
+
+
+MERMAID_DIAGRAM_HEIGHT = 600  # px
 
 
 class OutputRenderer(Protocol):
@@ -38,6 +42,44 @@ def parse_and_format_final_answer(answer: str) -> str:
             return FinalResponse(data).get_formatted_response()
 
     return answer
+
+
+def extract_mermaid_blocks(text: str) -> tuple[str, list[str]]:
+    """Extract Mermaid diagram blocks and return cleaned text with diagram codes."""
+    mermaid_pattern = r"```mermaid\n(.*?)\n```"
+    matches = re.findall(mermaid_pattern, text, re.DOTALL)
+
+    if not matches:
+        return text, []
+
+    # Replace mermaid blocks with placeholders
+    result = text
+    for i, mermaid_code in enumerate(matches):
+        placeholder = f"\n\n[MERMAID_DIAGRAM_{i}]\n\n"
+        result = result.replace(f"```mermaid\n{mermaid_code}\n```", placeholder, 1)
+
+    return result, matches
+
+
+def render_mermaid_diagram(mermaid_code: str) -> None:
+    """Render a Mermaid diagram using Streamlit components."""
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
+        </script>
+    </head>
+    <body>
+        <div class="mermaid">
+{mermaid_code.strip()}
+        </div>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=MERMAID_DIAGRAM_HEIGHT, scrolling=True)
 
 
 @dataclasses.dataclass
@@ -127,8 +169,11 @@ class ChatResponse:
     def __post_init__(self) -> None:
         self.result: AgentStep
 
-        self.steps_markdown: list[str] = []
+        type TextAndDiagram = tuple[str, list[str]]
+
+        self.steps_markdown: list[TextAndDiagram] = []
         self.final_answer_text: str | None = None
+        self.final_answer_diagrams: list[str] = []
 
     def process_step(self, step: AgentStep) -> None:
         if isinstance(step, PlanningStep):
@@ -140,8 +185,9 @@ class ChatResponse:
         self.result = step
 
     def process_planning_step(self, step: PlanningStep) -> None:
-        plan_md = f"#### 🧠 Plan\n\n{step.plan.strip()}\n"
-        self.steps_markdown.append(plan_md)
+        plan_text, mermaid_diagrams = extract_mermaid_blocks(step.plan.strip())
+        plan_md = f"#### 🧠 Plan\n\n{plan_text}\n"
+        self.steps_markdown.append((plan_md, mermaid_diagrams))
 
     def process_action_step(self, step: ActionStep) -> None:
         self.step_md_parts: list[str] = []
@@ -152,15 +198,22 @@ class ChatResponse:
         self._process_observations(step)
 
         self.step_md = "\n".join(self.step_md_parts)
-        self.steps_markdown.append(self.step_md)
+        self.steps_markdown.append((self.step_md, []))
 
         # Detect final answer
         if step.is_final_answer and step.action_output is not None:
             raw_answer = str(step.action_output)
-            self.final_answer_text = parse_and_format_final_answer(raw_answer)
+            formatted_answer = parse_and_format_final_answer(raw_answer)
+            self.final_answer_text, self.final_answer_diagrams = extract_mermaid_blocks(formatted_answer)
 
         # Build current display
-        display_md = "\n\n".join(self.steps_markdown)
+        display_parts = []
+        for md_text, diagrams in self.steps_markdown:
+            display_parts.append(md_text)
+            for _diagram in diagrams:
+                display_parts.append(f"[MERMAID_DIAGRAM: {len(display_parts)}]")
+
+        display_md = "\n\n".join(display_parts)
 
         if self.final_answer_text is None:
             display_md += "\n\n⏳ _Processing..._"
@@ -168,6 +221,14 @@ class ChatResponse:
             display_md += f"\n\n---\n\n### ✅ Final Answer\n\n{self.final_answer_text}"
 
         self.output_placeholder.markdown(display_md, unsafe_allow_html=True)
+
+        for _md_text, diagrams in self.steps_markdown:
+            for diagram in diagrams:
+                render_mermaid_diagram(diagram)
+
+        if self.final_answer_diagrams:
+            for diagram in self.final_answer_diagrams:
+                render_mermaid_diagram(diagram)
 
         # Log each completed step
         duration = time.time() - self.start_time
