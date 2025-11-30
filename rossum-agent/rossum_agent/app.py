@@ -6,6 +6,7 @@ Usage:
     streamlit run rossum_agent/app.py
 """
 
+import base64
 import logging
 import os
 import pathlib
@@ -19,6 +20,7 @@ from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 from rossum_agent.agent import create_agent
 from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
+from rossum_agent.beep_sound import generate_beep_wav
 from rossum_agent.utils import (
     check_env_vars,
     clear_generated_files,
@@ -28,6 +30,11 @@ from rossum_agent.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+# Generate beep and encode as base64 data URL
+_beep_wav = generate_beep_wav(frequency=440, duration=0.33)
+_beep_b64 = base64.b64encode(_beep_wav).decode("ascii")
+BEEP_HTML = f'<audio src="data:audio/wav;base64,{_beep_b64}" autoplay></audio>'
 
 # Configure logging with Elasticsearch integration
 setup_logging(
@@ -278,6 +285,9 @@ def main() -> None:  # noqa: C901
                     duration = time.time() - start_time
                     log_agent_result(chat_response.result, prompt, duration)
                     logger.info("Agent response generated successfully")
+
+                    # Play beep sound when answer generation completes
+                    st.components.v1.html(BEEP_HTML, height=0)
 
                     # Check if files were generated/modified and rerun to update sidebar
                     current_files_metadata = get_generated_files_with_metadata()
