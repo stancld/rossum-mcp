@@ -36,27 +36,15 @@ _beep_wav = generate_beep_wav(frequency=440, duration=0.33)
 _beep_b64 = base64.b64encode(_beep_wav).decode("ascii")
 BEEP_HTML = f'<audio src="data:audio/wav;base64,{_beep_b64}" autoplay></audio>'
 
+LOGO_PATH = pathlib.Path(__file__).parent / "assets" / "Primary_light_logo.png"
+
 # Configure logging with Elasticsearch integration
-setup_logging(
-    app_name="rossum-agent",
-    log_level=os.getenv("LOG_LEVEL", "INFO"),
-)
+setup_logging(app_name="rossum-agent", log_level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
-def load_logo() -> str | None:
-    """Load and display Rossum logo."""
-    logo_path = pathlib.Path(__file__).parent / "assets" / "Primary_light_logo.png"
-    return str(logo_path) if logo_path.exists() else None
-
-
 # Page config - must be first Streamlit command and at module level
-st.set_page_config(
-    page_title="Rossum Agent",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
 
 
 def main() -> None:  # noqa: C901
@@ -80,8 +68,7 @@ def main() -> None:  # noqa: C901
 
     # Sidebar
     with st.sidebar:
-        logo_path = load_logo()
-        st.image(logo_path, width=200)
+        st.image(str(LOGO_PATH), width=200)
 
         # Credentials section
         st.markdown("---")
@@ -120,11 +107,7 @@ def main() -> None:  # noqa: C901
             st.success("✅ Credentials configured")
 
             with st.expander("View Credentials"):
-                st.text_input(
-                    "API Base URL",
-                    value=st.session_state.rossum_api_base_url,
-                    disabled=True,
-                )
+                st.text_input("API Base URL", value=st.session_state.rossum_api_base_url, disabled=True)
                 st.text_input(
                     "API Token",
                     value=st.session_state.rossum_api_token[:8] + "..."
