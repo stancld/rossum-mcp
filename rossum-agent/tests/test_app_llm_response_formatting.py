@@ -251,8 +251,8 @@ class TestChatResponse:
         chat_response.process_planning_step(step)
 
         assert len(chat_response.steps_markdown) == 1
-        assert "🧠 Plan" in chat_response.steps_markdown[0]
-        assert "First do this" in chat_response.steps_markdown[0]
+        assert "🧠 Plan" in chat_response.steps_markdown[0][0]
+        assert "First do this" in chat_response.steps_markdown[0][0]
 
     def test_process_action_step_basic(self, chat_response, mock_placeholder):
         """Test processing of basic action step."""
@@ -269,7 +269,7 @@ class TestChatResponse:
         chat_response.process_action_step(step)
 
         assert len(chat_response.steps_markdown) == 1
-        assert "Step 1" in chat_response.steps_markdown[0]
+        assert "Step 1" in chat_response.steps_markdown[0][0]
         mock_placeholder.markdown.assert_called()
 
     def test_process_action_step_with_tool_calls(self, chat_response):
@@ -289,7 +289,7 @@ class TestChatResponse:
 
         chat_response.process_action_step(step)
 
-        assert "search_tool" in chat_response.steps_markdown[0]
+        assert "search_tool" in chat_response.steps_markdown[0][0]
 
     def test_process_action_step_skips_python_interpreter(self, chat_response):
         """Test that python_interpreter tool is skipped in display."""
@@ -308,7 +308,7 @@ class TestChatResponse:
 
         chat_response.process_action_step(step)
 
-        assert "python_interpreter" not in chat_response.steps_markdown[0]
+        assert "python_interpreter" not in chat_response.steps_markdown[0][0]
 
     def test_process_action_step_with_code_blocks(self, chat_response):
         """Test processing of action step with code blocks."""
@@ -325,8 +325,8 @@ class TestChatResponse:
         chat_response.process_action_step(step)
 
         markdown = chat_response.steps_markdown[0]
-        assert "View code" in markdown
-        assert "print('hello')" in markdown
+        assert "View code" in markdown[0]
+        assert "print('hello')" in markdown[0]
 
     def test_process_action_step_extracts_thinking(self, chat_response):
         """Test extraction of thinking from model output."""
@@ -343,7 +343,7 @@ class TestChatResponse:
         chat_response.process_action_step(step)
 
         markdown = chat_response.steps_markdown[0]
-        assert "💭 Analyzing the data" in markdown
+        assert "💭 Analyzing the data" in markdown[0]
 
     def test_process_action_step_with_observations(self, chat_response):
         """Test processing of observations."""
@@ -360,7 +360,7 @@ class TestChatResponse:
         chat_response.process_action_step(step)
 
         markdown = chat_response.steps_markdown[0]
-        assert "Result:** 42" in markdown
+        assert "Result:** 42" in markdown[0]
 
     def test_process_action_step_final_answer(self, chat_response):
         """Test processing of final answer step."""

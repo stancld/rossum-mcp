@@ -19,19 +19,21 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --extra agent --extra tests --no-install-project
+          uv sync --extra tests
         shell: bash
+        working-directory: rossum-agent
 
       - name: Run tests
         run: |
-          uv run coverage run --source=rossum-agent/rossum_agent -m pytest rossum-agent/tests -v --junitxml=report.xml
+          uv run coverage run --source=rossum_agent -m pytest tests -v --junitxml=report.xml
         shell: bash
+        working-directory: rossum-agent
 
       - name: Upload pytest results
         uses: actions/upload-artifact@v4
         with:
           name: rossum-agent-test-report
-          path: report.xml
+          path: rossum-agent/report.xml
         if: failure()
 
       - name: Coverage statistics
@@ -40,3 +42,4 @@ jobs:
           uv run coverage xml
           uv run coverage report
         shell: bash
+        working-directory: rossum-agent
