@@ -42,10 +42,13 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     Returns:
         Configured CodeAgent with Rossum MCP tools and custom tools
     """
+    lite_llm_kwargs = _parse_aws_role_based_params()
+
     llm = LiteLLMModel(
         model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
         # Limit the number of requests to avoid being kicked by AWS Bedrock
         requests_per_minute=5.0,
+        **lite_llm_kwargs,
     )
 
     prompt_templates = yaml.safe_load(
@@ -118,3 +121,14 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         stream_outputs=stream_outputs,
         max_steps=50,
     )
+
+
+def _parse_aws_role_based_params() -> dict[str, str]:
+    lite_llm_kwargs = {}
+    AWS_KEYS = ["AWS_ROLE_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+
+    for key in AWS_KEYS:
+        if aws_role_name := os.environ.get(key):
+            lite_llm_kwargs[key.lower()] = aws_role_name
+
+    return lite_llm_kwargs
