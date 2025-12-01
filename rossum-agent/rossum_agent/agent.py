@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.resources
 import os
+from typing import TYPE_CHECKING
 
 import yaml
 from mcp import StdioServerParameters
@@ -23,7 +24,79 @@ from rossum_agent.internal_tools import (
 )
 from rossum_agent.plot_tools import plot_data
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from typing import Any
+
+    from smolagents.models import ChatMessage, ChatMessageStreamDelta
+    from smolagents.tools import Tool
+
 DEFAULT_LLM_MODEL = "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+
+class LiteLLMBedrockModel(LiteLLMModel):
+    """Use LiteLLM Python SDK with a convenient processing of AWS bedrock client kwargs.
+
+    Smolagents AWSBedrockModel handles generation differently, which leads to unexpected errors.
+    """
+
+    def __init__(
+        self,
+        model_id: str | None = None,
+        api_base: str | None = None,
+        api_key: str | None = None,
+        custom_role_conversions: dict[str, str] | None = None,
+        flatten_messages_as_text: bool | None = None,
+        client_kwargs: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            model_id=model_id,
+            api_base=api_base,
+            api_key=api_key,
+            custom_role_conversions=custom_role_conversions,
+            flatten_messages_as_text=flatten_messages_as_text,
+            **kwargs,
+        )
+        self.client_kwargs = client_kwargs or {}
+
+    def generate(
+        self,
+        messages: list[ChatMessage | dict],
+        stop_sequences: list[str] | None = None,
+        response_format: dict[str, str] | None = None,
+        tools_to_call_from: list[Tool] | None = None,
+        **kwargs: Any,
+    ) -> ChatMessage:
+        # Hack: Drop incompatible model_id, which is passed inside from self.model_id
+        kwargs.pop("model_id", None)
+        return super().generate(
+            messages=messages,
+            stop_sequences=stop_sequences,
+            response_format=response_format,
+            tools_to_call_from=tools_to_call_from,
+            **self.client_kwargs,
+            **kwargs,
+        )
+
+    def generate_stream(
+        self,
+        messages: list[ChatMessage | dict],
+        stop_sequences: list[str] | None = None,
+        response_format: dict[str, str] | None = None,
+        tools_to_call_from: list[Tool] | None = None,
+        **kwargs: Any,
+    ) -> Generator[ChatMessageStreamDelta]:
+        # Hack: Drop incompatible model_id, which is passed inside from self.model_id
+        kwargs.pop("model_id", None)
+        yield from super().generate(
+            messages=messages,
+            stop_sequences=stop_sequences,
+            response_format=response_format,
+            tools_to_call_from=tools_to_call_from,
+            **self.client_kwargs,
+            **kwargs,
+        )
 
 
 def create_agent(stream_outputs: bool = False) -> CodeAgent:
@@ -42,13 +115,15 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     Returns:
         Configured CodeAgent with Rossum MCP tools and custom tools
     """
-    lite_llm_kwargs = _parse_aws_role_based_params()
+    bedrock_client_kwargs: dict[str, str] = {}
+    if bedrock_model_arn := os.environ.get("AWS_BEDROCK_MODEL_ARN"):
+        bedrock_client_kwargs["model_id"] = bedrock_model_arn
 
-    llm = LiteLLMModel(
+    llm = LiteLLMBedrockModel(
         model_id=os.environ.get("LLM_MODEL_ID", DEFAULT_LLM_MODEL),
         # Limit the number of requests to avoid being kicked by AWS Bedrock
         requests_per_minute=5.0,
-        **lite_llm_kwargs,
+        client_kwargs=bedrock_client_kwargs,
     )
 
     prompt_templates = yaml.safe_load(
@@ -121,14 +196,3 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         stream_outputs=stream_outputs,
         max_steps=50,
     )
-
-
-def _parse_aws_role_based_params() -> dict[str, str]:
-    lite_llm_kwargs = {}
-    AWS_KEYS = ["AWS_ROLE_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
-
-    for key in AWS_KEYS:
-        if aws_role_name := os.environ.get(key):
-            lite_llm_kwargs[key.lower()] = aws_role_name
-
-    return lite_llm_kwargs

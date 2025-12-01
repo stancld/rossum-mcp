@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Fixed using AWS Bedrock Model ARN [#39](https://github.com/stancld/rossum-mcp/pull/39)
 
 
 ## [0.1.1] - 2025-12-01
