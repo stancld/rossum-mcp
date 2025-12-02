@@ -26,7 +26,7 @@ from rossum_agent.plot_tools import plot_data
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from typing import Any
+    from typing import Any, Literal
 
     from smolagents.models import ChatMessage, ChatMessageStreamDelta
     from smolagents.tools import Tool
@@ -99,7 +99,12 @@ class LiteLLMBedrockModel(LiteLLMModel):
         )
 
 
-def create_agent(stream_outputs: bool = False) -> CodeAgent:
+def create_agent(
+    rossum_api_token: str,
+    rossum_api_base_url: str,
+    mcp_mode: Literal["read-only", "read-write"] = "read-only",
+    stream_outputs: bool = False,
+) -> CodeAgent:
     """Create and configure the Rossum agent with custom tools and instructions.
 
     This agent uses MCP (Model Context Protocol) to connect directly to the Rossum MCP server,
@@ -110,6 +115,9 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
     You must be logged into your AWS account with appropriate Bedrock access.
 
     Args:
+        rossum_api_token: Rossum API token for authentication
+        rossum_api_base_url: Rossum API base URL
+        mcp_mode: MCP mod
         stream_outputs: Whether to stream outputs from the agent
 
     Returns:
@@ -139,9 +147,9 @@ def create_agent(stream_outputs: bool = False) -> CodeAgent:
         command="rossum-mcp",
         args=[],
         env={
-            "ROSSUM_API_BASE_URL": os.environ["ROSSUM_API_BASE_URL"],
-            "ROSSUM_API_TOKEN": os.environ["ROSSUM_API_TOKEN"],
-            "ROSSUM_MCP_MODE": os.environ.get("ROSSUM_MCP_MODE", "read-write"),
+            "ROSSUM_API_BASE_URL": rossum_api_base_url,
+            "ROSSUM_API_TOKEN": rossum_api_token,
+            "ROSSUM_MCP_MODE": mcp_mode,
             **os.environ,
         },
     )

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
 
 from rossum_agent.agent import create_agent
@@ -27,7 +28,12 @@ def main(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     print("\n🔧 Initializing agent...")
-    agent = create_agent(args.stream_outputs)
+    agent = create_agent(
+        rossum_api_token=os.environ["ROSSUM_API_TOKEN"],
+        rossum_api_base_url=os.environ["ROSSUM_API_BASE_URL"],
+        mcp_mode=os.environ.get("ROSSUM_MCP_MODE", "read-only"),  # type: ignore[arg-type]
+        stream_outputs=args.stream_outputs,
+    )
 
     print("\n" + "=" * 50)
     print("Agent ready! You can now give instructions.")

@@ -22,7 +22,6 @@ from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.beep_sound import generate_beep_wav
 from rossum_agent.utils import (
-    check_env_vars,
     clear_generated_files,
     get_generated_files,
     get_generated_files_with_metadata,
@@ -49,22 +48,24 @@ st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", i
 
 def main() -> None:  # noqa: C901
     # Initialize credentials in session state
+    # Read from env variables for debugging if suitable
     if "rossum_api_token" not in st.session_state:
-        st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "")
+        st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "") if os.getenv("DEBUG") else ""
     if "rossum_api_base_url" not in st.session_state:
-        st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "")
-    if "mcp_mode" not in st.session_state:
-        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
+        st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "") if os.getenv("DEBUG") else ""
     if "credentials_saved" not in st.session_state:
         st.session_state.credentials_saved = bool(
             st.session_state.rossum_api_token and st.session_state.rossum_api_base_url
         )
+
     if "read_write_disabled" not in st.session_state:
         st.session_state.read_write_disabled = os.getenv("ROSSUM_DISABLE_READ_WRITE", "").lower() in [
             "true",
             "1",
             "yes",
         ]
+    if "mcp_mode" not in st.session_state:
+        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
 
     # Sidebar
     with st.sidebar:
@@ -96,8 +97,6 @@ def main() -> None:  # noqa: C901
                     st.session_state.rossum_api_token = api_token
                     st.session_state.rossum_api_base_url = api_base_url
                     st.session_state.credentials_saved = True
-                    os.environ["ROSSUM_API_TOKEN"] = api_token
-                    os.environ["ROSSUM_API_BASE_URL"] = api_base_url
                     if "agent" in st.session_state:
                         del st.session_state.agent
                     st.rerun()
@@ -155,17 +154,6 @@ def main() -> None:  # noqa: C901
         mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
         st.info(f"Current mode: **{mode_indicator}**")
 
-        if missing_vars := check_env_vars():
-            st.markdown("---")
-            st.error("❌ Missing environment variables:")
-            for var, desc in missing_vars:
-                if var not in ["ROSSUM_API_TOKEN", "ROSSUM_API_BASE_URL"]:
-                    st.code(f"export {var}=<value>")
-                    st.caption(desc)
-            if any(var not in ["ROSSUM_API_TOKEN", "ROSSUM_API_BASE_URL"] for var, _ in missing_vars):
-                st.stop()
-            st.markdown("---")
-
         # Quick actions
         st.subheader("Quick Actions")
         if st.button("🔄 Reset Conversation"):
@@ -221,7 +209,12 @@ def main() -> None:  # noqa: C901
         with st.spinner("Initializing agent..."):
             try:
                 logger.info("Initializing Rossum agent")
-                st.session_state.agent = create_agent(stream_outputs=False)
+                st.session_state.agent = create_agent(
+                    rossum_api_token=st.session_state.rossum_api_token,
+                    rossum_api_base_url=st.session_state.rossum_api_base_url,
+                    mcp_mode=st.session_state.mcp_mode,
+                    stream_outputs=False,
+                )
                 logger.info("Agent initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize agent: {e}", exc_info=True)
