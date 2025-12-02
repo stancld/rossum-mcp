@@ -2063,6 +2063,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-cov"
+version = "7.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "coverage" },
+    { name = "pluggy" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5e/f7/c933acc76f5208b3b00089573cf6a2bc26dc80a8aece8f52bb7d6b1855ca/pytest_cov-7.0.0.tar.gz", hash = "sha256:33c97eda2e049a0c5298e91f519302a1334c26ac65c1a483d6206fd458361af1", size = 54328, upload-time = "2025-09-09T10:57:02.113Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/49/1377b49de7d0c1ce41292161ea0f721913fa8722c19fb9c1e3aa0367eecb/pytest_cov-7.0.0-py3-none-any.whl", hash = "sha256:3b8e9558b16cc1479da72058bdecf8073661c7f57f7d3c5f22a1c23507f2d861", size = 22424, upload-time = "2025-09-09T10:57:00.695Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -2294,7 +2308,7 @@ wheels = [
 
 [[package]]
 name = "rossum-agent"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -2335,6 +2349,8 @@ tests = [
     { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "streamlit" },
 ]
 
 [package.metadata]
@@ -2351,6 +2367,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'all'", specifier = ">=0.21.0" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.21.0" },
+    { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=4.0.0" },
     { name = "python-dotenv" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.32" },
@@ -2367,6 +2384,7 @@ requires-dist = [
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0.0" },
     { name = "streamlit", marker = "extra == 'all'", specifier = ">=1.28.0" },
     { name = "streamlit", marker = "extra == 'streamlit'", specifier = ">=1.28.0" },
+    { name = "streamlit", marker = "extra == 'tests'", specifier = ">=1.28.0" },
 ]
 provides-extras = ["docs", "streamlit", "tests", "all"]
 
