@@ -22,9 +22,11 @@ from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.beep_sound import generate_beep_wav
 from rossum_agent.utils import (
-    clear_generated_files,
+    cleanup_session_output_dir,
+    create_session_output_dir,
     get_generated_files,
     get_generated_files_with_metadata,
+    set_session_output_dir,
 )
 
 if TYPE_CHECKING:
@@ -47,6 +49,12 @@ st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", i
 
 
 def main() -> None:  # noqa: C901
+    # Initialize session-specific output directory
+    if "output_dir" not in st.session_state:
+        st.session_state.output_dir = create_session_output_dir()
+    # Set the context variable for the current session
+    set_session_output_dir(st.session_state.output_dir)
+
     # Initialize credentials in session state
     # Read from env variables for debugging if suitable
     if "rossum_api_token" not in st.session_state:
@@ -160,7 +168,11 @@ def main() -> None:  # noqa: C901
             st.session_state.messages = []
             if "agent" in st.session_state:
                 del st.session_state.agent
-            clear_generated_files()
+            # Cleanup old session directory and create a new one
+            if "output_dir" in st.session_state:
+                cleanup_session_output_dir(st.session_state.output_dir)
+            st.session_state.output_dir = create_session_output_dir()
+            set_session_output_dir(st.session_state.output_dir)
             st.rerun()
 
         # Generated files section

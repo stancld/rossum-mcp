@@ -6,15 +6,16 @@ import json
 from pathlib import Path
 
 from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
+from rossum_agent.utils import set_session_output_dir
 
 
 class TestWriteFile:
     """Test write_file tool function."""
 
-    def test_creates_output_directory_if_not_exists(self, monkeypatch, tmp_path):
+    def test_creates_output_directory_if_not_exists(self, tmp_path):
         """Test that output directory is created automatically."""
         output_dir = tmp_path / "outputs"
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         assert not output_dir.exists()
 
@@ -23,10 +24,10 @@ class TestWriteFile:
         assert output_dir.exists()
         assert output_dir.is_dir()
 
-    def test_writes_file_to_output_directory(self, monkeypatch, tmp_path):
+    def test_writes_file_to_output_directory(self, tmp_path):
         """Test that file is written to correct location."""
         output_dir = tmp_path / "outputs"
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         result_json = write_file("test.txt", "Hello, World!")
         result = json.loads(result_json)
@@ -35,10 +36,10 @@ class TestWriteFile:
         assert (output_dir / "test.txt").exists()
         assert (output_dir / "test.txt").read_text() == "Hello, World!"
 
-    def test_extracts_filename_from_absolute_path(self, monkeypatch, tmp_path):
+    def test_extracts_filename_from_absolute_path(self, tmp_path):
         """Test that only filename is used from absolute paths."""
         output_dir = tmp_path / "outputs"
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         result_json = write_file("/some/absolute/path/myfile.txt", "content")
         result = json.loads(result_json)
@@ -48,11 +49,11 @@ class TestWriteFile:
         # Original path should not be created
         assert not Path("/some/absolute/path/myfile.txt").exists()
 
-    def test_respects_overwrite_false(self, monkeypatch, tmp_path):
+    def test_respects_overwrite_false(self, tmp_path):
         """Test that overwrite=False prevents overwriting."""
         output_dir = tmp_path / "outputs"
         output_dir.mkdir()
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         # Write initial file
         (output_dir / "test.txt").write_text("original")
@@ -65,11 +66,11 @@ class TestWriteFile:
         assert "already exists" in result["error"]
         assert (output_dir / "test.txt").read_text() == "original"
 
-    def test_overwrites_by_default(self, monkeypatch, tmp_path):
+    def test_overwrites_by_default(self, tmp_path):
         """Test that files are overwritten by default."""
         output_dir = tmp_path / "outputs"
         output_dir.mkdir()
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         # Write initial file
         write_file("test.txt", "original")
@@ -79,10 +80,10 @@ class TestWriteFile:
 
         assert (output_dir / "test.txt").read_text() == "new content"
 
-    def test_returns_correct_metadata(self, monkeypatch, tmp_path):
+    def test_returns_correct_metadata(self, tmp_path):
         """Test that result includes correct metadata."""
         output_dir = tmp_path / "outputs"
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         content = "Test content with some length"
         result_json = write_file("test.txt", content)
@@ -94,10 +95,10 @@ class TestWriteFile:
         assert result["size"] == len(content)
         assert "message" in result
 
-    def test_handles_relative_paths(self, monkeypatch, tmp_path):
+    def test_handles_relative_paths(self, tmp_path):
         """Test that relative paths extract just the filename."""
         output_dir = tmp_path / "outputs"
-        monkeypatch.setattr("rossum_agent.file_system_tools.OUTPUT_DIR", output_dir)
+        set_session_output_dir(output_dir)
 
         # Relative path with subdirectory - should extract just the filename
         result_json = write_file("subdir/myfile.txt", "content")
