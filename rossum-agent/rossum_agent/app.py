@@ -49,24 +49,22 @@ st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", i
 
 def main() -> None:  # noqa: C901
     # Initialize credentials in session state
-    # Read from env variables for debugging if suitable
     if "rossum_api_token" not in st.session_state:
-        st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "") if os.getenv("DEBUG") else ""
+        st.session_state.rossum_api_token = os.getenv("ROSSUM_API_TOKEN", "")
     if "rossum_api_base_url" not in st.session_state:
-        st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "") if os.getenv("DEBUG") else ""
+        st.session_state.rossum_api_base_url = os.getenv("ROSSUM_API_BASE_URL", "")
+    if "mcp_mode" not in st.session_state:
+        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
     if "credentials_saved" not in st.session_state:
         st.session_state.credentials_saved = bool(
             st.session_state.rossum_api_token and st.session_state.rossum_api_base_url
         )
-
     if "read_write_disabled" not in st.session_state:
         st.session_state.read_write_disabled = os.getenv("ROSSUM_DISABLE_READ_WRITE", "").lower() in [
             "true",
             "1",
             "yes",
         ]
-    if "mcp_mode" not in st.session_state:
-        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
 
     # Sidebar
     with st.sidebar:
@@ -98,6 +96,8 @@ def main() -> None:  # noqa: C901
                     st.session_state.rossum_api_token = api_token
                     st.session_state.rossum_api_base_url = api_base_url
                     st.session_state.credentials_saved = True
+                    os.environ["ROSSUM_API_TOKEN"] = api_token
+                    os.environ["ROSSUM_API_BASE_URL"] = api_base_url
                     if "agent" in st.session_state:
                         del st.session_state.agent
                     st.rerun()
