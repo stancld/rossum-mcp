@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Fixed leaking Rossum API credentials across users' session [#41](https://github.com/stancld/rossum-mcp/pull/41)
 
 
 ## [0.1.2] - 2025-12-01
