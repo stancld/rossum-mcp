@@ -8,7 +8,7 @@ from pathlib import Path
 
 from smolagents import tool
 
-from rossum_agent.utils import OUTPUT_DIR
+from rossum_agent.utils import get_session_output_dir
 
 
 @tool
@@ -109,10 +109,10 @@ def get_file_info(path: str) -> str:
 
 @tool
 def write_file(file_path: str, content: str, overwrite: bool = True) -> str:
-    """Write text or markdown content to a file in the ./outputs/ directory.
+    """Write text or markdown content to a file in the session outputs directory.
 
     Args:
-        file_path: Path to file (absolute or relative). Will be saved to ./outputs/ directory.
+        file_path: Path to file (absolute or relative). Will be saved to session outputs directory.
         content: Text content to write
         overwrite: Whether to overwrite existing file (default: True)
 
@@ -120,14 +120,15 @@ def write_file(file_path: str, content: str, overwrite: bool = True) -> str:
         JSON string with success status. Use json.loads() to parse.
     """
     try:
-        # Ensure output directory exists
-        OUTPUT_DIR.mkdir(exist_ok=True)
+        # Get session-specific output directory
+        output_dir = get_session_output_dir()
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         # Get the filename and construct path in outputs directory
         input_path = Path(file_path)
         # Always use just the filename (basename) for simplicity and safety
         filename = input_path.name
-        path = OUTPUT_DIR / filename
+        path = output_dir / filename
 
         if path.exists() and not overwrite:
             return json.dumps({"error": f"File already exists and overwrite=False: {file_path}"})
