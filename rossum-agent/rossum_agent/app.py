@@ -76,6 +76,8 @@ def main() -> None:  # noqa: C901
             st.session_state.chat_id = url_chat_id
             if "messages" in st.session_state:
                 del st.session_state.messages  # Force reload from Redis
+            if "output_dir" in st.session_state:
+                del st.session_state.output_dir  # Clear old files
             logger.info(f"Loaded chat ID from URL: {url_chat_id}")
     elif "chat_id" not in st.session_state:
         st.session_state.chat_id = generate_chat_id()
