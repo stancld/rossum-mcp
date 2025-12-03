@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
-- Added conversation permalinks persisted in Redis [#45](https://github.com/stancld/rossum-mcp/pull/44)
+-
 
 
 ## [0.1.4] - 2025-12-03
