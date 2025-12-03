@@ -80,27 +80,24 @@ class TestSetupLogging:
         assert len(file_handlers) == 1
         assert log_file.exists()
 
-    def test_no_elasticsearch_handler_without_host(self):
-        """Test that no Elasticsearch handler is added without host config."""
+    def test_no_redis_handler_without_host(self):
+        """Test that no Redis handler is added without host config."""
         logger = setup_logging(app_name="test-app", use_console=False)
 
-        # Should only have no handlers (we disabled console)
         non_test_handlers = [h for h in logger.handlers if h.__class__.__name__ != "LogCaptureHandler"]
         assert len(non_test_handlers) == 0
 
-    def test_handles_elasticsearch_connection_failure(self):
-        """Test graceful handling when Elasticsearch is unreachable."""
-        with patch("elasticsearch.Elasticsearch") as mock_es_class:
-            mock_es_class.side_effect = Exception("Connection refused")
+    def test_handles_redis_connection_failure(self):
+        """Test graceful handling when Redis is unreachable."""
+        with patch("redis.Redis") as mock_redis_class:
+            mock_redis_class.side_effect = Exception("Connection refused")
 
-            # Should not raise exception
-            logger = setup_logging(app_name="test-app", elasticsearch_host="localhost", use_console=False)
+            logger = setup_logging(app_name="test-app", redis_host="localhost", use_console=False)
 
-            # Should not have Elasticsearch handler
-            from rossum_mcp.logging_config import ElasticsearchHandler  # noqa: PLC0415
+            from rossum_mcp.logging_config import RedisHandler  # noqa: PLC0415
 
-            es_handlers = [h for h in logger.handlers if isinstance(h, ElasticsearchHandler)]
-            assert len(es_handlers) == 0
+            redis_handlers = [h for h in logger.handlers if isinstance(h, RedisHandler)]
+            assert len(redis_handlers) == 0
 
     def test_returns_root_logger(self):
         """Test that setup_logging returns the root logger."""

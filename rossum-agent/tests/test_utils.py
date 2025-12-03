@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import re
 import tempfile
 from pathlib import Path
 
 from rossum_agent.utils import (
     clear_generated_files,
+    generate_chat_id,
     get_generated_files,
     get_session_output_dir,
+    is_valid_chat_id,
     set_session_output_dir,
 )
 
@@ -140,3 +143,99 @@ class TestSessionOutputDir:
         # Just verify get_session_output_dir returns a Path
         result = get_session_output_dir()
         assert isinstance(result, Path)
+
+
+class TestGenerateChatId:
+    """Test generate_chat_id function."""
+
+    def test_generates_unique_ids(self):
+        """Test that multiple calls generate unique chat IDs."""
+        chat_id_1 = generate_chat_id()
+        chat_id_2 = generate_chat_id()
+
+        assert chat_id_1 != chat_id_2
+
+    def test_returns_string(self):
+        """Test that chat ID is a string."""
+        chat_id = generate_chat_id()
+
+        assert isinstance(chat_id, str)
+
+    def test_format_matches_expected_pattern(self):
+        """Test that chat ID matches the expected format."""
+        chat_id = generate_chat_id()
+
+        pattern = r"^chat_\d{14}_[0-9a-f]{12}$"
+        assert re.match(pattern, chat_id), f"Chat ID '{chat_id}' doesn't match expected pattern"
+
+    def test_starts_with_chat_prefix(self):
+        """Test that chat ID starts with 'chat_' prefix."""
+        chat_id = generate_chat_id()
+
+        assert chat_id.startswith("chat_")
+
+    def test_contains_timestamp_component(self):
+        """Test that chat ID contains a timestamp component."""
+        chat_id = generate_chat_id()
+
+        parts = chat_id.split("_")
+        assert len(parts) == 3
+
+        timestamp = parts[1]
+        assert len(timestamp) == 14
+        assert timestamp.isdigit()
+
+    def test_contains_hex_uuid_component(self):
+        """Test that chat ID contains a 12-character hex UUID component."""
+        chat_id = generate_chat_id()
+
+        parts = chat_id.split("_")
+        uuid_part = parts[2]
+
+        assert len(uuid_part) == 12
+        assert all(c in "0123456789abcdef" for c in uuid_part)
+
+
+class TestIsValidChatId:
+    """Test is_valid_chat_id function."""
+
+    def test_valid_chat_id_returns_true(self):
+        """Test that a valid chat ID returns True."""
+        chat_id = generate_chat_id()
+
+        assert is_valid_chat_id(chat_id) is True
+
+    def test_invalid_type_returns_false(self):
+        """Test that non-string input returns False."""
+        assert is_valid_chat_id(123) is False
+        assert is_valid_chat_id(None) is False
+        assert is_valid_chat_id([]) is False
+
+    def test_wrong_prefix_returns_false(self):
+        """Test that chat ID with wrong prefix returns False."""
+        assert is_valid_chat_id("wrong_20231203120000_abc123def456") is False
+
+    def test_wrong_number_of_parts_returns_false(self):
+        """Test that chat ID with wrong number of parts returns False."""
+        assert is_valid_chat_id("chat_20231203120000") is False
+        assert is_valid_chat_id("chat_20231203120000_abc_def") is False
+
+    def test_invalid_timestamp_returns_false(self):
+        """Test that chat ID with invalid timestamp returns False."""
+        assert is_valid_chat_id("chat_2023120312_abc123def456") is False
+        assert is_valid_chat_id("chat_20231203120000X_abc123def456") is False
+        assert is_valid_chat_id("chat_abcd1203120000_abc123def456") is False
+
+    def test_invalid_uuid_length_returns_false(self):
+        """Test that chat ID with wrong UUID length returns False."""
+        assert is_valid_chat_id("chat_20231203120000_abc123") is False
+        assert is_valid_chat_id("chat_20231203120000_abc123def456789") is False
+
+    def test_invalid_uuid_characters_returns_false(self):
+        """Test that chat ID with non-hex UUID returns False."""
+        assert is_valid_chat_id("chat_20231203120000_xyz123def456") is False
+        assert is_valid_chat_id("chat_20231203120000_ABC123DEF456") is False
+
+    def test_empty_string_returns_false(self):
+        """Test that empty string returns False."""
+        assert is_valid_chat_id("") is False

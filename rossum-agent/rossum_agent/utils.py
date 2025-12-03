@@ -1,3 +1,4 @@
+import datetime as dt
 import os
 import shutil
 import tempfile
@@ -124,3 +125,39 @@ def check_env_vars() -> list[tuple[str, str]]:
             missing.append((var, description))
 
     return missing
+
+
+def generate_chat_id() -> str:
+    unique_id = uuid.uuid4().hex[:12]
+    timestamp = dt.datetime.now(tz=dt.UTC).strftime("%Y%m%d%H%M%S")
+    return f"chat_{timestamp}_{unique_id}"
+
+
+def is_valid_chat_id(chat_id: str) -> bool:
+    """Validate chat ID format.
+
+    Args:
+        chat_id: Chat identifier to validate
+
+    Returns:
+        bool: True if chat_id matches expected format
+    """
+    if not isinstance(chat_id, str):
+        return False
+
+    parts = chat_id.split("_")
+    if len(parts) != 3:
+        return False
+
+    if parts[0] != "chat":
+        return False
+
+    # Validate timestamp (14 digits: YYYYMMDDHHMMSS)
+    if not (parts[1].isdigit() and len(parts[1]) == 14):
+        return False
+
+    # Validate hex ID (12 hex characters)
+    if not (len(parts[2]) == 12 and all(c in "0123456789abcdef" for c in parts[2])):
+        return False
+
+    return True

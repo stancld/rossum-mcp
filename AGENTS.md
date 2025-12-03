@@ -97,16 +97,27 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 
 ## Environment
 - Required: `ROSSUM_API_TOKEN`, `ROSSUM_API_BASE_URL`
-- Optional Elasticsearch: `ELASTICSEARCH_HOST`, `ELASTICSEARCH_PORT` (default: 9200)
+- Optional Redis: `REDIS_HOST`, `REDIS_PORT` (default: 6379)
 - Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
+- Optional: `ENABLE_USER_ISOLATION` (true/false, default: false) - Enable per-user chat isolation when deployed behind Teleport
 - MCP client configuration in Claude Desktop or smolagents
 
-## Elasticsearch Logging Setup
-1. **Start Elasticsearch/Kibana**: `docker-compose up elasticsearch-mac kibana-mac -d` (or use `elasticsearch`/`kibana` for linux/amd64)
+### User Isolation Feature
+When `ENABLE_USER_ISOLATION=true`, the agent isolates chat history per user when deployed behind Teleport:
+- Detects user ID from Teleport headers (`X-Teleport-Login`, `X-Forwarded-User`)
+- Falls back to Teleport session cookie if headers unavailable
+- Redis keys pattern: `user:{user_id}:chat:{chat_id}` (vs shared `chat:{chat_id}`)
+- Each user sees only their own chat history in the sidebar
+- Disable for local development (default): all users share chat history
+
+## Redis Logging Setup
+1. **Start Redis**: `docker-compose up redis -d`
 2. **Set environment variables**:
    ```bash
-   export ELASTICSEARCH_HOST=localhost
-   export ELASTICSEARCH_PORT=9200
+   export REDIS_HOST=localhost
+   export REDIS_PORT=6379
    ```
-3. **Access Kibana**: http://localhost:5601
-4. **View logs**: Navigate to Discover → Create index pattern `logstash-*` → View logs filtered by `application: rossum-mcp-server`
+3. **View logs**: Use Redis CLI to view logs:
+   ```bash
+   redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
+   ```
