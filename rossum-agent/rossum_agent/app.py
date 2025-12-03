@@ -264,6 +264,10 @@ def main() -> None:  # noqa: C901
         user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
         render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id)
 
+        # Debug: Display normalized user_id
+        st.sidebar.divider()
+        st.sidebar.caption(f"User ID: {st.session_state.user_id}")
+
     # Main content
     st.title("Rossum Agent")
     st.markdown("Agent for automating Rossum setup processes.")
