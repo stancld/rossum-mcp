@@ -21,11 +21,16 @@ from rossum_agent.agent import create_agent
 from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.beep_sound import generate_beep_wav
+from rossum_agent.redis_storage import RedisStorage
+from rossum_agent.render_modules import render_chat_history
+from rossum_agent.user_detection import normalize_user_id
 from rossum_agent.utils import (
     cleanup_session_output_dir,
     create_session_output_dir,
+    generate_chat_id,
     get_generated_files,
     get_generated_files_with_metadata,
+    is_valid_chat_id,
     set_session_output_dir,
 )
 
@@ -39,7 +44,7 @@ BEEP_HTML = f'<audio src="data:audio/wav;base64,{_beep_b64}" autoplay></audio>'
 
 LOGO_PATH = pathlib.Path(__file__).parent / "assets" / "Primary_light_logo.png"
 
-# Configure logging with Elasticsearch integration
+# Configure logging with Redis integration
 setup_logging(app_name="rossum-agent", log_level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
@@ -49,6 +54,34 @@ st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", i
 
 
 def main() -> None:  # noqa: C901
+    # Set up chat history user isolation
+    st.session_state.user_isolation_enabled = os.getenv("ENABLE_USER_ISOLATION", False)
+
+    # Initialize user ID (with automatic fallback to "default")
+    if "user_id" not in st.session_state:
+        st.session_state.user_id = normalize_user_id(None)
+        logger.info(f"Initialized user_id: {st.session_state.user_id}")
+
+    # Initialize Redis storage
+    if "redis_storage" not in st.session_state:
+        st.session_state.redis_storage = RedisStorage()
+
+    # Initialize chat ID from URL or generate new one
+    url_chat_id = st.query_params.get("chat_id")
+
+    # Check if URL chat_id changed (permalink navigation)
+    if url_chat_id and is_valid_chat_id(url_chat_id):
+        if "chat_id" not in st.session_state or st.session_state.chat_id != url_chat_id:
+            # Chat ID changed via permalink - reset session
+            st.session_state.chat_id = url_chat_id
+            if "messages" in st.session_state:
+                del st.session_state.messages  # Force reload from Redis
+            logger.info(f"Loaded chat ID from URL: {url_chat_id}")
+    elif "chat_id" not in st.session_state:
+        st.session_state.chat_id = generate_chat_id()
+        st.query_params["chat_id"] = st.session_state.chat_id
+        logger.info(f"Generated new chat ID: {st.session_state.chat_id}")
+
     # Initialize session-specific output directory
     if "output_dir" not in st.session_state:
         st.session_state.output_dir = create_session_output_dir()
@@ -74,6 +107,23 @@ def main() -> None:  # noqa: C901
         ]
     if "mcp_mode" not in st.session_state:
         st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
+
+    # Load messages from Redis or initialize empty list (BEFORE sidebar renders)
+    if "messages" not in st.session_state:
+        if st.session_state.redis_storage.is_connected():
+            user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
+            result = st.session_state.redis_storage.load_chat(
+                user_id, st.session_state.chat_id, st.session_state.output_dir
+            )
+            if result:
+                messages, _ = result
+                st.session_state.messages = messages
+                logger.info(f"Loaded {len(messages)} messages from Redis for chat {st.session_state.chat_id}")
+            else:
+                st.session_state.messages = []
+                logger.info(f"No messages found in Redis for chat {st.session_state.chat_id}, starting fresh")
+        else:
+            st.session_state.messages = []
 
     # Sidebar
     with st.sidebar:
@@ -173,6 +223,10 @@ def main() -> None:  # noqa: C901
                 cleanup_session_output_dir(st.session_state.output_dir)
             st.session_state.output_dir = create_session_output_dir()
             set_session_output_dir(st.session_state.output_dir)
+            # Generate new chat ID for new conversation
+            st.session_state.chat_id = generate_chat_id()
+            st.query_params["chat_id"] = st.session_state.chat_id
+            logger.info(f"Reset conversation with new chat ID: {st.session_state.chat_id}")
             st.rerun()
 
         # Generated files section
@@ -204,20 +258,16 @@ def main() -> None:  # noqa: C901
         else:
             st.info("No files generated yet")
 
-    # Stop if credentials not saved
-    if not st.session_state.credentials_saved:
-        st.info("👈 Please enter your Rossum API credentials in the sidebar to continue")
-        st.stop()
+        # Chat History section
+        user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
+        render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id)
 
     # Main content
     st.title("Rossum Agent")
     st.markdown("Agent for automating Rossum setup processes.")
 
-    # Initialize session state
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    if "agent" not in st.session_state:
+    # Initialize agent only if credentials are saved
+    if "agent" not in st.session_state and st.session_state.credentials_saved:
         with st.spinner("Initializing agent..."):
             try:
                 logger.info("Initializing Rossum agent")
@@ -238,11 +288,27 @@ def main() -> None:  # noqa: C901
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # Disable chat input if credentials not saved
+    if not st.session_state.credentials_saved:
+        st.chat_input("👈 Please enter your Rossum API credentials in the sidebar", disabled=True)
+        return
+
     # Process user input
     if prompt := st.chat_input("Enter your instruction..."):
         logger.info(f"User prompt received: {prompt[:100]}...")  # Log first 100 chars
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # Persist user message to Redis
+        if st.session_state.redis_storage.is_connected():
+            user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
+            st.session_state.redis_storage.save_chat(
+                user_id,
+                st.session_state.chat_id,
+                st.session_state.messages,
+                str(st.session_state.output_dir),
+            )
+
         with st.chat_message("user"):
             st.markdown(prompt)
 
@@ -268,6 +334,20 @@ def main() -> None:  # noqa: C901
                     # Save final answer to chat history
                 if final_answer_text:
                     st.session_state.messages.append({"role": "assistant", "content": final_answer_text})
+
+                    # Persist to Redis
+                    if st.session_state.redis_storage.is_connected():
+                        user_id = (
+                            st.session_state.get("user_id")
+                            if st.session_state.get("user_isolation_enabled", False)
+                            else None
+                        )
+                        st.session_state.redis_storage.save_chat(
+                            user_id,
+                            st.session_state.chat_id,
+                            st.session_state.messages,
+                            str(st.session_state.output_dir),
+                        )
 
                     # Log final result
                     duration = time.time() - start_time

@@ -216,32 +216,30 @@ docker-compose up rossum-agent
 
 Access the application at **http://localhost:8501**
 
-#### With Elasticsearch Logging + Kibana
+#### With Redis Logging
 
 For production-like monitoring locally:
 
-**amd64/x86 systems:**
+**All systems:**
 ```bash
-# Set encryption key for Kibana (32+ characters)
-export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-random-encryption-key"
-
 # Start with logging stack
-docker-compose up rossum-agent kibana
+docker-compose up rossum-agent redis
 ```
 
 **ARM Mac (M1/M2/M3):**
 ```bash
-# Set encryption key for Kibana
-export XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="your-32-character-random-encryption-key"
-
 # Start ARM-compatible services
-docker-compose up rossum-agent-mac kibana-mac
+docker-compose up rossum-agent-mac redis
 ```
 
 Access points:
 - **Application**: http://localhost:8501
-- **Kibana**: http://localhost:5601
-- **Elasticsearch**: http://localhost:9200
+- **Redis**: localhost:6379
+
+View logs with:
+```bash
+redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
+```
 
 ---
 

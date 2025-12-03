@@ -50,6 +50,7 @@ mcp = [
 # Streamlit UI
 streamlit = [
     "streamlit>=1.28.0",
+    "redis>=7.0.0",
 ]
 # Testing
 tests = [
@@ -64,7 +65,6 @@ tests = [
 all = [
     "boto3>=1.0",
     "coverage>=7.0.0",
-    "elasticsearch>=9.0",
     "matplotlib>=3.10",
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",
@@ -74,6 +74,7 @@ all = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "pyyaml>=6.0",
+    "redis>=7.0.0",
     "requests>=2.32",
     "rossum-api>=3.6.1",
     "seaborn>=0.13.2",

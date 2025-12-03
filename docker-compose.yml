@@ -1,76 +1,17 @@
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.1
-    platform: linux/amd64
-    container_name: rossum-elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  redis:
+    image: redis:8-alpine
+    container_name: rossum-redis
     ports:
-      - 127.0.0.1:9200:9200
-      - 127.0.0.1:9300:9300
+      - 127.0.0.1:6379:6379
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+      - redis-data:/data
+    command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-
-  elasticsearch-mac:
-    image: arm64v8/elasticsearch:9.2.1
-    container_name: rossum-elasticsearch-mac
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - 127.0.0.1:9200:9200
-      - 127.0.0.1:9300:9300
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    networks:
-      - rossum-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  kibana-base:
-    image: docker.elastic.co/kibana/kibana:9.2.1
-    ports:
-      - 127.0.0.1:5601:5601
-    environment:
-      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    profiles:
-      - base
-
-  kibana:
-    extends: kibana-base
-    container_name: rossum-kibana
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-
-  kibana-mac:
-    extends: kibana-base
-    container_name: rossum-kibana-mac
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch-mac:9200
-    networks:
-      - rossum-network
-    depends_on:
-      elasticsearch-mac:
-        condition: service_healthy
 
   rossum-agent-base:
     image: rossum-agent
@@ -82,7 +23,6 @@ services:
     environment:
       - AWS_PROFILE=${AWS_PROFILE}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - ELASTICSEARCH_PORT=9200
       - LLM_API_BASE_URL=""
     ports:
       - 127.0.0.1:8501:8501
@@ -96,10 +36,10 @@ services:
     environment:
       - AWS_PROFILE=${AWS_PROFILE}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - ELASTICSEARCH_HOST=elasticsearch
-      - ELASTICSEARCH_PORT=9200
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
-      elasticsearch:
+      redis:
         condition: service_healthy
 
   rossum-agent-mac:
@@ -107,12 +47,12 @@ services:
     environment:
       - AWS_PROFILE=${AWS_PROFILE}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - ELASTICSEARCH_HOST=elasticsearch-mac
-      - ELASTICSEARCH_PORT=9200
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - rossum-network
     depends_on:
-      elasticsearch-mac:
+      redis:
         condition: service_healthy
 
 networks:
@@ -120,5 +60,5 @@ networks:
     driver: bridge
 
 volumes:
-  elasticsearch-data:
+  redis-data:
     driver: local
