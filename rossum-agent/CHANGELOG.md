@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 -
 
+## [0.1.5] - 2025-12-03
+- Added User ID to a Streamlit UI for debugging purposes
+
 
 ## [0.1.4] - 2025-12-03
 - Added conversation permalinks persisted in Redis [#45](https://github.com/stancld/rossum-mcp/pull/44)
