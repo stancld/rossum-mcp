@@ -13,7 +13,6 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
-import pyperclip
 import streamlit as st
 from rossum_mcp.logging_config import setup_logging
 from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
@@ -242,8 +241,18 @@ def main() -> None:  # noqa: C901
                 f"{protocol}://{base_url}/?chat_id={st.session_state.chat_id}&user_id={st.session_state.user_id}"
             )
 
-            pyperclip.copy(share_url)
-            st.success(f"✅ Copied! Link: `{share_url}`")
+            st.code(share_url, language=None)
+            copy_html = f"""
+            <script>
+                navigator.clipboard.writeText('{share_url}').then(() => {{
+                    console.log('Link copied to clipboard');
+                }}).catch(() => {{
+                    console.error('Failed to copy to clipboard');
+                }});
+            </script>
+            """
+            st.components.v1.html(copy_html, height=0)
+            st.success("✅ Link copied to clipboard!")
 
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []

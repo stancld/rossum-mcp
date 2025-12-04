@@ -49,7 +49,7 @@ mcp = [
 ]
 # Streamlit UI
 streamlit = [
-    "pyperclip>=1.0",
+
     "streamlit>=1.37.0",
     "redis>=7.0.0",
 ]
