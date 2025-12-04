@@ -100,6 +100,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - Optional Redis: `REDIS_HOST`, `REDIS_PORT` (default: 6379)
 - Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
 - Optional: `TELEPORT_JWT_JWKS_URL` for JWT verification and user isolation
+- Optional: `PUBLIC_URL` for shareable links on remote servers (e.g., `https://your-domain.com`)
 - MCP client configuration in Claude Desktop or smolagents
 
 ### User Isolation Feature

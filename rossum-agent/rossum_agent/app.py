@@ -234,25 +234,19 @@ def main() -> None:  # noqa: C901
         st.subheader("Quick Actions")
 
         # Share conversation button (only for own conversations)
-        if not st.session_state.get("shared_user_id") and st.button("🔗 Copy Shareable Link"):
-            base_url = st.context.headers.get("host", "localhost:8501")
-            protocol = "https" if "localhost" not in base_url else "http"
-            share_url = (
-                f"{protocol}://{base_url}/?chat_id={st.session_state.chat_id}&user_id={st.session_state.user_id}"
-            )
+        if not st.session_state.get("shared_user_id") and st.button("🔗 Get Shareable Link"):
+            # Use PUBLIC_URL from environment if set, otherwise construct from headers
+            public_url = os.getenv("PUBLIC_URL")
+            if public_url:
+                base_url = public_url.rstrip("/")
+            else:
+                host = st.context.headers.get("host", "localhost:8501")
+                protocol = "https" if "localhost" not in host else "http"
+                base_url = f"{protocol}://{host}"
+
+            share_url = f"{base_url}/?chat_id={st.session_state.chat_id}&user_id={st.session_state.user_id}"
 
             st.code(share_url, language=None)
-            copy_html = f"""
-            <script>
-                navigator.clipboard.writeText('{share_url}').then(() => {{
-                    console.log('Link copied to clipboard');
-                }}).catch(() => {{
-                    console.error('Failed to copy to clipboard');
-                }});
-            </script>
-            """
-            st.components.v1.html(copy_html, height=0)
-            st.success("✅ Link copied to clipboard!")
 
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []
