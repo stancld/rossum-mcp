@@ -14,6 +14,7 @@ import time
 from typing import TYPE_CHECKING
 
 import streamlit as st
+import streamlit.components.v1 as components
 from rossum_mcp.logging_config import setup_logging
 from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 
@@ -73,17 +74,19 @@ def main() -> None:  # noqa: C901
 
     # Initialize chat ID from URL or generate new one
     url_chat_id = st.query_params.get("chat_id")
+    url_shared_user_id = st.query_params.get("user_id")  # For shared permalinks
 
     # Check if URL chat_id changed (permalink navigation)
     if url_chat_id and is_valid_chat_id(url_chat_id):
         if "chat_id" not in st.session_state or st.session_state.chat_id != url_chat_id:
             # Chat ID changed via permalink - reset session
             st.session_state.chat_id = url_chat_id
+            st.session_state.shared_user_id = url_shared_user_id  # Store shared user_id if present
             if "messages" in st.session_state:
                 del st.session_state.messages  # Force reload from Redis
             if "output_dir" in st.session_state:
                 del st.session_state.output_dir  # Clear old files
-            logger.info(f"Loaded chat ID from URL: {url_chat_id}")
+            logger.info(f"Loaded chat ID from URL: {url_chat_id}, shared_user_id: {url_shared_user_id}")
     elif "chat_id" not in st.session_state:
         st.session_state.chat_id = generate_chat_id()
         st.query_params["chat_id"] = st.session_state.chat_id
@@ -118,7 +121,16 @@ def main() -> None:  # noqa: C901
     # Load messages from Redis or initialize empty list (BEFORE sidebar renders)
     if "messages" not in st.session_state:
         if st.session_state.redis_storage.is_connected():
-            user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
+            # Use shared_user_id if present (for shared permalinks), otherwise use current user_id
+            shared_user_id = st.session_state.get("shared_user_id")
+            if shared_user_id:
+                # Loading shared conversation - use the original owner's user_id
+                user_id = shared_user_id if st.session_state.user_isolation_enabled else None
+                logger.info(f"Loading shared conversation from user: {shared_user_id}")
+            else:
+                # Loading own conversation
+                user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
+
             result = st.session_state.redis_storage.load_chat(
                 user_id, st.session_state.chat_id, st.session_state.output_dir
             )
@@ -221,6 +233,27 @@ def main() -> None:  # noqa: C901
 
         # Quick actions
         st.subheader("Quick Actions")
+
+        # Share conversation button (only for own conversations)
+        if not st.session_state.get("shared_user_id") and st.button("🔗 Copy Shareable Link"):
+            base_url = st.context.headers.get("host", "localhost:8501")
+            protocol = "https" if "localhost" not in base_url else "http"
+            user_id_param = f"&user_id={st.session_state.user_id}" if st.session_state.user_isolation_enabled else ""
+            share_url = f"{protocol}://{base_url}/?chat_id={st.session_state.chat_id}{user_id_param}"
+
+            # Auto-copy to clipboard using JavaScript
+            copy_script = f"""
+                <script>
+                    navigator.clipboard.writeText("{share_url}").then(function() {{
+                        console.log('Link copied to clipboard');
+                    }}, function(err) {{
+                        console.error('Could not copy text: ', err);
+                    }});
+                </script>
+            """
+            components.html(copy_script, height=0)
+            st.success("✅ Link copied to clipboard!")
+
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []
             if "agent" in st.session_state:
@@ -267,7 +300,8 @@ def main() -> None:  # noqa: C901
 
         # Chat History section
         user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
-        render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id)
+        is_shared_view = bool(st.session_state.get("shared_user_id"))
+        render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id, is_shared_view)
 
         # Debug: Display normalized user_id
         st.sidebar.divider()
