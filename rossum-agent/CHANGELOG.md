@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 - Fixed teleport user detection from JWT [#46](https://github.com/stancld/rossum-mcp/pull/46)
-- Made permalinks shareable across users [#47](https://github.com/stancld/rossum-mcp/pull/47)
+- Made permalinks shareable across users [#47](https://github.com/stancld/rossum-mcp/pull/47), [#48](https://github.com/stancld/rossum-mcp/pull/48)
 
 ## [0.1.6] - 2025-12-03
 - Improved teleport user detection [#45](https://github.com/stancld/rossum-mcp/pull/45)

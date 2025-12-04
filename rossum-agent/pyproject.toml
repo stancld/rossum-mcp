@@ -41,6 +41,7 @@ docs = [
     "sphinx-rtd-theme>=2.0.0",
 ]
 streamlit = [
+    "pyperclip>=1.0",
     "redis>=7.0.0",
     "streamlit>=1.28.0",
 ]
