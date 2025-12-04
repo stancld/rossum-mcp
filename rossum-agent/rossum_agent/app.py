@@ -23,7 +23,7 @@ from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_for
 from rossum_agent.beep_sound import generate_beep_wav
 from rossum_agent.redis_storage import RedisStorage
 from rossum_agent.render_modules import render_chat_history
-from rossum_agent.user_detection import normalize_user_id
+from rossum_agent.user_detection import detect_user_id, normalize_user_id
 from rossum_agent.utils import (
     cleanup_session_output_dir,
     create_session_output_dir,
@@ -54,13 +54,18 @@ st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", i
 
 
 def main() -> None:  # noqa: C901
-    # Set up chat history user isolation
-    st.session_state.user_isolation_enabled = os.getenv("ENABLE_USER_ISOLATION", False)
+    # Auto-enable user isolation if Teleport JWT config is present
+    jwt_enabled = bool(os.getenv("TELEPORT_JWT_JWKS_URL"))
+    st.session_state.user_isolation_enabled = jwt_enabled
 
     # Initialize user ID (with automatic fallback to "default")
     if "user_id" not in st.session_state:
-        st.session_state.user_id = normalize_user_id(None)
-        logger.info(f"Initialized user_id: {st.session_state.user_id}")
+        headers = dict(st.context.headers) if hasattr(st.context, "headers") else None
+        jwt_token = headers.get("Teleport-Jwt-Assertion") if headers else None
+
+        # Detect user from JWT token
+        user_id = detect_user_id(jwt_token=jwt_token)
+        st.session_state.user_id = normalize_user_id(user_id)
 
     # Initialize Redis storage
     if "redis_storage" not in st.session_state:

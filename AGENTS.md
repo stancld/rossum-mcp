@@ -99,16 +99,16 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - Required: `ROSSUM_API_TOKEN`, `ROSSUM_API_BASE_URL`
 - Optional Redis: `REDIS_HOST`, `REDIS_PORT` (default: 6379)
 - Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
-- Optional: `ENABLE_USER_ISOLATION` (true/false, default: false) - Enable per-user chat isolation when deployed behind Teleport
+- Optional: `TELEPORT_JWT_JWKS_URL` for JWT verification and user isolation
 - MCP client configuration in Claude Desktop or smolagents
 
 ### User Isolation Feature
-When `ENABLE_USER_ISOLATION=true`, the agent isolates chat history per user when deployed behind Teleport:
-- Detects user ID from Teleport headers (`X-Teleport-Login`, `X-Forwarded-User`)
-- Falls back to Teleport session cookie if headers unavailable
+User isolation is automatically enabled when `TELEPORT_JWT_JWKS_URL` is configured:
+- Extracts username from `Teleport-Jwt-Assertion` header (JWT token)
+- JWT token is the only supported authentication method
 - Redis keys pattern: `user:{user_id}:chat:{chat_id}` (vs shared `chat:{chat_id}`)
 - Each user sees only their own chat history in the sidebar
-- Disable for local development (default): all users share chat history
+- Local development (no JWT config): all users share chat history
 
 ## Redis Logging Setup
 1. **Start Redis**: `docker-compose up redis -d`

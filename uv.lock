@@ -2466,9 +2466,9 @@ requires-dist = [
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5.2" },
     { name = "sphinx-rtd-theme", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = ">=2.0.0" },
-    { name = "streamlit", marker = "extra == 'all'", specifier = ">=1.28.0" },
-    { name = "streamlit", marker = "extra == 'streamlit'", specifier = ">=1.28.0" },
-    { name = "streamlit", marker = "extra == 'tests'", specifier = ">=1.28.0" },
+    { name = "streamlit", marker = "extra == 'all'", specifier = ">=1.37.0" },
+    { name = "streamlit", marker = "extra == 'streamlit'", specifier = ">=1.37.0" },
+    { name = "streamlit", marker = "extra == 'tests'", specifier = ">=1.37.0" },
 ]
 provides-extras = ["agent", "docs", "mcp", "streamlit", "tests", "all"]
 
