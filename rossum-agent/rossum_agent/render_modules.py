@@ -7,7 +7,7 @@ import streamlit as st
 from rossum_agent.redis_storage import RedisStorage
 
 
-def render_chat_history(  # noqa: C901
+def render_chat_history(
     redis_storage: RedisStorage,
     current_chat_id: str,
     user_id: str | None = None,
@@ -23,11 +23,6 @@ def render_chat_history(  # noqa: C901
     """
     st.markdown("---")
     st.subheader("Chat History")
-
-    # Don't show chat history in sidebar when viewing shared conversations
-    if is_shared_view:
-        st.info("Viewing shared conversation")
-        return
 
     if redis_storage.is_connected():
         all_chats = redis_storage.list_all_chats(user_id)

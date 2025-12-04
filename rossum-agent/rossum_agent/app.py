@@ -13,8 +13,8 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
+import pyperclip
 import streamlit as st
-import streamlit.components.v1 as components
 from rossum_mcp.logging_config import setup_logging
 from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 
@@ -238,21 +238,12 @@ def main() -> None:  # noqa: C901
         if not st.session_state.get("shared_user_id") and st.button("🔗 Copy Shareable Link"):
             base_url = st.context.headers.get("host", "localhost:8501")
             protocol = "https" if "localhost" not in base_url else "http"
-            user_id_param = f"&user_id={st.session_state.user_id}" if st.session_state.user_isolation_enabled else ""
-            share_url = f"{protocol}://{base_url}/?chat_id={st.session_state.chat_id}{user_id_param}"
+            share_url = (
+                f"{protocol}://{base_url}/?chat_id={st.session_state.chat_id}&user_id={st.session_state.user_id}"
+            )
 
-            # Auto-copy to clipboard using JavaScript
-            copy_script = f"""
-                <script>
-                    navigator.clipboard.writeText("{share_url}").then(function() {{
-                        console.log('Link copied to clipboard');
-                    }}, function(err) {{
-                        console.error('Could not copy text: ', err);
-                    }});
-                </script>
-            """
-            components.html(copy_script, height=0)
-            st.success("✅ Link copied to clipboard!")
+            pyperclip.copy(share_url)
+            st.success(f"✅ Copied! Link: `{share_url}`")
 
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []
