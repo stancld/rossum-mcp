@@ -11,3 +11,4 @@ All notable changes to this project will be documented in this file.
 - Added `get_hook` method for `rossum_api.models.hook.Hook` objects. [#49](https://github.com/stancld/rossum-mcp/pull/49)
 - Added `get_rule` method for `rossum_api.models.rule.Rule` objects. [#49](https://github.com/stancld/rossum-mcp/pull/49)
 - Added `get_engine_fields` method for `rossum_api.models.engine.EngineFields` objects. [#49](https://github.com/stancld/rossum-mcp/pull/49)
+- Added `get_relation` and `list_relations` methods for `rossum_api.models.relation.Relations` objects. [#50](https://github.com/stancld/rossum-mcp/pull/50)

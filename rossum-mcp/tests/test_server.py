@@ -2109,6 +2109,8 @@ class TestReadOnlyMode:
             "get_queue_engine",
             "get_hook",
             "list_hooks",
+            "get_relation",
+            "list_relations",
             "get_rule",
             "list_rules",
             "get_workspace",
@@ -2146,8 +2148,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 28 tools should be present (added get_engine, list_engines, get_hook, get_rule, and get_engine_fields)
-        assert len(tool_names) == 28
+        # All 30 tools should be present (added get_relation and list_relations)
+        assert len(tool_names) == 30
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -3070,3 +3072,217 @@ class TestGetEngineFields:
         assert result["count"] == 0
         assert result["results"] == []
         server.client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
+
+
+@pytest.mark.unit
+class TestGetRelation:
+    """Tests for getting a single relation."""
+
+    @pytest.mark.asyncio
+    async def test_get_relation_success(self, server: RossumMCPServer) -> None:
+        """Test successful relation retrieval."""
+        mock_relation_data = {
+            "id": 100,
+            "type": "duplicate",
+            "key": "abc123def456",
+            "parent": "https://api.test.rossum.ai/v1/annotations/1000",
+            "annotations": [
+                "https://api.test.rossum.ai/v1/annotations/1000",
+                "https://api.test.rossum.ai/v1/annotations/1001",
+            ],
+            "url": "https://api.test.rossum.ai/v1/relations/100",
+        }
+
+        mock_relation = Mock()
+        mock_relation.id = 100
+        mock_relation.type = "duplicate"
+        mock_relation.key = "abc123def456"
+        mock_relation.parent = "https://api.test.rossum.ai/v1/annotations/1000"
+        mock_relation.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/1000",
+            "https://api.test.rossum.ai/v1/annotations/1001",
+        ]
+        mock_relation.url = "https://api.test.rossum.ai/v1/relations/100"
+
+        server.client._http_client.fetch_one = AsyncMock(return_value=mock_relation_data)
+        server.client._deserializer = Mock(return_value=mock_relation)
+
+        result = await server.relations_handler.get_relation(100)
+
+        assert result["id"] == 100
+        assert result["type"] == "duplicate"
+        assert result["key"] == "abc123def456"
+        assert result["parent"] == "https://api.test.rossum.ai/v1/annotations/1000"
+        assert len(result["annotations"]) == 2
+        server.client._http_client.fetch_one.assert_called_once_with(Resource.Relation, 100)
+
+    @pytest.mark.asyncio
+    async def test_get_relation_edit_type(self, server: RossumMCPServer) -> None:
+        """Test retrieving an edit-type relation."""
+        mock_relation_data = {
+            "id": 200,
+            "type": "edit",
+            "key": None,
+            "parent": "https://api.test.rossum.ai/v1/annotations/2000",
+            "annotations": [
+                "https://api.test.rossum.ai/v1/annotations/2001",
+                "https://api.test.rossum.ai/v1/annotations/2002",
+            ],
+            "url": "https://api.test.rossum.ai/v1/relations/200",
+        }
+
+        mock_relation = Mock()
+        mock_relation.id = 200
+        mock_relation.type = "edit"
+        mock_relation.key = None
+        mock_relation.parent = "https://api.test.rossum.ai/v1/annotations/2000"
+        mock_relation.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/2001",
+            "https://api.test.rossum.ai/v1/annotations/2002",
+        ]
+        mock_relation.url = "https://api.test.rossum.ai/v1/relations/200"
+
+        server.client._http_client.fetch_one = AsyncMock(return_value=mock_relation_data)
+        server.client._deserializer = Mock(return_value=mock_relation)
+
+        result = await server.relations_handler.get_relation(200)
+
+        assert result["id"] == 200
+        assert result["type"] == "edit"
+        assert result["key"] is None
+        server.client._http_client.fetch_one.assert_called_once_with(Resource.Relation, 200)
+
+
+@pytest.mark.unit
+class TestListRelations:
+    """Tests for listing relations."""
+
+    @pytest.mark.asyncio
+    async def test_list_relations_success(self, server: RossumMCPServer) -> None:
+        """Test successful relations listing."""
+        mock_relation1 = Mock()
+        mock_relation1.id = 1
+        mock_relation1.type = "duplicate"
+        mock_relation1.key = "abc123"
+        mock_relation1.parent = "https://api.test.rossum.ai/v1/annotations/100"
+        mock_relation1.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/100",
+            "https://api.test.rossum.ai/v1/annotations/101",
+        ]
+        mock_relation1.url = "https://api.test.rossum.ai/v1/relations/1"
+
+        mock_relation2 = Mock()
+        mock_relation2.id = 2
+        mock_relation2.type = "edit"
+        mock_relation2.key = None
+        mock_relation2.parent = "https://api.test.rossum.ai/v1/annotations/200"
+        mock_relation2.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/201",
+        ]
+        mock_relation2.url = "https://api.test.rossum.ai/v1/relations/2"
+
+        async def async_iter():
+            for relation in [mock_relation1, mock_relation2]:
+                yield relation
+
+        server.client.list_relations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.relations_handler.list_relations()
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 1
+        assert result["results"][0]["type"] == "duplicate"
+        assert result["results"][1]["id"] == 2
+        assert result["results"][1]["type"] == "edit"
+        server.client.list_relations.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_list_relations_with_type_filter(self, server: RossumMCPServer) -> None:
+        """Test listing relations filtered by type."""
+        mock_relation = Mock()
+        mock_relation.id = 1
+        mock_relation.type = "duplicate"
+        mock_relation.key = "xyz789"
+        mock_relation.parent = "https://api.test.rossum.ai/v1/annotations/300"
+        mock_relation.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/300",
+            "https://api.test.rossum.ai/v1/annotations/301",
+        ]
+        mock_relation.url = "https://api.test.rossum.ai/v1/relations/1"
+
+        async def async_iter():
+            yield mock_relation
+
+        server.client.list_relations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.relations_handler.list_relations(type="duplicate")
+
+        assert result["count"] == 1
+        assert result["results"][0]["type"] == "duplicate"
+        server.client.list_relations.assert_called_once_with(type="duplicate")
+
+    @pytest.mark.asyncio
+    async def test_list_relations_with_parent_filter(self, server: RossumMCPServer) -> None:
+        """Test listing relations filtered by parent annotation."""
+        mock_relation = Mock()
+        mock_relation.id = 10
+        mock_relation.type = "edit"
+        mock_relation.key = None
+        mock_relation.parent = "https://api.test.rossum.ai/v1/annotations/500"
+        mock_relation.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/501",
+        ]
+        mock_relation.url = "https://api.test.rossum.ai/v1/relations/10"
+
+        async def async_iter():
+            yield mock_relation
+
+        server.client.list_relations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.relations_handler.list_relations(parent=500)
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 10
+        server.client.list_relations.assert_called_once_with(parent=500)
+
+    @pytest.mark.asyncio
+    async def test_list_relations_with_annotation_filter(self, server: RossumMCPServer) -> None:
+        """Test listing relations filtered by annotation ID."""
+        mock_relation = Mock()
+        mock_relation.id = 15
+        mock_relation.type = "attachment"
+        mock_relation.key = None
+        mock_relation.parent = "https://api.test.rossum.ai/v1/annotations/600"
+        mock_relation.annotations = [
+            "https://api.test.rossum.ai/v1/annotations/600",
+            "https://api.test.rossum.ai/v1/annotations/601",
+        ]
+        mock_relation.url = "https://api.test.rossum.ai/v1/relations/15"
+
+        async def async_iter():
+            yield mock_relation
+
+        server.client.list_relations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.relations_handler.list_relations(annotation=600)
+
+        assert result["count"] == 1
+        assert result["results"][0]["type"] == "attachment"
+        server.client.list_relations.assert_called_once_with(annotation=600)
+
+    @pytest.mark.asyncio
+    async def test_list_relations_empty(self, server: RossumMCPServer) -> None:
+        """Test listing relations when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.list_relations = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.relations_handler.list_relations()
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.list_relations.assert_called_once()

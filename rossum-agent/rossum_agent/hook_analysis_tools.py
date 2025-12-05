@@ -379,10 +379,9 @@ def _generate_single_mermaid_flow(execution_phases: list[dict[str, Any]]) -> str
     lines = ["```mermaid", "graph TD", "    Start[Document Upload]"]
 
     prev_node = "Start"
-    node_counter = 1
     hook_counter = 1
 
-    for phase in execution_phases:
+    for node_counter, phase in enumerate(execution_phases, start=1):
         # Create event node
         event_node = f"Event{node_counter}"
         event_label = phase["event"].replace(".", "_")
@@ -396,7 +395,6 @@ def _generate_single_mermaid_flow(execution_phases: list[dict[str, Any]]) -> str
             hook_counter += 1
 
         prev_node = event_node
-        node_counter += 1
 
     lines.append(f"    {prev_node} --> End[Complete]")
     lines.append("```")
@@ -422,9 +420,8 @@ def _generate_multi_cluster_mermaid(clusters: list[list[dict[str, Any]]]) -> str
         all_lines.append(f"        {start_node}[Start]")
 
         prev_node = start_node
-        node_counter = 1
 
-        for phase in cluster:
+        for node_counter, phase in enumerate(cluster, start=1):
             event_node = f"Event{cluster_idx}_{node_counter}"
             event_label = phase["event"].replace(".", "_")
             all_lines.append(f"        {prev_node} --> {event_node}[{event_label}]")
@@ -437,7 +434,6 @@ def _generate_multi_cluster_mermaid(clusters: list[list[dict[str, Any]]]) -> str
                 hook_counter += 1
 
             prev_node = event_node
-            node_counter += 1
 
         end_node = f"End{cluster_idx}"
         all_lines.append(f"        {prev_node} --> {end_node}[Complete]")

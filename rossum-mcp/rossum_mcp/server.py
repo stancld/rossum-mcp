@@ -26,6 +26,7 @@ from rossum_mcp.handlers import (
     EnginesHandler,
     HooksHandler,
     QueuesHandler,
+    RelationsHandler,
     RulesHandler,
     SchemasHandler,
     WorkspacesHandler,
@@ -80,6 +81,9 @@ class RossumMCPServer:
             # HooksHandler
             "get_hook",
             "list_hooks",
+            # RelationsHandler
+            "get_relation",
+            "list_relations",
             # RulesHandler
             "get_rule",
             "list_rules",
@@ -94,6 +98,7 @@ class RossumMCPServer:
         self.schemas_handler = SchemasHandler(self.client, self.base_url)
         self.engines_handler = EnginesHandler(self.client, self.base_url)
         self.hooks_handler = HooksHandler(self.client, self.base_url)
+        self.relations_handler = RelationsHandler(self.client, self.base_url)
         self.rules_handler = RulesHandler(self.client, self.base_url)
         self.workspaces_handler = WorkspacesHandler(self.client, self.base_url)
 
@@ -103,6 +108,7 @@ class RossumMCPServer:
             self.schemas_handler,
             self.engines_handler,
             self.hooks_handler,
+            self.relations_handler,
             self.rules_handler,
             self.workspaces_handler,
         ]

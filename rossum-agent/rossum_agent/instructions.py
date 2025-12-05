@@ -239,6 +239,7 @@ Debugging checklist:
 - [ ] Validate field IDs exist in schema
 - [ ] Review hook code for syntax/logic errors
 - [ ] Check automation_level and score_threshold settings
+- [ ] **Parent-child relations can be chained** - when debugging, check children of children (nested relationships) as issues may propagate through the chain
 
 ## Generating Visual Documentation
 
