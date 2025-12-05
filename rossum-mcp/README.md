@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-26-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-27-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-sdk)
 
 </div>
@@ -41,8 +41,10 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **create_engine_field**: Create engine fields and link them to schemas
 
 ### Extensions & Rules
+- **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
 
 ## Prerequisites
@@ -704,6 +706,50 @@ Creates a new engine field and links it to schemas. Engine fields define what da
 ```
 
 ### Rules Management
+
+#### get_rule
+
+Retrieves details of a specific business rule by its ID.
+
+**Parameters:**
+- `rule_id` (integer, required): Rule ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Auto-calculate Total",
+  "url": "https://elis.rossum.ai/api/v1/rules/12345",
+  "enabled": true,
+  "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+  "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+  "trigger_condition": "field.amount_total.changed",
+  "created_by": "https://elis.rossum.ai/api/v1/users/300",
+  "created_at": "2024-01-01T00:00:00Z",
+  "modified_by": "https://elis.rossum.ai/api/v1/users/300",
+  "modified_at": "2024-01-01T00:00:00Z",
+  "rule_template": null,
+  "synchronized_from_template": false,
+  "actions": [
+    {
+      "id": 54321,
+      "type": "set_datapoint_value",
+      "payload": {
+        "datapoint_id": "tax_amount",
+        "value": "field.amount_total.value * 0.2"
+      },
+      "event": "trigger",
+      "enabled": true
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Get rule details
+rule = get_rule(rule_id=12345)
+```
 
 #### list_rules
 

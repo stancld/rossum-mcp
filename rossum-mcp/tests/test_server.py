@@ -2109,6 +2109,7 @@ class TestReadOnlyMode:
             "get_queue_engine",
             "get_hook",
             "list_hooks",
+            "get_rule",
             "list_rules",
             "get_workspace",
             "list_workspaces",
@@ -2144,8 +2145,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 26 tools should be present (added get_engine, list_engines, and get_hook)
-        assert len(tool_names) == 26
+        # All 27 tools should be present (added get_engine, list_engines, get_hook, and get_rule)
+        assert len(tool_names) == 27
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -2395,6 +2396,72 @@ class TestCreateWorkspace:
         assert call_args["name"] == "Metadata Workspace"
         assert call_args["organization"] == "https://api.test.rossum.ai/organizations/20"
         assert call_args["metadata"] == {"department": "finance", "region": "us-west"}
+
+
+@pytest.mark.unit
+class TestGetRule:
+    """Tests for rule retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_rule_success(self, server: RossumMCPServer) -> None:
+        """Test successful rule retrieval."""
+        mock_rule = Mock()
+        mock_rule.id = 100
+        mock_rule.name = "Test Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/100"
+        mock_rule.enabled = True
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "field.amount.changed"
+        mock_rule.actions = [{"type": "validate", "field": "total_amount"}]
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        server.client.retrieve_rule.return_value = mock_rule
+
+        result = await server.rules_handler.get_rule(100)
+
+        assert result["id"] == 100
+        assert result["name"] == "Test Rule"
+        assert result["url"] == "https://api.test.rossum.ai/v1/rules/100"
+        assert result["enabled"] is True
+        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/10"
+        assert result["schema"] == "https://api.test.rossum.ai/v1/schemas/100"
+        assert result["trigger_condition"] == "field.amount.changed"
+        server.client.retrieve_rule.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_get_rule_disabled(self, server: RossumMCPServer) -> None:
+        """Test retrieving a disabled rule."""
+        mock_rule = Mock()
+        mock_rule.id = 200
+        mock_rule.name = "Disabled Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/200"
+        mock_rule.enabled = False
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "admin@example.com"
+        mock_rule.created_at = "2025-01-03T00:00:00Z"
+        mock_rule.modified_by = "admin@example.com"
+        mock_rule.modified_at = "2025-01-04T00:00:00Z"
+        mock_rule.rule_template = "template1"
+        mock_rule.synchronized_from_template = True
+
+        server.client.retrieve_rule.return_value = mock_rule
+
+        result = await server.rules_handler.get_rule(200)
+
+        assert result["id"] == 200
+        assert result["enabled"] is False
+        assert result["rule_template"] == "template1"
+        assert result["synchronized_from_template"] is True
+        server.client.retrieve_rule.assert_called_once_with(200)
 
 
 @pytest.mark.unit

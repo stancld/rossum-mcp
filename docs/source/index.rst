@@ -73,6 +73,7 @@ The MCP server provides **22 tools** organized into four categories:
 * **get_hook** - Get hook/extension details
 * **list_hooks** - List webhooks and extensions
 * **create_hook** - Create webhooks or serverless function hooks
+* **get_rule** - Get business rule details
 * **list_rules** - List business rules with trigger conditions and actions
 
 **AI Agent Toolkit**

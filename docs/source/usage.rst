@@ -773,6 +773,54 @@ can be used for custom validation, data enrichment, or integration with external
      "message": "Hook 'My Hook' created successfully with ID 12345"
    }
 
+get_rule
+^^^^^^^^
+
+Retrieves details of a specific business rule by its ID.
+
+**Parameters:**
+
+- ``rule_id`` (integer, required): Rule ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "Auto-calculate Total",
+     "url": "https://elis.rossum.ai/api/v1/rules/12345",
+     "enabled": true,
+     "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+     "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+     "trigger_condition": "field.amount_total.changed",
+     "created_by": "https://elis.rossum.ai/api/v1/users/300",
+     "created_at": "2024-01-01T00:00:00Z",
+     "modified_by": "https://elis.rossum.ai/api/v1/users/300",
+     "modified_at": "2024-01-01T00:00:00Z",
+     "rule_template": null,
+     "synchronized_from_template": false,
+     "actions": [
+       {
+         "id": 54321,
+         "type": "set_datapoint_value",
+         "payload": {
+           "datapoint_id": "tax_amount",
+           "value": "field.amount_total.value * 0.2"
+         },
+         "event": "trigger",
+         "enabled": true
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get rule details
+   rule = get_rule(rule_id=12345)
+
 list_rules
 ^^^^^^^^^^
 

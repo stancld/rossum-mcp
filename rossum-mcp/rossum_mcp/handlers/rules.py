@@ -24,6 +24,15 @@ class RulesHandler(BaseHandler):
         """Get list of tool definitions for rule operations."""
         return [
             Tool(
+                name="get_rule",
+                description="Retrieve rule details. Returns: id, name, url, enabled, organization, schema, trigger_condition, created_by, created_at, modified_by, modified_at, rule_template, synchronized_from_template, actions.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {"rule_id": {"type": "integer", "description": "Rule ID"}},
+                    "required": ["rule_id"],
+                },
+            ),
+            Tool(
                 name="list_rules",
                 description="List all rules. Returns: count, results array with rule details (id, name, url, enabled, organization, schema, trigger_condition, created_by, created_at, modified_by, modified_at, rule_template, synchronized_from_template, actions).",
                 inputSchema={
@@ -45,6 +54,20 @@ class RulesHandler(BaseHandler):
                 },
             ),
         ]
+
+    async def get_rule(self, rule_id: int) -> dict:
+        """Retrieve rule details.
+
+        Args:
+            rule_id: Rossum rule ID to retrieve
+
+        Returns:
+            Dictionary containing rule details
+        """
+        logger.debug(f"Retrieving rule: rule_id={rule_id}")
+
+        rule: Rule = await self.client.retrieve_rule(rule_id)
+        return dataclasses.asdict(rule)
 
     async def list_rules(
         self, schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None

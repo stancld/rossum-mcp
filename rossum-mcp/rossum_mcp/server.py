@@ -80,6 +80,7 @@ class RossumMCPServer:
             "get_hook",
             "list_hooks",
             # RulesHandler
+            "get_rule",
             "list_rules",
             # WorkspacesHandler
             "get_workspace",
