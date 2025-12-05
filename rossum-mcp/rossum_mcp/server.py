@@ -77,6 +77,7 @@ class RossumMCPServer:
             "get_engine",
             "list_engines",
             # HooksHandler
+            "get_hook",
             "list_hooks",
             # RulesHandler
             "list_rules",

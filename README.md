@@ -320,7 +320,7 @@ The agent includes file system tools, plotting capabilities, and Rossum integrat
 
 ## MCP Tools
 
-The MCP server provides 25 tools organized into six categories:
+The MCP server provides 26 tools organized into six categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -366,8 +366,9 @@ The MCP server provides 25 tools organized into six categories:
 </details>
 
 <details>
-<summary><strong>Automation Management (3 tools)</strong></summary>
+<summary><strong>Automation Management (4 tools)</strong></summary>
 
+- `get_hook` - Get hook/extension details
 - `list_hooks` - List webhooks and extensions
 - `create_hook` - Create new hooks/extensions
 - `list_rules` - List validation rules

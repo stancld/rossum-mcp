@@ -644,6 +644,42 @@ Confirms an annotation to move it to 'confirmed' status. Can be called after
      "message": "Annotation 12345 confirmed successfully. Status changed to 'confirmed'."
    }
 
+get_hook
+^^^^^^^^
+
+Retrieves details of a specific hook/extension by its ID.
+
+**Parameters:**
+
+- ``hook_id`` (integer, required): Hook ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "Validation Hook",
+     "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+     "type": "webhook",
+     "active": true,
+     "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+     "events": ["annotation_status", "annotation_content"],
+     "config": {
+       "url": "https://example.com/webhook",
+       "secret": "***"
+     },
+     "settings": {},
+     "extension_source": "rossum_store"
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get hook details
+   hook = get_hook(hook_id=12345)
+
 list_hooks
 ^^^^^^^^^^
 

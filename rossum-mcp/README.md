@@ -6,8 +6,8 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-25-blue.svg)](#available-tools)
-[![Rossum SDK](https://img.shields.io/badge/Rossum-SDK-orange.svg)](https://github.com/rossumai/rossum-sdk)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-26-blue.svg)](#available-tools)
+[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-sdk)
 
 </div>
 
@@ -532,6 +532,38 @@ Updates an existing engine's settings including learning and training queues.
   "description": "Engine description",
   "message": "Engine 'My Engine' (ID 12345) updated successfully"
 }
+```
+
+#### get_hook
+
+Retrieves details of a specific hook/extension by its ID.
+
+**Parameters:**
+- `hook_id` (integer, required): Hook ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Validation Hook",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "type": "webhook",
+  "active": true,
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_status", "annotation_content"],
+  "config": {
+    "url": "https://example.com/webhook",
+    "secret": "***"
+  },
+  "settings": {},
+  "extension_source": "rossum_store"
+}
+```
+
+**Example usage:**
+```python
+# Get hook details
+hook = get_hook(hook_id=12345)
 ```
 
 #### list_hooks

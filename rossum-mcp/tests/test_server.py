@@ -2107,6 +2107,7 @@ class TestReadOnlyMode:
             "get_schema",
             "get_queue_schema",
             "get_queue_engine",
+            "get_hook",
             "list_hooks",
             "list_rules",
             "get_workspace",
@@ -2143,8 +2144,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 25 tools should be present (added get_engine and list_engines)
-        assert len(tool_names) == 25
+        # All 26 tools should be present (added get_engine, list_engines, and get_hook)
+        assert len(tool_names) == 26
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -2590,6 +2591,59 @@ class TestListRules:
         assert result["count"] == 0
         assert result["results"] == []
         server.client.list_rules.assert_called_once_with(schema=999)
+
+
+@pytest.mark.unit
+class TestGetHook:
+    """Tests for hook retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_hook_success(self, server: RossumMCPServer) -> None:
+        """Test successful hook retrieval."""
+        mock_hook = Mock()
+        mock_hook.id = 100
+        mock_hook.name = "Test Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/100"
+        mock_hook.active = True
+        mock_hook.type = "function"
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/1"]
+        mock_hook.events = ["annotation_content"]
+        mock_hook.config = {"runtime": "python3.12", "code": "import json"}
+        mock_hook.settings = {"key": "value"}
+
+        server.client.retrieve_hook.return_value = mock_hook
+
+        result = await server.hooks_handler.get_hook(100)
+
+        assert result["id"] == 100
+        assert result["name"] == "Test Hook"
+        assert result["url"] == "https://api.test.rossum.ai/v1/hooks/100"
+        assert result["active"] is True
+        assert result["type"] == "function"
+        server.client.retrieve_hook.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_get_hook_webhook_type(self, server: RossumMCPServer) -> None:
+        """Test retrieving a webhook hook."""
+        mock_hook = Mock()
+        mock_hook.id = 200
+        mock_hook.name = "Webhook Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/200"
+        mock_hook.active = False
+        mock_hook.type = "webhook"
+        mock_hook.queues = []
+        mock_hook.events = ["annotation_status"]
+        mock_hook.config = {"url": "https://example.com/webhook"}
+        mock_hook.settings = {}
+
+        server.client.retrieve_hook.return_value = mock_hook
+
+        result = await server.hooks_handler.get_hook(200)
+
+        assert result["id"] == 200
+        assert result["type"] == "webhook"
+        assert result["active"] is False
+        server.client.retrieve_hook.assert_called_once_with(200)
 
 
 @pytest.mark.unit

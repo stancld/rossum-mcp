@@ -10,7 +10,7 @@
 ## Architecture
 - Single-file MCP server (`server.py`) for Rossum API integration
 - Main class: `RossumMCPServer` with async tool handlers
-- 20 tools including `upload_document`, `get_annotation`, `list_annotations`, `create_hook`, `list_hooks`, `list_rules`, etc.
+- 21 tools including `upload_document`, `get_annotation`, `list_annotations`, `get_hook`, `create_hook`, `list_hooks`, `list_rules`, etc.
 - Sync API client wrapped in async executors for MCP compatibility
 - Examples in `examples/` directory
 
