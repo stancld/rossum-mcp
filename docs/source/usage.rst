@@ -459,6 +459,55 @@ Creates a new schema with sections and datapoints.
      "message": "Schema 'My Schema' created successfully with ID 12345"
    }
 
+list_engines
+^^^^^^^^^^^^
+
+Lists all engines with optional filtering.
+
+**Parameters:**
+
+- ``id`` (integer, optional): Filter by engine ID
+- ``engine_type`` (string, optional): Filter by engine type ('extractor' or 'splitter')
+- ``agenda_id`` (string, optional): Filter by agenda ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "name": "My Engine",
+         "url": "https://elis.rossum.ai/api/v1/engines/12345",
+         "type": "extractor",
+         "learning_enabled": true,
+         "training_queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+         "description": "Engine description",
+         "agenda_id": "abc123",
+         "organization": "https://elis.rossum.ai/api/v1/organizations/123"
+       }
+     ],
+     "message": "Retrieved 2 engine(s)"
+   }
+
+**Example:**
+
+.. code-block:: python
+
+   # List all engines
+   all_engines = list_engines()
+
+   # List specific engine by ID
+   engine = list_engines(id=12345)
+
+   # List extractors only
+   extractors = list_engines(engine_type="extractor")
+
+   # List engines by agenda
+   agenda_engines = list_engines(agenda_id="abc123")
+
 create_engine
 ^^^^^^^^^^^^^
 
@@ -517,6 +566,61 @@ engine extracts and must be created for each field in the schema when setting up
      "schema_ids": [456, 789],
      "message": "Engine field 'Invoice Number' created successfully with ID 12345 and linked to 2 schema(s)"
    }
+
+get_engine_fields
+^^^^^^^^^^^^^^^^^
+
+Retrieves engine fields for a specific engine or all engine fields.
+
+**Parameters:**
+
+- ``engine_id`` (integer, optional): Engine ID to filter fields by. If not provided, retrieves all engine fields.
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "url": "https://elis.rossum.ai/api/v1/engine_fields/12345",
+         "engine": "https://elis.rossum.ai/api/v1/engines/123",
+         "name": "invoice_number",
+         "label": "Invoice Number",
+         "type": "string",
+         "subtype": null,
+         "tabular": false,
+         "multiline": "false",
+         "pre_trained_field_id": null,
+         "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+       },
+       {
+         "id": 12346,
+         "url": "https://elis.rossum.ai/api/v1/engine_fields/12346",
+         "engine": "https://elis.rossum.ai/api/v1/engines/123",
+         "name": "invoice_date",
+         "label": "Invoice Date",
+         "type": "date",
+         "subtype": null,
+         "tabular": false,
+         "multiline": "false",
+         "pre_trained_field_id": null,
+         "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get all engine fields for a specific engine
+   engine_fields = get_engine_fields(engine_id=123)
+
+   # Get all engine fields
+   all_fields = get_engine_fields()
 
 start_annotation
 ^^^^^^^^^^^^^^^^
@@ -594,6 +698,42 @@ Confirms an annotation to move it to 'confirmed' status. Can be called after
      "annotation_id": 12345,
      "message": "Annotation 12345 confirmed successfully. Status changed to 'confirmed'."
    }
+
+get_hook
+^^^^^^^^
+
+Retrieves details of a specific hook/extension by its ID.
+
+**Parameters:**
+
+- ``hook_id`` (integer, required): Hook ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "Validation Hook",
+     "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+     "type": "webhook",
+     "active": true,
+     "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+     "events": ["annotation_status", "annotation_content"],
+     "config": {
+       "url": "https://example.com/webhook",
+       "secret": "***"
+     },
+     "settings": {},
+     "extension_source": "rossum_store"
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get hook details
+   hook = get_hook(hook_id=12345)
 
 list_hooks
 ^^^^^^^^^^
@@ -687,6 +827,54 @@ can be used for custom validation, data enrichment, or integration with external
      "settings": {"custom_key": "custom_value"},
      "message": "Hook 'My Hook' created successfully with ID 12345"
    }
+
+get_rule
+^^^^^^^^
+
+Retrieves details of a specific business rule by its ID.
+
+**Parameters:**
+
+- ``rule_id`` (integer, required): Rule ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "Auto-calculate Total",
+     "url": "https://elis.rossum.ai/api/v1/rules/12345",
+     "enabled": true,
+     "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+     "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+     "trigger_condition": "field.amount_total.changed",
+     "created_by": "https://elis.rossum.ai/api/v1/users/300",
+     "created_at": "2024-01-01T00:00:00Z",
+     "modified_by": "https://elis.rossum.ai/api/v1/users/300",
+     "modified_at": "2024-01-01T00:00:00Z",
+     "rule_template": null,
+     "synchronized_from_template": false,
+     "actions": [
+       {
+         "id": 54321,
+         "type": "set_datapoint_value",
+         "payload": {
+           "datapoint_id": "tax_amount",
+           "value": "field.amount_total.value * 0.2"
+         },
+         "event": "trigger",
+         "enabled": true
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get rule details
+   rule = get_rule(rule_id=12345)
 
 list_rules
 ^^^^^^^^^^

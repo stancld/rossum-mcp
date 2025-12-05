@@ -27,6 +27,15 @@ class HooksHandler(BaseHandler):
         """Get list of tool definitions for hook operations."""
         return [
             Tool(
+                name="get_hook",
+                description="Retrieve hook details. Returns: id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {"hook_id": {"type": "integer", "description": "Hook ID"}},
+                    "required": ["hook_id"],
+                },
+            ),
+            Tool(
                 name="list_hooks",
                 description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description).",
                 inputSchema={
@@ -90,6 +99,20 @@ class HooksHandler(BaseHandler):
             ),
         ]
 
+    async def get_hook(self, hook_id: int) -> dict:
+        """Retrieve hook details.
+
+        Args:
+            hook_id: Rossum hook ID to retrieve
+
+        Returns:
+            Dictionary containing hook details
+        """
+        logger.debug(f"Retrieving hook: hook_id={hook_id}")
+
+        hook: Hook = await self.client.retrieve_hook(hook_id)
+        return dataclasses.asdict(hook)
+
     async def list_hooks(
         self, queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
     ) -> dict:
@@ -122,10 +145,7 @@ class HooksHandler(BaseHandler):
         else:
             hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
 
-        return {
-            "count": len(hooks_list),
-            "results": [dataclasses.asdict(hook) for hook in hooks_list],
-        }
+        return {"count": len(hooks_list), "results": [dataclasses.asdict(hook) for hook in hooks_list]}
 
     async def create_hook(
         self,

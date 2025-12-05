@@ -34,7 +34,7 @@ class WorkspacesHandler(BaseHandler):
             ),
             Tool(
                 name="list_workspaces",
-                description="List all workspaces with optional filters. Returns: list of workspaces with id, name, url, organization, queues.",
+                description="List all workspaces with optional filters. Returns: count, results array with workspace details (id, name, url, organization, queues).",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -99,14 +99,11 @@ class WorkspacesHandler(BaseHandler):
         if name is not None:
             filters["name"] = name
 
-        workspaces_list = []
-        async for workspace in self.client.list_workspaces(**filters):  # type: ignore[arg-type]
-            workspaces_list.append(dataclasses.asdict(workspace))
+        workspaces_list = [workspace async for workspace in self.client.list_workspaces(**filters)]  # type: ignore[arg-type]
 
         return {
-            "workspaces": workspaces_list,
             "count": len(workspaces_list),
-            "message": f"Retrieved {len(workspaces_list)} workspace(s)",
+            "results": [dataclasses.asdict(workspace) for workspace in workspaces_list],
         }
 
     async def create_workspace(self, name: str, organization_id: int, metadata: dict | None = None) -> dict:

@@ -25,6 +25,41 @@ class EnginesHandler(BaseHandler):
         """Get list of tool definitions for engine operations."""
         return [
             Tool(
+                name="get_engine",
+                description="Retrieve a single engine by ID. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, organization, message.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "engine_id": {
+                            "type": "integer",
+                            "description": "Engine ID to retrieve",
+                        },
+                    },
+                    "required": ["engine_id"],
+                },
+            ),
+            Tool(
+                name="list_engines",
+                description="List all engines with optional filters. Returns: count, results array with engine details (id, url, name, type, learning_enabled, training_queues, description, agenda_id, organization).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional engine ID filter",
+                        },
+                        "engine_type": {
+                            "type": ["string", "null"],
+                            "description": "Optional engine type filter ('extractor' or 'splitter')",
+                        },
+                        "agenda_id": {
+                            "type": ["string", "null"],
+                            "description": "Optional agenda ID filter",
+                        },
+                    },
+                },
+            ),
+            Tool(
                 name="update_engine",
                 description="Update engine settings. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, message.",
                 inputSchema={
@@ -94,7 +129,65 @@ class EnginesHandler(BaseHandler):
                     "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
                 },
             ),
+            Tool(
+                name="get_engine_fields",
+                description="Retrieve engine fields for a specific engine or all engine fields. Returns: count, results array with engine field details (id, url, engine, name, tabular, label, type, subtype, pre_trained_field_id, multiline).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "engine_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional engine ID filter. If None, retrieves all engine fields.",
+                        },
+                    },
+                },
+            ),
         ]
+
+    async def get_engine(self, engine_id: int) -> dict:
+        """Retrieve a single engine by ID.
+
+        Args:
+            engine_id: Rossum engine ID to retrieve
+
+        Returns:
+            Dictionary containing engine details including id, name, url, type, learning_enabled,
+            training_queues, description, agenda_id, organization, and message
+        """
+        logger.debug(f"Retrieving engine: engine_id={engine_id}")
+
+        engine: Engine = await self.client.retrieve_engine(engine_id)
+
+        result = dataclasses.asdict(engine)
+        result["message"] = f"Engine '{engine.name}' (ID {engine.id}) retrieved successfully"
+        return result
+
+    async def list_engines(
+        self, id: int | None = None, engine_type: str | None = None, agenda_id: str | None = None
+    ) -> dict:
+        """List all engines with optional filters.
+
+        Args:
+            id: Optional engine ID filter
+            engine_type: Optional engine type filter ('extractor' or 'splitter')
+            agenda_id: Optional agenda ID filter
+
+        Returns:
+            Dictionary containing list of engines with count, results, and message
+        """
+        logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")
+
+        filters: dict[str, int | str] = {}
+        if id is not None:
+            filters["id"] = id
+        if engine_type is not None:
+            filters["type"] = engine_type
+        if agenda_id is not None:
+            filters["agenda_id"] = agenda_id
+
+        engines_list = [engine async for engine in self.client.list_engines(**filters)]  # type: ignore[arg-type]
+
+        return {"count": len(engines_list), "results": [dataclasses.asdict(engine) for engine in engines_list]}
 
     async def update_engine(self, engine_id: int, engine_data: dict) -> dict:
         """Update an existing engine's settings.
@@ -240,3 +333,23 @@ class EnginesHandler(BaseHandler):
             f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)"
         )
         return result
+
+    async def get_engine_fields(self, engine_id: int | None = None) -> dict:
+        """Retrieve engine fields for a specific engine or all engine fields.
+
+        Args:
+            engine_id: Optional engine ID to filter fields by. If None, retrieves all engine fields.
+
+        Returns:
+            Dictionary containing list of engine fields with count, results, and message
+        """
+        logger.debug(f"Retrieving engine fields: engine_id={engine_id}")
+
+        engine_fields_list = [
+            engine_field async for engine_field in self.client.retrieve_engine_fields(engine_id=engine_id)
+        ]
+
+        return {
+            "count": len(engine_fields_list),
+            "results": [dataclasses.asdict(engine_field) for engine_field in engine_fields_list],
+        }

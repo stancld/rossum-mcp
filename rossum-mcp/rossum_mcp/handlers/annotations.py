@@ -209,10 +209,7 @@ class AnnotationsHandler(BaseHandler):
 
         annotations_list: list[Annotation] = [item async for item in self.client.list_annotations(**params)]
 
-        return {
-            "count": len(annotations_list),
-            "results": [dataclasses.asdict(ann) for ann in annotations_list],
-        }
+        return {"count": len(annotations_list), "results": [dataclasses.asdict(ann) for ann in annotations_list]}
 
     async def start_annotation(self, annotation_id: int) -> dict:
         """Start annotation to move it to 'reviewing' status.

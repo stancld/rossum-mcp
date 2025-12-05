@@ -6,7 +6,8 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![Rossum SDK](https://img.shields.io/badge/Rossum-SDK-orange.svg)](https://github.com/rossumai/rossum-sdk)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-28-blue.svg)](#available-tools)
+[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-sdk)
 
 </div>
 
@@ -32,14 +33,24 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **update_queue**: Update queue settings including automation thresholds
 - **update_schema**: Update schema with field-level automation thresholds
 
+### Workspace Management
+- **get_workspace**: Retrieve workspace details by ID
+- **list_workspaces**: List all workspaces with optional filtering
+- **create_workspace**: Create a new workspace
+
 ### Engine Management
+- **get_engine**: Retrieve engine details by ID
+- **list_engines**: List all engines with optional filters
 - **create_engine**: Create a new engine (extractor or splitter)
 - **update_engine**: Update engine settings including learning and training queues
 - **create_engine_field**: Create engine fields and link them to schemas
+- **get_engine_fields**: Retrieve engine fields for a specific engine or all engine fields
 
 ### Extensions & Rules
+- **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
 
 ## Prerequisites
@@ -399,6 +410,80 @@ Updates an existing schema, typically used to set field-level automation thresho
 
 ### Engine Management
 
+#### get_engine
+
+Retrieves detailed information about a specific engine by its ID.
+
+**Parameters:**
+- `engine_id` (integer, required): Engine ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Invoice Extractor",
+  "url": "https://elis.rossum.ai/api/v1/engines/12345",
+  "type": "extractor",
+  "learning_enabled": true,
+  "training_queues": ["https://elis.rossum.ai/api/v1/queues/100", "https://elis.rossum.ai/api/v1/queues/200"],
+  "description": "Extracts invoice data",
+  "agenda_id": "agenda-123",
+  "organization": "https://elis.rossum.ai/api/v1/organizations/10",
+  "message": "Engine 'Invoice Extractor' (ID 12345) retrieved successfully"
+}
+```
+
+**Example usage:**
+```python
+# Get engine details
+engine = get_engine(engine_id=12345)
+```
+
+#### list_engines
+
+Lists all engines with optional filtering.
+
+**Parameters:**
+- `id` (integer, optional): Filter by engine ID
+- `engine_type` (string, optional): Filter by engine type ('extractor' or 'splitter')
+- `agenda_id` (string, optional): Filter by agenda ID
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "name": "My Engine",
+      "url": "https://elis.rossum.ai/api/v1/engines/12345",
+      "type": "extractor",
+      "learning_enabled": true,
+      "training_queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+      "description": "Engine description",
+      "agenda_id": "abc123",
+      "organization": "https://elis.rossum.ai/api/v1/organizations/123"
+    }
+  ],
+  "message": "Retrieved 2 engine(s)"
+}
+```
+
+**Example usage:**
+```python
+# List all engines
+all_engines = list_engines()
+
+# List specific engine by ID
+engine = list_engines(id=12345)
+
+# List extractors only
+extractors = list_engines(engine_type="extractor")
+
+# List engines by agenda
+agenda_engines = list_engines(agenda_id="abc123")
+```
+
 #### create_engine
 
 Creates a new engine for document processing.
@@ -455,6 +540,38 @@ Updates an existing engine's settings including learning and training queues.
   "description": "Engine description",
   "message": "Engine 'My Engine' (ID 12345) updated successfully"
 }
+```
+
+#### get_hook
+
+Retrieves details of a specific hook/extension by its ID.
+
+**Parameters:**
+- `hook_id` (integer, required): Hook ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Validation Hook",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "type": "webhook",
+  "active": true,
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_status", "annotation_content"],
+  "config": {
+    "url": "https://example.com/webhook",
+    "secret": "***"
+  },
+  "settings": {},
+  "extension_source": "rossum_store"
+}
+```
+
+**Example usage:**
+```python
+# Get hook details
+hook = get_hook(hook_id=12345)
 ```
 
 #### list_hooks
@@ -594,7 +711,102 @@ Creates a new engine field and links it to schemas. Engine fields define what da
 }
 ```
 
+#### get_engine_fields
+
+Retrieves engine fields for a specific engine or all engine fields.
+
+**Parameters:**
+- `engine_id` (integer, optional): Engine ID to filter fields by. If not provided, retrieves all engine fields.
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "url": "https://elis.rossum.ai/api/v1/engine_fields/12345",
+      "engine": "https://elis.rossum.ai/api/v1/engines/123",
+      "name": "invoice_number",
+      "label": "Invoice Number",
+      "type": "string",
+      "subtype": null,
+      "tabular": false,
+      "multiline": "false",
+      "pre_trained_field_id": null,
+      "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+    },
+    {
+      "id": 12346,
+      "url": "https://elis.rossum.ai/api/v1/engine_fields/12346",
+      "engine": "https://elis.rossum.ai/api/v1/engines/123",
+      "name": "invoice_date",
+      "label": "Invoice Date",
+      "type": "date",
+      "subtype": null,
+      "tabular": false,
+      "multiline": "false",
+      "pre_trained_field_id": null,
+      "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Get all engine fields for a specific engine
+engine_fields = get_engine_fields(engine_id=123)
+
+# Get all engine fields
+all_fields = get_engine_fields()
+```
+
 ### Rules Management
+
+#### get_rule
+
+Retrieves details of a specific business rule by its ID.
+
+**Parameters:**
+- `rule_id` (integer, required): Rule ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Auto-calculate Total",
+  "url": "https://elis.rossum.ai/api/v1/rules/12345",
+  "enabled": true,
+  "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+  "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+  "trigger_condition": "field.amount_total.changed",
+  "created_by": "https://elis.rossum.ai/api/v1/users/300",
+  "created_at": "2024-01-01T00:00:00Z",
+  "modified_by": "https://elis.rossum.ai/api/v1/users/300",
+  "modified_at": "2024-01-01T00:00:00Z",
+  "rule_template": null,
+  "synchronized_from_template": false,
+  "actions": [
+    {
+      "id": 54321,
+      "type": "set_datapoint_value",
+      "payload": {
+        "datapoint_id": "tax_amount",
+        "value": "field.amount_total.value * 0.2"
+      },
+      "event": "trigger",
+      "enabled": true
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Get rule details
+rule = get_rule(rule_id=12345)
+```
 
 #### list_rules
 

@@ -3,13 +3,14 @@
 ## Commands
 - **Python setup**: `pip install -e .`
 - **Run server**: `python server.py`
+- **Run tests**: `pytest` (run all tests), `pytest path/to/test_file.py` (run specific test)
 - **Lint & type check**: `pre-commit run --all-files`
 - **Individual tools**: `ruff check --fix`, `ruff format`, `mypy --config-file=mypy.ini`
 
 ## Architecture
 - Single-file MCP server (`server.py`) for Rossum API integration
 - Main class: `RossumMCPServer` with async tool handlers
-- 20 tools including `upload_document`, `get_annotation`, `list_annotations`, `create_hook`, `list_hooks`, `list_rules`, etc.
+- 21 tools including `upload_document`, `get_annotation`, `list_annotations`, `get_hook`, `create_hook`, `list_hooks`, `list_rules`, etc.
 - Sync API client wrapped in async executors for MCP compatibility
 - Examples in `examples/` directory
 
@@ -83,6 +84,39 @@ grep -A5 "Tool(" rossum_mcp/server.py | grep "name="
 grep "^\*\*" docs/source/index.rst
 grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 ```
+
+## Testing Requirements
+
+**CRITICAL**: When adding new features or modifying existing code, you MUST write tests.
+
+### When to Write Tests:
+- **New functions/methods**: Write unit tests for all new functions and methods
+- **New MCP tools**: Add integration tests in `rossum-mcp/tests/test_server.py`
+- **New agent tools**: Add unit tests in `rossum-agent/tests/`
+- **Bug fixes**: Add regression tests to prevent the bug from reoccurring
+- **Modified logic**: Update existing tests and add new ones for changed behavior
+- **New modules**: Create corresponding test file (e.g., `foo.py` → `test_foo.py`)
+
+### Test Structure:
+- Place tests in `tests/` directory mirroring the source structure
+- Use pytest fixtures for common setup (see `conftest.py`)
+- Test file naming: `test_<module_name>.py`
+- Test function naming: `test_<functionality>_<scenario>`
+
+### Test Coverage Guidelines:
+- **Unit tests**: Test individual functions/methods in isolation
+- **Integration tests**: Test MCP tool handlers end-to-end
+- **Mock external dependencies**: Use `unittest.mock` for API calls, file I/O, etc.
+- **Edge cases**: Test error conditions, empty inputs, boundary values
+- **Async code**: Use `pytest-asyncio` for async function tests
+
+### Development Workflow:
+1. Write/modify code
+2. Write/update tests for your changes
+3. Run tests: `pytest path/to/test_file.py`
+4. Verify all tests pass: `pytest`
+5. Run pre-commit hooks: `pre-commit run --all-files`
+6. Fix any issues and repeat until all checks pass
 
 ## Code Style
 - **Python version**: 3.12+ syntax required

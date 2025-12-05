@@ -595,6 +595,7 @@ class TestGetQueueEngine:
             "training_queues": ["https://api.test.rossum.ai/v1/queues/666"],
             "description": "Test embedded engine",
             "agenda_id": "test-agenda",
+            "organization": "https://api.test.rossum.ai/v1/organizations/1",
         }
         mock_queue.dedicated_engine = None
         mock_queue.generic_engine = None
@@ -2106,10 +2107,15 @@ class TestReadOnlyMode:
             "get_schema",
             "get_queue_schema",
             "get_queue_engine",
+            "get_hook",
             "list_hooks",
+            "get_rule",
             "list_rules",
             "get_workspace",
             "list_workspaces",
+            "get_engine",
+            "list_engines",
+            "get_engine_fields",
         }
 
         # Write tools that should NOT be present
@@ -2140,8 +2146,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 23 tools should be present
-        assert len(tool_names) == 23
+        # All 28 tools should be present (added get_engine, list_engines, get_hook, get_rule, and get_engine_fields)
+        assert len(tool_names) == 28
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -2258,12 +2264,11 @@ class TestListWorkspaces:
         result = await server.workspaces_handler.list_workspaces()
 
         assert result["count"] == 2
-        assert len(result["workspaces"]) == 2
-        assert result["workspaces"][0]["id"] == 1
-        assert result["workspaces"][0]["name"] == "Workspace 1"
-        assert result["workspaces"][1]["id"] == 2
-        assert result["workspaces"][1]["name"] == "Workspace 2"
-        assert "Retrieved 2 workspace(s)" in result["message"]
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 1
+        assert result["results"][0]["name"] == "Workspace 1"
+        assert result["results"][1]["id"] == 2
+        assert result["results"][1]["name"] == "Workspace 2"
 
         server.client.list_workspaces.assert_called_once_with()
 
@@ -2287,8 +2292,8 @@ class TestListWorkspaces:
         result = await server.workspaces_handler.list_workspaces(organization_id=10)
 
         assert result["count"] == 1
-        assert len(result["workspaces"]) == 1
-        assert result["workspaces"][0]["id"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["id"] == 1
         server.client.list_workspaces.assert_called_once_with(organization=10)
 
     @pytest.mark.asyncio
@@ -2311,7 +2316,7 @@ class TestListWorkspaces:
         result = await server.workspaces_handler.list_workspaces(name="Specific Workspace")
 
         assert result["count"] == 1
-        assert result["workspaces"][0]["name"] == "Specific Workspace"
+        assert result["results"][0]["name"] == "Specific Workspace"
         server.client.list_workspaces.assert_called_once_with(name="Specific Workspace")
 
     @pytest.mark.asyncio
@@ -2327,8 +2332,7 @@ class TestListWorkspaces:
         result = await server.workspaces_handler.list_workspaces()
 
         assert result["count"] == 0
-        assert result["workspaces"] == []
-        assert "Retrieved 0 workspace(s)" in result["message"]
+        assert result["results"] == []
 
 
 @pytest.mark.unit
@@ -2393,3 +2397,676 @@ class TestCreateWorkspace:
         assert call_args["name"] == "Metadata Workspace"
         assert call_args["organization"] == "https://api.test.rossum.ai/organizations/20"
         assert call_args["metadata"] == {"department": "finance", "region": "us-west"}
+
+
+@pytest.mark.unit
+class TestGetRule:
+    """Tests for rule retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_rule_success(self, server: RossumMCPServer) -> None:
+        """Test successful rule retrieval."""
+        mock_rule = Mock()
+        mock_rule.id = 100
+        mock_rule.name = "Test Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/100"
+        mock_rule.enabled = True
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "field.amount.changed"
+        mock_rule.actions = [{"type": "validate", "field": "total_amount"}]
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        server.client.retrieve_rule.return_value = mock_rule
+
+        result = await server.rules_handler.get_rule(100)
+
+        assert result["id"] == 100
+        assert result["name"] == "Test Rule"
+        assert result["url"] == "https://api.test.rossum.ai/v1/rules/100"
+        assert result["enabled"] is True
+        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/10"
+        assert result["schema"] == "https://api.test.rossum.ai/v1/schemas/100"
+        assert result["trigger_condition"] == "field.amount.changed"
+        server.client.retrieve_rule.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_get_rule_disabled(self, server: RossumMCPServer) -> None:
+        """Test retrieving a disabled rule."""
+        mock_rule = Mock()
+        mock_rule.id = 200
+        mock_rule.name = "Disabled Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/200"
+        mock_rule.enabled = False
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "admin@example.com"
+        mock_rule.created_at = "2025-01-03T00:00:00Z"
+        mock_rule.modified_by = "admin@example.com"
+        mock_rule.modified_at = "2025-01-04T00:00:00Z"
+        mock_rule.rule_template = "template1"
+        mock_rule.synchronized_from_template = True
+
+        server.client.retrieve_rule.return_value = mock_rule
+
+        result = await server.rules_handler.get_rule(200)
+
+        assert result["id"] == 200
+        assert result["enabled"] is False
+        assert result["rule_template"] == "template1"
+        assert result["synchronized_from_template"] is True
+        server.client.retrieve_rule.assert_called_once_with(200)
+
+
+@pytest.mark.unit
+class TestListRules:
+    """Tests for listing rules functionality."""
+
+    @pytest.mark.asyncio
+    async def test_list_rules_success(self, server: RossumMCPServer) -> None:
+        """Test successful rules listing."""
+        mock_rule1 = Mock()
+        mock_rule1.id = 1
+        mock_rule1.name = "Validation Rule"
+        mock_rule1.url = "https://api.test.rossum.ai/v1/rules/1"
+        mock_rule1.enabled = True
+        mock_rule1.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule1.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule1.trigger_condition = "all"
+        mock_rule1.actions = [{"type": "validate", "field": "total_amount"}]
+        mock_rule1.created_by = "user@example.com"
+        mock_rule1.created_at = "2025-01-01T00:00:00Z"
+        mock_rule1.modified_by = "user@example.com"
+        mock_rule1.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule1.rule_template = None
+        mock_rule1.synchronized_from_template = False
+
+        mock_rule2 = Mock()
+        mock_rule2.id = 2
+        mock_rule2.name = "Calculation Rule"
+        mock_rule2.url = "https://api.test.rossum.ai/v1/rules/2"
+        mock_rule2.enabled = False
+        mock_rule2.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule2.schema = "https://api.test.rossum.ai/v1/schemas/101"
+        mock_rule2.trigger_condition = "any"
+        mock_rule2.actions = [{"type": "calculate", "formula": "sum"}]
+        mock_rule2.created_by = "admin@example.com"
+        mock_rule2.created_at = "2025-01-03T00:00:00Z"
+        mock_rule2.modified_by = "admin@example.com"
+        mock_rule2.modified_at = "2025-01-04T00:00:00Z"
+        mock_rule2.rule_template = "template1"
+        mock_rule2.synchronized_from_template = True
+
+        async def async_iter():
+            for rule in [mock_rule1, mock_rule2]:
+                yield rule
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules()
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 1
+        assert result["results"][0]["name"] == "Validation Rule"
+        assert result["results"][0]["enabled"] is True
+        assert result["results"][1]["id"] == 2
+        assert result["results"][1]["name"] == "Calculation Rule"
+        assert result["results"][1]["enabled"] is False
+        server.client.list_rules.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_list_rules_with_schema_filter(self, server: RossumMCPServer) -> None:
+        """Test listing rules filtered by schema_id."""
+        mock_rule = Mock()
+        mock_rule.id = 3
+        mock_rule.name = "Schema Specific Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/3"
+        mock_rule.enabled = True
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/200"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        async def async_iter():
+            yield mock_rule
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules(schema_id=200)
+
+        assert result["count"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["id"] == 3
+        assert result["results"][0]["name"] == "Schema Specific Rule"
+        server.client.list_rules.assert_called_once_with(schema=200)
+
+    @pytest.mark.asyncio
+    async def test_list_rules_with_organization_filter(self, server: RossumMCPServer) -> None:
+        """Test listing rules filtered by organization_id."""
+        mock_rule = Mock()
+        mock_rule.id = 4
+        mock_rule.name = "Org Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/4"
+        mock_rule.enabled = True
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/50"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        async def async_iter():
+            yield mock_rule
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules(organization_id=50)
+
+        assert result["count"] == 1
+        assert result["results"][0]["organization"] == "https://api.test.rossum.ai/v1/organizations/50"
+        server.client.list_rules.assert_called_once_with(organization=50)
+
+    @pytest.mark.asyncio
+    async def test_list_rules_with_enabled_filter(self, server: RossumMCPServer) -> None:
+        """Test listing rules filtered by enabled status."""
+        mock_rule = Mock()
+        mock_rule.id = 5
+        mock_rule.name = "Enabled Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/5"
+        mock_rule.enabled = True
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/10"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/100"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        async def async_iter():
+            yield mock_rule
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules(enabled=True)
+
+        assert result["count"] == 1
+        assert result["results"][0]["enabled"] is True
+        server.client.list_rules.assert_called_once_with(enabled=True)
+
+    @pytest.mark.asyncio
+    async def test_list_rules_with_multiple_filters(self, server: RossumMCPServer) -> None:
+        """Test listing rules with multiple filters."""
+        mock_rule = Mock()
+        mock_rule.id = 6
+        mock_rule.name = "Filtered Rule"
+        mock_rule.url = "https://api.test.rossum.ai/v1/rules/6"
+        mock_rule.enabled = False
+        mock_rule.organization = "https://api.test.rossum.ai/v1/organizations/30"
+        mock_rule.schema = "https://api.test.rossum.ai/v1/schemas/150"
+        mock_rule.trigger_condition = "all"
+        mock_rule.actions = []
+        mock_rule.created_by = "user@example.com"
+        mock_rule.created_at = "2025-01-01T00:00:00Z"
+        mock_rule.modified_by = "user@example.com"
+        mock_rule.modified_at = "2025-01-02T00:00:00Z"
+        mock_rule.rule_template = None
+        mock_rule.synchronized_from_template = False
+
+        async def async_iter():
+            yield mock_rule
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules(schema_id=150, organization_id=30, enabled=False)
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 6
+        server.client.list_rules.assert_called_once_with(schema=150, organization=30, enabled=False)
+
+    @pytest.mark.asyncio
+    async def test_list_rules_empty(self, server: RossumMCPServer) -> None:
+        """Test listing rules when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.list_rules = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.rules_handler.list_rules(schema_id=999)
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.list_rules.assert_called_once_with(schema=999)
+
+
+@pytest.mark.unit
+class TestGetHook:
+    """Tests for hook retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_hook_success(self, server: RossumMCPServer) -> None:
+        """Test successful hook retrieval."""
+        mock_hook = Mock()
+        mock_hook.id = 100
+        mock_hook.name = "Test Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/100"
+        mock_hook.active = True
+        mock_hook.type = "function"
+        mock_hook.queues = ["https://api.test.rossum.ai/v1/queues/1"]
+        mock_hook.events = ["annotation_content"]
+        mock_hook.config = {"runtime": "python3.12", "code": "import json"}
+        mock_hook.settings = {"key": "value"}
+
+        server.client.retrieve_hook.return_value = mock_hook
+
+        result = await server.hooks_handler.get_hook(100)
+
+        assert result["id"] == 100
+        assert result["name"] == "Test Hook"
+        assert result["url"] == "https://api.test.rossum.ai/v1/hooks/100"
+        assert result["active"] is True
+        assert result["type"] == "function"
+        server.client.retrieve_hook.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_get_hook_webhook_type(self, server: RossumMCPServer) -> None:
+        """Test retrieving a webhook hook."""
+        mock_hook = Mock()
+        mock_hook.id = 200
+        mock_hook.name = "Webhook Hook"
+        mock_hook.url = "https://api.test.rossum.ai/v1/hooks/200"
+        mock_hook.active = False
+        mock_hook.type = "webhook"
+        mock_hook.queues = []
+        mock_hook.events = ["annotation_status"]
+        mock_hook.config = {"url": "https://example.com/webhook"}
+        mock_hook.settings = {}
+
+        server.client.retrieve_hook.return_value = mock_hook
+
+        result = await server.hooks_handler.get_hook(200)
+
+        assert result["id"] == 200
+        assert result["type"] == "webhook"
+        assert result["active"] is False
+        server.client.retrieve_hook.assert_called_once_with(200)
+
+
+@pytest.mark.unit
+class TestGetEngine:
+    """Tests for engine retrieval functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_engine_success(self, server: RossumMCPServer) -> None:
+        """Test successful engine retrieval."""
+        mock_engine = Mock()
+        mock_engine.id = 100
+        mock_engine.name = "Invoice Extractor"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/100"
+        mock_engine.type = "extractor"
+        mock_engine.learning_enabled = True
+        mock_engine.training_queues = [
+            "https://api.test.rossum.ai/v1/queues/1",
+            "https://api.test.rossum.ai/v1/queues/2",
+        ]
+        mock_engine.description = "Extracts invoice data"
+        mock_engine.agenda_id = "agenda-123"
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = await server.engines_handler.get_engine(100)
+
+        assert result["id"] == 100
+        assert result["name"] == "Invoice Extractor"
+        assert result["url"] == "https://api.test.rossum.ai/v1/engines/100"
+        assert result["type"] == "extractor"
+        assert result["learning_enabled"] is True
+        assert result["training_queues"] == [
+            "https://api.test.rossum.ai/v1/queues/1",
+            "https://api.test.rossum.ai/v1/queues/2",
+        ]
+        assert result["description"] == "Extracts invoice data"
+        assert result["agenda_id"] == "agenda-123"
+        assert result["organization"] == "https://api.test.rossum.ai/v1/organizations/10"
+        assert "Invoice Extractor" in result["message"]
+        assert "100" in result["message"]
+        server.client.retrieve_engine.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_splitter_type(self, server: RossumMCPServer) -> None:
+        """Test retrieving a splitter engine."""
+        mock_engine = Mock()
+        mock_engine.id = 200
+        mock_engine.name = "Document Splitter"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/200"
+        mock_engine.type = "splitter"
+        mock_engine.learning_enabled = False
+        mock_engine.training_queues = []
+        mock_engine.description = "Splits documents"
+        mock_engine.agenda_id = None
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/20"
+
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = await server.engines_handler.get_engine(200)
+
+        assert result["id"] == 200
+        assert result["type"] == "splitter"
+        assert result["learning_enabled"] is False
+        assert result["training_queues"] == []
+        assert result["agenda_id"] is None
+        server.client.retrieve_engine.assert_called_once_with(200)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_minimal_fields(self, server: RossumMCPServer) -> None:
+        """Test retrieving an engine with minimal fields."""
+        mock_engine = Mock()
+        mock_engine.id = 300
+        mock_engine.name = "Basic Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/300"
+        mock_engine.type = "extractor"
+        mock_engine.learning_enabled = False
+        mock_engine.training_queues = []
+        mock_engine.description = ""
+        mock_engine.agenda_id = None
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        server.client.retrieve_engine.return_value = mock_engine
+
+        result = await server.engines_handler.get_engine(300)
+
+        assert result["id"] == 300
+        assert result["name"] == "Basic Engine"
+        assert result["description"] == ""
+        assert result["agenda_id"] is None
+        assert "Basic Engine" in result["message"]
+        server.client.retrieve_engine.assert_called_once_with(300)
+
+
+@pytest.mark.unit
+class TestListEngines:
+    """Tests for listing engines functionality."""
+
+    @pytest.mark.asyncio
+    async def test_list_engines_success(self, server: RossumMCPServer) -> None:
+        """Test successful engines listing."""
+        mock_engine1 = Mock()
+        mock_engine1.id = 100
+        mock_engine1.name = "Invoice Extractor"
+        mock_engine1.url = "https://api.test.rossum.ai/v1/engines/100"
+        mock_engine1.type = "extractor"
+        mock_engine1.learning_enabled = True
+        mock_engine1.training_queues = ["https://api.test.rossum.ai/v1/queues/1"]
+        mock_engine1.description = "Extracts invoice data"
+        mock_engine1.agenda_id = "agenda-123"
+        mock_engine1.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        mock_engine2 = Mock()
+        mock_engine2.id = 200
+        mock_engine2.name = "Document Splitter"
+        mock_engine2.url = "https://api.test.rossum.ai/v1/engines/200"
+        mock_engine2.type = "splitter"
+        mock_engine2.learning_enabled = False
+        mock_engine2.training_queues = []
+        mock_engine2.description = "Splits multi-page documents"
+        mock_engine2.agenda_id = "agenda-456"
+        mock_engine2.organization = "https://api.test.rossum.ai/v1/organizations/20"
+
+        async def async_iter():
+            for engine in [mock_engine1, mock_engine2]:
+                yield engine
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines()
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 100
+        assert result["results"][0]["name"] == "Invoice Extractor"
+        assert result["results"][0]["type"] == "extractor"
+        assert result["results"][0]["learning_enabled"] is True
+        assert result["results"][1]["id"] == 200
+        assert result["results"][1]["name"] == "Document Splitter"
+        assert result["results"][1]["type"] == "splitter"
+        assert result["results"][1]["learning_enabled"] is False
+        server.client.list_engines.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_list_engines_with_id_filter(self, server: RossumMCPServer) -> None:
+        """Test listing engines filtered by ID."""
+        mock_engine = Mock()
+        mock_engine.id = 300
+        mock_engine.name = "Specific Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/300"
+        mock_engine.type = "extractor"
+        mock_engine.learning_enabled = True
+        mock_engine.training_queues = []
+        mock_engine.description = "Specific engine"
+        mock_engine.agenda_id = "agenda-789"
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        async def async_iter():
+            yield mock_engine
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines(id=300)
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 300
+        assert result["results"][0]["name"] == "Specific Engine"
+        server.client.list_engines.assert_called_once_with(id=300)
+
+    @pytest.mark.asyncio
+    async def test_list_engines_with_type_filter(self, server: RossumMCPServer) -> None:
+        """Test listing engines filtered by type."""
+        mock_engine = Mock()
+        mock_engine.id = 400
+        mock_engine.name = "Splitter Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/400"
+        mock_engine.type = "splitter"
+        mock_engine.learning_enabled = False
+        mock_engine.training_queues = []
+        mock_engine.description = "Splitter"
+        mock_engine.agenda_id = None
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        async def async_iter():
+            yield mock_engine
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines(engine_type="splitter")
+
+        assert result["count"] == 1
+        assert result["results"][0]["type"] == "splitter"
+        server.client.list_engines.assert_called_once_with(type="splitter")
+
+    @pytest.mark.asyncio
+    async def test_list_engines_with_agenda_filter(self, server: RossumMCPServer) -> None:
+        """Test listing engines filtered by agenda_id."""
+        mock_engine = Mock()
+        mock_engine.id = 500
+        mock_engine.name = "Agenda Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/500"
+        mock_engine.type = "extractor"
+        mock_engine.learning_enabled = True
+        mock_engine.training_queues = []
+        mock_engine.description = "Engine with agenda"
+        mock_engine.agenda_id = "specific-agenda"
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        async def async_iter():
+            yield mock_engine
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines(agenda_id="specific-agenda")
+
+        assert result["count"] == 1
+        assert result["results"][0]["agenda_id"] == "specific-agenda"
+        server.client.list_engines.assert_called_once_with(agenda_id="specific-agenda")
+
+    @pytest.mark.asyncio
+    async def test_list_engines_with_multiple_filters(self, server: RossumMCPServer) -> None:
+        """Test listing engines with multiple filters."""
+        mock_engine = Mock()
+        mock_engine.id = 600
+        mock_engine.name = "Filtered Engine"
+        mock_engine.url = "https://api.test.rossum.ai/v1/engines/600"
+        mock_engine.type = "extractor"
+        mock_engine.learning_enabled = True
+        mock_engine.training_queues = []
+        mock_engine.description = "Multi-filtered engine"
+        mock_engine.agenda_id = "agenda-multi"
+        mock_engine.organization = "https://api.test.rossum.ai/v1/organizations/10"
+
+        async def async_iter():
+            yield mock_engine
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines(id=600, engine_type="extractor", agenda_id="agenda-multi")
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 600
+        server.client.list_engines.assert_called_once_with(id=600, type="extractor", agenda_id="agenda-multi")
+
+    @pytest.mark.asyncio
+    async def test_list_engines_empty(self, server: RossumMCPServer) -> None:
+        """Test listing engines when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.list_engines(id=999)
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.list_engines.assert_called_once_with(id=999)
+
+
+@pytest.mark.unit
+class TestGetEngineFields:
+    """Tests for retrieving engine fields functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_for_specific_engine(self, server: RossumMCPServer) -> None:
+        """Test retrieving engine fields for a specific engine."""
+        mock_field1 = Mock()
+        mock_field1.id = 12345
+        mock_field1.url = "https://api.test.rossum.ai/v1/engine_fields/12345"
+        mock_field1.engine = "https://api.test.rossum.ai/v1/engines/123"
+        mock_field1.name = "invoice_number"
+        mock_field1.label = "Invoice Number"
+        mock_field1.type = "string"
+        mock_field1.subtype = None
+        mock_field1.tabular = False
+        mock_field1.multiline = "false"
+        mock_field1.pre_trained_field_id = None
+        mock_field1.schemas = ["https://api.test.rossum.ai/v1/schemas/456"]
+
+        mock_field2 = Mock()
+        mock_field2.id = 12346
+        mock_field2.url = "https://api.test.rossum.ai/v1/engine_fields/12346"
+        mock_field2.engine = "https://api.test.rossum.ai/v1/engines/123"
+        mock_field2.name = "invoice_date"
+        mock_field2.label = "Invoice Date"
+        mock_field2.type = "date"
+        mock_field2.subtype = None
+        mock_field2.tabular = False
+        mock_field2.multiline = "false"
+        mock_field2.pre_trained_field_id = None
+        mock_field2.schemas = ["https://api.test.rossum.ai/v1/schemas/456"]
+
+        async def async_iter():
+            for field in [mock_field1, mock_field2]:
+                yield field
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields(engine_id=123)
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 12345
+        assert result["results"][0]["name"] == "invoice_number"
+        assert result["results"][0]["label"] == "Invoice Number"
+        assert result["results"][0]["type"] == "string"
+        assert result["results"][1]["id"] == 12346
+        assert result["results"][1]["name"] == "invoice_date"
+        assert result["results"][1]["type"] == "date"
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_all(self, server: RossumMCPServer) -> None:
+        """Test retrieving all engine fields without filtering."""
+        mock_field = Mock()
+        mock_field.id = 99999
+        mock_field.url = "https://api.test.rossum.ai/v1/engine_fields/99999"
+        mock_field.engine = "https://api.test.rossum.ai/v1/engines/999"
+        mock_field.name = "total_amount"
+        mock_field.label = "Total Amount"
+        mock_field.type = "number"
+        mock_field.subtype = None
+        mock_field.tabular = True
+        mock_field.multiline = "false"
+        mock_field.pre_trained_field_id = "amount_total"
+        mock_field.schemas = ["https://api.test.rossum.ai/v1/schemas/100"]
+
+        async def async_iter():
+            yield mock_field
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields()
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 99999
+        assert result["results"][0]["name"] == "total_amount"
+        assert result["results"][0]["tabular"] is True
+        assert result["results"][0]["pre_trained_field_id"] == "amount_total"
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=None)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_empty(self, server: RossumMCPServer) -> None:
+        """Test retrieving engine fields when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields(engine_id=123)
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
