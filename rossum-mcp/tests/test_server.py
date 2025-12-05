@@ -2115,6 +2115,7 @@ class TestReadOnlyMode:
             "list_workspaces",
             "get_engine",
             "list_engines",
+            "get_engine_fields",
         }
 
         # Write tools that should NOT be present
@@ -2145,8 +2146,8 @@ class TestReadOnlyMode:
         tool_definitions = server._get_tool_definitions()
         tool_names = {tool.name for tool in tool_definitions}
 
-        # All 27 tools should be present (added get_engine, list_engines, get_hook, and get_rule)
-        assert len(tool_names) == 27
+        # All 28 tools should be present (added get_engine, list_engines, get_hook, get_rule, and get_engine_fields)
+        assert len(tool_names) == 28
 
     def test_is_tool_allowed_read_only_mode(self, monkeypatch: MonkeyPatch, mock_rossum_client: AsyncMock) -> None:
         """Test _is_tool_allowed method in read-only mode."""
@@ -2970,3 +2971,102 @@ class TestListEngines:
         assert result["count"] == 0
         assert result["results"] == []
         server.client.list_engines.assert_called_once_with(id=999)
+
+
+@pytest.mark.unit
+class TestGetEngineFields:
+    """Tests for retrieving engine fields functionality."""
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_for_specific_engine(self, server: RossumMCPServer) -> None:
+        """Test retrieving engine fields for a specific engine."""
+        mock_field1 = Mock()
+        mock_field1.id = 12345
+        mock_field1.url = "https://api.test.rossum.ai/v1/engine_fields/12345"
+        mock_field1.engine = "https://api.test.rossum.ai/v1/engines/123"
+        mock_field1.name = "invoice_number"
+        mock_field1.label = "Invoice Number"
+        mock_field1.type = "string"
+        mock_field1.subtype = None
+        mock_field1.tabular = False
+        mock_field1.multiline = "false"
+        mock_field1.pre_trained_field_id = None
+        mock_field1.schemas = ["https://api.test.rossum.ai/v1/schemas/456"]
+
+        mock_field2 = Mock()
+        mock_field2.id = 12346
+        mock_field2.url = "https://api.test.rossum.ai/v1/engine_fields/12346"
+        mock_field2.engine = "https://api.test.rossum.ai/v1/engines/123"
+        mock_field2.name = "invoice_date"
+        mock_field2.label = "Invoice Date"
+        mock_field2.type = "date"
+        mock_field2.subtype = None
+        mock_field2.tabular = False
+        mock_field2.multiline = "false"
+        mock_field2.pre_trained_field_id = None
+        mock_field2.schemas = ["https://api.test.rossum.ai/v1/schemas/456"]
+
+        async def async_iter():
+            for field in [mock_field1, mock_field2]:
+                yield field
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields(engine_id=123)
+
+        assert result["count"] == 2
+        assert len(result["results"]) == 2
+        assert result["results"][0]["id"] == 12345
+        assert result["results"][0]["name"] == "invoice_number"
+        assert result["results"][0]["label"] == "Invoice Number"
+        assert result["results"][0]["type"] == "string"
+        assert result["results"][1]["id"] == 12346
+        assert result["results"][1]["name"] == "invoice_date"
+        assert result["results"][1]["type"] == "date"
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_all(self, server: RossumMCPServer) -> None:
+        """Test retrieving all engine fields without filtering."""
+        mock_field = Mock()
+        mock_field.id = 99999
+        mock_field.url = "https://api.test.rossum.ai/v1/engine_fields/99999"
+        mock_field.engine = "https://api.test.rossum.ai/v1/engines/999"
+        mock_field.name = "total_amount"
+        mock_field.label = "Total Amount"
+        mock_field.type = "number"
+        mock_field.subtype = None
+        mock_field.tabular = True
+        mock_field.multiline = "false"
+        mock_field.pre_trained_field_id = "amount_total"
+        mock_field.schemas = ["https://api.test.rossum.ai/v1/schemas/100"]
+
+        async def async_iter():
+            yield mock_field
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields()
+
+        assert result["count"] == 1
+        assert result["results"][0]["id"] == 99999
+        assert result["results"][0]["name"] == "total_amount"
+        assert result["results"][0]["tabular"] is True
+        assert result["results"][0]["pre_trained_field_id"] == "amount_total"
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=None)
+
+    @pytest.mark.asyncio
+    async def test_get_engine_fields_empty(self, server: RossumMCPServer) -> None:
+        """Test retrieving engine fields when none exist."""
+
+        async def async_iter():
+            return
+            yield
+
+        server.client.retrieve_engine_fields = Mock(side_effect=lambda **kwargs: async_iter())
+
+        result = await server.engines_handler.get_engine_fields(engine_id=123)
+
+        assert result["count"] == 0
+        assert result["results"] == []
+        server.client.retrieve_engine_fields.assert_called_once_with(engine_id=123)

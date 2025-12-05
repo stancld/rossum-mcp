@@ -567,6 +567,61 @@ engine extracts and must be created for each field in the schema when setting up
      "message": "Engine field 'Invoice Number' created successfully with ID 12345 and linked to 2 schema(s)"
    }
 
+get_engine_fields
+^^^^^^^^^^^^^^^^^
+
+Retrieves engine fields for a specific engine or all engine fields.
+
+**Parameters:**
+
+- ``engine_id`` (integer, optional): Engine ID to filter fields by. If not provided, retrieves all engine fields.
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "url": "https://elis.rossum.ai/api/v1/engine_fields/12345",
+         "engine": "https://elis.rossum.ai/api/v1/engines/123",
+         "name": "invoice_number",
+         "label": "Invoice Number",
+         "type": "string",
+         "subtype": null,
+         "tabular": false,
+         "multiline": "false",
+         "pre_trained_field_id": null,
+         "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+       },
+       {
+         "id": 12346,
+         "url": "https://elis.rossum.ai/api/v1/engine_fields/12346",
+         "engine": "https://elis.rossum.ai/api/v1/engines/123",
+         "name": "invoice_date",
+         "label": "Invoice Date",
+         "type": "date",
+         "subtype": null,
+         "tabular": false,
+         "multiline": "false",
+         "pre_trained_field_id": null,
+         "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get all engine fields for a specific engine
+   engine_fields = get_engine_fields(engine_id=123)
+
+   # Get all engine fields
+   all_fields = get_engine_fields()
+
 start_annotation
 ^^^^^^^^^^^^^^^^
 

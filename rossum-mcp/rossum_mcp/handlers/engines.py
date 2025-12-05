@@ -129,6 +129,19 @@ class EnginesHandler(BaseHandler):
                     "required": ["engine_id", "name", "label", "field_type", "schema_ids"],
                 },
             ),
+            Tool(
+                name="get_engine_fields",
+                description="Retrieve engine fields for a specific engine or all engine fields. Returns: count, results array with engine field details (id, url, engine, name, tabular, label, type, subtype, pre_trained_field_id, multiline).",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "engine_id": {
+                            "type": ["integer", "null"],
+                            "description": "Optional engine ID filter. If None, retrieves all engine fields.",
+                        },
+                    },
+                },
+            ),
         ]
 
     async def get_engine(self, engine_id: int) -> dict:
@@ -320,3 +333,23 @@ class EnginesHandler(BaseHandler):
             f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} and linked to {len(schema_ids)} schema(s)"
         )
         return result
+
+    async def get_engine_fields(self, engine_id: int | None = None) -> dict:
+        """Retrieve engine fields for a specific engine or all engine fields.
+
+        Args:
+            engine_id: Optional engine ID to filter fields by. If None, retrieves all engine fields.
+
+        Returns:
+            Dictionary containing list of engine fields with count, results, and message
+        """
+        logger.debug(f"Retrieving engine fields: engine_id={engine_id}")
+
+        engine_fields_list = [
+            engine_field async for engine_field in self.client.retrieve_engine_fields(engine_id=engine_id)
+        ]
+
+        return {
+            "count": len(engine_fields_list),
+            "results": [dataclasses.asdict(engine_field) for engine_field in engine_fields_list],
+        }

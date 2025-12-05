@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-27-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-28-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-sdk)
 
 </div>
@@ -33,12 +33,18 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **update_queue**: Update queue settings including automation thresholds
 - **update_schema**: Update schema with field-level automation thresholds
 
+### Workspace Management
+- **get_workspace**: Retrieve workspace details by ID
+- **list_workspaces**: List all workspaces with optional filtering
+- **create_workspace**: Create a new workspace
+
 ### Engine Management
 - **get_engine**: Retrieve engine details by ID
 - **list_engines**: List all engines with optional filters
 - **create_engine**: Create a new engine (extractor or splitter)
 - **update_engine**: Update engine settings including learning and training queues
 - **create_engine_field**: Create engine fields and link them to schemas
+- **get_engine_fields**: Retrieve engine fields for a specific engine or all engine fields
 
 ### Extensions & Rules
 - **get_hook**: Get hook/extension details
@@ -703,6 +709,57 @@ Creates a new engine field and links it to schemas. Engine fields define what da
   "schema_ids": [456, 789],
   "message": "Engine field 'Invoice Number' created successfully with ID 12345 and linked to 2 schema(s)"
 }
+```
+
+#### get_engine_fields
+
+Retrieves engine fields for a specific engine or all engine fields.
+
+**Parameters:**
+- `engine_id` (integer, optional): Engine ID to filter fields by. If not provided, retrieves all engine fields.
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "url": "https://elis.rossum.ai/api/v1/engine_fields/12345",
+      "engine": "https://elis.rossum.ai/api/v1/engines/123",
+      "name": "invoice_number",
+      "label": "Invoice Number",
+      "type": "string",
+      "subtype": null,
+      "tabular": false,
+      "multiline": "false",
+      "pre_trained_field_id": null,
+      "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+    },
+    {
+      "id": 12346,
+      "url": "https://elis.rossum.ai/api/v1/engine_fields/12346",
+      "engine": "https://elis.rossum.ai/api/v1/engines/123",
+      "name": "invoice_date",
+      "label": "Invoice Date",
+      "type": "date",
+      "subtype": null,
+      "tabular": false,
+      "multiline": "false",
+      "pre_trained_field_id": null,
+      "schemas": ["https://elis.rossum.ai/api/v1/schemas/456"]
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Get all engine fields for a specific engine
+engine_fields = get_engine_fields(engine_id=123)
+
+# Get all engine fields
+all_fields = get_engine_fields()
 ```
 
 ### Rules Management

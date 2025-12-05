@@ -43,7 +43,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-The MCP server provides **22 tools** organized into four categories:
+The MCP server provides **28 tools** organized into five categories:
 
 **Document Processing**
 
@@ -61,12 +61,19 @@ The MCP server provides **22 tools** organized into four categories:
 * **create_queue**, **create_schema** - Create new queues and schemas
 * **update_queue**, **update_schema** - Configure automation thresholds
 
+**Workspace Management**
+
+* **get_workspace** - Retrieve workspace details by ID
+* **list_workspaces** - List all workspaces with optional filtering
+* **create_workspace** - Create a new workspace
+
 **Engine Management**
 
 * **list_engines** - List all engines with optional filters
 * **create_engine** - Create extraction or splitting engines
 * **update_engine** - Configure learning and training queues
 * **create_engine_field** - Define engine fields and link to schemas
+* **get_engine_fields** - Retrieve engine fields for a specific engine or all fields
 
 **Extensions & Rules**
 
