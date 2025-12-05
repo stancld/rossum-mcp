@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-25-blue.svg)](#available-tools)
 [![Rossum SDK](https://img.shields.io/badge/Rossum-SDK-orange.svg)](https://github.com/rossumai/rossum-sdk)
 
 </div>
@@ -33,6 +34,8 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **update_schema**: Update schema with field-level automation thresholds
 
 ### Engine Management
+- **get_engine**: Retrieve engine details by ID
+- **list_engines**: List all engines with optional filters
 - **create_engine**: Create a new engine (extractor or splitter)
 - **update_engine**: Update engine settings including learning and training queues
 - **create_engine_field**: Create engine fields and link them to schemas
@@ -398,6 +401,80 @@ Updates an existing schema, typically used to set field-level automation thresho
 - `schema_data` (object, required): Dictionary containing schema fields to update
 
 ### Engine Management
+
+#### get_engine
+
+Retrieves detailed information about a specific engine by its ID.
+
+**Parameters:**
+- `engine_id` (integer, required): Engine ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Invoice Extractor",
+  "url": "https://elis.rossum.ai/api/v1/engines/12345",
+  "type": "extractor",
+  "learning_enabled": true,
+  "training_queues": ["https://elis.rossum.ai/api/v1/queues/100", "https://elis.rossum.ai/api/v1/queues/200"],
+  "description": "Extracts invoice data",
+  "agenda_id": "agenda-123",
+  "organization": "https://elis.rossum.ai/api/v1/organizations/10",
+  "message": "Engine 'Invoice Extractor' (ID 12345) retrieved successfully"
+}
+```
+
+**Example usage:**
+```python
+# Get engine details
+engine = get_engine(engine_id=12345)
+```
+
+#### list_engines
+
+Lists all engines with optional filtering.
+
+**Parameters:**
+- `id` (integer, optional): Filter by engine ID
+- `engine_type` (string, optional): Filter by engine type ('extractor' or 'splitter')
+- `agenda_id` (string, optional): Filter by agenda ID
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "name": "My Engine",
+      "url": "https://elis.rossum.ai/api/v1/engines/12345",
+      "type": "extractor",
+      "learning_enabled": true,
+      "training_queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+      "description": "Engine description",
+      "agenda_id": "abc123",
+      "organization": "https://elis.rossum.ai/api/v1/organizations/123"
+    }
+  ],
+  "message": "Retrieved 2 engine(s)"
+}
+```
+
+**Example usage:**
+```python
+# List all engines
+all_engines = list_engines()
+
+# List specific engine by ID
+engine = list_engines(id=12345)
+
+# List extractors only
+extractors = list_engines(engine_type="extractor")
+
+# List engines by agenda
+agenda_engines = list_engines(agenda_id="abc123")
+```
 
 #### create_engine
 

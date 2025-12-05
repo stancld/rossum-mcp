@@ -459,6 +459,55 @@ Creates a new schema with sections and datapoints.
      "message": "Schema 'My Schema' created successfully with ID 12345"
    }
 
+list_engines
+^^^^^^^^^^^^
+
+Lists all engines with optional filtering.
+
+**Parameters:**
+
+- ``id`` (integer, optional): Filter by engine ID
+- ``engine_type`` (string, optional): Filter by engine type ('extractor' or 'splitter')
+- ``agenda_id`` (string, optional): Filter by agenda ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "name": "My Engine",
+         "url": "https://elis.rossum.ai/api/v1/engines/12345",
+         "type": "extractor",
+         "learning_enabled": true,
+         "training_queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+         "description": "Engine description",
+         "agenda_id": "abc123",
+         "organization": "https://elis.rossum.ai/api/v1/organizations/123"
+       }
+     ],
+     "message": "Retrieved 2 engine(s)"
+   }
+
+**Example:**
+
+.. code-block:: python
+
+   # List all engines
+   all_engines = list_engines()
+
+   # List specific engine by ID
+   engine = list_engines(id=12345)
+
+   # List extractors only
+   extractors = list_engines(engine_type="extractor")
+
+   # List engines by agenda
+   agenda_engines = list_engines(agenda_id="abc123")
+
 create_engine
 ^^^^^^^^^^^^^
 

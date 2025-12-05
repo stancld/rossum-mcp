@@ -64,14 +64,23 @@ class RossumMCPServer:
 
         # Define read-only tool names (GET/LIST operations)
         self._read_only_tools = {
+            # AnnotationsHandler
             "get_annotation",
             "list_annotations",
+            # QueuesHandler
             "get_queue",
-            "get_schema",
             "get_queue_schema",
             "get_queue_engine",
+            # SchemasHandler
+            "get_schema",
+            # EnginesHandler
+            "get_engine",
+            "list_engines",
+            # HooksHandler
             "list_hooks",
+            # RulesHandler
             "list_rules",
+            # WorkspacesHandler
             "get_workspace",
             "list_workspaces",
         }

@@ -43,7 +43,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-The MCP server provides **20 tools** organized into four categories:
+The MCP server provides **21 tools** organized into four categories:
 
 **Document Processing**
 
@@ -63,6 +63,7 @@ The MCP server provides **20 tools** organized into four categories:
 
 **Engine Management**
 
+* **list_engines** - List all engines with optional filters
 * **create_engine** - Create extraction or splitting engines
 * **update_engine** - Configure learning and training queues
 * **create_engine_field** - Define engine fields and link to schemas

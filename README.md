@@ -320,7 +320,7 @@ The agent includes file system tools, plotting capabilities, and Rossum integrat
 
 ## MCP Tools
 
-The MCP server provides 23 tools organized into six categories:
+The MCP server provides 25 tools organized into six categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -355,8 +355,10 @@ The MCP server provides 23 tools organized into six categories:
 </details>
 
 <details>
-<summary><strong>Engine Management (3 tools)</strong></summary>
+<summary><strong>Engine Management (5 tools)</strong></summary>
 
+- `get_engine` - Retrieve engine details by ID
+- `list_engines` - List all engines with optional filters
 - `create_engine` - Create extraction or splitting engines
 - `update_engine` - Configure learning and training queues
 - `create_engine_field` - Define engine fields and link to schemas
@@ -376,7 +378,7 @@ The MCP server provides 23 tools organized into six categories:
 <summary><strong>Workspace Management (3 tools)</strong></summary>
 
 - `get_workspace` - Retrieve workspace details
-- `list_workspaces` - List all workspaces with filtering
+- `list_workspaces` - List all workspaces with filtering (returns count and results array)
 - `create_workspace` - Create new workspaces
 
 </details>

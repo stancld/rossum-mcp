@@ -72,7 +72,4 @@ class RulesHandler(BaseHandler):
 
         rules_list: list[Rule] = [rule async for rule in self.client.list_rules(**filters)]
 
-        return {
-            "count": len(rules_list),
-            "results": [dataclasses.asdict(rule) for rule in rules_list],
-        }
+        return {"count": len(rules_list), "results": [dataclasses.asdict(rule) for rule in rules_list]}

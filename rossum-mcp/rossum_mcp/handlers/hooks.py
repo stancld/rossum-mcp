@@ -122,10 +122,7 @@ class HooksHandler(BaseHandler):
         else:
             hooks_list = [hook async for hook in self.client.list_hooks(**filters)]
 
-        return {
-            "count": len(hooks_list),
-            "results": [dataclasses.asdict(hook) for hook in hooks_list],
-        }
+        return {"count": len(hooks_list), "results": [dataclasses.asdict(hook) for hook in hooks_list]}
 
     async def create_hook(
         self,
