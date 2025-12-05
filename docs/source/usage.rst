@@ -938,6 +938,106 @@ logic with trigger conditions (TxScript formulas) and actions that execute when 
    # List only enabled rules
    enabled_rules = list_rules(enabled=True)
 
+Relations Management
+--------------------
+
+get_relation
+^^^^^^^^^^^^
+
+Retrieves details of a specific relation by its ID. Relations introduce common relations between annotations.
+
+**Parameters:**
+
+- ``relation_id`` (integer, required): Relation ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "type": "duplicate",
+     "key": "abc123def456",
+     "parent": "https://elis.rossum.ai/api/v1/annotations/100",
+     "annotations": [
+       "https://elis.rossum.ai/api/v1/annotations/100",
+       "https://elis.rossum.ai/api/v1/annotations/101"
+     ],
+     "url": "https://elis.rossum.ai/api/v1/relations/12345"
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get relation details
+   relation = get_relation(relation_id=12345)
+
+list_relations
+^^^^^^^^^^^^^^
+
+Lists all relations between annotations with optional filters. Relations introduce common relations between annotations:
+
+- **edit**: Created after editing annotation in user interface (rotation or split of the document)
+- **attachment**: One or more documents are attachments to another document
+- **duplicate**: Created after importing the same document that already exists in Rossum
+
+**Parameters:**
+
+- ``id`` (integer, optional): Filter by relation ID
+- ``type`` (string, optional): Filter by relation type ('edit', 'attachment', 'duplicate')
+- ``parent`` (integer, optional): Filter by parent annotation ID
+- ``key`` (string, optional): Filter by relation key
+- ``annotation`` (integer, optional): Filter by annotation ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "type": "duplicate",
+         "key": "abc123def456",
+         "parent": "https://elis.rossum.ai/api/v1/annotations/100",
+         "annotations": [
+           "https://elis.rossum.ai/api/v1/annotations/100",
+           "https://elis.rossum.ai/api/v1/annotations/101"
+         ],
+         "url": "https://elis.rossum.ai/api/v1/relations/12345"
+       },
+       {
+         "id": 12346,
+         "type": "edit",
+         "key": null,
+         "parent": "https://elis.rossum.ai/api/v1/annotations/200",
+         "annotations": [
+           "https://elis.rossum.ai/api/v1/annotations/201",
+           "https://elis.rossum.ai/api/v1/annotations/202"
+         ],
+         "url": "https://elis.rossum.ai/api/v1/relations/12346"
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all relations
+   all_relations = list_relations()
+
+   # List duplicate relations
+   duplicate_relations = list_relations(type="duplicate")
+
+   # List relations for a specific parent annotation
+   parent_relations = list_relations(parent=12345)
+
+   # List relations containing a specific annotation
+   annotation_relations = list_relations(annotation=12345)
+
    Agent Tools
    -----------
 

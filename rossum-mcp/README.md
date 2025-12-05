@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-28-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-30-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -52,6 +52,10 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
+
+### Relations Management
+- **get_relation**: Retrieve relation details by ID
+- **list_relations**: List all relations between annotations (edit, attachment, duplicate)
 
 ## Prerequisites
 
@@ -866,6 +870,96 @@ enabled_rules = list_rules(enabled=True)
 
 # List enabled rules for a specific organization
 org_enabled_rules = list_rules(organization_id=100, enabled=True)
+```
+
+### Relations Management
+
+#### get_relation
+
+Retrieves details of a specific relation by its ID. Relations introduce common relations between annotations.
+
+**Parameters:**
+- `relation_id` (integer, required): Relation ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "type": "duplicate",
+  "key": "abc123def456",
+  "parent": "https://elis.rossum.ai/api/v1/annotations/100",
+  "annotations": [
+    "https://elis.rossum.ai/api/v1/annotations/100",
+    "https://elis.rossum.ai/api/v1/annotations/101"
+  ],
+  "url": "https://elis.rossum.ai/api/v1/relations/12345"
+}
+```
+
+**Example usage:**
+```python
+# Get relation details
+relation = get_relation(relation_id=12345)
+```
+
+#### list_relations
+
+Lists all relations between annotations with optional filters. Relations introduce common relations between annotations:
+- **edit**: Created after editing annotation in user interface (rotation or split of the document)
+- **attachment**: One or more documents are attachments to another document
+- **duplicate**: Created after importing the same document that already exists in Rossum
+
+**Parameters:**
+- `id` (integer, optional): Filter by relation ID
+- `type` (string, optional): Filter by relation type ('edit', 'attachment', 'duplicate')
+- `parent` (integer, optional): Filter by parent annotation ID
+- `key` (string, optional): Filter by relation key
+- `annotation` (integer, optional): Filter by annotation ID
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "type": "duplicate",
+      "key": "abc123def456",
+      "parent": "https://elis.rossum.ai/api/v1/annotations/100",
+      "annotations": [
+        "https://elis.rossum.ai/api/v1/annotations/100",
+        "https://elis.rossum.ai/api/v1/annotations/101"
+      ],
+      "url": "https://elis.rossum.ai/api/v1/relations/12345"
+    },
+    {
+      "id": 12346,
+      "type": "edit",
+      "key": null,
+      "parent": "https://elis.rossum.ai/api/v1/annotations/200",
+      "annotations": [
+        "https://elis.rossum.ai/api/v1/annotations/201",
+        "https://elis.rossum.ai/api/v1/annotations/202"
+      ],
+      "url": "https://elis.rossum.ai/api/v1/relations/12346"
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all relations
+all_relations = list_relations()
+
+# List duplicate relations
+duplicate_relations = list_relations(type="duplicate")
+
+# List relations for a specific parent annotation
+parent_relations = list_relations(parent=12345)
+
+# List relations containing a specific annotation
+annotation_relations = list_relations(annotation=12345)
 ```
 
 ## Annotation Status Workflow
