@@ -1,5 +1,7 @@
 """Handler modules for Rossum MCP Server"""
 
+from __future__ import annotations
+
 from rossum_mcp.handlers.annotations import AnnotationsHandler
 from rossum_mcp.handlers.engines import EnginesHandler
 from rossum_mcp.handlers.hooks import HooksHandler

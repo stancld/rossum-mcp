@@ -1,11 +1,17 @@
-from collections.abc import Iterator
-from pathlib import Path
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 from rossum_api.domain_logic.resources import Resource
 from rossum_mcp.server import RossumMCPServer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from _pytest.monkeypatch import MonkeyPatch
 
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)

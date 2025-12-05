@@ -1,5 +1,7 @@
 """Beep sound for UI notifications."""
 
+from __future__ import annotations
+
 import io
 import wave
 

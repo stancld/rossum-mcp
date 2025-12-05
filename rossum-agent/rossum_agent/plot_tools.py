@@ -22,6 +22,8 @@ Example usage:
               interactive=False, output_path='distribution.png')
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any, Literal

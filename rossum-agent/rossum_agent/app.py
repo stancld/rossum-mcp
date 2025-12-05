@@ -6,6 +6,8 @@ Usage:
     streamlit run rossum_agent/app.py
 """
 
+from __future__ import annotations
+
 import base64
 import logging
 import os

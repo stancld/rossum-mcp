@@ -1,5 +1,7 @@
 """Rossum internal tools for not yet publish endpoints."""
 
+from __future__ import annotations
+
 import json
 import os
 

@@ -1,5 +1,7 @@
 """Tests for rossum_agent.redis_storage module."""
 
+from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
 
 from rossum_agent.redis_storage import RedisStorage

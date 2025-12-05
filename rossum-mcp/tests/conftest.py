@@ -1,11 +1,12 @@
 """Shared test fixtures and helpers for rossum_mcp tests."""
 
+from __future__ import annotations
+
 import dataclasses
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 from rossum_api.models.annotation import Annotation
 from rossum_api.models.engine import Engine, EngineField
 from rossum_api.models.hook import Hook
@@ -13,6 +14,11 @@ from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 from rossum_api.models.workspace import Workspace
 from rossum_mcp.server import RossumMCPServer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from _pytest.monkeypatch import MonkeyPatch
 
 # Store the original asdict function
 _original_asdict = dataclasses.asdict

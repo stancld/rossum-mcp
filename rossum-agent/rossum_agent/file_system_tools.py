@@ -3,6 +3,8 @@
 Provides tools for listing, reading, and getting information about files.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 

@@ -3,6 +3,8 @@
 This module tests the plot_data tool with various chart types and configurations.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 

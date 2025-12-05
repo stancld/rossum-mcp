@@ -1,10 +1,14 @@
 """Streamlit UI rendering modules for the Rossum Agent app."""
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from rossum_agent.redis_storage import RedisStorage
+if TYPE_CHECKING:
+    from rossum_agent.redis_storage import RedisStorage
 
 
 def render_chat_history(

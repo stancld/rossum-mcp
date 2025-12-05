@@ -4,6 +4,8 @@ This module defines the system prompt that guides the agent's behavior
 for documentation, debugging, and configuration tasks.
 """
 
+from __future__ import annotations
+
 SYSTEM_PROMPT = """You are an expert Rossum platform specialist. Your role is to help users understand, document, debug, and configure Rossum document processing workflows.
 
 # Core Capabilities

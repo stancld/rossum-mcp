@@ -86,6 +86,9 @@ ignore-variadic-names = true
 # Disallow all relative imports.
 ban-relative-imports = "all"
 
+[lint.isort]
+required-imports = ["from __future__ import annotations"]
+
 [lint.pydocstyle]
 # Use numpy-style docstrings.
 convention = "numpy"
