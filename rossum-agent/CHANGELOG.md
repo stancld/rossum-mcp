@@ -12,8 +12,10 @@ All notable changes to this project will be documented in this file.
 - Fixed teleport user detection from JWT [#46](https://github.com/stancld/rossum-mcp/pull/46)
 - Made permalinks shareable across users [#47](https://github.com/stancld/rossum-mcp/pull/47), [#48](https://github.com/stancld/rossum-mcp/pull/48)
 
+
 ## [0.1.6] - 2025-12-03
 - Improved teleport user detection [#45](https://github.com/stancld/rossum-mcp/pull/45)
+
 
 ## [0.1.5] - 2025-12-03
 - Added User ID to a Streamlit UI for debugging purposes
@@ -33,7 +35,6 @@ All notable changes to this project will be documented in this file.
 
 
 ## [0.1.1] - 2025-12-01
-
 - Fixed displaying mermaid diagrams in Streamlit UI [#36](https://github.com/stancld/rossum-mcp/pull/36)
 - Added beep sound notification upon completing the agent answer [#37](https://github.com/stancld/rossum-mcp/pull/37)
 - Added missing support for parsing AWS role params [#38](https://github.com/stancld/rossum-mcp/pull/38)
