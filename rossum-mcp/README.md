@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-30-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-32-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -56,6 +56,8 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 ### Relations Management
 - **get_relation**: Retrieve relation details by ID
 - **list_relations**: List all relations between annotations (edit, attachment, duplicate)
+- **get_document_relation**: Retrieve document relation details by ID
+- **list_document_relations**: List all document relations (export, einvoice)
 
 ## Prerequisites
 
@@ -960,6 +962,92 @@ parent_relations = list_relations(parent=12345)
 
 # List relations containing a specific annotation
 annotation_relations = list_relations(annotation=12345)
+```
+
+#### get_document_relation
+
+Retrieves details of a specific document relation by its ID. Document relations introduce additional relations between annotations and documents.
+
+**Parameters:**
+- `document_relation_id` (integer, required): Document relation ID
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "type": "export",
+  "annotation": "https://elis.rossum.ai/api/v1/annotations/100",
+  "key": "exported_file_key",
+  "documents": [
+    "https://elis.rossum.ai/api/v1/documents/200",
+    "https://elis.rossum.ai/api/v1/documents/201"
+  ],
+  "url": "https://elis.rossum.ai/api/v1/document_relations/12345"
+}
+```
+
+**Example usage:**
+```python
+# Get document relation details
+doc_relation = get_document_relation(document_relation_id=12345)
+```
+
+#### list_document_relations
+
+Lists all document relations with optional filters. Document relations introduce additional relations between annotations and documents:
+- **export**: Documents generated from exporting an annotation
+- **einvoice**: Electronic invoice documents associated with an annotation
+
+**Parameters:**
+- `id` (integer, optional): Filter by document relation ID
+- `type` (string, optional): Filter by relation type ('export', 'einvoice')
+- `annotation` (integer, optional): Filter by annotation ID
+- `key` (string, optional): Filter by relation key
+- `documents` (integer, optional): Filter by document ID
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 12345,
+      "type": "export",
+      "annotation": "https://elis.rossum.ai/api/v1/annotations/100",
+      "key": "exported_file_key",
+      "documents": [
+        "https://elis.rossum.ai/api/v1/documents/200",
+        "https://elis.rossum.ai/api/v1/documents/201"
+      ],
+      "url": "https://elis.rossum.ai/api/v1/document_relations/12345"
+    },
+    {
+      "id": 12346,
+      "type": "einvoice",
+      "annotation": "https://elis.rossum.ai/api/v1/annotations/102",
+      "key": null,
+      "documents": [
+        "https://elis.rossum.ai/api/v1/documents/300"
+      ],
+      "url": "https://elis.rossum.ai/api/v1/document_relations/12346"
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all document relations
+all_doc_relations = list_document_relations()
+
+# List export-type document relations
+export_relations = list_document_relations(type="export")
+
+# List document relations for a specific annotation
+annotation_doc_relations = list_document_relations(annotation=100)
+
+# List document relations containing a specific document
+document_relations = list_document_relations(documents=200)
 ```
 
 ## Annotation Status Workflow

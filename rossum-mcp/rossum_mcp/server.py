@@ -23,6 +23,7 @@ from rossum_api.dtos import Token
 
 from rossum_mcp.handlers import (
     AnnotationsHandler,
+    DocumentRelationsHandler,
     EnginesHandler,
     HooksHandler,
     QueuesHandler,
@@ -81,6 +82,9 @@ class RossumMCPServer:
             # HooksHandler
             "get_hook",
             "list_hooks",
+            # DocumentRelationsHandler
+            "get_document_relation",
+            "list_document_relations",
             # RelationsHandler
             "get_relation",
             "list_relations",
@@ -98,6 +102,7 @@ class RossumMCPServer:
         self.schemas_handler = SchemasHandler(self.client, self.base_url)
         self.engines_handler = EnginesHandler(self.client, self.base_url)
         self.hooks_handler = HooksHandler(self.client, self.base_url)
+        self.document_relations_handler = DocumentRelationsHandler(self.client, self.base_url)
         self.relations_handler = RelationsHandler(self.client, self.base_url)
         self.rules_handler = RulesHandler(self.client, self.base_url)
         self.workspaces_handler = WorkspacesHandler(self.client, self.base_url)
@@ -108,6 +113,7 @@ class RossumMCPServer:
             self.schemas_handler,
             self.engines_handler,
             self.hooks_handler,
+            self.document_relations_handler,
             self.relations_handler,
             self.rules_handler,
             self.workspaces_handler,

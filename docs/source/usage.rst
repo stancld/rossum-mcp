@@ -1038,6 +1038,101 @@ Lists all relations between annotations with optional filters. Relations introdu
    # List relations containing a specific annotation
    annotation_relations = list_relations(annotation=12345)
 
+get_document_relation
+^^^^^^^^^^^^^^^^^^^^^
+
+Retrieves details of a specific document relation by its ID. Document relations introduce additional relations between annotations and documents.
+
+**Parameters:**
+
+- ``document_relation_id`` (integer, required): Document relation ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "type": "export",
+     "annotation": "https://elis.rossum.ai/api/v1/annotations/100",
+     "key": "exported_file_key",
+     "documents": [
+       "https://elis.rossum.ai/api/v1/documents/200",
+       "https://elis.rossum.ai/api/v1/documents/201"
+     ],
+     "url": "https://elis.rossum.ai/api/v1/document_relations/12345"
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get document relation details
+   doc_relation = get_document_relation(document_relation_id=12345)
+
+list_document_relations
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Lists all document relations with optional filters. Document relations introduce additional relations between annotations and documents:
+
+- **export**: Documents generated from exporting an annotation
+- **einvoice**: Electronic invoice documents associated with an annotation
+
+**Parameters:**
+
+- ``id`` (integer, optional): Filter by document relation ID
+- ``type`` (string, optional): Filter by relation type ('export', 'einvoice')
+- ``annotation`` (integer, optional): Filter by annotation ID
+- ``key`` (string, optional): Filter by relation key
+- ``documents`` (integer, optional): Filter by document ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "type": "export",
+         "annotation": "https://elis.rossum.ai/api/v1/annotations/100",
+         "key": "exported_file_key",
+         "documents": [
+           "https://elis.rossum.ai/api/v1/documents/200",
+           "https://elis.rossum.ai/api/v1/documents/201"
+         ],
+         "url": "https://elis.rossum.ai/api/v1/document_relations/12345"
+       },
+       {
+         "id": 12346,
+         "type": "einvoice",
+         "annotation": "https://elis.rossum.ai/api/v1/annotations/102",
+         "key": null,
+         "documents": [
+           "https://elis.rossum.ai/api/v1/documents/300"
+         ],
+         "url": "https://elis.rossum.ai/api/v1/document_relations/12346"
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all document relations
+   all_doc_relations = list_document_relations()
+
+   # List export-type document relations
+   export_relations = list_document_relations(type="export")
+
+   # List document relations for a specific annotation
+   annotation_doc_relations = list_document_relations(annotation=100)
+
+   # List document relations containing a specific document
+   document_relations = list_document_relations(documents=200)
+
    Agent Tools
    -----------
 

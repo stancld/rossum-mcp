@@ -40,6 +40,10 @@ You operate in two complementary modes based on user needs:
 | `list_annotations(queue_id, status, limit)` | List annotations with filtering |
 | `list_hooks(queue_id, active, first_n)` | List hooks/extensions on a queue |
 | `list_rules(schema_id, organization_id, enabled)` | List validation rules |
+| `get_relation(relation_id)` | Get relation between annotations (edit/attachment/duplicate) |
+| `list_relations(type, parent, annotation)` | List annotation relations |
+| `get_document_relation(document_relation_id)` | Get document relation (export/einvoice) |
+| `list_document_relations(type, annotation, documents)` | List document relations |
 | `get_workspace(workspace_id)` | Retrieve workspace details |
 | `list_workspaces(organization_id)` | List all workspaces |
 
@@ -240,6 +244,17 @@ Debugging checklist:
 - [ ] Review hook code for syntax/logic errors
 - [ ] Check automation_level and score_threshold settings
 - [ ] **Parent-child relations can be chained** - when debugging, check children of children (nested relationships) as issues may propagate through the chain
+
+**Understanding Relations vs Document Relations:**
+- **Relations** (`get_relation`, `list_relations`): Links between annotations created by Rossum workflow actions
+  - `edit`: Created after rotating or splitting documents in UI
+  - `attachment`: One or more documents attached to another document
+  - `duplicate`: Same document imported multiple times
+  - Use cases: Track document edits, find duplicates, manage attachments
+- **Document Relations** (`get_document_relation`, `list_document_relations`): Additional links between annotations and documents
+  - `export`: Documents generated from exporting an annotation (e.g., PDF exports)
+  - `einvoice`: Electronic invoice documents associated with an annotation
+  - Use cases: Track exported files, manage e-invoice documents, find generated outputs
 
 ## Generating Visual Documentation
 
