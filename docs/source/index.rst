@@ -43,7 +43,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-The MCP server provides **30 tools** organized into six categories:
+The MCP server provides **32 tools** organized into six categories:
 
 **Document Processing**
 
@@ -87,6 +87,8 @@ The MCP server provides **30 tools** organized into six categories:
 
 * **get_relation** - Retrieve relation details by ID
 * **list_relations** - List all relations between annotations (edit, attachment, duplicate)
+* **get_document_relation** - Retrieve document relation details by ID
+* **list_document_relations** - List all document relations (export, einvoice)
 
 **AI Agent Toolkit**
 

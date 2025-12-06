@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from rossum_mcp.handlers.annotations import AnnotationsHandler
+from rossum_mcp.handlers.document_relations import DocumentRelationsHandler
 from rossum_mcp.handlers.engines import EnginesHandler
 from rossum_mcp.handlers.hooks import HooksHandler
 from rossum_mcp.handlers.queues import QueuesHandler
@@ -13,6 +14,7 @@ from rossum_mcp.handlers.workspaces import WorkspacesHandler
 
 __all__ = [
     "AnnotationsHandler",
+    "DocumentRelationsHandler",
     "EnginesHandler",
     "HooksHandler",
     "QueuesHandler",
