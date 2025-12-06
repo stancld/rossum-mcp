@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 -
 
 
+## [0.1.8] - 2025-12-06
+- Updated Rossum MCP to 0.2.0. See more info in the [release notes](https://github.com/stancld/rossum-mcp/releases/tag/rossum-mcp-v0.2.0).
+
+
 ## [0.1.7] - 2025-12-04
 - Fixed teleport user detection from JWT [#46](https://github.com/stancld/rossum-mcp/pull/46)
 - Made permalinks shareable across users [#47](https://github.com/stancld/rossum-mcp/pull/47), [#48](https://github.com/stancld/rossum-mcp/pull/48)
