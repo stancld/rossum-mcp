@@ -16,7 +16,6 @@ from rossum_agent.hook_analysis_tools import (
     explain_hook_execution_order,
     visualize_hook_tree,
 )
-from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import (
     copy_queue_knowledge,
     get_splitting_and_sorting_hook_code,
@@ -135,10 +134,14 @@ def create_agent(
         client_kwargs=bedrock_client_kwargs,
     )
 
+    # Load default templates, then override with our custom system_prompt
     prompt_templates = yaml.safe_load(
         importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
     )
-    prompt_templates["system_prompt"] = SYSTEM_PROMPT
+    custom_prompts = yaml.safe_load(
+        importlib.resources.files("rossum_agent.prompts").joinpath("code_agent.yaml").read_text()
+    )
+    prompt_templates["system_prompt"] = custom_prompts["system_prompt"]
 
     # Configure MCP server connection to Rossum
     server_params = StdioServerParameters(

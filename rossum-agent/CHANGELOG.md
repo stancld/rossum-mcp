@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 - Started using structured outputs to streamline agent instructions [#52](https://github.com/stancld/rossum-mcp/pull/52)
 - Streamlined system prompt via inlining`smolagents` system prompt logic, and dropping their examples.
-This change saves roughly 3.3k tokes from previous ~9,6k for the initial LLM call [#53](https://github.com/stancld/rossum-mcp/pull/53)
+This change saves roughly 400 tokens from previous ~9,6k for the initial LLM call [#53](https://github.com/stancld/rossum-mcp/pull/53) and [#54](https://github.com/stancld/rossum-mcp/pull/54)
 - Started including Neighbors API tools if and only if API is available [#54](https://github.com/stancld/rossum-mcp/pull/54)
 - Consolidated raed_file and get_file_info tools into a single one [#54](https://github.com/stancld/rossum-mcp/pull/54)
 
