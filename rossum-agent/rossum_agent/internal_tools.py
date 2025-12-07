@@ -8,9 +8,23 @@ import os
 import requests
 from smolagents import tool
 
-NEIGHBORS_API_HOST: str = "localhost"
-NEIGHBORS_API_PORT: int = 5000
+NEIGHBORS_API_HOST: str = os.environ.get("NEIGHBORS_API_HOST", "localhost")
+NEIGHBORS_API_PORT: int = int(os.environ.get("NEIGHBORS_API_PORT", "5000"))
 DEFAULT_BACKBONE = "tender-fermat"
+
+
+def is_neighbors_api_available() -> bool:
+    """Check if NEIGHBORS API is configured and available."""
+    if not os.environ.get("NEIGHBORS_API_HOST"):
+        return False
+    try:
+        response = requests.get(
+            f"http://{NEIGHBORS_API_HOST}:{NEIGHBORS_API_PORT}/health",
+            timeout=2,
+        )
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
 
 
 @tool

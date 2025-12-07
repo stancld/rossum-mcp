@@ -20,6 +20,7 @@ from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import (
     copy_queue_knowledge,
     get_splitting_and_sorting_hook_code,
+    is_neighbors_api_available,
     retrieve_queue_status,
 )
 from rossum_agent.plot_tools import plot_data
@@ -164,14 +165,16 @@ def create_agent(
         get_file_info,
         plot_data,
         # Rossum internal tools
-        copy_queue_knowledge,
-        retrieve_queue_status,
         get_splitting_and_sorting_hook_code,
         # Hook analysis tools
         analyze_hook_dependencies,
         visualize_hook_tree,
         explain_hook_execution_order,
     ]
+
+    # Add NEIGHBORS API tools only if the API is available
+    if is_neighbors_api_available():
+        all_tools.extend([copy_queue_knowledge, retrieve_queue_status])
 
     return CodeAgent(
         tools=all_tools,
