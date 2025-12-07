@@ -51,62 +51,39 @@ def list_files(directory_path: str, pattern: str | None = None) -> str:
 
 
 @tool
-def read_file(file_path: str) -> str:
-    """Read text file contents with metadata.
+def read_file(file_path: str, include_content: bool = True) -> str:
+    """Read file or directory metadata, optionally with file contents.
 
     Args:
-        file_path: Path to file (absolute or relative)
+        file_path: Path to file or directory (absolute or relative)
+        include_content: Whether to include file contents (default: True, ignored for directories)
 
     Returns:
-        JSON string with file content. Use json.loads() to parse.
+        JSON string with metadata and optionally content. Use json.loads() to parse.
     """
     try:
         path = Path(file_path).expanduser().resolve()
 
         if not path.exists():
-            return json.dumps({"error": f"File not found: {file_path}"})
-        if not path.is_file():
-            return json.dumps({"error": f"Path is not a file: {file_path}"})
+            return json.dumps({"error": f"Path not found: {file_path}"})
 
         stat = path.stat()
-        return json.dumps(
-            {"path": str(path), "size": stat.st_size, "modified": stat.st_mtime, "content": path.read_text()}, indent=2
-        )
+        result = {
+            "path": str(path),
+            "name": path.name,
+            "type": "directory" if path.is_dir() else "file",
+            "size": stat.st_size,
+            "created": stat.st_ctime,
+            "modified": stat.st_mtime,
+            "accessed": stat.st_atime,
+        }
+
+        if path.is_file() and include_content:
+            result["content"] = path.read_text()
+
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": f"Failed to read file: {e!s}"})
-
-
-@tool
-def get_file_info(path: str) -> str:
-    """Get file or directory metadata.
-
-    Args:
-        path: Path to file or directory (absolute or relative)
-
-    Returns:
-        JSON string with metadata. Use json.loads() to parse.
-    """
-    try:
-        target_path = Path(path).expanduser().resolve()
-
-        if not target_path.exists():
-            return json.dumps({"error": f"Path not found: {path}"})
-
-        stat = target_path.stat()
-        return json.dumps(
-            {
-                "path": str(target_path),
-                "name": target_path.name,
-                "type": "directory" if target_path.is_dir() else "file",
-                "size": stat.st_size,
-                "created": stat.st_ctime,
-                "modified": stat.st_mtime,
-                "accessed": stat.st_atime,
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": f"Failed to get file info: {e!s}"})
 
 
 @tool

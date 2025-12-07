@@ -10,16 +10,16 @@ import yaml
 from mcp import StdioServerParameters
 from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
-from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
+from rossum_agent.file_system_tools import list_files, read_file, write_file
 from rossum_agent.hook_analysis_tools import (
     analyze_hook_dependencies,
     explain_hook_execution_order,
     visualize_hook_tree,
 )
-from rossum_agent.instructions import SYSTEM_PROMPT
 from rossum_agent.internal_tools import (
     copy_queue_knowledge,
     get_splitting_and_sorting_hook_code,
+    is_neighbors_api_available,
     retrieve_queue_status,
 )
 from rossum_agent.plot_tools import plot_data
@@ -134,10 +134,14 @@ def create_agent(
         client_kwargs=bedrock_client_kwargs,
     )
 
+    # Load default templates, then override with our custom system_prompt
     prompt_templates = yaml.safe_load(
         importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
     )
-    prompt_templates["system_prompt"] = SYSTEM_PROMPT
+    custom_prompts = yaml.safe_load(
+        importlib.resources.files("rossum_agent.prompts").joinpath("code_agent.yaml").read_text()
+    )
+    prompt_templates["system_prompt"] = custom_prompts["system_prompt"]
 
     # Configure MCP server connection to Rossum
     server_params = StdioServerParameters(
@@ -161,17 +165,18 @@ def create_agent(
         list_files,
         read_file,
         write_file,
-        get_file_info,
         plot_data,
         # Rossum internal tools
-        copy_queue_knowledge,
-        retrieve_queue_status,
         get_splitting_and_sorting_hook_code,
         # Hook analysis tools
         analyze_hook_dependencies,
         visualize_hook_tree,
         explain_hook_execution_order,
     ]
+
+    # Add NEIGHBORS API tools only if the API is available
+    if is_neighbors_api_available():
+        all_tools.extend([copy_queue_knowledge, retrieve_queue_status])
 
     return CodeAgent(
         tools=all_tools,

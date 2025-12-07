@@ -24,7 +24,7 @@ SORTING_WARMUP_PROMPT = """1. Create three new queues in workspace `1777693` - A
 9. Upload 10 documents from each folder air_waybill, certificate_of_origin, invoice in `examples/data/splitting_and_sorting/knowledge` to inbox queue.
 10. Based on the file names and predicted values, generate a pie plot with correct/wrong for each document type."""
 
-DATA_INSIGHT_PROMPT = """1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
+DATA_INSIGHT_PROMPT = """1. Upload 20 invoices from `~/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
     - Do not include documents from `knowledge` folder.
 2. Once you send all annotations, wait for a few seconds.
 3. Then, start checking annotation status. Once all are imported, return a list of all annotations_urls

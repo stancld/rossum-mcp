@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
+from rossum_agent.file_system_tools import list_files, read_file, write_file
 from rossum_agent.utils import set_session_output_dir
 
 
@@ -171,7 +171,7 @@ class TestReadFile:
     """Test read_file tool function."""
 
     def test_reads_file_content(self, tmp_path):
-        """Test basic file reading."""
+        """Test basic file reading with content."""
         file_path = tmp_path / "test.txt"
         content = "Hello, World!\nSecond line."
         file_path.write_text(content)
@@ -180,61 +180,44 @@ class TestReadFile:
         result = json.loads(result_json)
 
         assert result["content"] == content
-        assert "path" in result
-        assert result["size"] == len(content)
-        assert "modified" in result
-
-    def test_returns_error_for_nonexistent_file(self, tmp_path):
-        """Test error handling for non-existent file."""
-        nonexistent = tmp_path / "nonexistent.txt"
-
-        result_json = read_file(str(nonexistent))
-        result = json.loads(result_json)
-
-        assert "error" in result
-        assert "not found" in result["error"].lower()
-
-    def test_returns_error_for_directory(self, tmp_path):
-        """Test error when path is a directory."""
-        result_json = read_file(str(tmp_path))
-        result = json.loads(result_json)
-
-        assert "error" in result
-        assert "not a file" in result["error"].lower()
-
-
-class TestGetFileInfo:
-    """Test get_file_info tool function."""
-
-    def test_gets_file_info(self, tmp_path):
-        """Test getting file metadata."""
-        file_path = tmp_path / "test.txt"
-        file_path.write_text("content")
-
-        result_json = get_file_info(str(file_path))
-        result = json.loads(result_json)
-
         assert result["name"] == "test.txt"
         assert result["type"] == "file"
-        assert result["size"] > 0
+        assert result["size"] == len(content)
         assert "created" in result
         assert "modified" in result
         assert "accessed" in result
 
-    def test_gets_directory_info(self, tmp_path):
-        """Test getting directory metadata."""
-        result_json = get_file_info(str(tmp_path))
+    def test_reads_file_without_content(self, tmp_path):
+        """Test reading file metadata only."""
+        file_path = tmp_path / "test.txt"
+        content = "Hello, World!"
+        file_path.write_text(content)
+
+        result_json = read_file(str(file_path), include_content=False)
+        result = json.loads(result_json)
+
+        assert "content" not in result
+        assert result["name"] == "test.txt"
+        assert result["type"] == "file"
+        assert result["size"] == len(content)
+        assert "modified" in result
+
+    def test_reads_directory_info(self, tmp_path):
+        """Test reading directory metadata."""
+        result_json = read_file(str(tmp_path))
         result = json.loads(result_json)
 
         assert result["type"] == "directory"
+        assert "content" not in result
         assert "size" in result
         assert "created" in result
+        assert "modified" in result
 
     def test_returns_error_for_nonexistent_path(self, tmp_path):
         """Test error handling for non-existent path."""
-        nonexistent = tmp_path / "nonexistent"
+        nonexistent = tmp_path / "nonexistent.txt"
 
-        result_json = get_file_info(str(nonexistent))
+        result_json = read_file(str(nonexistent))
         result = json.loads(result_json)
 
         assert "error" in result

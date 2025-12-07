@@ -109,10 +109,11 @@ result = agent.run(
 ### File System Tools
 
 #### read_file
-Read contents of a file from the filesystem.
+Read file or directory metadata, optionally with file contents.
 
 **Parameters:**
-- `file_path` (string): Path to the file to read
+- `file_path` (string): Path to the file or directory
+- `include_content` (bool, optional): Whether to include file contents (default: True, ignored for directories)
 
 #### write_file
 Write text or markdown content to a file.
@@ -128,12 +129,6 @@ List files in a directory.
 **Parameters:**
 - `directory_path` (string): Path to the directory
 - `pattern` (string, optional): Glob pattern to filter files
-
-#### get_file_info
-Get metadata about a file or directory.
-
-**Parameters:**
-- `path` (string): Path to the file or directory
 
 ### Plotting Tools
 
