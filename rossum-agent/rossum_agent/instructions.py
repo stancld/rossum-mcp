@@ -28,7 +28,7 @@ You operate in two complementary modes based on user needs:
 # Critical Requirements
 
 ## Data Handling
-- **ALL MCP tools return JSON strings** - always parse with `json.loads()`
+- **MCP tools return structured data** - use directly without parsing
 - **IDs must be integers** - `queue_id=12345` not `queue_id="12345"`
 - **Error handling is mandatory** - wrap API calls in try/except blocks
 
@@ -37,12 +37,10 @@ You operate in two complementary modes based on user needs:
 Use `rossum_api.models.schema` classes for structured schema access:
 
 ```python
-import json
 from rossum_api.models.schema import Schema, Datapoint, Multivalue, Tuple, Section
 
 # Parse schema from API response
-schema_json = get_queue_schema(queue_id=12345)
-schema_data = json.loads(schema_json)
+schema_data = get_queue_schema(queue_id=12345)
 schema = Schema.from_dict(schema_data)
 
 # Navigate schema structure
@@ -83,7 +81,7 @@ def find_datapoint(content, schema_id):
     return None
 
 # Get annotation and find field
-ann = json.loads(get_annotation(annotation_id=12345, sideloads=['content']))
+ann = get_annotation(annotation_id=12345, sideloads=['content'])
 datapoint = find_datapoint(ann['content'], 'document_type')
 
 # Update using datapoint's actual ID
@@ -153,7 +151,7 @@ Output format example:
 Rules are schema-level validations with trigger conditions and actions:
 
 ```python
-rules = json.loads(list_rules(schema_id=12345))
+rules = list_rules(schema_id=12345)
 for rule in rules['results']:
     print(f"Rule: {rule['name']}")
     print(f"  Trigger: {rule['trigger_condition']}")  # Python expression
@@ -212,7 +210,7 @@ When documenting formula fields, create diagrams showing:
 
 ```python
 # Example: Generate formula field dependency diagram
-schema = json.loads(get_queue_schema(queue_id=12345))
+schema = get_queue_schema(queue_id=12345)
 schema_obj = Schema.from_dict(schema)
 
 # Analyze formula dependencies
@@ -244,7 +242,7 @@ graph TD
 
 ```python
 # Create queue with automation
-queue = json.loads(create_queue(
+queue = create_queue(
     name="Invoice Processing",
     workspace_id=1234,
     schema_id=5678,
@@ -252,10 +250,10 @@ queue = json.loads(create_queue(
     automation_enabled=True,
     automation_level="confident",
     training_enabled=True
-))
+)
 
 # Set field-level thresholds
-schema = json.loads(get_queue_schema(queue_id=queue['id']))
+schema = get_queue_schema(queue_id=queue['id'])
 schema_content = schema['schema_content']
 
 # Update threshold in schema content (recursive helper needed)
@@ -269,7 +267,7 @@ update_schema(
 
 ```python
 # Python function hook
-hook = json.loads(create_hook(
+hook = create_hook(
     name="Auto-Categorizer",
     type="function",
     queues=["https://api.elis.rossum.ai/v1/queues/12345"],
@@ -283,7 +281,7 @@ def rossum_hook_request_handler(payload):
 '''
     },
     settings={"threshold": 0.9}
-))
+)
 ```
 
 # Output Formatting Standards

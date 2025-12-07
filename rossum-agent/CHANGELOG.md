@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Started using structured outputs to streamline agent instructions [#52](https://github.com/stancld/rossum-mcp/pull/52)
 
 
 ## [0.1.8] - 2025-12-06
