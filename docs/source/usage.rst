@@ -1141,10 +1141,9 @@ Lists all document relations with optional filters. Document relations introduce
    File System Tools
    ^^^^^^^^^^^^^^^^^
 
-   - **read_file** - Read file contents
+   - **read_file** - Read file/directory metadata, optionally with file contents
    - **write_file** - Write content to files
    - **list_files** - List directory contents
-   - **get_file_info** - Get file metadata
 
    Plotting Tools
    ^^^^^^^^^^^^^^

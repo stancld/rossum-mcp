@@ -10,7 +10,7 @@ import yaml
 from mcp import StdioServerParameters
 from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
-from rossum_agent.file_system_tools import get_file_info, list_files, read_file, write_file
+from rossum_agent.file_system_tools import list_files, read_file, write_file
 from rossum_agent.hook_analysis_tools import (
     analyze_hook_dependencies,
     explain_hook_execution_order,
@@ -162,7 +162,6 @@ def create_agent(
         list_files,
         read_file,
         write_file,
-        get_file_info,
         plot_data,
         # Rossum internal tools
         get_splitting_and_sorting_hook_code,
