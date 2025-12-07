@@ -137,10 +137,7 @@ def create_agent(
     prompt_templates = yaml.safe_load(
         importlib.resources.files("smolagents.prompts").joinpath("code_agent.yaml").read_text()
     )
-
-    prompt_templates["system_prompt"] += "\n" + "\n".join(
-        [SYSTEM_PROMPT, "Proceed step-by-step and show intermediate results after each major step."]
-    )
+    prompt_templates["system_prompt"] = SYSTEM_PROMPT
 
     # Configure MCP server connection to Rossum
     server_params = StdioServerParameters(
