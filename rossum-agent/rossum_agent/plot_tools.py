@@ -41,13 +41,13 @@ ColorScheme = Literal["default", "viridis", "plasma", "inferno", "magma", "civid
 @tool
 def plot_data(
     data_json: str,
-    chart_type: str = "bar",
+    chart_type: ChartType = "bar",
     title: str = "Data Visualization",
     x_label: str | None = None,
     y_label: str | None = None,
     output_path: str = "plot.html",
     interactive: bool = True,
-    color_scheme: str = "default",
+    color_scheme: ColorScheme = "default",
     sort_values: bool = True,
     sort_descending: bool = True,
     show_values: bool = True,
@@ -55,9 +55,6 @@ def plot_data(
     height: int = 600,
 ) -> str:
     """Create beautiful data visualizations from dictionary data.
-
-    This tool should be invoked if and only if a user explicitly ask to plot some accuracy
-    or revenue data.
 
     This tool creates professional-quality charts using Plotly (interactive) or
     Matplotlib/Seaborn (static). Supports various chart types with smart defaults.
@@ -68,23 +65,13 @@ def plot_data(
             - Dict[str, List[float]]: For multi-series line charts
             - List[Dict]: For scatter plots with 'x', 'y' keys
             - Dict[str, Dict[str, float]]: For heatmaps (nested dict)
-        chart_type: Type of chart to create. Options:
-            - 'bar': Vertical bar chart (default)
-            - 'horizontal_bar': Horizontal bar chart
-            - 'line': Line chart (single or multi-series)
-            - 'pie': Pie chart with percentages
-            - 'scatter': Scatter plot (requires list of dicts with x, y)
-            - 'heatmap': Heatmap (requires nested dict or 2D structure)
+        chart_type: Type of chart to create.
         title: Chart title
         x_label: Label for X axis (auto-generated if None)
         y_label: Label for Y axis (auto-generated if None)
         output_path: Path to save plot (*.html for interactive, *.png for static)
         interactive: If True, create interactive Plotly plot; if False, static Matplotlib plot
-        color_scheme: Color scheme to use. Options:
-            - 'default': Beautiful default colors
-            - 'viridis', 'plasma', 'inferno', 'magma': Scientific colormaps
-            - 'pastel': Soft, pastel colors
-            - 'bold': Bold, vibrant colors
+        color_scheme: Color scheme to use.
         sort_values: If True, sort data by values before plotting (for bar/pie charts)
         sort_descending: If True, sort in descending order
         show_values: If True, display values on bars/slices
@@ -95,35 +82,6 @@ def plot_data(
         JSON string with result status and file path. Use json.loads() to parse.
         Success: {"status": "success", "output_path": "/path/to/plot.html", "chart_type": "bar"}
         Error: {"status": "error", "error": "error message"}
-
-    Examples:
-        # Bar chart from invoice line items
-        data = {'API Dev': 26992.25, 'System Design': 59209.98, 'DevOps': 21064.31}
-        result = plot_data(
-            json.dumps(data),
-            chart_type='bar',
-            title='Revenue by Service Category',
-            y_label='Total Revenue ($)',
-            interactive=True,
-            output_path='revenue.html',
-            color_scheme='viridis'
-        )
-
-        # Horizontal bar chart (better for long labels)
-        result = plot_data(
-            json.dumps(data),
-            chart_type='horizontal_bar',
-            title='Top Services by Revenue',
-            sort_descending=True
-        )
-
-        # Static plot (PNG output)
-        result = plot_data(
-            json.dumps(data),
-            chart_type='bar',
-            interactive=False,
-            output_path='revenue.png'
-        )
     """
     try:
         # Parse input data
