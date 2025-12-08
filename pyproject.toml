@@ -17,6 +17,7 @@ authors = [
 ]
 keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
 dependencies = [
+    "fastmcp>=2.0.0",
     "mcp>=1.0.0",
     "rossum-api>=3.6.1",
 ]
@@ -44,6 +45,7 @@ docs = [
 ]
 # MCP server dependencies
 mcp = [
+    "fastmcp>=2.0.0",
     "mcp>=1.0.0",
     "elasticsearch>=9.0",
 ]
@@ -66,6 +68,7 @@ tests = [
 all = [
     "boto3>=1.0",
     "coverage>=7.0.0",
+    "fastmcp>=2.0.0",
     "matplotlib>=3.10",
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",
