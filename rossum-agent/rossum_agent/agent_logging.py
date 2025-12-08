@@ -4,33 +4,55 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
-from smolagents.memory import ActionStep, FinalAnswerStep
+if TYPE_CHECKING:
+    from rossum_agent.agent import AgentStep
 
 logger = logging.getLogger(__name__)
 
 
-def log_agent_result(result: ActionStep | FinalAnswerStep, prompt: str = "", duration: float = 0) -> None:
-    """Log agent execution result. Use after consuming streaming generators."""
-    extra_fields = {
+def log_agent_result(
+    result: AgentStep, prompt: str = "", duration: float = 0, total_input_tokens: int = 0, total_output_tokens: int = 0
+) -> None:
+    """Log agent execution result.
+
+    Args:
+        result: The AgentStep to log.
+        prompt: The original user prompt.
+        duration: Time taken for the step in seconds.
+        total_input_tokens: Total input tokens across all steps.
+        total_output_tokens: Total output tokens across all steps.
+    """
+    extra_fields: dict[str, object] = {
         "event_type": "agent_call_complete",
         "prompt": prompt,
         "duration_seconds": duration,
+        "step_number": result.step_number,
+        "is_final": result.is_final,
+        "input_tokens": total_input_tokens if total_input_tokens else result.input_tokens,
+        "output_tokens": total_output_tokens if total_output_tokens else result.output_tokens,
     }
 
-    if isinstance(result, FinalAnswerStep):
-        extra_fields["output"] = str(result.output)
-    elif isinstance(result, ActionStep):
-        extra_fields["step_number"] = result.step_number
-        extra_fields["model_output"] = str(result.model_output) if result.model_output else None
-        extra_fields["action_output"] = str(result.action_output) if result.action_output else None
-        extra_fields["observations"] = str(result.observations) if result.observations else None
-        extra_fields["tool_calls"] = json.dumps(result.tool_calls, default=str) if result.tool_calls else None
-        extra_fields["error"] = str(result.error) if result.error else None
-        extra_fields["token_usage"] = result.token_usage.__dict__ if result.token_usage else None
-        extra_fields["timing"] = result.timing.__dict__ if result.timing else None
-        extra_fields["is_final_answer"] = result.is_final_answer
-    else:
-        extra_fields["response"] = str(result)[:500]
+    if result.thinking:
+        extra_fields["thinking"] = result.thinking[:500] if len(result.thinking) > 500 else result.thinking
 
-    logger.info("Agent call completed", extra=extra_fields)
+    if result.tool_calls:
+        extra_fields["tool_calls"] = json.dumps(
+            [{"name": tc.name, "arguments": tc.arguments} for tc in result.tool_calls], default=str
+        )
+
+    if result.tool_results:
+        extra_fields["tool_results"] = json.dumps(
+            [{"name": tr.name, "is_error": tr.is_error} for tr in result.tool_results], default=str
+        )
+
+    if result.final_answer:
+        extra_fields["final_answer"] = (
+            result.final_answer[:500] if len(result.final_answer) > 500 else result.final_answer
+        )
+
+    if result.error:
+        extra_fields["error"] = result.error
+
+    logger.info("Agent step completed", extra=extra_fields)

@@ -399,7 +399,7 @@ For detailed API documentation, parameters, and workflows, see the [full documen
 - [Rossum API](https://elis.rossum.ai/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
 - [Rossum SDK](https://github.com/rossumai/rossum-sdk) - Python SDK
-- [Smolagents](https://github.com/huggingface/smolagents) - Agent framework
+
 
 ## 🛠️ Development
 

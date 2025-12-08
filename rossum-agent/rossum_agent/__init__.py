@@ -2,4 +2,13 @@
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+from rossum_agent.agent import AgentConfig, AgentStep, RossumAgent, create_agent
+
+__version__ = "0.2.0"
+
+__all__ = [
+    "AgentConfig",
+    "AgentStep",
+    "RossumAgent",
+    "create_agent",
+]

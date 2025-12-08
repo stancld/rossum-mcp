@@ -61,27 +61,11 @@ The ``rossum_agent`` package provides CLI and web interfaces:
 The agent includes file system tools, plotting capabilities, and Rossum integration.
 See the :doc:`examples` section for complete workflows.
 
-Using with Smolagents
----------------------
+Using with AI Agents
+--------------------
 
-The Python implementation makes it easy to use with smolagents, as both use Python
-and can share the ``rossum_api`` package:
-
-.. code-block:: python
-
-   from smolagents import ToolCallingAgent, ManagedAgent
-
-   # Create a Rossum MCP agent
-   rossum_agent = ManagedAgent(
-       agent=ToolCallingAgent(tools=[]),
-       name="rossum",
-       description="Upload and process documents using Rossum API"
-   )
-
-   # Use the agent
-   result = rossum_agent.run(
-       "Upload the invoice.pdf to queue 12345 and wait for it to be processed"
-   )
+The Rossum Agent is built with Anthropic Claude for intelligent document processing.
+The agent includes file system tools, plotting capabilities, and seamless Rossum integration.
 
 Available Tools
 ---------------
@@ -1137,20 +1121,6 @@ Lists all document relations with optional filters. Document relations introduce
    -----------
 
    The ``rossum_agent`` package provides additional tools beyond the MCP server.
-
-   File System Tools
-   ^^^^^^^^^^^^^^^^^
-
-   - **read_file** - Read file/directory metadata, optionally with file contents
-   - **write_file** - Write content to files
-   - **list_files** - List directory contents
-
-   Plotting Tools
-   ^^^^^^^^^^^^^^
-
-   See :doc:`plotting` for complete plotting tool documentation including:
-
-   - **plot_data** - Create interactive charts (bar, line, pie, scatter, heatmap)
 
    Hook Analysis Tools
    ^^^^^^^^^^^^^^^^^^^

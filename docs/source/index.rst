@@ -94,10 +94,9 @@ The MCP server provides **32 tools** organized into six categories:
 
 The ``rossum_agent`` package provides additional capabilities:
 
-* File system tools for document management
-* Data visualization and plotting tools (bar, line, pie, scatter, heatmap charts)
 * Hook analysis tools for understanding workflow dependencies and execution flow
-* Integration with AI agent frameworks (smolagents)
+* Native Claude code execution for file operations, plotting, and data analysis
+* Integration with AI agent frameworks (Anthropic Claude)
 * CLI and Streamlit web interfaces
 * See the :doc:`examples` section for complete workflows
 

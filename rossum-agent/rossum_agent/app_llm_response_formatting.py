@@ -1,3 +1,9 @@
+"""Response formatting module for the Rossum Agent Streamlit application.
+
+This module handles the formatting and display of agent responses,
+including tool calls, tool results, and final answers.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -5,22 +11,12 @@ import contextlib
 import dataclasses
 import json
 import pathlib
-import re
-import time
 from typing import TYPE_CHECKING, Any, Protocol
-
-import streamlit.components.v1 as components
-from smolagents.memory import ActionStep, PlanningStep
-
-from rossum_agent.agent_logging import log_agent_result
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-    type AgentStep = ActionStep | PlanningStep
-
-
-MERMAID_DIAGRAM_HEIGHT = 600  # px
+    from rossum_agent.agent import AgentStep
 
 
 class OutputRenderer(Protocol):
@@ -42,44 +38,6 @@ def parse_and_format_final_answer(answer: str) -> str:
             return FinalResponse(data).get_formatted_response()
 
     return answer
-
-
-def extract_mermaid_blocks(text: str) -> tuple[str, list[str]]:
-    """Extract Mermaid diagram blocks and return cleaned text with diagram codes."""
-    mermaid_pattern = r"```mermaid\n(.*?)\n```"
-    matches = re.findall(mermaid_pattern, text, re.DOTALL)
-
-    if not matches:
-        return text, []
-
-    # Replace mermaid blocks with placeholders
-    result = text
-    for i, mermaid_code in enumerate(matches):
-        placeholder = f"\n\n[MERMAID_DIAGRAM_{i}]\n\n"
-        result = result.replace(f"```mermaid\n{mermaid_code}\n```", placeholder, 1)
-
-    return result, matches
-
-
-def render_mermaid_diagram(mermaid_code: str) -> None:
-    """Render a Mermaid diagram using Streamlit components."""
-    html_code = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-        </script>
-    </head>
-    <body>
-        <div class="mermaid">
-{mermaid_code.strip()}
-        </div>
-    </body>
-    </html>
-    """
-    components.html(html_code, height=MERMAID_DIAGRAM_HEIGHT, scrolling=True)
 
 
 @dataclasses.dataclass
@@ -162,131 +120,109 @@ class FinalResponse:
 
 @dataclasses.dataclass
 class ChatResponse:
+    """Handles formatting and display of agent responses.
+
+    This class processes AgentStep objects from the new Claude-based agent
+    and renders them appropriately in the Streamlit UI. Supports streaming
+    updates where thinking is displayed progressively.
+    """
+
     prompt: str
     output_placeholder: OutputRenderer | DeltaGenerator
-    start_time: float = dataclasses.field(default_factory=time.time)
 
     def __post_init__(self) -> None:
-        self.result: AgentStep
-
-        type TextAndDiagram = tuple[str, list[str]]
-
-        self.steps_markdown: list[TextAndDiagram] = []
+        self.result: AgentStep | None = None
+        self.completed_steps_markdown: list[str] = []
+        self.current_step_markdown: str = ""
         self.final_answer_text: str | None = None
-        self.final_answer_diagrams: list[str] = []
+        self._current_step_num: int = 0
+        self.total_input_tokens: int = 0
+        self.total_output_tokens: int = 0
 
     def process_step(self, step: AgentStep) -> None:
-        if isinstance(step, PlanningStep):
-            self.process_planning_step(step)
+        """Process and display an agent step.
 
-        if isinstance(step, ActionStep):
-            self.process_action_step(step)
-
-        self.result = step
-
-    def process_planning_step(self, step: PlanningStep) -> None:
-        plan_text, mermaid_diagrams = extract_mermaid_blocks(step.plan.strip())
-        plan_md = f"#### 🧠 Plan\n\n{plan_text}\n"
-        self.steps_markdown.append((plan_md, mermaid_diagrams))
-
-    def process_action_step(self, step: ActionStep) -> None:
-        self.step_md_parts: list[str] = []
-        self.step_md_parts.append(f"#### Step {step.step_number}\n")
-
-        self._process_tool_calls(step)
-        self._process_model_output(step)
-        self._process_observations(step)
-
-        self.step_md = "\n".join(self.step_md_parts)
-        self.steps_markdown.append((self.step_md, []))
-
-        # Detect final answer
-        if step.is_final_answer and step.action_output is not None:
-            raw_answer = str(step.action_output)
-            formatted_answer = parse_and_format_final_answer(raw_answer)
-            self.final_answer_text, self.final_answer_diagrams = extract_mermaid_blocks(formatted_answer)
-
-        # Build current display
-        display_parts = []
-        for md_text, diagrams in self.steps_markdown:
-            display_parts.append(md_text)
-            for _diagram in diagrams:
-                display_parts.append(f"[MERMAID_DIAGRAM: {len(display_parts)}]")
-
-        display_md = "\n\n".join(display_parts)
-
-        if self.final_answer_text is None:
-            display_md += "\n\n⏳ _Processing..._"
+        Args:
+            step: An AgentStep from the agent's execution.
+        """
+        if step.is_streaming:
+            self._process_streaming_step(step)
         else:
+            self._process_completed_step(step)
+
+        self._render_display(step)
+
+        if not step.is_streaming:
+            self.result = step
+            self.total_input_tokens += step.input_tokens
+            self.total_output_tokens += step.output_tokens
+
+    def _process_streaming_step(self, step: AgentStep) -> None:
+        """Process a streaming step (partial thinking or tool execution)."""
+        if step.step_number != self._current_step_num:
+            if self.current_step_markdown:
+                self.completed_steps_markdown.append(self.current_step_markdown)
+            self._current_step_num = step.step_number
+            self.current_step_markdown = f"#### Step {step.step_number}\n"
+
+        if step.current_tool and step.tool_progress:
+            current, total = step.tool_progress
+            progress_text = f"🔧 Running tool {current}/{total}: **{step.current_tool}**..."
+            if step.thinking:
+                self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n\n{progress_text}\n"
+            else:
+                self.current_step_markdown = f"#### Step {step.step_number}\n\n{progress_text}\n"
+        elif step.thinking:
+            self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n"
+
+    def _process_completed_step(self, step: AgentStep) -> None:
+        """Process a completed step with full content."""
+        self._current_step_num = step.step_number
+        step_md_parts: list[str] = [f"#### Step {step.step_number}\n"]
+
+        if step.thinking and step.has_tool_calls():
+            step_md_parts.append(f"💭 {step.thinking}\n")
+
+        if step.tool_calls:
+            tool_names = [tc.name for tc in step.tool_calls]
+            step_md_parts.append(f"**Tools:** {', '.join(tool_names)}\n")
+
+        for result in step.tool_results:
+            content = result.content
+            if result.is_error:
+                step_md_parts.append(f"**❌ {result.name} Error:** {content}\n")
+            elif len(content) > 200:
+                step_md_parts.append(
+                    f"<details><summary>📋 {result.name} result</summary>\n\n```\n{content}\n```\n</details>\n"
+                )
+            else:
+                step_md_parts.append(f"**Result ({result.name}):** {content}\n")
+
+        if step.error:
+            step_md_parts.append(f"**❌ Error:** {step.error}\n")
+
+        self.current_step_markdown = "\n".join(step_md_parts)
+        self.completed_steps_markdown.append(self.current_step_markdown)
+        self.current_step_markdown = ""
+
+        if step.is_final and step.final_answer is not None:
+            self.final_answer_text = parse_and_format_final_answer(step.final_answer)
+
+    def _render_display(self, step: AgentStep) -> None:
+        """Render the current display state."""
+        all_steps = self.completed_steps_markdown.copy()
+        if self.current_step_markdown:
+            all_steps.append(self.current_step_markdown)
+
+        display_md = "\n\n".join(all_steps)
+
+        if step.is_streaming:
+            display_md += "\n\n⏳ _Thinking..._"
+        elif self.final_answer_text is None and not step.is_final:
+            display_md += "\n\n⏳ _Processing..._"
+        elif self.final_answer_text is not None:
             display_md += f"\n\n---\n\n### ✅ Final Answer\n\n{self.final_answer_text}"
+        elif step.error:
+            display_md += f"\n\n---\n\n### ❌ Error\n\n{step.error}"
 
         self.output_placeholder.markdown(display_md, unsafe_allow_html=True)
-
-        for _md_text, diagrams in self.steps_markdown:
-            for diagram in diagrams:
-                render_mermaid_diagram(diagram)
-
-        if self.final_answer_diagrams:
-            for diagram in self.final_answer_diagrams:
-                render_mermaid_diagram(diagram)
-
-        # Log each completed step
-        duration = time.time() - self.start_time
-        log_agent_result(step, self.prompt, duration)
-
-    def _process_model_output(self, step: ActionStep) -> None:
-        if isinstance(step.model_output, str) and step.model_output.strip():
-            model_output = step.model_output.strip()
-
-            # Extract code blocks (everything between <code> and </code>)
-            code_pattern = r"<code>(.*?)</code>"
-            code_blocks = re.findall(code_pattern, model_output, re.DOTALL)
-
-            # Extract thinking (everything outside code blocks)
-            thinking = re.sub(code_pattern, "", model_output, flags=re.DOTALL).strip()
-
-            # If no explicit thinking, try to extract first comment from code
-            if not thinking and code_blocks:
-                for code_block in code_blocks:
-                    # Look for first comment line (# comment)
-                    comment_match = re.search(r"^\s*#\s*(.+)$", code_block, re.MULTILINE)
-                    if comment_match:
-                        thinking = comment_match.group(1).strip()
-                        break
-
-            # Display thinking directly
-            if thinking:
-                self.step_md_parts.append(f"💭 {thinking}\n")
-
-            # Display code in collapsible section
-            if code_blocks:
-                combined_code = "\n\n".join(block.strip() for block in code_blocks)
-                self.step_md_parts.append(
-                    f"<details><summary>🔍 View code</summary>\n\n```python\n{combined_code}\n```\n</details>\n"
-                )
-
-    def _process_tool_calls(self, step: ActionStep) -> None:
-        # Tools used (skip python_interpreter as it's the default)
-        if not step.tool_calls:
-            return
-
-        tool_names = [tc.name for tc in step.tool_calls if tc.name != "python_interpreter"]
-        if tool_names:
-            self.step_md_parts.append(f"**Tools:** {', '.join(tool_names)}\n")
-
-    def _process_observations(self, step: ActionStep) -> None:
-        if not step.observations:
-            return
-
-        obs_text = step.observations.strip()
-        # Only show if there's meaningful output
-        if obs_text and obs_text != "None" and len(obs_text) > 0:
-            # Extract just the key output, skip verbose logs for demo
-            if "Last output from code snippet:" in obs_text:
-                output_part = obs_text.split("Last output from code snippet:")[-1].strip()
-                if output_part and output_part != "None":
-                    self.step_md_parts.append(f"**Result:** {output_part}\n")
-            else:
-                self.step_md_parts.append(
-                    f"<details><summary>📋 View logs</summary>\n\n```\n{obs_text}\n```\n</details>\n"
-                )

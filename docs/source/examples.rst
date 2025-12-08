@@ -152,14 +152,6 @@ Create a new queue, warm it up with training documents, and test automation perf
 The agent automatically creates the queue, uploads documents, monitors processing, and calculates
 automation performance - achieving **86.7% automation rate** from just 30 training documents.
 
-Building Custom Tools
-----------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   plotting
-
 Building Your Own Agents
 -------------------------
 
@@ -219,32 +211,12 @@ Here's the general structure for building an extension:
 Integration with AI Agents
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Python implementation makes it easy to integrate with AI agent frameworks like
-`smolagents <https://huggingface.co/docs/smolagents>`_. Both the MCP server and your
-custom tools can share the ``rossum_api`` package:
-
-.. code-block:: python
-
-   from smolagents import ToolCallingAgent, ManagedAgent, tool
-
-   # Define your custom tool
-   @tool
-   def my_custom_tool(annotation_id: int) -> str:
-       """Process annotation data in a custom way."""
-       # Use rossum_api client to fetch data
-       # Process it
-       # Return results
-       return json.dumps({"status": "processed"})
-
-   # Create agent with both MCP and custom tools
-   agent = ToolCallingAgent(
-       tools=[my_custom_tool],
-       # MCP tools are available through managed agent
-   )
+The Rossum Agent is built with Anthropic Claude for intelligent document processing.
+The agent provides seamless access to MCP tools and can be extended with custom tools
+that share the ``rossum_api`` package.
 
 Next Steps
 ----------
 
-* Explore the :doc:`plotting` example to see a complete implementation
 * Review the :doc:`usage` guide to understand the core MCP tools
 * Check the :doc:`api` reference for detailed SDK documentation

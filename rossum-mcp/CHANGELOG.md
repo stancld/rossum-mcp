@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 -
 
 
+## [0.3.1] - 2025-12-09
+- Upgrade minimal Rossum API version dependency to >= 3.7.0
+
+
 ## [0.3.0] - 2025-12-08
 ### Changed
 - **Breaking**: Migrated from vanilla python-sdk MCP to FastMCP framework [#56](https://github.com/stancld/rossum-mcp/pull/56)

@@ -19,21 +19,21 @@ keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
 dependencies = [
     "fastmcp>=2.0.0",
     "mcp>=1.0.0",
-    "rossum-api>=3.6.1",
+    "rossum-api>=3.7.0",
 ]
 
 [project.optional-dependencies]
 # Agent dependencies
 agent = [
+    "anthropic>=0.75.0",
     "boto3>=1.0",
+    "cryptography>=41.0",
     "elasticsearch>=9.0",
-    "matplotlib>=3.10",
-    "plotly>=6.0",
+    "fastmcp>=2.13.0",
+    "PyJWT>=2.8",
     "python-dotenv",
     "pyyaml>=6.0",
     "requests>=2.32",
-    "seaborn>=0.13.2",
-    "smolagents[mcp,litellm]>=1.0.0",
 ]
 # Documentation
 docs = [
@@ -66,13 +66,14 @@ tests = [
 ]
 # All dependencies
 all = [
+    "anthropic>=0.75.0",
     "boto3>=1.0",
     "coverage>=7.0.0",
-    "fastmcp>=2.0.0",
-    "matplotlib>=3.10",
+    "cryptography>=41.0",
+    "fastmcp>=2.13.0",
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",
-    "plotly>=6.0",
+    "PyJWT>=2.8",
     "python-dotenv",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -80,9 +81,7 @@ all = [
     "pyyaml>=6.0",
     "redis>=7.0.0",
     "requests>=2.32",
-    "rossum-api>=3.6.1",
-    "seaborn>=0.13.2",
-    "smolagents[mcp,litellm]>=1.0.0",
+    "rossum-api>=3.7.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
@@ -106,9 +105,6 @@ testpaths = ["rossum-mcp/tests", "rossum-agent/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-
-[tool.uv.sources]
-rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-schema-content" }
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]

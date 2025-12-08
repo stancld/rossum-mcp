@@ -11,19 +11,13 @@ if TYPE_CHECKING:
     from rossum_agent.redis_storage import RedisStorage
 
 
-def render_chat_history(
-    redis_storage: RedisStorage,
-    current_chat_id: str,
-    user_id: str | None = None,
-    is_shared_view: bool = False,
-) -> None:
+def render_chat_history(redis_storage: RedisStorage, current_chat_id: str, user_id: str | None = None) -> None:
     """Render the chat history section in the sidebar.
 
     Args:
         redis_storage: Redis storage instance for retrieving chat history
         current_chat_id: The currently active chat ID
         user_id: Optional user ID for filtering chat history
-        is_shared_view: Whether viewing a shared conversation (don't show sidebar)
     """
     st.markdown("---")
     st.subheader("Chat History")

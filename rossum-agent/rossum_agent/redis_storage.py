@@ -36,10 +36,7 @@ class RedisStorage:
         """Get or create Redis client."""
         if self._client is None:
             self._client = redis.Redis(
-                host=self.host,
-                port=self.port,
-                decode_responses=False,
-                socket_connect_timeout=5,
+                host=self.host, port=self.port, decode_responses=False, socket_connect_timeout=5
             )
         return self._client
 
