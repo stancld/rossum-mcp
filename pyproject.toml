@@ -53,6 +53,11 @@ streamlit = [
     "streamlit>=1.37.0",
     "redis>=7.0.0",
 ]
+api = [
+    "fastapi>=0.115.0",
+    "redis>=7.0.0",
+    "uvicorn[standard]>=0.32.0",
+]
 # Testing
 tests = [
     "elasticsearch>=9.0",
@@ -66,6 +71,7 @@ tests = [
 all = [
     "boto3>=1.0",
     "coverage>=7.0.0",
+    "fastapi>=0.115.0",
     "matplotlib>=3.10",
     "mcp>=1.0.0",
     "myst-parser>=2.0.0",
@@ -85,6 +91,7 @@ all = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
     "streamlit>=1.37.0",
+    "uvicorn[standard]>=0.32.0",
 ]
 
 [tool.setuptools.packages.find]

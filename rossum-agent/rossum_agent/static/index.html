@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rossum Agent - Test UI</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #1a1a2e;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .status {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.connected {
+            background: #22c55e;
+        }
+
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e5e5e5;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-primary:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #e5e5e5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d4d4d4;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            max-width: 80%;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message-content {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background: #3b82f6;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: #f3f4f6;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.system .message-content {
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 0.875rem;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .step-indicator {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .step-indicator.planning {
+            background: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .step-indicator.error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .tool-call {
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            display: inline-block;
+            margin: 0.25rem 0.25rem 0.25rem 0;
+        }
+
+        .input-area {
+            border-top: 1px solid #e5e5e5;
+            padding: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .input-area input:disabled {
+            background: #f5f5f5;
+        }
+
+        .files-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .file-item a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .file-item a:hover {
+            text-decoration: underline;
+        }
+
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.8125rem;
+            margin-top: 0.5rem;
+        }
+
+        code {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e5e5;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .chat-id {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Rossum Agent</h1>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <h2>Configuration</h2>
+
+            <div class="form-group">
+                <label for="apiBaseUrl">Rossum API URL</label>
+                <input type="text" id="apiBaseUrl" placeholder="https://your-instance.rossum.app">
+            </div>
+
+            <div class="form-group">
+                <label for="apiToken">API Token</label>
+                <input type="password" id="apiToken" placeholder="Your Rossum API token">
+            </div>
+
+            <div class="form-group">
+                <label for="mcpMode">Mode</label>
+                <select id="mcpMode">
+                    <option value="read-only">Read Only</option>
+                    <option value="read-write">Read Write</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-primary" id="connectBtn" onclick="connect()">Connect</button>
+                <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            </div>
+
+            <div class="chat-id" id="chatIdDisplay"></div>
+
+            <div class="files-section">
+                <h2>Generated Files</h2>
+                <div id="filesList">
+                    <p style="font-size: 0.875rem; color: #666;">No files yet</p>
+                </div>
+                <button class="btn btn-secondary" onclick="refreshFiles()" style="margin-top: 0.5rem;">Refresh Files</button>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message system">
+                    <div class="message-content">
+                        Configure your credentials and click Connect to start chatting with the Rossum Agent.
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="messageInput" placeholder="Enter your message..." disabled onkeypress="handleKeyPress(event)">
+                <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let ws = null;
+        let chatId = null;
+        let isProcessing = false;
+
+        // DOM elements
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const messagesContainer = document.getElementById('messages');
+        const chatIdDisplay = document.getElementById('chatIdDisplay');
+        const filesList = document.getElementById('filesList');
+
+        // Get API base URL (same origin or override)
+        const API_BASE = window.location.origin;
+
+        function updateStatus(connected) {
+            statusDot.classList.toggle('connected', connected);
+            statusText.textContent = connected ? 'Connected' : 'Disconnected';
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            messageInput.disabled = !connected;
+            sendBtn.disabled = !connected;
+        }
+
+        function addMessage(role, content, extra = {}) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            let html = '';
+
+            if (extra.stepNumber) {
+                html += `<div class="step-indicator">Step ${extra.stepNumber}</div>`;
+            }
+
+            if (extra.plan) {
+                html += `<div class="step-indicator planning">Planning</div>`;
+            }
+
+            if (extra.error) {
+                html += `<div class="step-indicator error">Error</div>`;
+            }
+
+            if (extra.toolCalls && extra.toolCalls.length > 0) {
+                html += '<div>';
+                extra.toolCalls.forEach(tc => {
+                    html += `<span class="tool-call">${tc.name}</span>`;
+                });
+                html += '</div>';
+            }
+
+            // Format content (basic markdown)
+            let formattedContent = content
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g, '<code style="background:#e5e5e5;padding:0.125rem 0.25rem;border-radius:2px;">$1</code>')
+                .replace(/\n/g, '<br>');
+
+            html += `<div class="message-content">${formattedContent}</div>`;
+
+            messageDiv.innerHTML = html;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loadingIndicator';
+            loadingDiv.className = 'loading';
+            loadingDiv.innerHTML = '<div class="spinner"></div><span>Processing...</span>';
+            messagesContainer.appendChild(loadingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function removeLoadingIndicator() {
+            const loading = document.getElementById('loadingIndicator');
+            if (loading) loading.remove();
+        }
+
+        function connect() {
+            const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+            const apiToken = document.getElementById('apiToken').value.trim();
+            const mcpMode = document.getElementById('mcpMode').value;
+
+            if (!apiBaseUrl || !apiToken) {
+                alert('Please enter API URL and Token');
+                return;
+            }
+
+            // Generate a new chat ID or use existing
+            chatId = chatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
+
+            const wsUrl = `${API_BASE.replace(/^http/, 'ws')}/ws/chat/${chatId}`;
+            console.log('Connecting to:', wsUrl);
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                // Send config message
+                ws.send(JSON.stringify({
+                    type: 'config',
+                    api_token: apiToken,
+                    api_base_url: apiBaseUrl,
+                    mcp_mode: mcpMode
+                }));
+                updateStatus(true);
+                chatIdDisplay.textContent = `Chat ID: ${chatId}`;
+
+                // Clear welcome message
+                messagesContainer.innerHTML = '';
+                addMessage('system', 'Connected! You can now send messages to the agent.');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+                updateStatus(false);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addMessage('system', 'Connection error. Please try again.');
+                updateStatus(false);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                console.log('Received:', msg);
+                handleMessage(msg);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            updateStatus(false);
+        }
+
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case 'chat_id_assigned':
+                    chatId = msg.chat_id;
+                    chatIdDisplay.textContent = `Chat ID: ${chatId}`;
+                    break;
+
+                case 'planning':
+                    addMessage('assistant', msg.plan, { plan: true });
+                    break;
+
+                case 'action':
+                    if (msg.model_output) {
+                        addMessage('assistant', msg.model_output, {
+                            stepNumber: msg.step_number,
+                            toolCalls: msg.tool_calls
+                        });
+                    }
+                    if (msg.observations) {
+                        addMessage('assistant', msg.observations, { stepNumber: msg.step_number });
+                    }
+                    break;
+
+                case 'final_answer':
+                    removeLoadingIndicator();
+                    addMessage('assistant', msg.output);
+                    isProcessing = false;
+                    sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    break;
+
+                case 'error':
+                    removeLoadingIndicator();
+                    addMessage('system', msg.message, { error: true });
+                    isProcessing = false;
+                    sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    break;
+
+                case 'complete':
+                    removeLoadingIndicator();
+                    isProcessing = false;
+                    sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    if (msg.new_files && msg.new_files.length > 0) {
+                        addMessage('system', `New files generated: ${msg.new_files.join(', ')}`);
+                        refreshFiles();
+                    }
+                    break;
+
+                case 'pong':
+                    // Heartbeat response
+                    break;
+            }
+        }
+
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content || !ws || isProcessing) return;
+
+            addMessage('user', content);
+            messageInput.value = '';
+
+            isProcessing = true;
+            sendBtn.disabled = true;
+            messageInput.disabled = true;
+            addLoadingIndicator();
+
+            ws.send(JSON.stringify({
+                type: 'prompt',
+                content: content
+            }));
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function refreshFiles() {
+            if (!chatId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/chat/${chatId}/files`);
+                if (!response.ok) throw new Error('Failed to fetch files');
+
+                const data = await response.json();
+
+                if (data.files.length === 0) {
+                    filesList.innerHTML = '<p style="font-size: 0.875rem; color: #666;">No files yet</p>';
+                } else {
+                    filesList.innerHTML = data.files.map(f => `
+                        <div class="file-item">
+                            <span>📄</span>
+                            <a href="${API_BASE}/api/chat/${chatId}/files/${encodeURIComponent(f.filename)}"
+                               target="_blank" download>${f.filename}</a>
+                            <span style="color: #666; margin-left: auto;">${formatBytes(f.size)}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // Keepalive ping every 30 seconds
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
+
+        // Load saved credentials from localStorage
+        window.onload = () => {
+            const savedUrl = localStorage.getItem('rossum_api_url');
+            const savedToken = localStorage.getItem('rossum_api_token');
+            if (savedUrl) document.getElementById('apiBaseUrl').value = savedUrl;
+            if (savedToken) document.getElementById('apiToken').value = savedToken;
+        };
+
+        // Save credentials on change
+        document.getElementById('apiBaseUrl').onchange = (e) => {
+            localStorage.setItem('rossum_api_url', e.target.value);
+        };
+        document.getElementById('apiToken').onchange = (e) => {
+            localStorage.setItem('rossum_api_token', e.target.value);
+        };
+    </script>
+</body>
+</html>

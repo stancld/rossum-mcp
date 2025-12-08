@@ -31,6 +31,7 @@ dependencies = [
 
 [project.scripts]
 rossum-agent = "rossum_agent.streamlit_app:main"
+rossum-agent-api = "rossum_agent.api:main"
 
 [project.optional-dependencies]
 docs = [
@@ -45,6 +46,11 @@ streamlit = [
     "redis>=7.0.0",
     "streamlit>=1.28.0",
 ]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "redis>=7.0.0",
+]
 tests = [
     "coverage>=7.0.0",
     "pytest>=7.0.0",
@@ -55,6 +61,7 @@ tests = [
 ]
 all = [
     "coverage>=7.0.0",
+    "fastapi>=0.115.0",
     "myst-parser>=2.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -64,6 +71,7 @@ all = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
     "streamlit>=1.28.0",
+    "uvicorn[standard]>=0.32.0",
 ]
 
 [tool.uv.sources]
