@@ -13,7 +13,6 @@ from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 from rossum_api.models.workspace import Workspace
-from rossum_mcp.server import RossumMCPServer
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -67,12 +66,6 @@ def mock_rossum_client() -> Iterator[AsyncMock]:
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
         yield mock_client
-
-
-@pytest.fixture
-def server(mock_env_vars: None, mock_rossum_client: AsyncMock) -> RossumMCPServer:
-    """Create a RossumMCPServer instance for testing."""
-    return RossumMCPServer()
 
 
 def create_mock_annotation(**kwargs) -> Annotation:
@@ -158,10 +151,9 @@ def create_mock_queue(**kwargs) -> Queue:
         "inbox": "https://api.test.rossum.ai/v1/inboxes/1",
         "hooks": [],
         "users": [],
-        "groups": [],
         "use_confirmed_state": True,
         "default_score_threshold": 0.8,
-        "locale": "en",
+        "locale": "en_GB",
         "training_enabled": True,
         "automation_enabled": True,
         "automation_level": "never",
@@ -169,13 +161,10 @@ def create_mock_queue(**kwargs) -> Queue:
         "dedicated_engine": None,
         "counts": {},
         "metadata": {},
-        "created_at": "2025-01-01T00:00:00Z",
-        "modified_at": "2025-01-01T00:00:00Z",
+        "settings": {},
         "status": "active",
-        "description": "",
         "document_lifetime": None,
         "delete_after": None,
-        "formula_fields": [],
     }
     defaults.update(kwargs)
     return Queue(**defaults)
@@ -196,11 +185,12 @@ def create_mock_hook(**kwargs) -> Hook:
         "sideload": [],
         "run_after": [],
         "metadata": {},
-        "extension_source": None,
+        "extension_source": "custom",
         "test": {},
         "token_owner": None,
         "extension_image_url": None,
-        "extension_pages": [],
+        "guide": None,
+        "read_more_url": None,
     }
     defaults.update(kwargs)
     return Hook(**defaults)
@@ -232,9 +222,7 @@ def create_mock_engine(**kwargs) -> Engine:
         "learning_enabled": True,
         "training_queues": [],
         "description": "",
-        "metadata": {},
-        "modified_at": "2025-01-01T00:00:00Z",
-        "created_at": "2025-01-01T00:00:00Z",
+        "agenda_id": "test-agenda-id",
     }
     defaults.update(kwargs)
     return Engine(**defaults)
@@ -246,12 +234,13 @@ def create_mock_engine_field(**kwargs) -> EngineField:
         "id": 1,
         "url": "https://api.test.rossum.ai/v1/engine_fields/1",
         "engine": "https://api.test.rossum.ai/v1/engines/1",
+        "name": "test_field",
         "label": "Test Field",
         "type": "string",
         "subtype": None,
         "pre_trained_field_id": None,
-        "options": [],
-        "metadata": {},
+        "tabular": False,
+        "multiline": "no",
     }
     defaults.update(kwargs)
     return EngineField(**defaults)

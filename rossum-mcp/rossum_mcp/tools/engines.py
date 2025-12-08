@@ -1,0 +1,154 @@
+"""Engine tools for Rossum MCP Server."""
+
+from __future__ import annotations
+
+import dataclasses
+import logging
+from typing import TYPE_CHECKING
+
+from rossum_api.domain_logic.resources import Resource
+
+from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
+    from rossum_api import AsyncRossumAPIClient
+    from rossum_api.models.engine import Engine, EngineField
+
+logger = logging.getLogger(__name__)
+
+
+def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
+    """Register engine-related tools with the FastMCP server."""
+
+    @mcp.tool(
+        description="Retrieve a single engine by ID. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, organization, message."
+    )
+    async def get_engine(engine_id: int) -> dict:
+        """Retrieve a single engine by ID."""
+        logger.debug(f"Retrieving engine: engine_id={engine_id}")
+        engine: Engine = await client.retrieve_engine(engine_id)
+        result = dataclasses.asdict(engine)
+        result["message"] = f"Engine '{engine.name}' (ID {engine.id}) retrieved successfully"
+        return result
+
+    @mcp.tool(
+        description="List all engines with optional filters. Returns: count, results array with engine details (id, url, name, type, learning_enabled, training_queues, description, agenda_id, organization)."
+    )
+    async def list_engines(
+        id: int | None = None, engine_type: str | None = None, agenda_id: str | None = None
+    ) -> dict:
+        """List all engines with optional filters."""
+        logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")
+        filters: dict[str, int | str] = {}
+        if id is not None:
+            filters["id"] = id
+        if engine_type is not None:
+            filters["type"] = engine_type
+        if agenda_id is not None:
+            filters["agenda_id"] = agenda_id
+        engines_list = [engine async for engine in client.list_engines(**filters)]  # type: ignore[arg-type]
+        return {"count": len(engines_list), "results": [dataclasses.asdict(engine) for engine in engines_list]}
+
+    @mcp.tool(
+        description="Update engine settings. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, message."
+    )
+    async def update_engine(engine_id: int, engine_data: dict) -> dict:
+        """Update an existing engine's settings."""
+        if not is_read_write_mode():
+            return {"error": "update_engine is not available in read-only mode"}
+
+        logger.debug(f"Updating engine: engine_id={engine_id}, data={engine_data}")
+        updated_engine_data = await client._http_client.update(Resource.Engine, engine_id, engine_data)
+        updated_engine: Engine = client._deserializer(Resource.Engine, updated_engine_data)
+        result = dataclasses.asdict(updated_engine)
+        result["message"] = f"Engine '{updated_engine.name}' (ID {updated_engine.id}) updated successfully"
+        return result
+
+    @mcp.tool(
+        description="Create a new engine. Returns: id, url, name, type, learning_enabled, training_queues, description, agenda_id, message. IMPORTANT: When creating a new engine, check the schema to be used and create contained Engine fields immediately!"
+    )
+    async def create_engine(name: str, organization_id: int, engine_type: str) -> dict:
+        """Create a new engine."""
+        if not is_read_write_mode():
+            return {"error": "create_engine is not available in read-only mode"}
+
+        if engine_type not in ("extractor", "splitter"):
+            raise ValueError(f"Invalid engine_type '{engine_type}'. Must be 'extractor' or 'splitter'")
+
+        logger.debug(f"Creating engine: name={name}, organization_id={organization_id}, type={engine_type}")
+        engine_data = {
+            "name": name,
+            "organization": build_resource_url("organizations", organization_id),
+            "type": engine_type,
+        }
+        engine_response = await client._http_client.create(Resource.Engine, engine_data)
+        engine: Engine = client._deserializer(Resource.Engine, engine_response)
+        result = dataclasses.asdict(engine)
+        result["message"] = f"Engine '{engine.name}' created successfully with ID {engine.id}"
+        return result
+
+    @mcp.tool(
+        description="Create engine field for each schema field. Must be called when creating engine + schema. Returns: id, url, engine, name, tabular, label, type, subtype, pre_trained_field_id, multiline, schema_ids (added), message."
+    )
+    async def create_engine_field(
+        engine_id: int,
+        name: str,
+        label: str,
+        field_type: str,
+        schema_ids: list[int],
+        tabular: bool = False,
+        multiline: str = "false",
+        subtype: str | None = None,
+        pre_trained_field_id: str | None = None,
+    ) -> dict:
+        """Create a new engine field and link it to schemas."""
+        if not is_read_write_mode():
+            return {"error": "create_engine_field is not available in read-only mode"}
+
+        valid_types = ("string", "number", "date", "enum")
+        if field_type not in valid_types:
+            raise ValueError(f"Invalid field_type '{field_type}'. Must be one of: {', '.join(valid_types)}")
+        if not schema_ids:
+            raise ValueError("schema_ids cannot be empty - engine field must be linked to at least one schema")
+
+        logger.debug(
+            f"Creating engine field: engine_id={engine_id}, name={name}, type={field_type}, schemas={schema_ids}"
+        )
+        engine_field_data = {
+            "engine": build_resource_url("engines", engine_id),
+            "name": name,
+            "label": label,
+            "type": field_type,
+            "tabular": tabular,
+            "multiline": multiline,
+            "schemas": [build_resource_url("schemas", schema_id) for schema_id in schema_ids],
+        }
+        if subtype is not None:
+            engine_field_data["subtype"] = subtype
+        if pre_trained_field_id is not None:
+            engine_field_data["pre_trained_field_id"] = pre_trained_field_id
+
+        engine_field_response = await client._http_client.create(Resource.EngineField, engine_field_data)
+        engine_field: EngineField = client._deserializer(Resource.EngineField, engine_field_response)
+        result = dataclasses.asdict(engine_field)
+        result["schema_ids"] = schema_ids
+        result["message"] = (
+            f"Engine field '{engine_field.label}' created successfully with ID {engine_field.id} "
+            f"and linked to {len(schema_ids)} schema(s)"
+        )
+        return result
+
+    @mcp.tool(
+        description="Retrieve engine fields for a specific engine or all engine fields. Returns: count, results array with engine field details (id, url, engine, name, tabular, label, type, subtype, pre_trained_field_id, multiline)."
+    )
+    async def get_engine_fields(engine_id: int | None = None) -> dict:
+        """Retrieve engine fields for a specific engine or all engine fields."""
+        logger.debug(f"Retrieving engine fields: engine_id={engine_id}")
+        engine_fields_list = [
+            engine_field async for engine_field in client.retrieve_engine_fields(engine_id=engine_id)
+        ]
+        return {
+            "count": len(engine_fields_list),
+            "results": [dataclasses.asdict(engine_field) for engine_field in engine_fields_list],
+        }

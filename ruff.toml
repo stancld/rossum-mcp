@@ -62,6 +62,9 @@ ignore = [
     "W191",  # Tab-indentation (discouraged to use with formatter)
 ]
 
+[lint.per-file-ignores]
+"**/tests/**" = ["PLC0415"]
+
 [lint.flake8-import-conventions.aliases]
 "datetime" = "dt"
 "datasets" = "hf_datasets"

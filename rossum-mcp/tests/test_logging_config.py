@@ -94,7 +94,7 @@ class TestSetupLogging:
 
             logger = setup_logging(app_name="test-app", redis_host="localhost", use_console=False)
 
-            from rossum_mcp.logging_config import RedisHandler  # noqa: PLC0415
+            from rossum_mcp.logging_config import RedisHandler
 
             redis_handlers = [h for h in logger.handlers if isinstance(h, RedisHandler)]
             assert len(redis_handlers) == 0
