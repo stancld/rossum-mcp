@@ -25,7 +25,7 @@ dependencies = [
     "python-dotenv",
     "requests>=2.32",
     "rossum-api>=3.7.0",
-    "rossum-mcp>=0.2.0",
+    "rossum-mcp>=0.3.0",
 ]
 
 [project.scripts]
@@ -66,7 +66,7 @@ all = [
 ]
 
 [tool.uv.sources]
-rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", tag = "ds-rossum-agent-claude-agents-sdk", subdirectory = "rossum-mcp" }
+rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", tag = "rossum-mcp-v0.3.1", subdirectory = "rossum-mcp" }
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]
