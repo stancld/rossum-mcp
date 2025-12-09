@@ -9,23 +9,14 @@
 
 </div>
 
-AI agent package for Rossum document processing with tools for data manipulation and visualization. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
+AI agent for Rossum document processing. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
 
 ## Features
 
-### Agent Tools
-- **File System Tools**: Read, write, and list files from the filesystem
-- **Plotting Tools**: Create interactive charts and visualizations with Plotly
-- **Hook Analysis Tools**: Analyze and visualize Rossum hook dependencies and workflows
-- **Internal Tools**: Sleep, execute code, and manage agent operations
+### Agent Capabilities
 - **Rossum Integration**: Connect to Rossum MCP server for document processing
-
-### Visualization Capabilities
-- Interactive bar charts, line charts, scatter plots
-- Pie charts and histograms
-- Box plots and heatmaps
-- Customizable colors, labels, and layouts
-- Export to HTML or PNG formats
+- **File Output**: Write reports, documentation, and analysis results to files
+- **Claude Code Execution**: Leverage Claude's native code execution for data analysis, plotting, and complex computations
 
 ### User Interfaces
 - **CLI**: Command-line interface for interactive agent conversations
@@ -98,152 +89,27 @@ os.environ["LLM_MODEL_ID"] = "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1
 agent = create_agent()
 
 # Use the agent
-result = agent.run(
-    "Create a bar chart showing sales by region: "
-    "North: 100, South: 150, East: 120, West: 130"
-)
+result = agent.run("Analyze the hooks on queue 12345 and explain their execution order")
 ```
 
 ## Available Tools
 
-### File System Tools
-
-#### read_file
-Read file or directory metadata, optionally with file contents.
+### write_file
+Write text or markdown content to a file. Use this to save documentation, reports, diagrams, or any text output.
 
 **Parameters:**
-- `file_path` (string): Path to the file or directory
-- `include_content` (bool, optional): Whether to include file contents (default: True, ignored for directories)
+- `filename` (string): The name of the file to create (e.g., 'report.md', 'hooks.txt')
+- `content` (string): The text content to write to the file
 
-#### write_file
-Write text or markdown content to a file.
+### Rossum MCP Tools
 
-**Parameters:**
-- `file_path` (string): Path to the file to write
-- `content` (string): Text content to write
-- `overwrite` (bool, optional): Whether to overwrite existing file (default: True)
-
-#### list_files
-List files in a directory.
-
-**Parameters:**
-- `directory_path` (string): Path to the directory
-- `pattern` (string, optional): Glob pattern to filter files
-
-### Plotting Tools
-
-#### plot_bar_chart
-Create an interactive bar chart.
-
-**Parameters:**
-- `data` (dict): Data for plotting (e.g., `{"A": 10, "B": 20}`)
-- `title` (string, optional): Chart title
-- `x_label` (string, optional): X-axis label
-- `y_label` (string, optional): Y-axis label
-- `output_path` (string, optional): Path to save the chart
-
-#### plot_line_chart
-Create an interactive line chart.
-
-**Parameters:**
-- `data` (dict): Data for plotting with x and y values
-- Additional styling parameters
-
-#### plot_scatter
-Create an interactive scatter plot.
-
-**Parameters:**
-- `x_data` (list): X-axis values
-- `y_data` (list): Y-axis values
-- Additional styling parameters
-
-#### plot_pie_chart
-Create an interactive pie chart.
-
-**Parameters:**
-- `data` (dict): Data for plotting
-- Additional styling parameters
-
-### Hook Analysis Tools
-
-#### analyze_hook_dependencies
-Analyze hook dependencies from a list of hooks and generate a dependency tree.
-
-**Parameters:**
-- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
-
-**Returns:**
-- JSON string containing:
-  - `execution_phases`: Hooks grouped by trigger event
-  - `dependency_tree`: Visual tree representation
-  - `hook_details`: Detailed information about each hook
-  - `workflow_summary`: Overall workflow description
-
-**Example:**
-```python
-hooks_data = mcp.list_hooks(queue_id=12345)
-analysis = analyze_hook_dependencies(hooks_data)
-```
-
-#### visualize_hook_tree
-Generate a visual tree diagram of hook execution flow.
-
-**Parameters:**
-- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
-- `output_format` (string, optional): Format for visualization:
-  - `"ascii"`: Simple ASCII art tree (default)
-  - `"markdown"`: Markdown-formatted tree with indentation
-  - `"mermaid"`: Mermaid diagram syntax for rendering
-
-**Returns:**
-- String containing the tree visualization in the requested format
-
-**Example:**
-```python
-hooks_data = mcp.list_hooks(queue_id=12345)
-tree = visualize_hook_tree(hooks_data, output_format="markdown")
-print(tree)
-```
-
-#### explain_hook_execution_order
-Explain the execution order and timing of hooks in plain language.
-
-**Parameters:**
-- `hooks_json` (string): JSON string containing hooks data from list_hooks MCP tool
-
-**Returns:**
-- Plain text explanation of hook execution flow and dependencies
-
-**Example:**
-```python
-hooks_data = mcp.list_hooks(queue_id=12345)
-explanation = explain_hook_execution_order(hooks_data)
-print(explanation)
-```
-
-### Internal Tools
-
-#### sleep_tool
-Pause execution for a specified duration.
-
-**Parameters:**
-- `seconds` (int): Number of seconds to sleep
-
-#### execute_code
-Execute Python code safely.
-
-**Parameters:**
-- `code` (string): Python code to execute
-
-### Rossum Integration
-
-When configured with the Rossum MCP server, the agent can:
+When configured with the Rossum MCP server, the agent can use all MCP tools including:
 - Upload documents to Rossum
 - Monitor processing status
 - Retrieve and parse annotation data
-- Aggregate and visualize extracted data
+- Manage queues, schemas, hooks, and engines
 
-See the [main repository](https://github.com/stancld/rossum-mcp) for examples of using the agent with Rossum.
+See the [MCP Server README](../rossum-mcp/README.md) for the complete list of available MCP tools.
 
 ## Real-World Use Case
 
@@ -252,18 +118,18 @@ Imagine you have 30 invoices to process for a board meeting in 10 minutes. With 
 1. Upload all 30 invoices in bulk to Rossum
 2. Wait for automatic AI extraction
 3. Aggregate data across all documents
-4. Generate a presentable visualization
+4. Generate analysis and reports
 
-All with a simple conversational prompt. See the [main repository](https://github.com/stancld/rossum-mcp) for a complete example with a real-world revenue chart.
+All with a simple conversational prompt. See the [main repository](https://github.com/stancld/rossum-mcp) for complete examples.
 
 ## Example Commands
 
 Once the agent is running, you can say things like:
 
-- "Create a bar chart showing revenue by product: Product A: 1000, Product B: 1500, Product C: 1200"
-- "Read the file at /path/to/data.json and create a line chart from the data"
-- "List all CSV files in /path/to/data/ directory"
-- "Upload all invoices from /path/to/invoices to Rossum queue 12345" (requires Rossum MCP server)
+- "Upload all invoices from /path/to/invoices to Rossum queue 12345"
+- "Analyze the hooks on queue 12345 and explain their execution order"
+- "List all annotations in queue 12345 and summarize their status"
+- "Create a report documenting the schema for queue 12345"
 
 ## Configuration
 
@@ -288,9 +154,8 @@ The agent uses a configuration file at `rossum_agent/assets/agent_config.yaml`. 
 │ Rossum Agent    │
 │ (Claude)        │
 ├─────────────────┤
-│ • File Tools    │
-│ • Plot Tools    │
-│ • Internal Tools│
+│ • Write File    │
+│ • MCP Tools     │
 └────────┬────────┘
          │
          ▼

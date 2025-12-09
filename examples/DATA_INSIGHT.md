@@ -1,4 +1,4 @@
-# Upload data and get data insight
+# Upload data and get data aggregation
 
 1. Upload all invoices from `/Users/daniel.stancl/projects/rossum-mcp/examples/data` folder to Rossum to the queue 3901094.
     - Do not include documents from `knowledge` folder.
@@ -16,4 +16,3 @@
     - Print result for each document
 8. Aggregate across all documents: sum amounts for each unique description
 9. Return the final dictionary: {description: total_amount_across_all_docs}
-10. Using the retrieved data, generate bar plot displaying revenue by services. Sort it in descending order. Store it interactive `revenue.html`.

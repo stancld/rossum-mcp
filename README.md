@@ -110,43 +110,7 @@ This example shows how the agent can analyze existing automation to help teams u
 </details>
 
 <details>
-<summary><strong>Example 3: Bulk Processing & Visualization</strong></summary>
-
-Process multiple invoices and generate revenue analysis charts through a single conversational prompt:
-
-```md
-1. Upload all invoices from `/path/to/examples/data` folder to Rossum queue 3901094
-   - Do not include documents from `knowledge` folder
-2. Once you send all annotations, wait for a few seconds
-3. Then, start checking annotation status. Once all are imported, return a list of all annotations_urls
-4. Fetch the schema for the target queue
-5. Identify the schema field IDs for:
-   - Line item description field
-   - Line item total amount field
-6. Retrieve all annotations in 'to_review' state from queue 3901094
-7. For each document:
-   - Extract all line items
-   - Create a dictionary mapping {item_description: item_amount_total}
-   - If multiple line items share the same description, sum their amounts
-   - Print result for each document
-8. Aggregate across all documents: sum amounts for each unique description
-9. Return the final dictionary: {description: total_amount_across_all_docs}
-10. Using the retrieved data, generate bar plot displaying revenue by services.
-    Sort it in descending order. Store it interactive `revenue.html`.
-```
-
-<div align="center">
-  <img src="revenue.png" alt="Revenue by Services Chart" width="700">
-</div>
-
-**Result:** Automatically processes 30 invoices and generates an interactive visualization showing revenue breakdown by service category.
-
-See the [complete example](examples/PROMPT.md) for the full prompt and results.
-
-</details>
-
-<details>
-<summary><strong>Example 4: Queue Setup with Knowledge Warmup</strong></summary>
+<summary><strong>Example 3: Queue Setup with Knowledge Warmup</strong></summary>
 
 Create a new queue, warm it up with training documents, and test automation performance:
 
@@ -317,7 +281,7 @@ uv run streamlit run rossum_agent/app.py
 > ```
 > Or mount credentials in Docker: `~/.aws:/root/.aws:ro`
 
-The agent includes file system tools, plotting capabilities, and Rossum integration. See [examples/](examples/) for complete workflows.
+The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
 ## MCP Tools
 

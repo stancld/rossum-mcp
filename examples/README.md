@@ -5,7 +5,7 @@ This folder contains practical examples and data for demonstrating the Rossum MC
 ## What's in this folder
 
 - **data/**: Sample invoice files for testing document processing
-- **DATA_INSIGHT.md**: Data aggregation and visualization example
+- **DATA_INSIGHT.md**: Data aggregation example
 - **QUEUE_SETUP.md**: Guide for setting up Rossum queues
 - **SORTING_WARMUP.md**: Multi-queue setup with sorting engine
 - **SPLITTING_AND_SORTING_DEMO.md**: Full S&S demo with training queues, inbox, and hooks
@@ -80,10 +80,9 @@ Once the agent is running, you can say things like:
 ### How it Works
 
 1. **MCP Integration**: The agent connects to the Rossum MCP server to access document processing capabilities
-2. **Tool Suite**: The agent has access to file system tools, plotting tools, and Rossum API operations
+2. **Tool Suite**: The agent has access to file writing tools and Rossum API operations via MCP
 3. **Natural Language**: The agent interprets your commands and calls the appropriate tools automatically
 4. **Batch Processing**: The agent can handle multiple files and operations intelligently
-5. **Visualization**: The agent can create interactive charts from extracted data using Plotly
 
 ### Understanding Annotation States
 
@@ -113,9 +112,8 @@ When documents are uploaded to Rossum, they go through a processing workflow:
 │ Rossum Agent    │
 │ (Claude)        │
 ├─────────────────┤
-│ • File Tools    │
-│ • Plot Tools    │
-│ • Rossum Tools  │
+│ • Write File    │
+│ • MCP Tools     │
 └────────┬────────┘
          │
          ▼
