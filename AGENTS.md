@@ -123,6 +123,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 6. Fix any issues and repeat until all checks pass
 
 ## Code Style
+- **YAGNI**: Don't add functionality until it's actually needed. Remove unused code, endpoints, and features proactively.
 - **Python version**: 3.12+ syntax required
 - **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`). Avoid using `Any` type annotation as much as possible - use specific types instead
 - **Imports**: Use `from pathlib import Path`, standard library first. Do NOT add try/except blocks for missing imports - assume all dependencies are installed

@@ -5,15 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
-from rossum_agent.api.models.schemas import (
-    DeleteResponse,
-    FileListResponse,
-    FileUploadResponse,
-)
+from rossum_agent.api.models.schemas import FileListResponse
 from rossum_agent.api.services.chat_service import (
     ChatService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
 )
@@ -119,78 +115,3 @@ async def download_file(
         media_type=mime_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-@router.post("", response_model=FileUploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_file(
-    chat_id: str,
-    file: UploadFile,
-    credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
-    chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
-    file_service: Annotated[FileService, Depends(get_file_service_dep)] = None,  # type: ignore[assignment]
-) -> FileUploadResponse:
-    """Upload a file to a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        file: File to upload (multipart/form-data).
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-        file_service: File service instance.
-
-    Returns:
-        FileUploadResponse with uploaded file info.
-
-    Raises:
-        HTTPException: If chat not found, file too large, or invalid file type.
-    """
-    if not chat_service.chat_exists(credentials.user_id, chat_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
-
-    content = await file.read()
-    filename = file.filename or "uploaded_file"
-
-    try:
-        file_info = file_service.upload_file(chat_id=chat_id, filename=filename, content=content)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-
-    if file_info is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to upload file")
-
-    return FileUploadResponse(file=file_info)
-
-
-@router.delete("/{filename}", response_model=DeleteResponse)
-async def delete_file(
-    chat_id: str,
-    filename: str,
-    credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
-    chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
-    file_service: Annotated[FileService, Depends(get_file_service_dep)] = None,  # type: ignore[assignment]
-) -> DeleteResponse:
-    """Delete a file from a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        filename: Name of the file to delete.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-        file_service: File service instance.
-
-    Returns:
-        DeleteResponse indicating success.
-
-    Raises:
-        HTTPException: If chat or file not found.
-    """
-    if not chat_service.chat_exists(credentials.user_id, chat_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
-
-    if not file_service.file_exists(chat_id, filename):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"File {filename} not found in chat {chat_id}"
-        )
-
-    deleted = file_service.delete_file(chat_id, filename)
-    return DeleteResponse(deleted=deleted)

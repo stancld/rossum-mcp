@@ -119,10 +119,3 @@ class FileListResponse(BaseModel):
 
     files: list[FileInfo]
     total: int
-
-
-class FileUploadResponse(BaseModel):
-    """Response for file upload."""
-
-    file: FileInfo
-    uploaded: bool = True

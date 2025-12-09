@@ -63,24 +63,8 @@ class ChatService:
         initial_messages: list[dict[str, Any]] = []
         self._storage.save_chat(user_id, chat_id, initial_messages)
 
-        self._save_chat_metadata(user_id, chat_id, mcp_mode, timestamp)
-
         logger.info(f"Created chat {chat_id} for user {user_id or 'shared'}")
         return ChatResponse(chat_id=chat_id, created_at=timestamp)
-
-    def _save_chat_metadata(
-        self,
-        user_id: str | None,
-        chat_id: str,
-        mcp_mode: str,
-        created_at: dt.datetime,
-    ) -> None:
-        """Save chat metadata to Redis.
-
-        Metadata is stored separately from messages to allow quick access
-        without loading all messages.
-        """
-        pass
 
     def list_chats(self, user_id: str | None, limit: int = 50, offset: int = 0) -> ChatListResponse:
         """List chat sessions for a user.
