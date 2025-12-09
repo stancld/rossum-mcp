@@ -89,6 +89,12 @@ ignore-variadic-names = true
 # Disallow all relative imports.
 ban-relative-imports = "all"
 
+[lint.flake8-type-checking]
+exempt-modules = []  # default is `typing`, but we want to include these under guards if possible
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+]
+
 [lint.isort]
 required-imports = ["from __future__ import annotations"]
 

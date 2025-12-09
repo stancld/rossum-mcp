@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rossum Agent</title>
+    <link rel="stylesheet" href="/test-client/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <aside id="sidebar">
+            <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">«</button>
+
+            <div class="logo">
+                <img src="/test-client/assets/Primary_light_logo.png" alt="Rossum" onerror="this.style.display='none'">
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Rossum API Credentials</h3>
+                <div id="credentials-status" class="credentials-banner warning">
+                    <span class="banner-icon">⚠</span>
+                    Please enter your Rossum API credentials
+                </div>
+
+                <div id="credentials-form">
+                    <label class="form-label">API Base URL</label>
+                    <input type="text" id="api-url" placeholder="https://your-instance.rossum.app">
+
+                    <label class="form-label">API Token</label>
+                    <div class="input-with-icon">
+                        <input type="password" id="api-token" placeholder="Your Rossum API token">
+                        <button type="button" id="toggle-token" class="icon-button" title="Show/hide token">
+                            <span class="eye-icon">👁</span>
+                        </button>
+                    </div>
+
+                    <button id="save-credentials" class="btn-primary">Save Credentials</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Agent Mode</h3>
+                <div class="mode-help">
+                    <span>Select mode:</span>
+                    <span class="help-icon" title="Read-only mode only allows viewing data. Read-write mode allows creating and modifying data.">ⓘ</span>
+                </div>
+                <div class="mode-toggle">
+                    <label class="radio-label">
+                        <input type="radio" name="mode" value="read-write">
+                        <span>read-write</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="mode" value="read-only" checked>
+                        <span>read-only</span>
+                    </label>
+                </div>
+                <div id="mode-indicator" class="mode-indicator">
+                    Current mode: <span class="mode-lock">🔒</span> <span id="current-mode">Read-Only</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Quick Actions</h3>
+                <button id="get-link" class="btn-secondary full-width">
+                    <span class="btn-icon">🔗</span> Get Shareable Link
+                </button>
+                <button id="reset-chat" class="btn-secondary full-width danger">
+                    <span class="btn-icon">🗑</span> Reset Conversation
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Generated Files</h3>
+                <div id="file-list" class="file-list">
+                    <div class="empty-state warning">No files generated yet</div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Chat History</h3>
+                <ul id="chat-list"></ul>
+            </div>
+        </aside>
+
+        <main id="main">
+            <div id="header">
+                <h1>Rossum Agent</h1>
+                <p class="subtitle">Agent for automating Rossum setup processes.</p>
+            </div>
+
+            <div id="messages"></div>
+
+            <form id="chat-form">
+                <div class="input-container">
+                    <span class="input-icon">✏️</span>
+                    <input type="text" id="input" placeholder="Please enter your Rossum API credentials in the sidebar" disabled>
+                    <button type="submit" id="send" disabled title="Send message">
+                        <span class="send-icon">➤</span>
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+    <script src="/test-client/app.js"></script>
+</body>
+</html>

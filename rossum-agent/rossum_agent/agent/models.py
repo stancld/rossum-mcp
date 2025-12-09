@@ -7,7 +7,7 @@ for representing tool calls, results, and agent steps.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any  # noqa: TC003 - Any used in dataclass field type hints at runtime
 
 
 @dataclass

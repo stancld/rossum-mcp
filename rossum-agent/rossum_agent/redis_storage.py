@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any  # noqa: TC003 - Any used in function type hints at runtime
 
 import redis
 

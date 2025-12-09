@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --extra tests
+          uv sync --extra api --extra tests
         shell: bash
         working-directory: rossum-agent
 

@@ -1,5 +1,9 @@
 # Development Guidelines
 
+## Git Workflow
+- **NEVER commit or push automatically** - Only run `git commit` or `git push` when explicitly instructed by the user
+- Suggest commit messages when asked, but wait for user approval before committing
+
 ## Commands
 - **Python setup**: `pip install -e .`
 - **Run server**: `python server.py`
@@ -126,6 +130,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - **Logging**: File-based logging to `/tmp/` since stdout is MCP protocol
 - **Error handling**: Return JSON error objects, include tracebacks for debugging
 - **Comments**: Brief, explain why not what
+- **Noqa/type-ignore comments**: Always add an explanatory comment when using `# noqa` or `# type: ignore`. Explain why the suppression is necessary (e.g., `# noqa: TC003 - Callable used in type annotation at runtime for FastAPI`)
 - **Quality**: Use pre-commit hooks (ruff, mypy, codespell) before committing
 - **Development workflow**: After making code changes, iteratively run `pre-commit run --all-files` and fix all mypy type errors until the checks pass cleanly
 
