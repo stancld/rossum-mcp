@@ -135,7 +135,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
 - Optional: `TELEPORT_JWT_JWKS_URL` for JWT verification and user isolation
 - Optional: `PUBLIC_URL` for shareable links on remote servers (e.g., `https://your-domain.com`)
-- MCP client configuration in Claude Desktop or smolagents
+- MCP client configuration in Claude Desktop
 
 ### User Isolation Feature
 User isolation is automatically enabled when `TELEPORT_JWT_JWKS_URL` is configured:
@@ -156,3 +156,43 @@ User isolation is automatically enabled when `TELEPORT_JWT_JWKS_URL` is configur
    ```bash
    redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
    ```
+
+## Code Review Guidelines
+
+When performing code reviews, evaluate the following aspects:
+
+### Architecture & Design
+- Single Responsibility: Each class/function should have one clear purpose
+- Separation of concerns: Business logic, I/O, and presentation should be separate
+- Dependency injection: Prefer injected dependencies over hard-coded ones
+- Error boundaries: Errors should be handled at appropriate levels
+
+### Code Quality
+- **Type safety**: All functions should have type hints; avoid `Any` where possible
+- **Error handling**: Exceptions should be caught, logged, and handled gracefully
+- **Logging**: Sufficient logging for debugging without exposing sensitive data
+- **Naming**: Clear, descriptive names for variables, functions, and classes
+- **DRY**: Avoid code duplication; extract common patterns
+
+### Security
+- No hardcoded secrets or credentials
+- Input validation on all external inputs
+- Proper sanitization of data before logging
+
+### Performance
+- Avoid unnecessary I/O or API calls
+- Use caching where appropriate
+- Consider async/await for I/O-bound operations
+
+### Testing
+- Is the code testable? (Can dependencies be mocked?)
+- Are edge cases considered?
+- Is error handling tested?
+
+### Review Checklist
+- [ ] Type hints are complete and accurate
+- [ ] Error handling is comprehensive
+- [ ] Logging is appropriate (not too verbose, not too sparse)
+- [ ] No security vulnerabilities (secrets, injection, etc.)
+- [ ] Code follows project conventions (see Code Style section)
+- [ ] Tests exist or are planned for new functionality

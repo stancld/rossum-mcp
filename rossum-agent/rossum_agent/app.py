@@ -8,21 +8,23 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import os
 import pathlib
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import streamlit as st
 from rossum_mcp.logging_config import setup_logging
-from smolagents.memory import ActionStep, FinalAnswerStep, PlanningStep
 
-from rossum_agent.agent import create_agent
+from rossum_agent.agent import AgentConfig, create_agent
 from rossum_agent.agent_logging import log_agent_result
 from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.beep_sound import generate_beep_wav
+from rossum_agent.mcp_tools import connect_mcp_server
+from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import RedisStorage
 from rossum_agent.render_modules import render_chat_history
 from rossum_agent.user_detection import detect_user_id, normalize_user_id
@@ -37,7 +39,9 @@ from rossum_agent.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable
+
+    from rossum_agent.agent import AgentStep
 
 # Generate beep and encode as base64 data URL
 _beep_wav = generate_beep_wav(frequency=440, duration=0.33)
@@ -53,6 +57,43 @@ logger = logging.getLogger(__name__)
 
 # Page config - must be first Streamlit command and at module level
 st.set_page_config(page_title="Rossum Agent", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
+
+
+async def run_agent_turn(
+    rossum_api_token: str,
+    rossum_api_base_url: str,
+    mcp_mode: Literal["read-only", "read-write"],
+    prompt: str,
+    conversation_history: list[dict[str, str]],
+    on_step: Callable[[AgentStep], None],
+) -> None:
+    """Run a single agent turn with proper MCP connection lifecycle.
+
+    Creates MCP connection, runs the agent, and cleans up within a single event loop.
+
+    Args:
+        rossum_api_token: Rossum API token.
+        rossum_api_base_url: Rossum API base URL.
+        mcp_mode: MCP mode ('read-only' or 'read-write').
+        prompt: User's input prompt.
+        conversation_history: Previous messages for context.
+        on_step: Callback function called for each step as it completes.
+    """
+    async with connect_mcp_server(
+        rossum_api_token=rossum_api_token, rossum_api_base_url=rossum_api_base_url, mcp_mode=mcp_mode
+    ) as mcp_connection:
+        agent = await create_agent(
+            mcp_connection=mcp_connection, system_prompt=get_system_prompt(), config=AgentConfig()
+        )
+
+        for msg in conversation_history:
+            if msg["role"] == "user":
+                agent.add_user_message(msg["content"])
+            elif msg["role"] == "assistant":
+                agent.add_assistant_message(msg["content"])
+
+        async for step in agent.run(prompt):
+            on_step(step)
 
 
 def main() -> None:  # noqa: C901
@@ -175,8 +216,6 @@ def main() -> None:  # noqa: C901
                     st.session_state.rossum_api_token = api_token
                     st.session_state.rossum_api_base_url = api_base_url
                     st.session_state.credentials_saved = True
-                    if "agent" in st.session_state:
-                        del st.session_state.agent
                     st.rerun()
                 else:
                     st.error("Both fields are required")
@@ -195,8 +234,6 @@ def main() -> None:  # noqa: C901
 
             if st.button("Update Credentials"):
                 st.session_state.credentials_saved = False
-                if "agent" in st.session_state:
-                    del st.session_state.agent
                 st.rerun()
 
         # MCP Mode selection
@@ -225,8 +262,6 @@ def main() -> None:  # noqa: C901
         if new_mode != st.session_state.mcp_mode:
             st.session_state.mcp_mode = new_mode
             os.environ["ROSSUM_MCP_MODE"] = new_mode
-            if "agent" in st.session_state:
-                del st.session_state.agent
             st.rerun()
 
         mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
@@ -252,8 +287,6 @@ def main() -> None:  # noqa: C901
 
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []
-            if "agent" in st.session_state:
-                del st.session_state.agent
             # Cleanup old session directory and create a new one
             if "output_dir" in st.session_state:
                 cleanup_session_output_dir(st.session_state.output_dir)
@@ -296,8 +329,7 @@ def main() -> None:  # noqa: C901
 
         # Chat History section
         user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
-        is_shared_view = bool(st.session_state.get("shared_user_id"))
-        render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id, is_shared_view)
+        render_chat_history(st.session_state.redis_storage, st.session_state.chat_id, user_id)
 
         # Debug: Display normalized user_id
         st.sidebar.divider()
@@ -306,23 +338,6 @@ def main() -> None:  # noqa: C901
     # Main content
     st.title("Rossum Agent")
     st.markdown("Agent for automating Rossum setup processes.")
-
-    # Initialize agent only if credentials are saved
-    if "agent" not in st.session_state and st.session_state.credentials_saved:
-        with st.spinner("Initializing agent..."):
-            try:
-                logger.info("Initializing Rossum agent")
-                st.session_state.agent = create_agent(
-                    rossum_api_token=st.session_state.rossum_api_token,
-                    rossum_api_base_url=st.session_state.rossum_api_base_url,
-                    mcp_mode=st.session_state.mcp_mode,
-                    stream_outputs=False,
-                )
-                logger.info("Agent initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize agent: {e}", exc_info=True)
-                st.error(f"Failed to initialize agent: {e}")
-                st.stop()
 
     # Display chat messages
     for message in st.session_state.messages:
@@ -355,26 +370,45 @@ def main() -> None:  # noqa: C901
 
         with st.chat_message("assistant"):
             final_answer_text = None
+            final_error_text = None
 
             try:
                 start_time = time.time()
+                chat_response = ChatResponse(prompt, output_placeholder=st.empty())
 
-                result_generator: Iterator[ActionStep | PlanningStep] = st.session_state.agent.run(
-                    prompt, return_full_result=True, stream=True, reset=False
+                # Get conversation history (excluding the current user message)
+                conversation_history = st.session_state.messages[:-1]
+
+                # Run agent with proper MCP lifecycle
+                mcp_mode: Literal["read-only", "read-write"] = (
+                    "read-write" if st.session_state.mcp_mode == "read-write" else "read-only"
                 )
 
-                chat_response = ChatResponse(prompt, output_placeholder=st.empty(), start_time=start_time)
-
-                for step in result_generator:
+                def process_step(step: AgentStep) -> None:
+                    nonlocal final_answer_text, final_error_text
                     chat_response.process_step(step)
 
-                    if isinstance(chat_response.result, FinalAnswerStep) and chat_response.result.output:
-                        raw_answer = str(chat_response.result.output)
-                        final_answer_text = parse_and_format_final_answer(raw_answer)
+                    if step.is_final:
+                        if step.final_answer:
+                            final_answer_text = parse_and_format_final_answer(step.final_answer)
+                        elif step.error:
+                            final_error_text = f"❌ Error: {step.error}"
 
-                    # Save final answer to chat history
-                if final_answer_text:
-                    st.session_state.messages.append({"role": "assistant", "content": final_answer_text})
+                asyncio.run(
+                    run_agent_turn(
+                        rossum_api_token=st.session_state.rossum_api_token,
+                        rossum_api_base_url=st.session_state.rossum_api_base_url,
+                        mcp_mode=mcp_mode,
+                        prompt=prompt,
+                        conversation_history=conversation_history,
+                        on_step=process_step,
+                    )
+                )
+
+                # Save final answer or error to chat history
+                final_content = final_answer_text or final_error_text
+                if final_content:
+                    st.session_state.messages.append({"role": "assistant", "content": final_content})
 
                     # Persist to Redis
                     if st.session_state.redis_storage.is_connected():
@@ -390,18 +424,26 @@ def main() -> None:  # noqa: C901
                             str(st.session_state.output_dir),
                         )
 
-                    # Log final result
-                    duration = time.time() - start_time
-                    log_agent_result(chat_response.result, prompt, duration)
-                    logger.info("Agent response generated successfully")
+                # Log final result
+                duration = time.time() - start_time
+                if chat_response.result:
+                    log_agent_result(
+                        chat_response.result,
+                        prompt,
+                        duration,
+                        total_input_tokens=chat_response.total_input_tokens,
+                        total_output_tokens=chat_response.total_output_tokens,
+                    )
+                logger.info("Agent response generated successfully")
 
-                    # Play beep sound when answer generation completes
+                # Play beep sound when answer generation completes
+                if final_answer_text:
                     st.components.v1.html(BEEP_HTML, height=0)
 
-                    # Check if files were generated/modified and rerun to update sidebar
-                    current_files_metadata = get_generated_files_with_metadata()
-                    if current_files_metadata != generated_files_metadata:
-                        st.rerun()
+                # Check if files were generated/modified and rerun to update sidebar
+                current_files_metadata = get_generated_files_with_metadata()
+                if current_files_metadata != generated_files_metadata:
+                    st.rerun()
 
             except Exception as e:
                 logger.error(f"Error processing user request: {e}", exc_info=True)

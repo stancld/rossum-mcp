@@ -5,11 +5,11 @@
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Smolagents](https://img.shields.io/badge/Smolagents-compatible-green.svg)](https://github.com/huggingface/smolagents)
+[![Anthropic](https://img.shields.io/badge/Anthropic-Claude-blueviolet.svg)](https://www.anthropic.com/)
 
 </div>
 
-AI agent package for Rossum document processing with tools for data manipulation and visualization. Built with [smolagents](https://github.com/huggingface/smolagents) and designed to work seamlessly with the Rossum MCP server.
+AI agent package for Rossum document processing with tools for data manipulation and visualization. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
 
 ## Features
 
@@ -286,7 +286,7 @@ The agent uses a configuration file at `rossum_agent/assets/agent_config.yaml`. 
        ▼
 ┌─────────────────┐
 │ Rossum Agent    │
-│ (Smolagents)    │
+│ (Claude)        │
 ├─────────────────┤
 │ • File Tools    │
 │ • Plot Tools    │
@@ -314,7 +314,7 @@ MIT License - see LICENSE file for details
 
 ## Resources
 
-- [Smolagents Documentation](https://github.com/huggingface/smolagents)
+- [Anthropic Claude Documentation](https://docs.anthropic.com/)
 - [Rossum API Documentation](https://elis.rossum.ai/api/docs/)
 - [Main Repository](https://github.com/stancld/rossum-mcp)
 - [Full Documentation](https://stancld.github.io/rossum-mcp/)

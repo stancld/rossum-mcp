@@ -6,9 +6,8 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from rossum_agent.agent import AgentStep, ToolCall, ToolResult
 from rossum_agent.app_llm_response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
-from smolagents.memory import ActionStep, PlanningStep
-from smolagents.monitoring import Timing
 
 
 class TestParseAndFormatFinalAnswer:
@@ -230,209 +229,168 @@ class TestChatResponse:
     @pytest.fixture
     def chat_response(self, mock_placeholder):
         """Create a ChatResponse instance for testing."""
-        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder, start_time=0.0)
+        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder)
 
     def test_initialization(self, chat_response):
         """Test ChatResponse initialization."""
         assert chat_response.prompt == "Test prompt"
-        assert chat_response.start_time == 0.0
-        assert chat_response.steps_markdown == []
+        assert chat_response.completed_steps_markdown == []
         assert chat_response.final_answer_text is None
 
-    def test_process_planning_step(self, chat_response):
-        """Test processing of planning step."""
-
-        step = PlanningStep(
-            plan="1. First do this\n2. Then do that",
-            model_input_messages=[],
-            model_output_message=Mock(),
-            timing=Timing(start_time=0.0, end_time=0.5),
-        )
-        chat_response.process_planning_step(step)
-
-        assert len(chat_response.steps_markdown) == 1
-        assert "🧠 Plan" in chat_response.steps_markdown[0][0]
-        assert "First do this" in chat_response.steps_markdown[0][0]
-
-    def test_process_action_step_basic(self, chat_response, mock_placeholder):
-        """Test processing of basic action step."""
-        step = ActionStep(
+    def test_process_step_basic(self, chat_response, mock_placeholder):
+        """Test processing of basic step."""
+        step = AgentStep(
             step_number=1,
-            model_output="Analyzing data",
-            tool_calls=[],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            thinking="Analyzing data",
+            is_final=False,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
-        assert len(chat_response.steps_markdown) == 1
-        assert "Step 1" in chat_response.steps_markdown[0][0]
+        assert len(chat_response.completed_steps_markdown) == 1
+        assert "Step 1" in chat_response.completed_steps_markdown[0]
         mock_placeholder.markdown.assert_called()
 
-    def test_process_action_step_with_tool_calls(self, chat_response):
-        """Test processing of action step with tool calls."""
-        tool_call = Mock()
-        tool_call.name = "search_tool"
+    def test_process_step_with_tool_calls(self, chat_response):
+        """Test processing of step with tool calls."""
+        tool_call = ToolCall(id="tc_1", name="list_queues", arguments={})
 
-        step = ActionStep(
+        step = AgentStep(
             step_number=1,
-            model_output="Searching",
+            thinking="Let me search",
             tool_calls=[tool_call],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            is_final=False,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
-        assert "search_tool" in chat_response.steps_markdown[0][0]
+        assert "list_queues" in chat_response.completed_steps_markdown[0]
 
-    def test_process_action_step_skips_python_interpreter(self, chat_response):
-        """Test that python_interpreter tool is skipped in display."""
-        tool_call = Mock()
-        tool_call.name = "python_interpreter"
+    def test_process_step_with_tool_results(self, chat_response):
+        """Test processing of step with tool results."""
+        tool_result = ToolResult(
+            tool_call_id="tc_1",
+            name="list_queues",
+            content='{"queues": []}',
+            is_error=False,
+        )
 
-        step = ActionStep(
+        step = AgentStep(
             step_number=1,
-            model_output="Running code",
-            tool_calls=[tool_call],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            tool_results=[tool_result],
+            is_final=False,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
-        assert "python_interpreter" not in chat_response.steps_markdown[0][0]
+        assert "list_queues" in chat_response.completed_steps_markdown[0]
 
-    def test_process_action_step_with_code_blocks(self, chat_response):
-        """Test processing of action step with code blocks."""
-        step = ActionStep(
+    def test_process_step_with_error_result(self, chat_response):
+        """Test processing of step with error in tool result."""
+        tool_result = ToolResult(
+            tool_call_id="tc_1",
+            name="list_queues",
+            content="Connection failed",
+            is_error=True,
+        )
+
+        step = AgentStep(
             step_number=1,
-            model_output="Let me analyze <code>print('hello')</code>",
-            tool_calls=[],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            tool_results=[tool_result],
+            is_final=False,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
-        markdown = chat_response.steps_markdown[0]
-        assert "View code" in markdown[0]
-        assert "print('hello')" in markdown[0]
+        assert "❌" in chat_response.completed_steps_markdown[0]
+        assert "Error" in chat_response.completed_steps_markdown[0]
 
-    def test_process_action_step_extracts_thinking(self, chat_response):
-        """Test extraction of thinking from model output."""
-        step = ActionStep(
-            step_number=1,
-            model_output="Analyzing the data <code>result = 42</code>",
-            tool_calls=[],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
-        )
-
-        chat_response.process_action_step(step)
-
-        markdown = chat_response.steps_markdown[0]
-        assert "💭 Analyzing the data" in markdown[0]
-
-    def test_process_action_step_with_observations(self, chat_response):
-        """Test processing of observations."""
-        step = ActionStep(
-            step_number=1,
-            model_output="Processing",
-            tool_calls=[],
-            observations="Last output from code snippet: 42",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
-        )
-
-        chat_response.process_action_step(step)
-
-        markdown = chat_response.steps_markdown[0]
-        assert "Result:** 42" in markdown[0]
-
-    def test_process_action_step_final_answer(self, chat_response):
+    def test_process_step_final_answer(self, chat_response):
         """Test processing of final answer step."""
-        step = ActionStep(
+        step = AgentStep(
             step_number=2,
-            model_output="Done",
-            tool_calls=[],
-            observations="",
-            action_output='{"status": "success"}',
-            is_final_answer=True,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            thinking="Done",
+            final_answer='{"status": "success"}',
+            is_final=True,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
         assert chat_response.final_answer_text is not None
         assert "Status: Success" in chat_response.final_answer_text
 
     def test_shows_processing_indicator(self, chat_response, mock_placeholder):
         """Test that processing indicator is shown during execution."""
-        step = ActionStep(
+        step = AgentStep(
             step_number=1,
-            model_output="Working",
-            tool_calls=[],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            thinking="Working",
+            is_final=False,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
         call_args = mock_placeholder.markdown.call_args[0][0]
         assert "⏳ _Processing..._" in call_args
 
     def test_shows_final_answer_section(self, chat_response, mock_placeholder):
         """Test that final answer section is shown when complete."""
-        step = ActionStep(
+        step = AgentStep(
             step_number=1,
-            model_output="Complete",
-            tool_calls=[],
-            observations="",
-            action_output="Task finished",
-            is_final_answer=True,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            thinking="Complete",
+            final_answer="Task finished",
+            is_final=True,
         )
 
-        chat_response.process_action_step(step)
+        chat_response.process_step(step)
 
         call_args = mock_placeholder.markdown.call_args[0][0]
         assert "✅ Final Answer" in call_args
         assert "Task finished" in call_args
 
-    def test_process_step_delegates_to_specific_handlers(self, chat_response):
-        """Test that process_step delegates to appropriate handler."""
-        planning_step = PlanningStep(
-            plan="Do something",
-            model_input_messages=[],
-            model_output_message=Mock(),
-            timing=Timing(start_time=0.0, end_time=0.5),
-        )
-        chat_response.process_step(planning_step)
-        assert len(chat_response.steps_markdown) == 1
-
-        action_step = ActionStep(
+    def test_shows_error_section(self, chat_response, mock_placeholder):
+        """Test that error section is shown when step has error."""
+        step = AgentStep(
             step_number=1,
-            model_output="Working",
-            tool_calls=[],
-            observations="",
-            action_output=None,
-            is_final_answer=False,
-            timing=Timing(start_time=0.0, end_time=0.5),
+            error="Something went wrong",
+            is_final=True,
         )
-        chat_response.process_step(action_step)
-        assert len(chat_response.steps_markdown) == 2
+
+        chat_response.process_step(step)
+
+        call_args = mock_placeholder.markdown.call_args[0][0]
+        assert "❌ Error" in call_args
+        assert "Something went wrong" in call_args
+
+    def test_multiple_steps(self, chat_response, mock_placeholder):
+        """Test processing multiple steps."""
+        step1 = AgentStep(step_number=1, thinking="Step 1", is_final=False)
+        step2 = AgentStep(step_number=2, thinking="Step 2", is_final=False)
+        step3 = AgentStep(step_number=3, final_answer="Done", is_final=True)
+
+        chat_response.process_step(step1)
+        chat_response.process_step(step2)
+        chat_response.process_step(step3)
+
+        assert len(chat_response.completed_steps_markdown) == 3
+        assert chat_response.final_answer_text is not None
+
+    def test_long_tool_result_uses_details(self, chat_response):
+        """Test that long tool results use details/summary HTML."""
+        long_content = "x" * 300
+        tool_result = ToolResult(
+            tool_call_id="tc_1",
+            name="get_data",
+            content=long_content,
+            is_error=False,
+        )
+
+        step = AgentStep(
+            step_number=1,
+            tool_results=[tool_result],
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "<details>" in chat_response.completed_steps_markdown[0]
+        assert "<summary>" in chat_response.completed_steps_markdown[0]

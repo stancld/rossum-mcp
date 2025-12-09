@@ -5,11 +5,26 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
+-
+
+
+## [0.2.0] - 2025-12-09
+
+### Breaking Changes
+- Removed `smolagents` and `LiteLLM` dependencies
+- Removed `file_system_tools.py`, `hook_analysis_tools.py`, `plot_tools.py` modules (replaced by Claude's native code execution)
+- Removed old `agent.py` implementation
+
+### Changed
+- Migrated from smolagents + LiteLLM to Claude Agents SDK with direct Anthropic Bedrock integration
 - Started using structured outputs to streamline agent instructions [#52](https://github.com/stancld/rossum-mcp/pull/52)
-- Streamlined system prompt via inlining`smolagents` system prompt logic, and dropping their examples.
-This change saves roughly 400 tokens from previous ~9,6k for the initial LLM call [#53](https://github.com/stancld/rossum-mcp/pull/53) and [#54](https://github.com/stancld/rossum-mcp/pull/54)
-- Started including Neighbors API tools if and only if API is available [#54](https://github.com/stancld/rossum-mcp/pull/54)
-- Consolidated raed_file and get_file_info tools into a single one [#54](https://github.com/stancld/rossum-mcp/pull/54)
+- Streamlined system prompt [#53](https://github.com/stancld/rossum-mcp/pull/53), [#54](https://github.com/stancld/rossum-mcp/pull/54)
+- Consolidated read_file and get_file_info tools into a single one [#54](https://github.com/stancld/rossum-mcp/pull/54)
+
+### Added
+- New `bedrock_client.py` for direct AWS Bedrock integration
+- New `mcp_tools.py` for async MCP server connection
+- New `agent/` package with `core.py`, `memory.py`, `models.py`
 
 
 ## [0.1.8] - 2025-12-06

@@ -16,7 +16,7 @@ This folder contains practical examples and data for demonstrating the Rossum MC
 
 ## Using the Rossum Agent
 
-The examples in this folder work with the `rossum-agent` package, which uses [smolagents](https://github.com/huggingface/smolagents) to create an AI agent that can interact with the Rossum MCP server to upload and process invoices.
+The examples in this folder work with the `rossum-agent` package, which uses Anthropic Claude to create an AI agent that can interact with the Rossum MCP server to upload and process invoices.
 
 ### Features
 
@@ -111,7 +111,7 @@ When documents are uploaded to Rossum, they go through a processing workflow:
        ▼
 ┌─────────────────┐
 │ Rossum Agent    │
-│ (Smolagents)    │
+│ (Claude)        │
 ├─────────────────┤
 │ • File Tools    │
 │ • Plot Tools    │
