@@ -121,7 +121,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
-    parser.add_argument("--with-test-frontend", action="store_true", help="Enable the test frontend at /test-client")
+    parser.add_argument(
+        "--with-test-frontend",
+        action="store_true",
+        help="Enable the test frontend at /test-client (for testing only, requires installation from GitHub source)",
+    )
 
     args = parser.parse_args()
 
