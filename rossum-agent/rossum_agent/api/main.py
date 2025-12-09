@@ -77,14 +77,20 @@ STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 
-@app.get("/test-client")
-async def test_client_index() -> FileResponse:
-    """Serve the test client HTML page."""
-    return FileResponse(STATIC_DIR / "index.html")
+def mount_test_frontend() -> None:
+    """Mount the test frontend static files."""
+    if not STATIC_DIR.exists():
+        raise RuntimeError(f"Static directory not found: {STATIC_DIR}")
 
+    @app.get("/test-client")
+    async def test_client_index() -> FileResponse:
+        """Serve the test client HTML page."""
+        return FileResponse(STATIC_DIR / "index.html")
 
-app.mount("/test-client/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-app.mount("/test-client", StaticFiles(directory=STATIC_DIR), name="test-client-static")
+    app.mount("/test-client", StaticFiles(directory=STATIC_DIR), name="test-client-static")
+
+    if ASSETS_DIR.exists():
+        app.mount("/test-client/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
 
 @app.on_event("startup")
@@ -115,8 +121,12 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
+    parser.add_argument("--with-test-frontend", action="store_true", help="Enable the test frontend at /test-client")
 
     args = parser.parse_args()
+
+    if args.with_test_frontend:
+        mount_test_frontend()
 
     try:
         import uvicorn  # noqa: PLC0415
