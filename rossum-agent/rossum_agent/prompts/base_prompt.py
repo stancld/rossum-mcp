@@ -35,6 +35,10 @@ CRITICAL_REQUIREMENTS = """
 - **IDs must be integers** - `queue_id=12345` not `queue_id="12345"`
 - **Error handling** - always handle potential errors gracefully
 
+## URL Context
+- **Use context from URL** - When a "Current Context from URL" section is provided (extracted from the Rossum app URL the user is viewing), use these IDs (queue_id, document_id, hook_id, engine_id) automatically when the user refers to "this queue", "this hook", "this document", etc.
+- **Explicit IDs take precedence** - If the user explicitly provides IDs in their message, use those instead of the URL context
+
 ## Schema Operations
 
 When working with schemas, understand the structure:

@@ -7,15 +7,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from rossum_agent.api.main import app
+from rossum_agent.api.main import app, mount_test_frontend
 from rossum_agent.api.models.schemas import (
     ChatDetail,
     ChatListResponse,
     ChatResponse,
     ChatSummary,
     Message,
+    StepEvent,
+    StreamDoneEvent,
 )
-from rossum_agent.api.routes import chats, health, messages
+from rossum_agent.api.routes import chats, files, health, messages
 
 
 @pytest.fixture
@@ -37,7 +39,9 @@ def client(mock_chat_service, mock_agent_service):
     chats.set_chat_service_getter(lambda: mock_chat_service)
     messages.set_chat_service_getter(lambda: mock_chat_service)
     messages.set_agent_service_getter(lambda: mock_agent_service)
+    files.set_chat_service_getter(lambda: mock_chat_service)
 
+    mount_test_frontend()
     with TestClient(app) as client:
         yield client
 
@@ -378,8 +382,6 @@ class TestSendMessageEndpoint:
         self, mock_httpx, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Test that send message returns streaming response."""
-        from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
-
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": 12345}
