@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
+-
+
+
+## [0.2.2] - 2025-12-10
 - Pass extra context from URL to the LLM [#59](https://github.com/stancld/rossum-mcp/pull/59)
 
 
