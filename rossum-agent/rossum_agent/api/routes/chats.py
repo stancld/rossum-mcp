@@ -54,11 +54,7 @@ async def create_chat(
         ChatResponse with new chat_id and created_at.
     """
     mcp_mode = request.mcp_mode if request else "read-only"
-
-    return chat_service.create_chat(
-        user_id=credentials.user_id,
-        mcp_mode=mcp_mode,
-    )
+    return chat_service.create_chat(user_id=credentials.user_id, mcp_mode=mcp_mode)
 
 
 @router.get("", response_model=ChatListResponse)

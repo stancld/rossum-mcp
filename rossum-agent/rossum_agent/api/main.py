@@ -29,7 +29,15 @@ app = FastAPI(
 )
 
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=[
+        "https://elis.rossum.ai",
+        "https://elis.develop.r8.lol",
+    ],
+    allow_origin_regex=r"https://.*\.rossum\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 _chat_service: ChatService | None = None

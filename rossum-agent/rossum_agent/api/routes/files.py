@@ -111,7 +111,5 @@ async def download_file(
 
     content, mime_type = result
     return Response(
-        content=content,
-        media_type=mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        content=content, media_type=mime_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
