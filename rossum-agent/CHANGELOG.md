@@ -8,6 +8,15 @@ All notable changes to this project will be documented in this file.
 -
 
 
+## [0.2.1] - 2025-12-10
+- Added FastAPI-based REST API with SSE streaming for real-time agent responses
+  - Chat session management endpoints (create, list, get, delete)
+  - Message endpoint with Server-Sent Events (SSE) for streaming agent responses
+  - File management endpoints (list, download) for agent-generated artifacts
+  - Rate limiting (30/min for chat creation, 10/min for messages)
+  - Rossum API credential validation via headers (`X-Rossum-Token`, `X-Rossum-Api-Url`)
+
+
 ## [0.2.0] - 2025-12-09
 
 ### Breaking Changes
