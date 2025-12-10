@@ -7,10 +7,14 @@ import logging
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from rossum_agent.api.routes import chats, files, health, messages
 from rossum_agent.api.services.agent_service import AgentService
@@ -18,6 +22,32 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 
 logger = logging.getLogger(__name__)
+
+MAX_REQUEST_SIZE = 100 * 1024  # 100 KB
+
+limiter = Limiter(key_func=get_remote_address)
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware to limit request body size."""
+
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_REQUEST_SIZE:
+            return JSONResponse(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                content={"detail": f"Request body too large. Maximum size is {MAX_REQUEST_SIZE // 1024} KB."},
+            )
+        return await call_next(request)
+
+
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Handle rate limit exceeded errors."""
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+    )
+
 
 app = FastAPI(
     title="Rossum Agent API",
@@ -28,6 +58,10 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

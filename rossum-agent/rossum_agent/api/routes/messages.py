@@ -6,8 +6,10 @@ import logging
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
 from rossum_agent.api.models.schemas import (
@@ -23,6 +25,8 @@ from rossum_agent.api.services.chat_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/chats", tags=["messages"])
 
@@ -58,11 +62,14 @@ def get_agent_service_dep() -> AgentService:
     responses={
         200: {"description": "SSE stream of agent step events", "content": {"text/event-stream": {}}},
         404: {"description": "Chat not found"},
+        429: {"description": "Rate limit exceeded"},
     },
 )
+@limiter.limit("10/minute")
 async def send_message(
+    request: Request,
     chat_id: str,
-    request: MessageRequest,
+    message: MessageRequest,
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
     agent_service: Annotated[AgentService, Depends(get_agent_service_dep)] = None,  # type: ignore[assignment]
@@ -70,8 +77,9 @@ async def send_message(
     """Send a message and stream the agent's response via SSE.
 
     Args:
+        request: FastAPI request object (required for rate limiting).
         chat_id: Chat session identifier.
-        request: Message request with content.
+        message: Message request with content.
         credentials: Validated Rossum credentials.
         chat_service: Chat service instance.
         agent_service: Agent service instance.
@@ -86,13 +94,14 @@ async def send_message(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 
     history = chat_service.get_messages(credentials.user_id, chat_id) or []
+    user_prompt = message.content
 
     async def event_generator():
         final_response: str | None = None
 
         try:
             async for event in agent_service.run_agent(
-                prompt=request.content,
+                prompt=user_prompt,
                 conversation_history=history,
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
@@ -111,7 +120,7 @@ async def send_message(
             return
 
         updated_history = agent_service.build_updated_history(
-            existing_history=history, user_prompt=request.content, final_response=final_response
+            existing_history=history, user_prompt=user_prompt, final_response=final_response
         )
         chat_service.save_messages(user_id=credentials.user_id, chat_id=chat_id, messages=updated_history)
 

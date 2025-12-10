@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
 from rossum_agent.api.models.schemas import (
@@ -38,22 +42,25 @@ def get_chat_service_dep() -> ChatService:
 
 
 @router.post("", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def create_chat(
-    request: CreateChatRequest | None = None,
+    request: Request,
+    body: CreateChatRequest | None = None,
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
 ) -> ChatResponse:
     """Create a new chat session.
 
     Args:
-        request: Optional request body with mcp_mode.
+        request: FastAPI request object (required for rate limiting).
+        body: Optional request body with mcp_mode.
         credentials: Validated Rossum credentials.
         chat_service: Chat service instance.
 
     Returns:
         ChatResponse with new chat_id and created_at.
     """
-    mcp_mode = request.mcp_mode if request else "read-only"
+    mcp_mode = body.mcp_mode if body else "read-only"
     return chat_service.create_chat(user_id=credentials.user_id, mcp_mode=mcp_mode)
 
 
