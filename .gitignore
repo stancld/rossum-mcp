@@ -10,3 +10,4 @@ docs/build/
 build
 extension_explanation.md
 .env
+.agents/

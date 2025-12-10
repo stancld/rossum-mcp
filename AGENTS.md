@@ -4,6 +4,11 @@
 - **NEVER commit or push automatically** - Only run `git commit` or `git push` when explicitly instructed by the user
 - Suggest commit messages when asked, but wait for user approval before committing
 
+## Planning & Scratch Files
+- Place planning documents, task breakdowns, and scratch files in the `.agents/` folder
+- The `.agents/` folder is gitignored and should NOT be committed to the repository
+- Use this folder for temporary work, drafts, and agent-specific notes
+
 ## Commands
 - **Python setup**: `pip install -e .`
 - **Run server**: `python server.py`
