@@ -27,6 +27,7 @@ from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import RedisStorage
 from rossum_agent.render_modules import render_chat_history
+from rossum_agent.url_context import RossumUrlContext, extract_url_context, format_context_for_prompt
 from rossum_agent.user_detection import detect_user_id, normalize_user_id
 from rossum_agent.utils import (
     cleanup_session_output_dir,
@@ -66,6 +67,7 @@ async def run_agent_turn(
     prompt: str,
     conversation_history: list[dict[str, str]],
     on_step: Callable[[AgentStep], None],
+    rossum_url: str | None = None,
 ) -> None:
     """Run a single agent turn with proper MCP connection lifecycle.
 
@@ -78,13 +80,19 @@ async def run_agent_turn(
         prompt: User's input prompt.
         conversation_history: Previous messages for context.
         on_step: Callback function called for each step as it completes.
+        rossum_url: Optional Rossum app URL for context extraction.
     """
+    system_prompt = get_system_prompt()
+
+    url_context = extract_url_context(rossum_url)
+    if not url_context.is_empty():
+        context_section = format_context_for_prompt(url_context)
+        system_prompt = system_prompt + "\n\n---\n" + context_section
+
     async with connect_mcp_server(
         rossum_api_token=rossum_api_token, rossum_api_base_url=rossum_api_base_url, mcp_mode=mcp_mode
     ) as mcp_connection:
-        agent = await create_agent(
-            mcp_connection=mcp_connection, system_prompt=get_system_prompt(), config=AgentConfig()
-        )
+        agent = await create_agent(mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig())
 
         for msg in conversation_history:
             if msg["role"] == "user":
@@ -159,6 +167,9 @@ def main() -> None:  # noqa: C901
         ]
     if "mcp_mode" not in st.session_state:
         st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
+
+    if "rossum_url_context" not in st.session_state:
+        st.session_state.rossum_url_context = RossumUrlContext()
 
     # Load messages from Redis or initialize empty list (BEFORE sidebar renders)
     if "messages" not in st.session_state:
@@ -266,6 +277,26 @@ def main() -> None:  # noqa: C901
 
         mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
         st.info(f"Current mode: **{mode_indicator}**")
+
+        # URL Context section
+        st.markdown("---")
+        st.subheader("Current Context")
+
+        current_url = st.text_input(
+            "Rossum URL",
+            value=st.session_state.rossum_url_context.raw_url or "",
+            placeholder="Paste Rossum app URL here",
+            help="Paste a Rossum application URL to provide context (queue, annotation, etc.)",
+        )
+
+        if current_url != (st.session_state.rossum_url_context.raw_url or ""):
+            st.session_state.rossum_url_context = extract_url_context(current_url)
+
+        if not st.session_state.rossum_url_context.is_empty():
+            context_str = st.session_state.rossum_url_context.to_context_string()
+            st.success(f"✅ {context_str}")
+        elif current_url:
+            st.warning("⚠️ No context extracted from URL")
 
         # Quick actions
         st.subheader("Quick Actions")
@@ -402,6 +433,7 @@ def main() -> None:  # noqa: C901
                         prompt=prompt,
                         conversation_history=conversation_history,
                         on_step=process_step,
+                        rossum_url=st.session_state.rossum_url_context.raw_url,
                     )
                 )
 

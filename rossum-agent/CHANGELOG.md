@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Pass extra context from URL to the LLM [#59](https://github.com/stancld/rossum-mcp/pull/59)
 
 
 ## [0.2.1] - 2025-12-10
-- Added FastAPI-based REST API with SSE streaming for real-time agent responses
+- Added FastAPI-based REST API with SSE streaming for real-time agent responses [#58](https://github.com/stancld/rossum-mcp/pull/58)
   - Chat session management endpoints (create, list, get, delete)
   - Message endpoint with Server-Sent Events (SSE) for streaming agent responses
   - File management endpoints (list, download) for agent-generated artifacts

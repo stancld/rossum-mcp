@@ -105,6 +105,7 @@ async def send_message(
                 conversation_history=history,
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
+                rossum_url=message.rossum_url,
             ):
                 if isinstance(event, StreamDoneEvent):
                     yield f"event: done\ndata: {event.model_dump_json()}\n\n"

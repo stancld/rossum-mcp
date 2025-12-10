@@ -10,6 +10,7 @@ from rossum_agent.agent.models import AgentConfig, AgentStep
 from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts import get_system_prompt
+from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -68,6 +69,7 @@ class AgentService:
         rossum_api_token: str,
         rossum_api_base_url: str,
         mcp_mode: Literal["read-only", "read-write"] = "read-only",
+        rossum_url: str | None = None,
     ) -> AsyncIterator[StepEvent | StreamDoneEvent]:
         """Run the agent with a new prompt.
 
@@ -80,11 +82,18 @@ class AgentService:
             rossum_api_token: Rossum API token for MCP connection.
             rossum_api_base_url: Rossum API base URL.
             mcp_mode: MCP mode (read-only or read-write).
+            rossum_url: Optional Rossum app URL for context extraction.
 
         Yields:
             StepEvent objects during execution, StreamDoneEvent at the end.
         """
         logger.info(f"Starting agent run with {len(conversation_history)} history messages")
+
+        system_prompt = get_system_prompt()
+        url_context = extract_url_context(rossum_url)
+        if not url_context.is_empty():
+            context_section = format_context_for_prompt(url_context)
+            system_prompt = system_prompt + "\n\n---\n" + context_section
 
         async with connect_mcp_server(
             rossum_api_token=rossum_api_token,
@@ -92,7 +101,7 @@ class AgentService:
             mcp_mode=mcp_mode,
         ) as mcp_connection:
             agent = await create_agent(
-                mcp_connection=mcp_connection, system_prompt=get_system_prompt(), config=AgentConfig()
+                mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig()
             )
 
             self._restore_conversation_history(agent, conversation_history)

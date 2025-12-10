@@ -74,6 +74,7 @@ class MessageRequest(BaseModel):
     """Request body for sending a message."""
 
     content: str = Field(..., min_length=1, max_length=50000)
+    rossum_url: str | None = Field(default=None, description="Optional Rossum app URL for context")
 
 
 class StepEvent(BaseModel):
