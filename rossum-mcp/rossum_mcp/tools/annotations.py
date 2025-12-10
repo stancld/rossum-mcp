@@ -68,13 +68,22 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
         }
 
     @mcp.tool(
-        description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at."
+        description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at. "
+        "Valid sideloads: 'content', 'modifiers', 'documents'. Use 'content' to get extracted data."
     )
     async def get_annotation(annotation_id: int, sideloads: Sequence[Sideload] = ()) -> dict:
         """Retrieve annotation data from Rossum."""
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
-        annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)
-        return dataclasses.asdict(annotation)
+        try:
+            annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)
+            return dataclasses.asdict(annotation)
+        except KeyError as e:
+            logger.error(f"Failed to retrieve annotation {annotation_id}: KeyError {e}")
+            return {
+                "error": f"Failed to retrieve annotation {annotation_id}. "
+                f"Invalid sideload requested: {e}. "
+                f"Valid sideloads for annotations are: 'content', 'modifiers', 'documents'."
+            }
 
     @mcp.tool(description="List annotations for a queue. Returns: count, results array.")
     async def list_annotations(queue_id: int, status: str | None = "importing,to_review,confirmed,exported") -> dict:

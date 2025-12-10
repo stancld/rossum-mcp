@@ -300,8 +300,8 @@ class RossumAgent:
             return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
 
         except Exception as e:
-            error_msg = f"Tool execution failed: {e}"
-            logger.error(f"Tool {tool_call.name} failed: {e}", exc_info=True)
+            error_msg = f"Tool {tool_call.name} failed: {e}"
+            logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
             return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
     async def run(self, prompt: str) -> AsyncIterator[AgentStep]:
