@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from rossum_api import APIClientError
 from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
@@ -247,6 +248,33 @@ class TestGetQueueEngine:
 
         assert result["message"] == "No engine assigned to this queue"
         mock_client.retrieve_engine.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_engine_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue engine retrieval when engine returns 404."""
+        from rossum_mcp.tools.queues import register_queue_tools
+
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(
+            id=100,
+            engine="https://api.test.rossum.ai/v1/engines/999",
+            dedicated_engine=None,
+            generic_engine=None,
+        )
+        mock_client.retrieve_queue.return_value = mock_queue
+        mock_client.retrieve_engine.side_effect = APIClientError(
+            method="GET",
+            url="https://api.test.rossum.ai/v1/engines/999",
+            status_code=404,
+            error=Exception("Not found"),
+        )
+
+        get_queue_engine = mock_mcp._tools["get_queue_engine"]
+        result = await get_queue_engine(queue_id=100)
+
+        assert "Engine not found" in result["message"]
+        assert "engines/999" in result["message"]
 
 
 @pytest.mark.unit

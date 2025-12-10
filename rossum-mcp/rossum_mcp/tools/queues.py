@@ -7,6 +7,7 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
+from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models import deserialize_default
 
@@ -71,11 +72,16 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  #
         if not engine_url:
             return {"message": "No engine assigned to this queue"}
 
-        if isinstance(engine_url, str):
-            engine_id = int(engine_url.rstrip("/").split("/")[-1])
-            engine: Engine = await client.retrieve_engine(engine_id)
-        else:
-            engine = deserialize_default(Resource.Engine, engine_url)
+        try:
+            if isinstance(engine_url, str):
+                engine_id = int(engine_url.rstrip("/").split("/")[-1])
+                engine: Engine = await client.retrieve_engine(engine_id)
+            else:
+                engine = deserialize_default(Resource.Engine, engine_url)
+        except APIClientError as e:
+            if e.status_code == 404:
+                return {"message": f"Engine not found (engine URL: {engine_url})"}
+            raise
 
         return dataclasses.asdict(engine)
 

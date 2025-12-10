@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 
 
 ## [0.2.2] - 2025-12-10
+- Handle invalid passed sideload to get_annotation gracefully [#60](https://github.com/stancld/rossum-mcp/pull/60)
+
+
+## [0.2.2] - 2025-12-10
 - Pass extra context from URL to the LLM [#59](https://github.com/stancld/rossum-mcp/pull/59)
 
 
