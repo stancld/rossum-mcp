@@ -133,6 +133,7 @@ async def send_message(
                     file_event = FileCreatedEvent(
                         filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
                     )
+                    logger.info(f"event: file_created\ndata: {file_event.model_dump_json()}\n\n")
                     yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
 
         if done_event:
