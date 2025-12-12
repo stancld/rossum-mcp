@@ -81,7 +81,7 @@ all = [
 ]
 
 [tool.uv.sources]
-rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", tag = "rossum-mcp-v0.3.1", subdirectory = "rossum-mcp" }
+rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]
