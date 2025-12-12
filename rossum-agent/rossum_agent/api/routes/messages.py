@@ -123,7 +123,12 @@ async def send_message(
         updated_history = agent_service.build_updated_history(
             existing_history=history, user_prompt=user_prompt, final_response=final_response
         )
-        chat_service.save_messages(user_id=credentials.user_id, chat_id=chat_id, messages=updated_history)
+        chat_service.save_messages(
+            user_id=credentials.user_id,
+            chat_id=chat_id,
+            messages=updated_history,
+            output_dir=agent_service.output_dir,
+        )
 
     return StreamingResponse(
         event_generator(),

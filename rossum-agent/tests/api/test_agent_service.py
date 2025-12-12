@@ -224,7 +224,7 @@ class TestAgentServiceRunAgent:
     """Tests for run_agent method."""
 
     @pytest.mark.asyncio
-    async def test_run_agent_yields_events(self):
+    async def test_run_agent_yields_events(self, tmp_path):
         """Test that run_agent yields step events."""
         from rossum_agent.api.models.schemas import StreamDoneEvent
 
@@ -244,6 +244,8 @@ class TestAgentServiceRunAgent:
         with (
             patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
             patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir"),
         ):
             mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
             mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -266,7 +268,7 @@ class TestAgentServiceRunAgent:
             assert isinstance(events[2], StreamDoneEvent)
 
     @pytest.mark.asyncio
-    async def test_run_agent_handles_error(self):
+    async def test_run_agent_handles_error(self, tmp_path):
         """Test that run_agent yields error event on exception."""
         service = AgentService()
 
@@ -282,6 +284,8 @@ class TestAgentServiceRunAgent:
         with (
             patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
             patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir"),
         ):
             mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
             mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -302,7 +306,7 @@ class TestAgentServiceRunAgent:
             assert "Agent failed" in events[0].content
 
     @pytest.mark.asyncio
-    async def test_run_agent_restores_history(self):
+    async def test_run_agent_restores_history(self, tmp_path):
         """Test that run_agent restores conversation history."""
         service = AgentService()
 
@@ -324,6 +328,8 @@ class TestAgentServiceRunAgent:
         with (
             patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
             patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir"),
             patch.object(service, "_restore_conversation_history") as mock_restore,
         ):
             mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
@@ -339,3 +345,47 @@ class TestAgentServiceRunAgent:
                 pass
 
             mock_restore.assert_called_once_with(mock_agent, history)
+
+    @pytest.mark.asyncio
+    async def test_run_agent_creates_output_dir(self, tmp_path):
+        """Test that run_agent creates and sets session output directory."""
+        service = AgentService()
+
+        mock_mcp_connection = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent._total_input_tokens = 0
+        mock_agent._total_output_tokens = 0
+
+        async def mock_run(prompt):
+            yield AgentStep(step_number=1, final_answer="Done", is_final=True)
+
+        mock_agent.run = mock_run
+
+        with (
+            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch(
+                "rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path
+            ) as mock_create_dir,
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir") as mock_set_dir,
+        ):
+            mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
+            mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_create_agent.return_value = mock_agent
+
+            async for _ in service.run_agent(
+                prompt="Test",
+                conversation_history=[],
+                rossum_api_token="token",
+                rossum_api_base_url="https://api.rossum.ai",
+            ):
+                pass
+
+            mock_create_dir.assert_called_once()
+            mock_set_dir.assert_called_once_with(tmp_path)
+            assert service.output_dir == tmp_path
+
+    def test_output_dir_initially_none(self):
+        """Test that output_dir is None before running agent."""
+        service = AgentService()
+        assert service.output_dir is None

@@ -11,9 +11,11 @@ from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts import get_system_prompt
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
+from rossum_agent.utils import create_session_output_dir, set_session_output_dir
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,15 @@ class AgentService:
     Manages MCP connection lifecycle and agent execution for API requests.
     """
 
+    def __init__(self) -> None:
+        """Initialize agent service."""
+        self._output_dir: Path | None = None
+
+    @property
+    def output_dir(self) -> Path | None:
+        """Get the output directory for the current run."""
+        return self._output_dir
+
     async def run_agent(
         self,
         prompt: str,
@@ -76,18 +87,14 @@ class AgentService:
         Creates a fresh MCP connection, initializes the agent with conversation
         history, and streams step events.
 
-        Args:
-            prompt: The user's input prompt.
-            conversation_history: Previous messages in the conversation.
-            rossum_api_token: Rossum API token for MCP connection.
-            rossum_api_base_url: Rossum API base URL.
-            mcp_mode: MCP mode (read-only or read-write).
-            rossum_url: Optional Rossum app URL for context extraction.
-
         Yields:
             StepEvent objects during execution, StreamDoneEvent at the end.
         """
         logger.info(f"Starting agent run with {len(conversation_history)} history messages")
+
+        self._output_dir = create_session_output_dir()
+        set_session_output_dir(self._output_dir)
+        logger.info(f"Created session output directory: {self._output_dir}")
 
         system_prompt = get_system_prompt()
         url_context = extract_url_context(rossum_url)
