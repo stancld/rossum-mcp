@@ -100,6 +100,14 @@ class StreamDoneEvent(BaseModel):
     output_tokens: int
 
 
+class FileCreatedEvent(BaseModel):
+    """Event emitted when a file is created and stored."""
+
+    type: Literal["file_created"] = "file_created"
+    filename: str
+    url: str
+
+
 class HealthResponse(BaseModel):
     """Response for health check endpoint."""
 

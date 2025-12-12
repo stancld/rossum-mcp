@@ -13,6 +13,7 @@ from slowapi.util import get_remote_address
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
 from rossum_agent.api.models.schemas import (
+    FileCreatedEvent,
     MessageRequest,
     StepEvent,
     StreamDoneEvent,
@@ -129,6 +130,14 @@ async def send_message(
             messages=updated_history,
             output_dir=agent_service.output_dir,
         )
+
+        if agent_service.output_dir and agent_service.output_dir.exists():
+            for file_path in agent_service.output_dir.iterdir():
+                if file_path.is_file():
+                    file_event = FileCreatedEvent(
+                        filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
+                    )
+                    yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
 
     return StreamingResponse(
         event_generator(),
