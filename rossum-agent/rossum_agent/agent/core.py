@@ -112,10 +112,7 @@ class RossumAgent:
         return self._tools_cache
 
     def _sync_stream_events(
-        self,
-        model_id: str,
-        messages: list[MessageParam],
-        tools: list[ToolParam],
+        self, model_id: str, messages: list[MessageParam], tools: list[ToolParam]
     ) -> Iterator[tuple[MessageStreamEvent | None, Message | None]]:
         """Synchronous generator that yields stream events and final message.
 
@@ -137,10 +134,7 @@ class RossumAgent:
             yield (None, stream.get_final_message())
 
     def _process_stream_event(
-        self,
-        event: MessageStreamEvent,
-        pending_tools: dict[int, dict[str, str]],
-        tool_calls: list[ToolCall],
+        self, event: MessageStreamEvent, pending_tools: dict[int, dict[str, str]], tool_calls: list[ToolCall]
     ) -> str | None:
         """Process a single stream event.
 
@@ -206,11 +200,7 @@ class RossumAgent:
             text_delta = self._process_stream_event(event, pending_tools, tool_calls)
             if text_delta:
                 thinking_text += text_delta
-                yield AgentStep(
-                    step_number=step_num,
-                    thinking=thinking_text,
-                    is_streaming=True,
-                )
+                yield AgentStep(step_number=step_num, thinking=thinking_text, is_streaming=True)
 
         if final_message is None:
             raise RuntimeError("Stream ended without final message")
@@ -236,6 +226,13 @@ class RossumAgent:
         if not tool_calls:
             step.final_answer = thinking_text if thinking_text else None
             step.is_final = True
+            memory_step = MemoryStep(
+                step_number=step_num,
+                thinking=thinking_text if thinking_text else None,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+            self.memory.add_step(memory_step)
             yield step
             return
 
@@ -342,19 +339,13 @@ class RossumAgent:
             except APITimeoutError as e:
                 logger.warning(f"API timeout at step {step_num}: {e}")
                 yield AgentStep(
-                    step_number=step_num,
-                    error=f"Request timed out. Please try again. Details: {e}",
-                    is_final=True,
+                    step_number=step_num, error=f"Request timed out. Please try again. Details: {e}", is_final=True
                 )
                 break
 
             except APIError as e:
                 logger.error(f"API error at step {step_num}: {e}")
-                yield AgentStep(
-                    step_number=step_num,
-                    error=f"API error occurred: {e}",
-                    is_final=True,
-                )
+                yield AgentStep(step_number=step_num, error=f"API error occurred: {e}", is_final=True)
                 break
 
         else:
