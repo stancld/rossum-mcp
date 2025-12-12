@@ -96,7 +96,7 @@ class TestMemoryStep:
     """Test MemoryStep to_messages conversion."""
 
     def test_to_messages_with_tool_calls(self):
-        """Test that tool calls are converted to messages."""
+        """Test that tool calls are converted to messages (thinking is NOT included)."""
         step = MemoryStep(
             step_number=1,
             thinking="Let me analyze this...",
@@ -108,21 +108,29 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
-        assert len(messages[0]["content"]) == 2
-        assert messages[0]["content"][0]["type"] == "text"
-        assert messages[0]["content"][0]["text"] == "Let me analyze this..."
-        assert messages[0]["content"][1]["type"] == "tool_use"
+        assert len(messages[0]["content"]) == 1
+        assert messages[0]["content"][0]["type"] == "tool_use"
 
         assert messages[1]["role"] == "user"
         assert messages[1]["content"][0]["type"] == "tool_result"
 
     def test_to_messages_no_tool_calls_returns_empty(self):
-        """Test that step without tool calls returns empty messages."""
+        """Test that step without tool calls and no model_output returns empty messages."""
         step = MemoryStep(step_number=1, thinking="Just thinking...")
 
         messages = step.to_messages()
 
         assert messages == []
+
+    def test_to_messages_with_model_output(self):
+        """Test that final answer steps include model_output as assistant content."""
+        step = MemoryStep(step_number=1, model_output="Here is the final answer.")
+
+        messages = step.to_messages()
+
+        assert len(messages) == 1
+        assert messages[0]["role"] == "assistant"
+        assert messages[0]["content"] == "Here is the final answer."
 
 
 class TestTaskStep:

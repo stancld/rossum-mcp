@@ -228,7 +228,7 @@ class RossumAgent:
             step.is_final = True
             memory_step = MemoryStep(
                 step_number=step_num,
-                thinking=thinking_text if thinking_text else None,
+                model_output=thinking_text if thinking_text else None,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
             )
@@ -238,7 +238,6 @@ class RossumAgent:
 
         memory_step = MemoryStep(
             step_number=step_num,
-            thinking=thinking_text if thinking_text else None,
             tool_calls=tool_calls,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
