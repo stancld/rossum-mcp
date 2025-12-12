@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Fixed allowed sideloads for `get_annotation` [#63](https://github.com/stancld/rossum-mcp/pull/63)
 
 
 ## [0.3.1] - 2025-12-09

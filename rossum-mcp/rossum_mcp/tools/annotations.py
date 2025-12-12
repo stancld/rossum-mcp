@@ -6,9 +6,7 @@ import dataclasses
 import logging
 from collections.abc import Sequence  # noqa: TC003 - needed at runtime for FastMCP
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-from rossum_api.types import Sideload  # noqa: TC002 - needed at runtime for FastMCP
+from typing import TYPE_CHECKING, Literal
 
 from rossum_mcp.tools.base import is_read_write_mode
 
@@ -18,6 +16,9 @@ if TYPE_CHECKING:
     from rossum_api.models.annotation import Annotation
 
 logger = logging.getLogger(__name__)
+
+# Fixed sideloads (critical for well-behaving agent)
+type Sideload = Literal["content", "document", "automation_blocker"]
 
 
 def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
@@ -68,21 +69,21 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
         }
 
     @mcp.tool(
-        description="Retrieve annotation data. Returns: id, status, url, schema, modifier, document, content, created_at, modified_at. "
-        "Valid sideloads: 'content', 'modifiers', 'documents'. Use 'content' to get extracted data."
+        description="Retrieve annotation data. Returns: id, status, url, schema, modifier, content, created_at, modified_at. "
+        "Use 'content' to get extracted data."
     )
     async def get_annotation(annotation_id: int, sideloads: Sequence[Sideload] = ()) -> dict:
         """Retrieve annotation data from Rossum."""
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
         try:
-            annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)
+            annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)  # type: ignore[arg-type]
             return dataclasses.asdict(annotation)
         except KeyError as e:
             logger.error(f"Failed to retrieve annotation {annotation_id}: KeyError {e}")
             return {
                 "error": f"Failed to retrieve annotation {annotation_id}. "
                 f"Invalid sideload requested: {e}. "
-                f"Valid sideloads for annotations are: 'content', 'modifiers', 'documents'."
+                f"Valid sideloads for annotations are: 'content', 'document', 'automation_blocker'."
             }
 
     @mcp.tool(description="List annotations for a queue. Returns: count, results array.")
