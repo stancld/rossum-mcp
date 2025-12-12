@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added logging of chat metadata into Redis for auditing [#62](https://github.com/stancld/rossum-mcp/pull/62)
 
 
 ## [0.2.2] - 2025-12-10

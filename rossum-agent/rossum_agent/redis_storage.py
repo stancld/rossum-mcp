@@ -7,12 +7,76 @@ import datetime as dt
 import json
 import logging
 import os
+import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any  # noqa: TC003 - Any used in function type hints at runtime
 
 import redis
 
 logger = logging.getLogger(__name__)
+
+
+def get_commit_sha() -> str | None:
+    """Get the current git commit SHA.
+
+    Returns:
+        Short commit SHA or None if not in a git repository.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        pass
+    return None
+
+
+@dataclass
+class ChatMetadata:
+    """Metadata for a chat session."""
+
+    commit_sha: str | None = None
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tool_calls: int = 0
+    total_steps: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "commit_sha": self.commit_sha,
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
+            "total_tool_calls": self.total_tool_calls,
+            "total_steps": self.total_steps,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ChatMetadata:
+        """Create from dictionary."""
+        return cls(
+            commit_sha=data.get("commit_sha"),
+            total_input_tokens=data.get("total_input_tokens", 0),
+            total_output_tokens=data.get("total_output_tokens", 0),
+            total_tool_calls=data.get("total_tool_calls", 0),
+            total_steps=data.get("total_steps", 0),
+        )
+
+
+@dataclass
+class ChatData:
+    """Data structure for chat storage results."""
+
+    messages: list[dict[str, Any]] = field(default_factory=list)
+    output_dir: str | None = None
+    metadata: ChatMetadata = field(default_factory=ChatMetadata)
 
 
 class RedisStorage:
@@ -46,12 +110,14 @@ class RedisStorage:
         chat_id: str,
         messages: list[dict[str, Any]],
         output_dir: str | Path | None = None,
+        metadata: ChatMetadata | None = None,
     ) -> bool:
         try:
             key = self._get_chat_key(user_id, chat_id)
             payload = {
                 "messages": messages,
                 "output_dir": str(output_dir) if output_dir else None,
+                "metadata": metadata.to_dict() if metadata else ChatMetadata().to_dict(),
             }
             value = json.dumps(payload).encode("utf-8")
             self.client.setex(key, self.ttl, value)
@@ -70,9 +136,7 @@ class RedisStorage:
             logger.error(f"Failed to save chat {chat_id}: {e}", exc_info=True)
             return False
 
-    def load_chat(
-        self, user_id: str | None, chat_id: str, output_dir: Path | None = None
-    ) -> tuple[list[dict[str, Any]], Path | None] | None:
+    def load_chat(self, user_id: str | None, chat_id: str, output_dir: Path | None = None) -> ChatData | None:
         """Load chat from Redis and restore files to output directory.
 
         Args:
@@ -81,7 +145,7 @@ class RedisStorage:
             output_dir: Directory to restore files to. If None, a new temp directory is created.
 
         Returns:
-            Tuple of (messages, output_dir_path) or None if chat not found
+            ChatData containing messages, output_dir, and metadata, or None if chat not found
         """
         try:
             key = self._get_chat_key(user_id, chat_id)
@@ -93,6 +157,8 @@ class RedisStorage:
             data = json.loads(value.decode("utf-8"))
             messages = data if isinstance(data, list) else data.get("messages", [])
             stored_output_dir = data.get("output_dir") if isinstance(data, dict) else None
+            metadata_dict = data.get("metadata", {}) if isinstance(data, dict) else {}
+            metadata = ChatMetadata.from_dict(metadata_dict)
 
             files_loaded = 0
             if output_dir:
@@ -102,7 +168,7 @@ class RedisStorage:
                 f"Loaded chat {chat_id} from Redis "
                 f"({len(messages)} messages, {files_loaded} files, user: {user_id or 'shared'})"
             )
-            return messages, stored_output_dir
+            return ChatData(messages=messages, output_dir=stored_output_dir, metadata=metadata)
         except Exception as e:
             logger.error(f"Failed to load chat {chat_id}: {e}", exc_info=True)
             return None
@@ -166,7 +232,9 @@ class RedisStorage:
             user_id: Optional user ID to filter chats (None = all chats or shared chats)
 
         Returns:
-            List of dicts with chat_id, timestamp, message_count, and first_message
+            List of dicts with chat_id, timestamp, message_count, first_message,
+            and metadata (commit_sha, total_input_tokens, total_output_tokens,
+            total_tool_calls, total_steps)
         """
         try:
             pattern = self._get_chat_pattern(user_id)
@@ -175,16 +243,13 @@ class RedisStorage:
 
             for key in keys:
                 key_str = key.decode("utf-8")
-                # Extract chat_id from key (remove prefix)
                 chat_id = key_str.replace(f"user:{user_id}:chat:", "") if user_id else key_str.replace("chat:", "")
 
-                result = self.load_chat(user_id, chat_id)
+                chat_data = self.load_chat(user_id, chat_id)
 
-                if result:
-                    messages, _ = result
-                    # Extract timestamp from chat_id (format: chat_YYYYMMDDHHmmss_UNIQUE)
+                if chat_data:
+                    messages = chat_data.messages
                     timestamp_str = chat_id.split("_")[1]
-                    # Convert YYYYMMDDHHmmss to Unix timestamp
                     timestamp = int(dt.datetime.strptime(timestamp_str, "%Y%m%d%H%M%S").timestamp())
                     first_message = messages[0].get("content", "") if messages else ""
 
@@ -193,11 +258,15 @@ class RedisStorage:
                             "chat_id": chat_id,
                             "timestamp": timestamp,
                             "message_count": len(messages),
-                            "first_message": first_message[:100],  # First 100 chars as preview
+                            "first_message": first_message[:100],
+                            "commit_sha": chat_data.metadata.commit_sha,
+                            "total_input_tokens": chat_data.metadata.total_input_tokens,
+                            "total_output_tokens": chat_data.metadata.total_output_tokens,
+                            "total_tool_calls": chat_data.metadata.total_tool_calls,
+                            "total_steps": chat_data.metadata.total_steps,
                         }
                     )
 
-            # Sort by timestamp descending (newest first)
             chats.sort(key=lambda x: x["timestamp"], reverse=True)
             logger.info(f"Found {len(chats)} chats in Redis (user: {user_id or 'shared'})")
             return chats

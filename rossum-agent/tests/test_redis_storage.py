@@ -77,19 +77,25 @@ class TestRedisStorage:
         """Test successful chat load."""
         mock_client = MagicMock()
         mock_client.get.return_value = (
-            b'{"messages": [{"role": "user", "content": "Hello"}], "output_dir": "/tmp/output"}'
+            b'{"messages": [{"role": "user", "content": "Hello"}], "output_dir": "/tmp/output", '
+            b'"metadata": {"commit_sha": "abc123", "total_input_tokens": 100, "total_output_tokens": 50, '
+            b'"total_tool_calls": 3, "total_steps": 2}}'
         )
         mock_redis.return_value = mock_client
 
         storage = RedisStorage()
-        result = storage.load_chat(None, "chat_123")
+        chat_data = storage.load_chat(None, "chat_123")
 
-        assert result is not None
-        messages, output_dir = result
-        assert len(messages) == 1
-        assert messages[0]["role"] == "user"
-        assert messages[0]["content"] == "Hello"
-        assert output_dir == "/tmp/output"
+        assert chat_data is not None
+        assert len(chat_data.messages) == 1
+        assert chat_data.messages[0]["role"] == "user"
+        assert chat_data.messages[0]["content"] == "Hello"
+        assert chat_data.output_dir == "/tmp/output"
+        assert chat_data.metadata.commit_sha == "abc123"
+        assert chat_data.metadata.total_input_tokens == 100
+        assert chat_data.metadata.total_output_tokens == 50
+        assert chat_data.metadata.total_tool_calls == 3
+        assert chat_data.metadata.total_steps == 2
         mock_client.get.assert_called_once_with("chat:chat_123")
 
     @patch("rossum_agent.redis_storage.redis.Redis")

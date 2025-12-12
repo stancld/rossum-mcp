@@ -15,7 +15,7 @@ from rossum_agent.api.models.schemas import (
     FileInfo,
     Message,
 )
-from rossum_agent.redis_storage import RedisStorage
+from rossum_agent.redis_storage import ChatMetadata, RedisStorage
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -102,13 +102,11 @@ class ChatService:
         Returns:
             ChatDetail with messages and files, or None if not found.
         """
-        if (result := self._storage.load_chat(user_id, chat_id)) is None:
+        if (chat_data := self._storage.load_chat(user_id, chat_id)) is None:
             return None
 
-        messages_data, _ = result
-
         messages = []
-        for msg in messages_data:
+        for msg in chat_data.messages:
             role = msg.get("role")
             if role in ("user", "assistant"):
                 messages.append(Message(role=role, content=msg.get("content", "")))
@@ -152,13 +150,17 @@ class ChatService:
             user_id: User identifier for isolation.
             chat_id: Chat session identifier.
         """
-        if (result := self._storage.load_chat(user_id, chat_id)) is None:
+        if (chat_data := self._storage.load_chat(user_id, chat_id)) is None:
             return None
-        messages, _ = result
-        return messages
+        return chat_data.messages
 
     def save_messages(
-        self, user_id: str | None, chat_id: str, messages: list[dict[str, Any]], output_dir: Path | None = None
+        self,
+        user_id: str | None,
+        chat_id: str,
+        messages: list[dict[str, Any]],
+        output_dir: Path | None = None,
+        metadata: ChatMetadata | None = None,
     ) -> bool:
         """Save messages to a chat session.
 
@@ -167,8 +169,9 @@ class ChatService:
             chat_id: Chat session identifier.
             messages: List of message dicts to save.
             output_dir: Optional output directory path.
+            metadata: Optional chat metadata with token counts and step info.
 
         Returns:
             True if saved successfully, False otherwise.
         """
-        return self._storage.save_chat(user_id, chat_id, messages, output_dir)
+        return self._storage.save_chat(user_id, chat_id, messages, output_dir, metadata)

@@ -138,6 +138,8 @@ class ChatResponse:
         self._current_step_num: int = 0
         self.total_input_tokens: int = 0
         self.total_output_tokens: int = 0
+        self.total_tool_calls: int = 0
+        self.total_steps: int = 0
 
     def process_step(self, step: AgentStep) -> None:
         """Process and display an agent step.
@@ -156,6 +158,8 @@ class ChatResponse:
             self.result = step
             self.total_input_tokens += step.input_tokens
             self.total_output_tokens += step.output_tokens
+            self.total_tool_calls += len(step.tool_calls)
+            self.total_steps += 1
 
     def _process_streaming_step(self, step: AgentStep) -> None:
         """Process a streaming step (partial thinking or tool execution)."""

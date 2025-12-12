@@ -25,7 +25,7 @@ from rossum_agent.app_llm_response_formatting import ChatResponse, parse_and_for
 from rossum_agent.beep_sound import generate_beep_wav
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
-from rossum_agent.redis_storage import RedisStorage
+from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
 from rossum_agent.render_modules import render_chat_history
 from rossum_agent.url_context import RossumUrlContext, extract_url_context, format_context_for_prompt
 from rossum_agent.user_detection import detect_user_id, normalize_user_id
@@ -184,13 +184,14 @@ def main() -> None:  # noqa: C901
                 # Loading own conversation
                 user_id = st.session_state.user_id if st.session_state.user_isolation_enabled else None
 
-            result = st.session_state.redis_storage.load_chat(
+            chat_data = st.session_state.redis_storage.load_chat(
                 user_id, st.session_state.chat_id, st.session_state.output_dir
             )
-            if result:
-                messages, _ = result
-                st.session_state.messages = messages
-                logger.info(f"Loaded {len(messages)} messages from Redis for chat {st.session_state.chat_id}")
+            if chat_data:
+                st.session_state.messages = chat_data.messages
+                logger.info(
+                    f"Loaded {len(chat_data.messages)} messages from Redis for chat {st.session_state.chat_id}"
+                )
             else:
                 st.session_state.messages = []
                 logger.info(f"No messages found in Redis for chat {st.session_state.chat_id}, starting fresh")
@@ -442,18 +443,26 @@ def main() -> None:  # noqa: C901
                 if final_content:
                     st.session_state.messages.append({"role": "assistant", "content": final_content})
 
-                    # Persist to Redis
+                    # Persist to Redis with metadata
                     if st.session_state.redis_storage.is_connected():
                         user_id = (
                             st.session_state.get("user_id")
                             if st.session_state.get("user_isolation_enabled", False)
                             else None
                         )
+                        metadata = ChatMetadata(
+                            commit_sha=get_commit_sha(),
+                            total_input_tokens=chat_response.total_input_tokens,
+                            total_output_tokens=chat_response.total_output_tokens,
+                            total_tool_calls=chat_response.total_tool_calls,
+                            total_steps=chat_response.total_steps,
+                        )
                         st.session_state.redis_storage.save_chat(
                             user_id,
                             st.session_state.chat_id,
                             st.session_state.messages,
                             str(st.session_state.output_dir),
+                            metadata=metadata,
                         )
 
                 # Log final result
