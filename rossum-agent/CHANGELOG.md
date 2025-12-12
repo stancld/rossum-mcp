@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 - Added logging of chat metadata into Redis for auditing [#62](https://github.com/stancld/rossum-mcp/pull/62)
+- Stopped replaying CoT in the model context [#61](https://github.com/stancld/rossum-mcp/pull/61)
+- Introduced storing a final answer in memory when no tool is called  [#61](https://github.com/stancld/rossum-mcp/pull/61)
 
 
 ## [0.2.2] - 2025-12-10
