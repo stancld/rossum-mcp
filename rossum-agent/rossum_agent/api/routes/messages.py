@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
-from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
@@ -12,18 +12,16 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
-from rossum_agent.api.models.schemas import (
-    FileCreatedEvent,
-    MessageRequest,
-    StepEvent,
-    StreamDoneEvent,
-)
+from rossum_agent.api.models.schemas import FileCreatedEvent, MessageRequest, StepEvent, StreamDoneEvent
 from rossum_agent.api.services.agent_service import (
     AgentService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
 )
 from rossum_agent.api.services.chat_service import (
     ChatService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +95,9 @@ async def send_message(
     history = chat_service.get_messages(credentials.user_id, chat_id) or []
     user_prompt = message.content
 
-    async def event_generator():
+    async def event_generator() -> Iterator[str]:  # type: ignore[misc]
         final_response: str | None = None
+        done_event: StreamDoneEvent | None = None
 
         try:
             async for event in agent_service.run_agent(
@@ -109,7 +108,7 @@ async def send_message(
                 rossum_url=message.rossum_url,
             ):
                 if isinstance(event, StreamDoneEvent):
-                    yield f"event: done\ndata: {event.model_dump_json()}\n\n"
+                    done_event = event
                 elif isinstance(event, StepEvent):
                     if event.type == "final_answer" and event.content:
                         final_response = event.content
@@ -125,10 +124,7 @@ async def send_message(
             existing_history=history, user_prompt=user_prompt, final_response=final_response
         )
         chat_service.save_messages(
-            user_id=credentials.user_id,
-            chat_id=chat_id,
-            messages=updated_history,
-            output_dir=agent_service.output_dir,
+            user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir
         )
 
         if agent_service.output_dir and agent_service.output_dir.exists():
@@ -138,6 +134,9 @@ async def send_message(
                         filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
                     )
                     yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
+
+        if done_event:
+            yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
 
     return StreamingResponse(
         event_generator(),
