@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.document_relation import DocumentRelation
 
 
@@ -65,16 +64,15 @@ class TestGetDocumentRelation:
         register_document_relation_tools(mock_mcp, mock_client)
 
         mock_doc_relation = create_mock_document_relation(id=100, type="export", key="exported_file_key")
-        mock_client._http_client.fetch_one.return_value = {"id": 100}
-        mock_client._deserializer.return_value = mock_doc_relation
+        mock_client.retrieve_document_relation.return_value = mock_doc_relation
 
         get_document_relation = mock_mcp._tools["get_document_relation"]
         result = await get_document_relation(document_relation_id=100)
 
-        assert result["id"] == 100
-        assert result["type"] == "export"
-        assert result["key"] == "exported_file_key"
-        mock_client._http_client.fetch_one.assert_called_once_with(Resource.DocumentRelation, 100)
+        assert result.id == 100
+        assert result.type == "export"
+        assert result.key == "exported_file_key"
+        mock_client.retrieve_document_relation.assert_called_once_with(100)
 
     @pytest.mark.asyncio
     async def test_get_document_relation_einvoice_type(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -84,15 +82,14 @@ class TestGetDocumentRelation:
         register_document_relation_tools(mock_mcp, mock_client)
 
         mock_doc_relation = create_mock_document_relation(id=200, type="einvoice", key=None)
-        mock_client._http_client.fetch_one.return_value = {"id": 200}
-        mock_client._deserializer.return_value = mock_doc_relation
+        mock_client.retrieve_document_relation.return_value = mock_doc_relation
 
         get_document_relation = mock_mcp._tools["get_document_relation"]
         result = await get_document_relation(document_relation_id=200)
 
-        assert result["id"] == 200
-        assert result["type"] == "einvoice"
-        assert result["key"] is None
+        assert result.id == 200
+        assert result.type == "einvoice"
+        assert result.key is None
 
 
 @pytest.mark.unit
@@ -118,8 +115,8 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations()
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
     @pytest.mark.asyncio
     async def test_list_document_relations_with_type_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -138,7 +135,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(type="export")
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_document_relations.assert_called_once_with(type="export")
 
     @pytest.mark.asyncio
@@ -160,7 +157,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(annotation=500)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_document_relations.assert_called_once_with(annotation=500)
 
     @pytest.mark.asyncio
@@ -180,7 +177,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(documents=700)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_document_relations.assert_called_once_with(documents=700)
 
     @pytest.mark.asyncio
@@ -200,7 +197,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(key="specific_key")
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_document_relations.assert_called_once_with(key="specific_key")
 
     @pytest.mark.asyncio
@@ -219,5 +216,5 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations()
 
-        assert result["count"] == 0
-        assert result["results"] == []
+        assert result.count == 0
+        assert result.results == []

@@ -124,10 +124,10 @@ class TestGetQueue:
         get_queue = mock_mcp._tools["get_queue"]
         result = await get_queue(queue_id=100)
 
-        assert result["id"] == 100
-        assert result["name"] == "Production Queue"
-        assert result["schema"] == mock_queue.schema
-        assert result["workspace"] == mock_queue.workspace
+        assert result.id == 100
+        assert result.name == "Production Queue"
+        assert result.schema == mock_queue.schema
+        assert result.workspace == mock_queue.workspace
         mock_client.retrieve_queue.assert_called_once_with(100)
 
 
@@ -151,8 +151,8 @@ class TestGetQueueSchema:
         get_queue_schema = mock_mcp._tools["get_queue_schema"]
         result = await get_queue_schema(queue_id=100)
 
-        assert result["id"] == 50
-        assert result["name"] == "Invoice Schema"
+        assert result.id == 50
+        assert result.name == "Invoice Schema"
         mock_client.retrieve_queue.assert_called_once_with(100)
         mock_client.retrieve_schema.assert_called_once_with(50)
 
@@ -200,8 +200,8 @@ class TestGetQueueEngine:
         get_queue_engine = mock_mcp._tools["get_queue_engine"]
         result = await get_queue_engine(queue_id=100)
 
-        assert result["id"] == 15
-        assert result["name"] == "Custom Engine"
+        assert result.id == 15
+        assert result.name == "Custom Engine"
         mock_client.retrieve_engine.assert_called_once_with(15)
 
     @pytest.mark.asyncio
@@ -225,7 +225,7 @@ class TestGetQueueEngine:
         get_queue_engine = mock_mcp._tools["get_queue_engine"]
         result = await get_queue_engine(queue_id=100)
 
-        assert result["id"] == 20
+        assert result.id == 20
         mock_client.retrieve_engine.assert_called_once_with(20)
 
     @pytest.mark.asyncio
@@ -314,9 +314,8 @@ class TestCreateQueue:
             schema_id=10,
         )
 
-        assert result["id"] == 200
-        assert result["name"] == "New Queue"
-        assert "created successfully" in result["message"]
+        assert result.id == 200
+        assert result.name == "New Queue"
         mock_client.create_new_queue.assert_called_once()
 
     @pytest.mark.asyncio
@@ -372,7 +371,8 @@ class TestUpdateQueue:
         update_queue = mock_mcp._tools["update_queue"]
         result = await update_queue(queue_id=100, queue_data={"name": "Updated Queue"})
 
-        assert "Updated Queue" in result["message"]
+        assert result.id == 100
+        assert result.name == "Updated Queue"
         mock_client._http_client.update.assert_called_once_with(Resource.Queue, 100, {"name": "Updated Queue"})
 
     @pytest.mark.asyncio

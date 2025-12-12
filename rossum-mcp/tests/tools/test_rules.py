@@ -71,9 +71,9 @@ class TestGetRule:
         get_rule = mock_mcp._tools["get_rule"]
         result = await get_rule(rule_id=123)
 
-        assert result["id"] == 123
-        assert result["name"] == "Validation Rule"
-        assert result["enabled"] is True
+        assert result.id == 123
+        assert result.name == "Validation Rule"
+        assert result.enabled is True
         mock_client.retrieve_rule.assert_called_once_with(123)
 
 
@@ -100,8 +100,8 @@ class TestListRules:
         list_rules = mock_mcp._tools["list_rules"]
         result = await list_rules()
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
     @pytest.mark.asyncio
     async def test_list_rules_with_schema_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -120,7 +120,7 @@ class TestListRules:
         list_rules = mock_mcp._tools["list_rules"]
         result = await list_rules(schema_id=50)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_rules.assert_called_once_with(schema=50)
 
     @pytest.mark.asyncio
@@ -140,7 +140,7 @@ class TestListRules:
         list_rules = mock_mcp._tools["list_rules"]
         result = await list_rules(organization_id=100)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_rules.assert_called_once_with(organization=100)
 
     @pytest.mark.asyncio
@@ -160,7 +160,7 @@ class TestListRules:
         list_rules = mock_mcp._tools["list_rules"]
         result = await list_rules(enabled=True)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_rules.assert_called_once_with(enabled=True)
 
     @pytest.mark.asyncio
@@ -179,5 +179,5 @@ class TestListRules:
         list_rules = mock_mcp._tools["list_rules"]
         result = await list_rules()
 
-        assert result["count"] == 0
-        assert result["results"] == []
+        assert result.count == 0
+        assert result.results == []
