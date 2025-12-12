@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from rossum_agent.api.services.chat_service import ChatService
+from rossum_agent.redis_storage import ChatData, ChatMetadata
 
 
 class TestChatServiceInit:
@@ -151,9 +152,10 @@ class TestChatServiceGetChat:
     def test_get_chat_success(self):
         """Test get_chat with existing chat."""
         mock_storage = MagicMock()
-        mock_storage.load_chat.return_value = (
-            [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}],
-            "/tmp/output",
+        mock_storage.load_chat.return_value = ChatData(
+            messages=[{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}],
+            output_dir="/tmp/output",
+            metadata=ChatMetadata(),
         )
         mock_storage.list_files.return_value = [
             {"filename": "chart.html", "size": 12345, "timestamp": "2024-12-09T14:35:00Z"},
@@ -171,14 +173,15 @@ class TestChatServiceGetChat:
     def test_get_chat_filters_non_user_assistant_messages(self):
         """Test get_chat filters out system messages."""
         mock_storage = MagicMock()
-        mock_storage.load_chat.return_value = (
-            [
+        mock_storage.load_chat.return_value = ChatData(
+            messages=[
                 {"role": "system", "content": "System prompt"},
                 {"role": "user", "content": "Hello"},
                 {"role": "assistant", "content": "Hi!"},
                 {"role": "tool", "content": "Tool output"},
             ],
-            None,
+            output_dir=None,
+            metadata=ChatMetadata(),
         )
         mock_storage.list_files.return_value = []
 
@@ -258,7 +261,9 @@ class TestChatServiceGetMessages:
         """Test get_messages returns raw messages."""
         mock_storage = MagicMock()
         messages = [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi!"}]
-        mock_storage.load_chat.return_value = (messages, "/tmp/output")
+        mock_storage.load_chat.return_value = ChatData(
+            messages=messages, output_dir="/tmp/output", metadata=ChatMetadata()
+        )
 
         service = ChatService(redis_storage=mock_storage)
         result = service.get_messages(user_id="user_123", chat_id="chat_123")
@@ -279,7 +284,7 @@ class TestChatServiceSaveMessages:
         result = service.save_messages(user_id="user_123", chat_id="chat_123", messages=messages)
 
         assert result is True
-        mock_storage.save_chat.assert_called_once_with("user_123", "chat_123", messages, None)
+        mock_storage.save_chat.assert_called_once_with("user_123", "chat_123", messages, None, None)
 
     def test_save_messages_with_output_dir(self):
         """Test save_messages with output directory."""
@@ -295,4 +300,23 @@ class TestChatServiceSaveMessages:
         )
 
         assert result is True
-        mock_storage.save_chat.assert_called_once_with("user_123", "chat_123", messages, output_dir)
+        mock_storage.save_chat.assert_called_once_with("user_123", "chat_123", messages, output_dir, None)
+
+    def test_save_messages_with_metadata(self):
+        """Test save_messages with metadata."""
+        mock_storage = MagicMock()
+        mock_storage.save_chat.return_value = True
+
+        service = ChatService(redis_storage=mock_storage)
+        messages = [{"role": "user", "content": "Hello"}]
+        metadata = ChatMetadata(
+            commit_sha="abc123",
+            total_input_tokens=100,
+            total_output_tokens=50,
+            total_tool_calls=3,
+            total_steps=2,
+        )
+        result = service.save_messages(user_id="user_123", chat_id="chat_123", messages=messages, metadata=metadata)
+
+        assert result is True
+        mock_storage.save_chat.assert_called_once_with("user_123", "chat_123", messages, None, metadata)
