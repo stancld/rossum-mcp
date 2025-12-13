@@ -92,10 +92,9 @@ class TestGetEngine:
         get_engine = mock_mcp._tools["get_engine"]
         result = await get_engine(engine_id=123)
 
-        assert result["id"] == 123
-        assert result["name"] == "Custom Engine"
-        assert result["type"] == "extractor"
-        assert "retrieved successfully" in result["message"]
+        assert result.id == 123
+        assert result.name == "Custom Engine"
+        assert result.type == "extractor"
         mock_client.retrieve_engine.assert_called_once_with(123)
 
 
@@ -122,8 +121,8 @@ class TestListEngines:
         list_engines = mock_mcp._tools["list_engines"]
         result = await list_engines()
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
     @pytest.mark.asyncio
     async def test_list_engines_with_filters(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -142,7 +141,7 @@ class TestListEngines:
         list_engines = mock_mcp._tools["list_engines"]
         result = await list_engines(engine_type="extractor")
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_engines.assert_called_once_with(type="extractor")
 
 
@@ -174,7 +173,8 @@ class TestUpdateEngine:
         update_engine = mock_mcp._tools["update_engine"]
         result = await update_engine(engine_id=123, engine_data={"name": "Updated Engine"})
 
-        assert "updated successfully" in result["message"]
+        assert result.id == 123
+        assert result.name == "Updated Engine"
         mock_client._http_client.update.assert_called_once_with(Resource.Engine, 123, {"name": "Updated Engine"})
 
     @pytest.mark.asyncio
@@ -229,8 +229,8 @@ class TestCreateEngine:
         create_engine = mock_mcp._tools["create_engine"]
         result = await create_engine(name="New Engine", organization_id=1, engine_type="extractor")
 
-        assert result["id"] == 200
-        assert "created successfully" in result["message"]
+        assert result.id == 200
+        assert result.name == "New Engine"
 
     @pytest.mark.asyncio
     async def test_create_engine_invalid_type(
@@ -314,9 +314,8 @@ class TestCreateEngineField:
             schema_ids=[1, 2],
         )
 
-        assert result["id"] == 500
-        assert "created successfully" in result["message"]
-        assert result["schema_ids"] == [1, 2]
+        assert result.id == 500
+        assert result.label == "Invoice Number"
 
     @pytest.mark.asyncio
     async def test_create_engine_field_empty_schemas(
@@ -402,8 +401,8 @@ class TestGetEngineFields:
         get_engine_fields = mock_mcp._tools["get_engine_fields"]
         result = await get_engine_fields(engine_id=123)
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
         mock_client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
 
     @pytest.mark.asyncio
@@ -422,5 +421,5 @@ class TestGetEngineFields:
         get_engine_fields = mock_mcp._tools["get_engine_fields"]
         result = await get_engine_fields()
 
-        assert result["count"] == 0
+        assert result.count == 0
         mock_client.retrieve_engine_fields.assert_called_once_with(engine_id=None)
