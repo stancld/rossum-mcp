@@ -4,6 +4,6 @@ from __future__ import annotations
 
 from rossum_agent.agent import AgentConfig, AgentStep, RossumAgent, create_agent
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 __all__ = ["AgentConfig", "AgentStep", "RossumAgent", "create_agent"]
