@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Stopped replaying CoT in the model context [#61](https://github.com/stancld/rossum-mcp/pull/61)
 - Introduced storing a final answer in memory when no tool is called [#61](https://github.com/stancld/rossum-mcp/pull/61)
 - Added storing generated files in API and event to inform the client
+- Added `preview` field to `/api/v1/chats` response with user request preview [#65](https://github.com/stancld/rossum-mcp/pull/65)
 
 
 ## [0.2.3] - 2025-12-10

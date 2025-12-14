@@ -106,7 +106,13 @@ class TestChatServiceListChats:
         """Test list_chats with chats."""
         mock_storage = MagicMock()
         mock_storage.list_all_chats.return_value = [
-            {"chat_id": "chat_1", "timestamp": 1702132252, "message_count": 5, "first_message": "Hello"},
+            {
+                "chat_id": "chat_1",
+                "timestamp": 1702132252,
+                "message_count": 5,
+                "first_message": "Hello",
+                "preview": "User request preview",
+            },
             {"chat_id": "chat_2", "timestamp": 1702132253, "message_count": 10, "first_message": "World"},
         ]
 
@@ -116,7 +122,9 @@ class TestChatServiceListChats:
         assert len(response.chats) == 2
         assert response.total == 2
         assert response.chats[0].chat_id == "chat_1"
+        assert response.chats[0].preview == "User request preview"
         assert response.chats[1].chat_id == "chat_2"
+        assert response.chats[1].preview is None
 
     def test_list_chats_pagination(self):
         """Test list_chats with pagination."""

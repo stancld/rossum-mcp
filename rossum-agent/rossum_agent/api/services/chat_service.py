@@ -86,6 +86,7 @@ class ChatService:
                 timestamp=chat["timestamp"],
                 message_count=chat["message_count"],
                 first_message=chat["first_message"],
+                preview=chat.get("preview"),
             )
             for chat in paginated
         ]
