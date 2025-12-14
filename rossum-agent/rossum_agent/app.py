@@ -1,6 +1,6 @@
-"""Rossum Streamlit App
+"""Rossum Streamlit Test Bed App.
 
-Web interface for the Rossum Document Processing Agent using Streamlit.
+Web interface for testing the Rossum Document Processing Agent using Streamlit.
 
 Usage:
     streamlit run rossum_agent/app.py
