@@ -112,11 +112,7 @@ def mcp_tool_to_anthropic_format(mcp_tool: MCPTool) -> dict[str, object]:
     Returns:
         Tool definition dict in Anthropic format.
     """
-    return {
-        "name": mcp_tool.name,
-        "description": mcp_tool.description or "",
-        "input_schema": mcp_tool.inputSchema,
-    }
+    return {"name": mcp_tool.name, "description": mcp_tool.description or "", "input_schema": mcp_tool.inputSchema}
 
 
 def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[dict[str, object]]:

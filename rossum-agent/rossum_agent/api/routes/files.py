@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
+from pathlib import Path
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -64,7 +66,24 @@ async def list_files(
     return FileListResponse(files=files, total=len(files))
 
 
-@router.get("/{filename}")
+def _sanitize_filename(filename: str) -> str:
+    """Sanitize filename to prevent path traversal and header injection.
+
+    - Normalizes Windows backslash separators to forward slashes
+    - Extracts only the base filename (no directory traversal)
+    - Removes control characters, newlines, quotes, and backslashes (header injection prevention)
+    - Rejects directory-only names like ".." or "."
+    - Limits length to prevent DoS
+    """
+    normalized = filename.replace("\\", "/")
+    safe_name = Path(normalized).name
+    safe_name = re.sub(r'[\x00-\x1f\x7f"\\]', "", safe_name)
+    if safe_name in ("", ".", ".."):
+        return ""
+    return safe_name[:255]
+
+
+@router.get("/{filename:path}")
 async def download_file(
     chat_id: str,
     filename: str,
@@ -76,13 +95,19 @@ async def download_file(
     if not chat_service.chat_exists(credentials.user_id, chat_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 
-    result = file_service.get_file(chat_id, filename)
+    safe_filename = _sanitize_filename(filename)
+    if not safe_filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+
+    result = file_service.get_file(chat_id, safe_filename)
     if result is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"File {filename} not found in chat {chat_id}"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"File {safe_filename} not found in chat {chat_id}"
         )
 
     content, mime_type = result
     return Response(
-        content=content, media_type=mime_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        content=content,
+        media_type=mime_type,
+        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
     )

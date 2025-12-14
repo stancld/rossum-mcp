@@ -21,9 +21,7 @@ DEFAULT_MODEL_ID = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 
 def create_bedrock_client(
-    aws_region: str | None = None,
-    aws_profile: str | None = None,
-    session: boto3.Session | None = None,
+    aws_region: str | None = None, aws_profile: str | None = None, session: boto3.Session | None = None
 ) -> AnthropicBedrock:
     """Create AnthropicBedrock client using boto3.Session credentials.
 

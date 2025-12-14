@@ -27,12 +27,7 @@ from rossum_mcp.tools import (
     register_workspace_tools,
 )
 
-setup_logging(
-    app_name="rossum-mcp-server",
-    log_level="DEBUG",
-    log_file="/tmp/rossum_mcp_debug.log",
-    use_console=False,
-)
+setup_logging(app_name="rossum-mcp-server", log_level="DEBUG", use_console=False)
 
 logger = logging.getLogger(__name__)
 

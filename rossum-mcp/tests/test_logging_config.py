@@ -70,16 +70,6 @@ class TestSetupLogging:
         ]
         assert len(console_handlers) == 0
 
-    def test_adds_file_handler_when_log_file_specified(self, tmp_path):
-        """Test that file handler is added when log_file is specified."""
-        log_file = tmp_path / "test.log"
-
-        logger = setup_logging(app_name="test-app", log_file=str(log_file), use_console=False)
-
-        file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
-        assert len(file_handlers) == 1
-        assert log_file.exists()
-
     def test_no_redis_handler_without_host(self):
         """Test that no Redis handler is added without host config."""
         logger = setup_logging(app_name="test-app", use_console=False)

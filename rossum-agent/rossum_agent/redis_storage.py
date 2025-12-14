@@ -470,7 +470,6 @@ class RedisStorage:
                     file_path = output_dir / filename
                     file_path.write_bytes(content)
                     loaded_count += 1
-                    logger.debug(f"Restored file {filename} to {file_path}")
 
             logger.info(f"Loaded {loaded_count}/{len(files)} files for chat {chat_id} from Redis")
             return loaded_count

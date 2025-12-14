@@ -174,7 +174,6 @@ class RossumAgent:
 
         tools = await self._get_tools()
         model_id = get_model_id()
-        logger.debug(f"Calling model {model_id} with {len(messages)} messages and {len(tools)} tools")
 
         thinking_text = ""
         tool_calls: list[ToolCall] = []
@@ -257,8 +256,6 @@ class RossumAgent:
 
     async def _execute_tool(self, tool_call: ToolCall) -> ToolResult:
         try:
-            logger.debug(f"Executing tool: {tool_call.name} with args: {tool_call.arguments}")
-
             if tool_call.name in get_internal_tool_names():
                 result = execute_internal_tool(tool_call.name, tool_call.arguments)
                 content = str(result)
@@ -271,7 +268,6 @@ class RossumAgent:
                     content = str(result) if result is not None else "Tool executed successfully (no output)"
 
             content = truncate_content(content)
-            logger.debug(f"Tool {tool_call.name} completed successfully")
             return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
 
         except Exception as e:

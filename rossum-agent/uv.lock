@@ -2032,7 +2032,7 @@ wheels = [
 
 [[package]]
 name = "rossum-agent"
-version = "0.2.3"
+version = "0.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2055,10 +2055,14 @@ all = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "myst-parser" },
+    { name = "pydantic" },
+    { name = "pyperclip" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
     { name = "python-multipart" },
     { name = "redis" },
+    { name = "slowapi" },
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-copybutton" },
@@ -2069,6 +2073,7 @@ all = [
 ]
 api = [
     { name = "fastapi" },
+    { name = "pydantic" },
     { name = "python-multipart" },
     { name = "redis" },
     { name = "slowapi" },
@@ -2113,12 +2118,16 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.0" },
     { name = "myst-parser", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=2.0.0" },
+    { name = "pydantic", marker = "extra == 'all'", specifier = ">2.0.0" },
+    { name = "pydantic", marker = "extra == 'api'", specifier = ">2.0.0" },
     { name = "pyjwt", specifier = ">=2.8" },
+    { name = "pyperclip", marker = "extra == 'all'", specifier = ">=1.0" },
     { name = "pyperclip", marker = "extra == 'streamlit'", specifier = ">=1.0" },
     { name = "pytest", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'all'", specifier = ">=0.21.0" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.21.0" },
+    { name = "pytest-cov", marker = "extra == 'all'", specifier = ">=4.0.0" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=4.0.0" },
     { name = "python-dotenv" },
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.12" },
@@ -2131,6 +2140,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32" },
     { name = "rossum-api", specifier = ">=3.7.0" },
     { name = "rossum-mcp", git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-mcp" },
+    { name = "slowapi", marker = "extra == 'all'", specifier = ">=0.1.9" },
     { name = "slowapi", marker = "extra == 'api'", specifier = ">=0.1.9" },
     { name = "sphinx", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0.0" },

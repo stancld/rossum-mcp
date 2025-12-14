@@ -160,6 +160,41 @@ class TestDownloadFileEndpoint:
         assert "Chat" in response.json()["detail"]
 
 
+class TestSanitizeFilename:
+    """Tests for the _sanitize_filename security function."""
+
+    def test_sanitize_removes_path_traversal(self):
+        """Test that path traversal sequences are stripped."""
+        from rossum_agent.api.routes.files import _sanitize_filename
+
+        assert _sanitize_filename("../../../etc/passwd") == "passwd"
+        assert _sanitize_filename("..\\..\\secret.txt") == "secret.txt"
+        assert _sanitize_filename("/etc/passwd") == "passwd"
+
+    def test_sanitize_removes_control_characters(self):
+        """Test that control characters are removed to prevent header injection."""
+        from rossum_agent.api.routes.files import _sanitize_filename
+
+        assert _sanitize_filename("file\r\nInjected: header") == "fileInjected: header"
+        assert _sanitize_filename("file\x00name.txt") == "filename.txt"
+        assert _sanitize_filename('file"name.txt') == "filename.txt"
+
+    def test_sanitize_empty_filename(self):
+        """Test that sanitization handles edge cases."""
+        from rossum_agent.api.routes.files import _sanitize_filename
+
+        assert _sanitize_filename("..") == ""
+        assert _sanitize_filename(".") == ""
+        assert _sanitize_filename("") == ""
+
+    def test_sanitize_long_filename(self):
+        """Test that filenames are truncated to prevent DoS."""
+        from rossum_agent.api.routes.files import _sanitize_filename
+
+        long_name = "a" * 500 + ".txt"
+        assert len(_sanitize_filename(long_name)) == 255
+
+
 class TestTestClientEndpoint:
     """Tests for /test-client endpoint."""
 
