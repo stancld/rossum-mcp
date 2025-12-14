@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-agent"
-version = "0.2.3"
+version = "0.2.4"
 description = "AI agent toolkit for Rossum: document workflows conversationally, debug pipelines automatically, and enable agentic configuration of intelligent document processing."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -35,6 +35,7 @@ rossum-agent-api = "rossum_agent.api.main:main"
 [project.optional-dependencies]
 api = [
     "fastapi>=0.115.0",
+    "pydantic>2.0.0",
     "python-multipart>=0.0.12",
     "redis>=7.0.0",
     "slowapi>=0.1.9",
@@ -67,10 +68,14 @@ all = [
     "fastapi>=0.115.0",
     "httpx>=0.27.0",
     "myst-parser>=2.0.0",
+    "pydantic>2.0.0",
+    "pyperclip>=1.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "python-multipart>=0.0.12",
     "redis>=7.0.0",
+    "slowapi>=0.1.9",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
