@@ -99,7 +99,6 @@ def setup_logging(
     Args:
         app_name: Application name
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        log_file: Optional file path for file handler
         use_console: Whether to add console handler (default: True)
         redis_host: Redis host (default: from REDIS_HOST env var)
         redis_port: Redis port (default: 6379)
@@ -117,11 +116,6 @@ def setup_logging(
         console = logging.StreamHandler(sys.stdout)
         console.setFormatter(formatter)
         root_logger.addHandler(console)
-
-    if log_file:
-        file = logging.FileHandler(log_file)
-        file.setFormatter(formatter)
-        root_logger.addHandler(file)
 
     redis_host_val = redis_host or os.getenv("REDIS_HOST")
     redis_port_val = redis_port or int(os.getenv("REDIS_PORT", "6379"))

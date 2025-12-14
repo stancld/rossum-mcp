@@ -2,14 +2,74 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import Header, HTTPException, status
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_ROSSUM_HOST_PATTERN = re.compile(
+    r"^(elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|elis\.develop\.r8\.lol)$"
+)
+
+
+def validate_rossum_api_url(url: str) -> str:
+    """Validate that the Rossum API URL is a trusted Rossum domain.
+
+    This prevents SSRF attacks by ensuring we only make requests to known Rossum endpoints.
+
+    Args:
+        url: The API URL to validate.
+
+    Returns:
+        The validated and normalized API base URL.
+
+    Raises:
+        HTTPException: If the URL is not a valid Rossum API endpoint.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid X-Rossum-Api-Url format") from e
+
+    if parsed.scheme != "https":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Rossum-Api-Url must use HTTPS",
+        )
+
+    if not parsed.hostname:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid X-Rossum-Api-Url: missing hostname"
+        )
+
+    if not ALLOWED_ROSSUM_HOST_PATTERN.match(parsed.hostname):
+        logger.warning(f"Rejected non-Rossum API URL: {parsed.hostname}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Rossum-Api-Url must be a valid Rossum API endpoint",
+        )
+
+    api_base = f"{parsed.scheme}://{parsed.hostname}"
+    if parsed.port and parsed.port != 443:
+        api_base = f"{api_base}:{parsed.port}"
+
+    # Preserve /api prefix if present (some Rossum environments use /api/v1 path)
+    if parsed.path:
+        path = parsed.path.rstrip("/")
+        # Strip /v1 suffix to avoid duplication when we append /v1/auth/user
+        if path.endswith("/v1"):
+            path = path[:-3]
+        if path:
+            api_base = f"{api_base}{path}"
+
+    return api_base
 
 
 @dataclass
@@ -66,15 +126,19 @@ async def get_validated_credentials(
     """
     credentials = await get_rossum_credentials(x_rossum_token, x_rossum_api_url)
 
-    # Normalize API URL - strip trailing /v1 if present to avoid duplication
-    api_base = credentials.api_url.rstrip("/")
-    if api_base.endswith("/v1"):
-        api_base = api_base[:-3]
+    # Validate and normalize API URL to prevent SSRF
+    api_base = validate_rossum_api_url(credentials.api_url)
+    # Strip trailing /v1 to avoid duplication (URL might be .../api or .../api/v1)
+    api_base_normalized = api_base.rstrip("/")
+    if api_base_normalized.endswith("/v1"):
+        api_base_normalized = api_base_normalized[:-3]
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{api_base}/v1/auth/user", headers={"Authorization": f"Bearer {credentials.token}"}, timeout=10.0
+                f"{api_base_normalized}/v1/auth/user",
+                headers={"Authorization": f"Bearer {credentials.token}"},
+                timeout=10.0,
             )
 
             if response.status_code == 401:
@@ -86,7 +150,14 @@ async def get_validated_credentials(
                     status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to validate token with Rossum API"
                 )
 
-            user_data = response.json()
+            try:
+                user_data = response.json()
+            except json.JSONDecodeError as e:
+                logger.error(f"Rossum API returned invalid JSON: {e}. Response text: {response.text!r}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY, detail="Rossum API returned invalid response"
+                ) from e
+
             user_id = str(user_data.get("id", ""))
 
             if not user_id:

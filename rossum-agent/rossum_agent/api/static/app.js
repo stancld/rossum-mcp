@@ -298,7 +298,11 @@ function renderMarkdown(text) {
             breaks: true,
             gfm: true,
         });
-        return marked.parse(text);
+        const html = marked.parse(text);
+        if (typeof DOMPurify !== 'undefined') {
+            return DOMPurify.sanitize(html);
+        }
+        return html;
     }
     return escapeHtml(text).replace(/\n/g, '<br>');
 }

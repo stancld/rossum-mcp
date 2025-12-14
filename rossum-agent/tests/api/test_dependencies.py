@@ -11,6 +11,7 @@ from rossum_agent.api.dependencies import (
     RossumCredentials,
     get_rossum_credentials,
     get_validated_credentials,
+    validate_rossum_api_url,
 )
 
 
@@ -187,11 +188,11 @@ class TestGetValidatedCredentials:
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await get_validated_credentials(x_rossum_token="test_token", x_rossum_api_url="https://custom.rossum.ai")
+            await get_validated_credentials(x_rossum_token="test_token", x_rossum_api_url="https://custom.rossum.app")
 
             mock_async_client.get.assert_called_once()
             call_args = mock_async_client.get.call_args
-            assert "https://custom.rossum.ai/v1/auth/user" in call_args[0]
+            assert "https://custom.rossum.app/v1/auth/user" in call_args[0]
             assert call_args.kwargs["headers"]["Authorization"] == "Bearer test_token"
 
     @pytest.mark.asyncio
@@ -208,11 +209,107 @@ class TestGetValidatedCredentials:
             mock_async_client.__aexit__ = AsyncMock(return_value=None)
             mock_client.return_value = mock_async_client
 
-            await get_validated_credentials(
-                x_rossum_token="test_token", x_rossum_api_url="https://us.api.rossum.ai/v1"
-            )
+            await get_validated_credentials(x_rossum_token="test_token", x_rossum_api_url="https://us.rossum.app/v1")
 
             mock_async_client.get.assert_called_once()
             call_args = mock_async_client.get.call_args
-            # Should be /v1/auth/user, not /v1/v1/auth/user
-            assert call_args[0][0] == "https://us.api.rossum.ai/v1/auth/user"
+            # Should normalize and use base URL
+            assert call_args[0][0] == "https://us.rossum.app/v1/auth/user"
+
+    @pytest.mark.asyncio
+    async def test_preserves_original_api_url_with_v1_suffix(self):
+        """Test that returned credentials preserve original API URL including /v1 path."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": 789}
+
+        with patch("rossum_agent.api.dependencies.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get = AsyncMock(return_value=mock_response)
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            creds = await get_validated_credentials(
+                x_rossum_token="test_token", x_rossum_api_url="https://elis.develop.r8.lol/api/v1"
+            )
+
+            # Should preserve the original URL with /api/v1 for MCP server
+            assert creds.api_url == "https://elis.develop.r8.lol/api/v1"
+
+
+class TestValidateRossumApiUrl:
+    """Tests for validate_rossum_api_url SSRF prevention."""
+
+    def test_allows_elis_rossum_ai(self):
+        """Test that elis.rossum.ai is allowed."""
+        result = validate_rossum_api_url("https://elis.rossum.ai")
+        assert result == "https://elis.rossum.ai"
+
+    def test_allows_rossum_app_subdomain(self):
+        """Test that *.rossum.app domains are allowed."""
+        result = validate_rossum_api_url("https://us.rossum.app")
+        assert result == "https://us.rossum.app"
+
+    def test_allows_elis_develop_r8_lol(self):
+        """Test that elis.develop.r8.lol is allowed."""
+        result = validate_rossum_api_url("https://elis.develop.r8.lol")
+        assert result == "https://elis.develop.r8.lol"
+
+    def test_rejects_http_scheme(self):
+        """Test that HTTP (non-HTTPS) is rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("http://elis.rossum.ai")
+
+        assert exc_info.value.status_code == 400
+        assert "HTTPS" in exc_info.value.detail
+
+    def test_rejects_internal_ip(self):
+        """Test that internal IPs are rejected (SSRF prevention)."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("https://10.0.0.5:8080")
+
+        assert exc_info.value.status_code == 400
+
+    def test_rejects_localhost(self):
+        """Test that localhost is rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("https://localhost:8000")
+
+        assert exc_info.value.status_code == 400
+
+    def test_rejects_arbitrary_domain(self):
+        """Test that arbitrary domains are rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("https://evil.com")
+
+        assert exc_info.value.status_code == 400
+
+    def test_rejects_similar_looking_domain(self):
+        """Test that domains that look like Rossum but aren't are rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("https://rossum.ai.evil.com")
+
+        assert exc_info.value.status_code == 400
+
+    def test_preserves_path_components(self):
+        """Test that path components are preserved (only trailing /v1 is stripped)."""
+        result = validate_rossum_api_url("https://elis.rossum.ai/api/v1")
+        assert result == "https://elis.rossum.ai/api"
+
+    def test_strips_only_v1_suffix(self):
+        """Test that only trailing /v1 is stripped, rest of path preserved."""
+        result = validate_rossum_api_url("https://elis.rossum.ai/v1")
+        assert result == "https://elis.rossum.ai"
+
+    def test_preserves_non_standard_port(self):
+        """Test that non-443 ports are preserved if specified."""
+        result = validate_rossum_api_url("https://elis.develop.r8.lol:8443")
+        assert result == "https://elis.develop.r8.lol:8443"
+
+    def test_rejects_missing_hostname(self):
+        """Test that URLs without hostname are rejected."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("https://")
+
+        assert exc_info.value.status_code == 400

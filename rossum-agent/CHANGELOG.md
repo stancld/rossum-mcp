@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added SSRF protection via URL validation for Rossum API endpoints [#69](https://github.com/stancld/rossum-mcp/pull/69)
+- Added path traversal and header injection protection for file downloads [#69](https://github.com/stancld/rossum-mcp/pull/69)
+- Added XSS protection via DOMPurify in test client [#69](https://github.com/stancld/rossum-mcp/pull/69)
 
 
 ## [0.2.4] - 2025-12-14
