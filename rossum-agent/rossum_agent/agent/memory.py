@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from anthropic.types import MessageParam
 
     from rossum_agent.agent.models import ToolCall, ToolResult
+    from rossum_agent.agent.types import UserContent
 
 
 @dataclass
@@ -79,9 +80,12 @@ class MemoryStep:
 
 @dataclass
 class TaskStep:
-    """Represents the initial user task/prompt."""
+    """Represents the initial user task/prompt.
 
-    task: str
+    Supports both text-only and multimodal content (with images).
+    """
+
+    task: UserContent
 
     def to_messages(self) -> list[MessageParam]:
         return [{"role": "user", "content": self.task}]
@@ -100,8 +104,8 @@ class AgentMemory:
         """Clear all steps."""
         self.steps = []
 
-    def add_task(self, task: str) -> None:
-        """Add initial user task."""
+    def add_task(self, task: UserContent) -> None:
+        """Add initial user task (text or multimodal content)."""
         self.steps.append(TaskStep(task=task))
 
     def add_step(self, step: MemoryStep) -> None:

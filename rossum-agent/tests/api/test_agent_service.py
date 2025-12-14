@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent.models import AgentStep, ToolResult
-from rossum_agent.api.models.schemas import StepEvent
+from rossum_agent.api.models.schemas import ImageContent, StepEvent
 from rossum_agent.api.services.agent_service import AgentService, convert_step_to_event
 
 
@@ -389,3 +389,51 @@ class TestAgentServiceRunAgent:
         """Test that output_dir is None before running agent."""
         service = AgentService()
         assert service.output_dir is None
+
+
+class TestAgentServiceBuildUserContent:
+    """Tests for AgentService._build_user_content method."""
+
+    def test_text_only_returns_string(self):
+        """Test that text-only prompt returns a plain string."""
+        service = AgentService()
+        result = service._build_user_content("Hello, agent!", None)
+        assert result == "Hello, agent!"
+        assert isinstance(result, str)
+
+    def test_with_images_returns_list(self):
+        """Test that prompt with images returns a content list."""
+        service = AgentService()
+        images = [ImageContent(media_type="image/png", data="aGVsbG8=")]
+        result = service._build_user_content("Analyze this", images)
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["type"] == "image"
+        assert result[0]["source"]["type"] == "base64"
+        assert result[0]["source"]["media_type"] == "image/png"
+        assert result[0]["source"]["data"] == "aGVsbG8="
+        assert result[1]["type"] == "text"
+        assert result[1]["text"] == "Analyze this"
+
+    def test_with_multiple_images(self):
+        """Test that multiple images are included in correct order."""
+        service = AgentService()
+        images = [
+            ImageContent(media_type="image/png", data="aW1hZ2Ux"),
+            ImageContent(media_type="image/jpeg", data="aW1hZ2Uy"),
+        ]
+        result = service._build_user_content("Compare these images", images)
+
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert result[0]["source"]["data"] == "aW1hZ2Ux"
+        assert result[1]["source"]["data"] == "aW1hZ2Uy"
+        assert result[2]["text"] == "Compare these images"
+
+    def test_empty_images_list_returns_string(self):
+        """Test that empty images list returns plain string."""
+        service = AgentService()
+        result = service._build_user_content("Hello", [])
+        assert result == "Hello"
+        assert isinstance(result, str)

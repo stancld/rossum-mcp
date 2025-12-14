@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CreateChatRequest(BaseModel):
@@ -40,11 +40,35 @@ class ChatListResponse(BaseModel):
     offset: int
 
 
+class ImageContent(BaseModel):
+    """Image content in a message."""
+
+    type: Literal["image"] = "image"
+    media_type: Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
+    data: str = Field(..., description="Base64-encoded image data")
+
+    @field_validator("data")
+    @classmethod
+    def validate_base64_size(cls, v: str) -> str:
+        max_size = 5 * 1024 * 1024  # 5 MB limit for base64 data
+        if len(v) > max_size * 4 // 3:  # Base64 is ~4/3 larger than binary
+            msg = "Image data exceeds maximum size of 5 MB"
+            raise ValueError(msg)
+        return v
+
+
+class TextContent(BaseModel):
+    """Text content in a message."""
+
+    type: Literal["text"] = "text"
+    text: str
+
+
 class Message(BaseModel):
     """A single chat message."""
 
     role: Literal["user", "assistant"]
-    content: str
+    content: str | list[TextContent | ImageContent]
 
 
 class FileInfo(BaseModel):
@@ -72,9 +96,18 @@ class DeleteResponse(BaseModel):
 
 
 class MessageRequest(BaseModel):
-    """Request body for sending a message."""
+    """Request body for sending a message.
 
-    content: str = Field(..., min_length=1, max_length=50000)
+    Supports text-only messages or multimodal messages with images.
+    For image messages, use the `images` field with base64-encoded image data.
+    """
+
+    content: str = Field(..., min_length=1, max_length=50000, description="Text content of the message")
+    images: list[ImageContent] | None = Field(
+        default=None,
+        max_length=5,
+        description="Optional list of images (max 5) to include with the message",
+    )
     rossum_url: str | None = Field(default=None, description="Optional Rossum app URL for context")
 
 

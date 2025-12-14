@@ -16,10 +16,12 @@ from rossum_agent.api.models.schemas import (
     ErrorResponse,
     FileInfo,
     HealthResponse,
+    ImageContent,
     Message,
     MessageRequest,
     StepEvent,
     StreamDoneEvent,
+    TextContent,
 )
 
 
@@ -188,6 +190,91 @@ class TestMessageRequest:
         """Test content exceeding max length is rejected."""
         with pytest.raises(ValidationError):
             MessageRequest(content="x" * 50001)
+
+    def test_message_with_images(self):
+        """Test message request with images."""
+        image = ImageContent(media_type="image/png", data="aGVsbG8=")
+        request = MessageRequest(content="Analyze this image", images=[image])
+        assert request.content == "Analyze this image"
+        assert request.images is not None
+        assert len(request.images) == 1
+        assert request.images[0].media_type == "image/png"
+
+    def test_message_without_images(self):
+        """Test message request without images."""
+        request = MessageRequest(content="Hello")
+        assert request.images is None
+
+    def test_message_with_multiple_images(self):
+        """Test message request with multiple images."""
+        images = [
+            ImageContent(media_type="image/png", data="aGVsbG8="),
+            ImageContent(media_type="image/jpeg", data="d29ybGQ="),
+        ]
+        request = MessageRequest(content="Compare these images", images=images)
+        assert len(request.images) == 2
+
+    def test_message_max_images_exceeded(self):
+        """Test that more than 5 images is rejected."""
+        images = [ImageContent(media_type="image/png", data="aGVsbG8=")] * 6
+        with pytest.raises(ValidationError):
+            MessageRequest(content="Too many images", images=images)
+
+
+class TestImageContent:
+    """Tests for ImageContent schema."""
+
+    def test_valid_image_content(self):
+        """Test valid image content."""
+        image = ImageContent(media_type="image/png", data="aGVsbG8=")
+        assert image.type == "image"
+        assert image.media_type == "image/png"
+        assert image.data == "aGVsbG8="
+
+    def test_all_supported_media_types(self):
+        """Test all supported media types."""
+        for media_type in ["image/jpeg", "image/png", "image/gif", "image/webp"]:
+            image = ImageContent(media_type=media_type, data="aGVsbG8=")
+            assert image.media_type == media_type
+
+    def test_invalid_media_type_rejected(self):
+        """Test invalid media type is rejected."""
+        with pytest.raises(ValidationError):
+            ImageContent(media_type="image/bmp", data="aGVsbG8=")
+
+    def test_image_data_too_large(self):
+        """Test that oversized image data is rejected."""
+        large_data = "x" * (7 * 1024 * 1024)  # ~7MB base64
+        with pytest.raises(ValidationError):
+            ImageContent(media_type="image/png", data=large_data)
+
+
+class TestTextContent:
+    """Tests for TextContent schema."""
+
+    def test_valid_text_content(self):
+        """Test valid text content."""
+        text = TextContent(text="Hello, world!")
+        assert text.type == "text"
+        assert text.text == "Hello, world!"
+
+
+class TestMessageMultimodal:
+    """Tests for multimodal Message schema."""
+
+    def test_message_with_string_content(self):
+        """Test message with simple string content."""
+        msg = Message(role="user", content="Hello")
+        assert msg.content == "Hello"
+
+    def test_message_with_multimodal_content(self):
+        """Test message with multimodal content list."""
+        content = [
+            TextContent(text="Analyze this image"),
+            ImageContent(media_type="image/png", data="aGVsbG8="),
+        ]
+        msg = Message(role="user", content=content)
+        assert len(msg.content) == 2
 
 
 class TestStepEvent:

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.models import AgentConfig, AgentStep
-from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
+from rossum_agent.api.models.schemas import ImageContent, StepEvent, StreamDoneEvent
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts import get_system_prompt
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
@@ -16,6 +16,8 @@ from rossum_agent.utils import create_session_output_dir, set_session_output_dir
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from pathlib import Path
+
+    from rossum_agent.agent.types import ContentBlock, UserContent
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,7 @@ class AgentService:
         rossum_api_base_url: str,
         mcp_mode: Literal["read-only", "read-write"] = "read-only",
         rossum_url: str | None = None,
+        images: list[ImageContent] | None = None,
     ) -> AsyncIterator[StepEvent | StreamDoneEvent]:
         """Run the agent with a new prompt.
 
@@ -91,6 +94,8 @@ class AgentService:
             StepEvent objects during execution, StreamDoneEvent at the end.
         """
         logger.info(f"Starting agent run with {len(conversation_history)} history messages")
+        if images:
+            logger.info(f"Including {len(images)} images in the prompt")
 
         self._output_dir = create_session_output_dir()
         set_session_output_dir(self._output_dir)
@@ -117,8 +122,10 @@ class AgentService:
             total_input_tokens = 0
             total_output_tokens = 0
 
+            user_content = self._build_user_content(prompt, images)
+
             try:
-                async for step in agent.run(prompt):
+                async for step in agent.run(user_content):
                     yield convert_step_to_event(step)
 
                     if not step.is_streaming:
@@ -138,6 +145,34 @@ class AgentService:
                     content=f"Agent execution failed: {e}",
                     is_final=True,
                 )
+
+    def _build_user_content(self, prompt: str, images: list[ImageContent] | None) -> UserContent:
+        """Build user content for the agent, optionally including images.
+
+        Args:
+            prompt: The user's text prompt.
+            images: Optional list of images to include.
+
+        Returns:
+            Either a plain string (text-only) or a list of content blocks (multimodal).
+        """
+        if not images:
+            return prompt
+
+        content: list[ContentBlock] = []
+        for img in images:
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": img.media_type,
+                        "data": img.data,
+                    },
+                }
+            )
+        content.append({"type": "text", "text": prompt})
+        return content
 
     def _restore_conversation_history(self, agent: RossumAgent, history: list[dict[str, Any]]) -> None:
         """Restore conversation history to the agent.

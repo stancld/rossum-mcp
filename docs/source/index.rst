@@ -96,6 +96,7 @@ The ``rossum_agent`` package provides additional capabilities:
 
 * Hook analysis tools for understanding workflow dependencies and execution flow
 * Native Claude code execution for file operations, plotting, and data analysis
+* Image input support for attaching images (PNG, JPEG, GIF, WebP) to messages
 * Integration with AI agent frameworks (Anthropic Claude)
 * CLI and Streamlit web interfaces
 * See the :doc:`examples` section for complete workflows

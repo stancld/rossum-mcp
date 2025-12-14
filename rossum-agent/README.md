@@ -17,6 +17,7 @@ AI agent for Rossum document processing. Built with Anthropic Claude and designe
 - **Rossum Integration**: Connect to Rossum MCP server for document processing
 - **File Output**: Write reports, documentation, and analysis results to files
 - **Claude Code Execution**: Leverage Claude's native code execution for data analysis, plotting, and complex computations
+- **Image Input Support**: Attach images (PNG, JPEG, GIF, WebP) to messages for visual context and analysis
 
 ### User Interfaces
 - **CLI**: Command-line interface for interactive agent conversations
