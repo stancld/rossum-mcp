@@ -252,6 +252,11 @@ class RedisStorage:
                     timestamp_str = chat_id.split("_")[1]
                     timestamp = int(dt.datetime.strptime(timestamp_str, "%Y%m%d%H%M%S").timestamp())
                     first_message = messages[0].get("content", "") if messages else ""
+                    first_user = next(
+                        (m.get("content", "") for m in messages if m.get("role") == "user"),
+                        None,
+                    )
+                    preview = first_user[:100] if first_user else None
 
                     chats.append(
                         {
@@ -259,6 +264,7 @@ class RedisStorage:
                             "timestamp": timestamp,
                             "message_count": len(messages),
                             "first_message": first_message[:100],
+                            "preview": preview,
                             "commit_sha": chat_data.metadata.commit_sha,
                             "total_input_tokens": chat_data.metadata.total_input_tokens,
                             "total_output_tokens": chat_data.metadata.total_output_tokens,

@@ -9,8 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-limiter = Limiter(key_func=get_remote_address)
-
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
 from rossum_agent.api.models.schemas import (
     ChatDetail,
@@ -22,6 +20,8 @@ from rossum_agent.api.models.schemas import (
 from rossum_agent.api.services.chat_service import (
     ChatService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
 )
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 

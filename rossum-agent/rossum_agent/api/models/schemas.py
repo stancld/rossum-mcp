@@ -28,6 +28,7 @@ class ChatSummary(BaseModel):
     timestamp: int
     message_count: int
     first_message: str
+    preview: str | None = None
 
 
 class ChatListResponse(BaseModel):

@@ -73,6 +73,18 @@ class TestChatSummary:
         assert summary.timestamp == 1702132252
         assert summary.message_count == 5
         assert summary.first_message == "Hello, agent!"
+        assert summary.preview is None
+
+    def test_summary_with_preview(self):
+        """Test summary with preview field."""
+        summary = ChatSummary(
+            chat_id="chat_123",
+            timestamp=1702132252,
+            message_count=5,
+            first_message="Hello, agent!",
+            preview="User request preview text",
+        )
+        assert summary.preview == "User request preview text"
 
 
 class TestChatListResponse:
