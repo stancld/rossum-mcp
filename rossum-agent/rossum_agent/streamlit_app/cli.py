@@ -1,4 +1,4 @@
-"""CLI entry point for Rossum Agent."""
+"""CLI entry point for Rossum Agent Streamlit application."""
 
 from __future__ import annotations
 

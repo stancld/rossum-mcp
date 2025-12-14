@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 from rossum_agent.agent import AgentStep, ToolCall, ToolResult
-from rossum_agent.app_llm_response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
+from rossum_agent.streamlit_app.response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
 
 
 class TestParseAndFormatFinalAnswer:

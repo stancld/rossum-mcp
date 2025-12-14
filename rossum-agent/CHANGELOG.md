@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Introduced storing a final answer in memory when no tool is called [#61](https://github.com/stancld/rossum-mcp/pull/61)
 - Added storing generated files in API and event to inform the client
 - Added `preview` field to `/api/v1/chats` response with user request preview [#65](https://github.com/stancld/rossum-mcp/pull/65)
+- Separated Streamlit components into `streamlit_app` submodule as a standalone test-bed component [#66](https://github.com/stancld/rossum-mcp/pull/66)
 
 
 ## [0.2.3] - 2025-12-10

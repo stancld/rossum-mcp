@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rossum-agent = "rossum_agent.streamlit_app:main"
+rossum-agent = "rossum_agent.streamlit_app.cli:main"
 rossum-agent-api = "rossum_agent.api.main:main"
 
 [project.optional-dependencies]
