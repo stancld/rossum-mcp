@@ -6,7 +6,7 @@ import io
 import wave
 
 import numpy as np
-from rossum_agent.beep_sound import generate_beep_wav
+from rossum_agent.streamlit_app.beep_sound import generate_beep_wav
 
 
 class TestGenerateBeepWav:
