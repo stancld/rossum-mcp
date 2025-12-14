@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 
     from anthropic import AnthropicBedrock
 
+    from rossum_agent.agent.types import UserContent
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +83,7 @@ class RossumAgent:
         self._total_input_tokens = 0
         self._total_output_tokens = 0
 
-    def add_user_message(self, content: str) -> None:
+    def add_user_message(self, content: UserContent) -> None:
         """Add a user message to the conversation history."""
         self.memory.add_task(content)
 
@@ -277,7 +279,7 @@ class RossumAgent:
             logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
             return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
-    async def run(self, prompt: str) -> AsyncIterator[AgentStep]:
+    async def run(self, prompt: UserContent) -> AsyncIterator[AgentStep]:
         """Run the agent with the given prompt, yielding steps.
 
         This method implements the main agent loop, calling the model,

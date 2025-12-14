@@ -23,7 +23,7 @@ from rossum_agent.api.services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 
-MAX_REQUEST_SIZE = 100 * 1024  # 100 KB
+MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10 MB (supports image uploads)
 
 limiter = Limiter(key_func=get_remote_address)
 

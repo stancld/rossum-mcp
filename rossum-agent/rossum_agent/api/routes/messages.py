@@ -12,7 +12,13 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
-from rossum_agent.api.models.schemas import FileCreatedEvent, MessageRequest, StepEvent, StreamDoneEvent
+from rossum_agent.api.models.schemas import (
+    FileCreatedEvent,
+    ImageContent,
+    MessageRequest,
+    StepEvent,
+    StreamDoneEvent,
+)
 from rossum_agent.api.services.agent_service import (
     AgentService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
 )
@@ -94,6 +100,7 @@ async def send_message(
 
     history = chat_service.get_messages(credentials.user_id, chat_id) or []
     user_prompt = message.content
+    images: list[ImageContent] | None = message.images
 
     async def event_generator() -> Iterator[str]:  # type: ignore[misc]
         final_response: str | None = None
@@ -102,6 +109,7 @@ async def send_message(
         try:
             async for event in agent_service.run_agent(
                 prompt=user_prompt,
+                images=images,
                 conversation_history=history,
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
