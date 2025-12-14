@@ -237,10 +237,7 @@ class RossumAgent:
             return
 
         memory_step = MemoryStep(
-            step_number=step_num,
-            tool_calls=tool_calls,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+            step_number=step_num, tool_calls=tool_calls, input_tokens=input_tokens, output_tokens=output_tokens
         )
 
         tool_results: list[ToolResult] = []
@@ -353,27 +350,6 @@ class RossumAgent:
                 error=f"Maximum steps ({self.config.max_steps}) reached without final answer.",
                 is_final=True,
             )
-
-    async def run_single_turn(self, prompt: str) -> AgentStep:
-        """Run the agent for a single turn and return the final step.
-
-        This is a convenience method that collects all steps and returns
-        only the final one. Useful when you don't need to track intermediate steps.
-
-        Args:
-            prompt: The user's input prompt.
-
-        Returns:
-            The final AgentStep from the agent's execution.
-        """
-        final_step: AgentStep | None = None
-        async for step in self.run(prompt):
-            final_step = step
-
-        if final_step is None:
-            return AgentStep(step_number=0, error="No response from agent", is_final=True)
-
-        return final_step
 
 
 async def create_agent(

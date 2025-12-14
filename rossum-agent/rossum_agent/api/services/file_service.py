@@ -59,27 +59,6 @@ class FileService:
         mime_type = self._guess_mime_type(filename)
         return content, mime_type
 
-    def delete_file(self, chat_id: str, filename: str) -> bool:
-        """Delete a file from a chat session.
-
-        Args:
-            chat_id: Chat session identifier.
-            filename: Name of the file to delete.
-
-        Returns:
-            True if deleted, False otherwise.
-        """
-        return self._storage.delete_file(chat_id, filename)
-
-    def file_exists(self, chat_id: str, filename: str) -> bool:
-        """Check if a file exists in a chat session.
-
-        Args:
-            chat_id: Chat session identifier.
-            filename: Name of the file.
-        """
-        return self._storage.load_file(chat_id, filename) is not None
-
     def _guess_mime_type(self, filename: str) -> str:
         """Guess MIME type from filename."""
         mime_type, _ = mimetypes.guess_type(filename)

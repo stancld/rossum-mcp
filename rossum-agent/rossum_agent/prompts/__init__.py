@@ -15,10 +15,7 @@ from rossum_agent.prompts.base_prompt import (
     ROSSUM_EXPERT_INTRO,
     get_shared_prompt_sections,
 )
-from rossum_agent.prompts.system_prompt import (
-    get_system_prompt,
-    get_system_prompt_with_tools_summary,
-)
+from rossum_agent.prompts.system_prompt import get_system_prompt
 
 __all__ = [
     "CONFIGURATION_WORKFLOWS",
@@ -29,5 +26,4 @@ __all__ = [
     "ROSSUM_EXPERT_INTRO",
     "get_shared_prompt_sections",
     "get_system_prompt",
-    "get_system_prompt_with_tools_summary",
 ]

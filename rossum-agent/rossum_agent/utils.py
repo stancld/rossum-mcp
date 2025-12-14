@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import os
 import shutil
 import tempfile
 import uuid
@@ -109,24 +108,6 @@ def cleanup_session_output_dir(output_dir: Path) -> None:
     """
     if output_dir.exists() and output_dir.is_dir():
         shutil.rmtree(output_dir, ignore_errors=True)
-
-
-def check_env_vars() -> list[tuple[str, str]]:
-    """Check if required environment variables are set for Rossum API.
-
-    LLM_MODEL_ID is optional and defaults to a Bedrock model.
-    """
-    required_vars = {
-        "ROSSUM_API_TOKEN": "Rossum API authentication token",
-        "ROSSUM_API_BASE_URL": "Rossum API base URL",
-    }
-
-    missing = []
-    for var, description in required_vars.items():
-        if not os.getenv(var):
-            missing.append((var, description))
-
-    return missing
 
 
 def generate_chat_id() -> str:

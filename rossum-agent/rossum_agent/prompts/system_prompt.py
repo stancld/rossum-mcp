@@ -39,27 +39,3 @@ def get_system_prompt() -> str:
         The system prompt string defining agent behavior.
     """
     return SYSTEM_PROMPT
-
-
-def get_system_prompt_with_tools_summary(tool_names: list[str]) -> str:
-    """Get the system prompt with a summary of available tools appended.
-
-    Args:
-        tool_names: List of available tool names.
-
-    Returns:
-        The system prompt with tool summary appended.
-    """
-    tools_section = f"""
-
----
-
-# Available Tools
-
-You have access to the following tools:
-
-{chr(10).join(f"- `{name}`" for name in sorted(tool_names))}
-
-Use these tools to accomplish the user's requests. Call tools with their required parameters.
-"""
-    return SYSTEM_PROMPT + tools_section
