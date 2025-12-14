@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from rossum_agent.agent import AgentStep
+    from rossum_agent.agent.types import ContentBlock, ImageContentBlock, TextContentBlock, UserContent
 
 # Generate beep and encode as base64 data URL
 _beep_wav = generate_beep_wav(frequency=440, duration=0.33)
@@ -64,7 +65,7 @@ async def run_agent_turn(
     rossum_api_token: str,
     rossum_api_base_url: str,
     mcp_mode: Literal["read-only", "read-write"],
-    prompt: str,
+    prompt: UserContent,
     conversation_history: list[dict[str, str]],
     on_step: Callable[[AgentStep], None],
     rossum_url: str | None = None,
@@ -77,7 +78,7 @@ async def run_agent_turn(
         rossum_api_token: Rossum API token.
         rossum_api_base_url: Rossum API base URL.
         mcp_mode: MCP mode ('read-only' or 'read-write').
-        prompt: User's input prompt.
+        prompt: User's input prompt (text or multimodal content).
         conversation_history: Previous messages for context.
         on_step: Callback function called for each step as it completes.
         rossum_url: Optional Rossum app URL for context extraction.
@@ -136,6 +137,10 @@ def main() -> None:  # noqa: C901
                 del st.session_state.messages  # Force reload from Redis
             if "output_dir" in st.session_state:
                 del st.session_state.output_dir  # Clear old files
+            if "uploaded_images" in st.session_state:
+                st.session_state.uploaded_images = []  # Clear pending images
+            if "uploader_key_counter" in st.session_state:
+                st.session_state.uploader_key_counter += 1  # Force file uploader widget reset
             logger.info(f"Loaded chat ID from URL: {url_chat_id}, shared_user_id: {url_shared_user_id}")
     elif "chat_id" not in st.session_state:
         st.session_state.chat_id = generate_chat_id()
@@ -170,6 +175,13 @@ def main() -> None:  # noqa: C901
 
     if "rossum_url_context" not in st.session_state:
         st.session_state.rossum_url_context = RossumUrlContext()
+
+    if "uploaded_images" not in st.session_state:
+        st.session_state.uploaded_images = []
+
+    # Counter for file uploader key - used to force widget reset on conversation clear
+    if "uploader_key_counter" not in st.session_state:
+        st.session_state.uploader_key_counter = 0
 
     # Load messages from Redis or initialize empty list (BEFORE sidebar renders)
     if "messages" not in st.session_state:
@@ -319,6 +331,8 @@ def main() -> None:  # noqa: C901
 
         if st.button("🔄 Reset Conversation"):
             st.session_state.messages = []
+            st.session_state.uploaded_images = []  # Clear pending images
+            st.session_state.uploader_key_counter += 1  # Force file uploader widget reset
             # Cleanup old session directory and create a new one
             if "output_dir" in st.session_state:
                 cleanup_session_output_dir(st.session_state.output_dir)
@@ -369,7 +383,7 @@ def main() -> None:  # noqa: C901
 
     # Main content
     st.title("Rossum Agent")
-    st.markdown("Agent for automating Rossum setup processes.")
+    st.markdown("Test-bed agent for automating Rossum setup processes.")
 
     # Display chat messages
     for message in st.session_state.messages:
@@ -381,11 +395,77 @@ def main() -> None:  # noqa: C901
         st.chat_input("👈 Please enter your Rossum API credentials in the sidebar", disabled=True)
         return
 
+    # Image upload section with plus button
+    col1, col2 = st.columns([1, 15])
+    with col1:
+        with st.popover("+", help="Attach images"):
+            uploaded_files = st.file_uploader(
+                "Upload images",
+                type=["png", "jpg", "jpeg", "gif", "webp"],
+                accept_multiple_files=True,
+                key=f"image_uploader_{st.session_state.uploader_key_counter}",
+                label_visibility="collapsed",
+            )
+            if uploaded_files:
+                st.session_state.uploaded_images = []
+                for uploaded_file in uploaded_files[:5]:  # Max 5 images
+                    file_bytes = uploaded_file.read()
+                    b64_data = base64.b64encode(file_bytes).decode("utf-8")
+                    mime_type = uploaded_file.type or "image/png"
+                    st.session_state.uploaded_images.append(
+                        {
+                            "name": uploaded_file.name,
+                            "media_type": mime_type,
+                            "data": b64_data,
+                        }
+                    )
+                    uploaded_file.seek(0)  # Reset for thumbnail display
+                if len(uploaded_files) > 5:
+                    st.warning("Max 5 images allowed. Only first 5 will be used.")
+
+    with col2:
+        # Display image thumbnails if any are uploaded
+        if st.session_state.uploaded_images:
+            thumb_cols = st.columns(len(st.session_state.uploaded_images) + 1)
+            for idx, img_data in enumerate(st.session_state.uploaded_images):
+                with thumb_cols[idx]:
+                    st.image(f"data:{img_data['media_type']};base64,{img_data['data']}", width=50)
+            with thumb_cols[-1]:
+                if st.button("✕", key="clear_images", help="Clear images"):
+                    st.session_state.uploaded_images = []
+                    st.rerun()
+
     # Process user input
     if prompt := st.chat_input("Enter your instruction..."):
         logger.info(f"User prompt received: {prompt[:100]}...")  # Log first 100 chars
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # Build agent prompt (text or multimodal with images)
+        uploaded_images = st.session_state.uploaded_images
+        if uploaded_images:
+            # Build multimodal content for the agent
+            content_blocks: list[ContentBlock] = []
+            for img_data in uploaded_images:
+                image_block: ImageContentBlock = {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": img_data["media_type"],
+                        "data": img_data["data"],
+                    },
+                }
+                content_blocks.append(image_block)
+            text_block: TextContentBlock = {"type": "text", "text": prompt}
+            content_blocks.append(text_block)
+            agent_prompt: UserContent = content_blocks
+            # Clear uploaded images after sending
+            st.session_state.uploaded_images = []
+        else:
+            agent_prompt = prompt
+
+        # Add user message to history (store only text for display, images were processed)
+        num_images = len(uploaded_images)
+        display_content = f"[{num_images} image(s) attached]\n\n{prompt}" if num_images > 0 else prompt
+        st.session_state.messages.append({"role": "user", "content": display_content})
 
         # Persist user message to Redis
         if st.session_state.redis_storage.is_connected():
@@ -398,7 +478,7 @@ def main() -> None:  # noqa: C901
             )
 
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(display_content)
 
         with st.chat_message("assistant"):
             final_answer_text = None
@@ -431,7 +511,7 @@ def main() -> None:  # noqa: C901
                         rossum_api_token=st.session_state.rossum_api_token,
                         rossum_api_base_url=st.session_state.rossum_api_base_url,
                         mcp_mode=mcp_mode,
-                        prompt=prompt,
+                        prompt=agent_prompt,
                         conversation_history=conversation_history,
                         on_step=process_step,
                         rossum_url=st.session_state.rossum_url_context.raw_url,
