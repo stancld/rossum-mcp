@@ -56,20 +56,7 @@ async def list_files(
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
     file_service: Annotated[FileService, Depends(get_file_service_dep)] = None,  # type: ignore[assignment]
 ) -> FileListResponse:
-    """List all files for a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-        file_service: File service instance.
-
-    Returns:
-        FileListResponse with list of files and total count.
-
-    Raises:
-        HTTPException: If chat not found.
-    """
+    """List all files for a chat session."""
     if not chat_service.chat_exists(credentials.user_id, chat_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 
@@ -85,21 +72,7 @@ async def download_file(
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
     file_service: Annotated[FileService, Depends(get_file_service_dep)] = None,  # type: ignore[assignment]
 ) -> Response:
-    """Download a file from a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        filename: Name of the file to download.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-        file_service: File service instance.
-
-    Returns:
-        File content with appropriate MIME type.
-
-    Raises:
-        HTTPException: If chat or file not found.
-    """
+    """Download a file from a chat session."""
     if not chat_service.chat_exists(credentials.user_id, chat_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 

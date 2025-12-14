@@ -49,17 +49,7 @@ async def create_chat(
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
 ) -> ChatResponse:
-    """Create a new chat session.
-
-    Args:
-        request: FastAPI request object (required for rate limiting).
-        body: Optional request body with mcp_mode.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-
-    Returns:
-        ChatResponse with new chat_id and created_at.
-    """
+    """Create a new chat session."""
     mcp_mode = body.mcp_mode if body else "read-only"
     return chat_service.create_chat(user_id=credentials.user_id, mcp_mode=mcp_mode)
 
@@ -71,17 +61,7 @@ async def list_chats(
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
 ) -> ChatListResponse:
-    """List chat sessions for the authenticated user.
-
-    Args:
-        limit: Maximum number of chats to return (1-100).
-        offset: Pagination offset.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-
-    Returns:
-        ChatListResponse with paginated chat list.
-    """
+    """List chat sessions for the authenticated user."""
     return chat_service.list_chats(user_id=credentials.user_id, limit=limit, offset=offset)
 
 
@@ -91,19 +71,7 @@ async def get_chat(
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
 ) -> ChatDetail:
-    """Get detailed information about a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-
-    Returns:
-        ChatDetail with messages and files.
-
-    Raises:
-        HTTPException: If chat not found.
-    """
+    """Get detailed information about a chat session."""
     chat = chat_service.get_chat(user_id=credentials.user_id, chat_id=chat_id)
 
     if chat is None:
@@ -118,19 +86,7 @@ async def delete_chat(
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)] = None,  # type: ignore[assignment]
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)] = None,  # type: ignore[assignment]
 ) -> DeleteResponse:
-    """Delete a chat session.
-
-    Args:
-        chat_id: Chat session identifier.
-        credentials: Validated Rossum credentials.
-        chat_service: Chat service instance.
-
-    Returns:
-        DeleteResponse indicating success.
-
-    Raises:
-        HTTPException: If chat not found.
-    """
+    """Delete a chat session."""
     if not chat_service.chat_exists(credentials.user_id, chat_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 

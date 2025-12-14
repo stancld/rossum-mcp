@@ -36,11 +36,7 @@ def get_chat_service_dep() -> ChatService:
 async def health_check(
     chat_service: Annotated[ChatService, Depends(get_chat_service_dep)],
 ) -> HealthResponse:
-    """Check API health and dependencies.
-
-    Returns:
-        HealthResponse with status and dependency states.
-    """
+    """Check API health and dependencies."""
     redis_connected = chat_service.is_connected()
 
     return HealthResponse(

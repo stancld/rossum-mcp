@@ -59,16 +59,6 @@ class RossumAgent:
         config: AgentConfig | None = None,
         additional_tools: list[ToolParam] | None = None,
     ) -> None:
-        """Initialize the RossumAgent.
-
-        Args:
-            client: AnthropicBedrock client for API calls.
-            mcp_connection: Active MCP connection for tool operations.
-            system_prompt: System prompt defining agent behavior.
-            config: Optional agent configuration. Uses defaults if not provided.
-            additional_tools: Optional list of additional tools in Anthropic format
-                to include alongside MCP tools.
-        """
         self.client = client
         self.mcp_connection = mcp_connection
         self.system_prompt = system_prompt
@@ -264,16 +254,6 @@ class RossumAgent:
         yield step
 
     async def _execute_tool(self, tool_call: ToolCall) -> ToolResult:
-        """Execute a single tool call.
-
-        Internal tools are executed locally, while MCP tools are called via the MCP connection.
-
-        Args:
-            tool_call: The tool call to execute.
-
-        Returns:
-            The result of the tool execution.
-        """
         try:
             logger.debug(f"Executing tool: {tool_call.name} with args: {tool_call.arguments}")
 
@@ -303,12 +283,6 @@ class RossumAgent:
         This method implements the main agent loop, calling the model,
         executing tools, and continuing until the model produces a final
         answer or the maximum number of steps is reached.
-
-        Args:
-            prompt: The user's input prompt.
-
-        Yields:
-            AgentStep objects describing each step of the agent's execution.
         """
         self.memory.add_task(prompt)
 
@@ -362,15 +336,6 @@ async def create_agent(
 
     This is a convenience factory function that creates the Bedrock client
     and initializes the agent with the provided configuration.
-
-    Args:
-        mcp_connection: Active MCP connection for tool operations.
-        system_prompt: System prompt defining agent behavior.
-        config: Optional agent configuration.
-        additional_tools: Optional list of additional tools in Anthropic format.
-
-    Returns:
-        Configured RossumAgent ready for use.
     """
     client = create_bedrock_client()
     return RossumAgent(
