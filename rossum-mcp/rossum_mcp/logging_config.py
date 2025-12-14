@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
 from datetime import UTC, datetime
 from logging import LogRecord
+
+import redis
 
 
 class RedisHandler(logging.Handler):
@@ -23,8 +26,6 @@ class RedisHandler(logging.Handler):
         """
         super().__init__()
 
-        import redis  # noqa: PLC0415
-
         self.client = redis.Redis(host=host, port=port, decode_responses=True)
         self.key_prefix = key_prefix
         self.additional_fields = additional_fields or {}
@@ -35,8 +36,6 @@ class RedisHandler(logging.Handler):
             return
 
         try:
-            import json  # noqa: PLC0415
-
             log_entry = {
                 "@timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                 "level": record.levelname,
@@ -129,8 +128,6 @@ def setup_logging(
 
     if redis_host_val:
         try:
-            import redis  # noqa: PLC0415
-
             redis_client = redis.Redis(host=redis_host_val, port=redis_port_val, socket_timeout=2)
             redis_client.ping()
 

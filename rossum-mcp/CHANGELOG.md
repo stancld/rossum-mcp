@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 - Fixed allowed sideloads for `get_annotation` [#63](https://github.com/stancld/rossum-mcp/pull/63)
+- Refactored tools to return class instances directly instead of `dataclasses.asdict()` conversions,
+leveraging FastMCP's automatic serialization [#64](https://github.com/stancld/rossum-mcp/pull/64)
 
 
 ## [0.3.1] - 2025-12-09

@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
-import dataclasses
 import logging
 from collections.abc import Sequence  # noqa: TC003 - needed at runtime for FastMCP
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
+
+from pydantic import BaseModel
+from rossum_api.models.annotation import Annotation
 
 from rossum_mcp.tools.base import is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
-    from rossum_api.models.annotation import Annotation
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,19 @@ logger = logging.getLogger(__name__)
 type Sideload = Literal["content", "document", "automation_blocker"]
 
 
+class AnnotationList(BaseModel):
+    """Response model for list_annotations."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    count: int
+    results: list[Annotation]
+
+
 def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
     """Register annotation-related tools with the FastMCP server."""
 
-    @mcp.tool(
-        description="Upload a document to Rossum. Returns: task_id, task_status, queue_id, message. Use list_annotations to get annotation ID."
-    )
+    @mcp.tool(description="Upload a document to Rossum. Use list_annotations to get annotation ID.")
     async def upload_document(file_path: str, queue_id: int) -> dict:
         """Upload a document to Rossum."""
         if not is_read_write_mode():
@@ -68,35 +76,26 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
             "message": "Document upload initiated. Use `list_annotations` to find the annotation ID for this queue.",
         }
 
-    @mcp.tool(
-        description="Retrieve annotation data. Returns: id, status, url, schema, modifier, content, created_at, modified_at. "
-        "Use 'content' to get extracted data."
-    )
-    async def get_annotation(annotation_id: int, sideloads: Sequence[Sideload] = ()) -> dict:
+    @mcp.tool(description="Retrieve annotation data. Use 'content' sideload to get extracted data.")
+    async def get_annotation(annotation_id: int, sideloads: Sequence[Sideload] = ()) -> Annotation:
         """Retrieve annotation data from Rossum."""
         logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
-        try:
-            annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)  # type: ignore[arg-type]
-            return dataclasses.asdict(annotation)
-        except KeyError as e:
-            logger.error(f"Failed to retrieve annotation {annotation_id}: KeyError {e}")
-            return {
-                "error": f"Failed to retrieve annotation {annotation_id}. "
-                f"Invalid sideload requested: {e}. "
-                f"Valid sideloads for annotations are: 'content', 'document', 'automation_blocker'."
-            }
+        annotation: Annotation = await client.retrieve_annotation(annotation_id, sideloads)  # type: ignore[arg-type]
+        return annotation
 
-    @mcp.tool(description="List annotations for a queue. Returns: count, results array.")
-    async def list_annotations(queue_id: int, status: str | None = "importing,to_review,confirmed,exported") -> dict:
+    @mcp.tool(description="List annotations for a queue.")
+    async def list_annotations(
+        queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
+    ) -> AnnotationList:
         """List annotations for a queue with optional filtering."""
         logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}")
         params: dict = {"queue": queue_id, "page_size": 100}
         if status:
             params["status"] = status
         annotations_list: list[Annotation] = [item async for item in client.list_annotations(**params)]
-        return {"count": len(annotations_list), "results": [dataclasses.asdict(ann) for ann in annotations_list]}
+        return AnnotationList(count=len(annotations_list), results=annotations_list)
 
-    @mcp.tool(description="Start annotation (move from 'importing' to 'to_review'). Returns: annotation_id, message.")
+    @mcp.tool(description="Start annotation (move from 'to_review' to 'reviewing').")
     async def start_annotation(annotation_id: int) -> dict:
         """Start annotation to move it to 'reviewing' status."""
         if not is_read_write_mode():
@@ -110,7 +109,7 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
         }
 
     @mcp.tool(
-        description="Bulk update annotation fields. It can be used after `start_annotation` only. Returns: annotation_id, operations_count, message. Use datapoint ID from content, NOT schema_id."
+        description="Bulk update annotation fields. It can be used after `start_annotation` only. Use datapoint ID from content, NOT schema_id."
     )
     async def bulk_update_annotation_fields(annotation_id: int, operations: list[dict]) -> dict:
         """Bulk update annotation field values using operations."""
@@ -126,7 +125,7 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
         }
 
     @mcp.tool(
-        description="Confirm annotation (move to 'confirmed'). It can be used after `bulk_update_annotation_fields`. Returns: annotation_id, message."
+        description="Confirm annotation (move to 'confirmed'). It can be used after `bulk_update_annotation_fields`."
     )
     async def confirm_annotation(annotation_id: int) -> dict:
         """Confirm annotation to move it to 'confirmed' status."""

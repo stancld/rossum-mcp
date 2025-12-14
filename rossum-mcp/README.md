@@ -87,7 +87,7 @@ docker-compose up rossum-agent
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
-cd rossum-mcp/rossum_mcp
+cd rossum-mcp/rossum-mcp
 uv sync
 ```
 
@@ -110,14 +110,16 @@ uv sync --extra tests  # Testing only
 
 #### Read-Only vs Read-Write Mode
 
-When `ROSSUM_MCP_MODE` is set to `read-only`, only the following tools are available:
-- `get_annotation` - Retrieve annotation data
-- `list_annotations` - List annotations for a queue
-- `get_queue` - Retrieve queue details
-- `get_schema` - Retrieve schema details
-- `get_queue_schema` - Retrieve queue schema in one call
-- `get_queue_engine` - Retrieve engine information
-- `list_hooks` - List webhooks/extensions
+When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available:
+- **Annotations:** `get_annotation`, `list_annotations`
+- **Queues:** `get_queue`, `get_queue_schema`, `get_queue_engine`
+- **Schemas:** `get_schema`
+- **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
+- **Hooks:** `get_hook`, `list_hooks`
+- **Rules:** `get_rule`, `list_rules`
+- **Relations:** `get_relation`, `list_relations`
+- **Document Relations:** `get_document_relation`, `list_document_relations`
+- **Workspaces:** `get_workspace`, `list_workspaces`
 
 All CREATE, UPDATE, and UPLOAD operations are disabled in read-only mode for security purposes.
 
@@ -149,7 +151,7 @@ Configure your MCP client to use this server. In Claude Desktop's config:
   "mcpServers": {
     "rossum": {
       "command": "python",
-      "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+      "args": ["/path/to/rossum-mcp/rossum-mcp/rossum_mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
         "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
@@ -166,7 +168,7 @@ Configure your MCP client to use this server. In Claude Desktop's config:
   "mcpServers": {
     "rossum-readonly": {
       "command": "python",
-      "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+      "args": ["/path/to/rossum-mcp/rossum-mcp/rossum_mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
         "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",

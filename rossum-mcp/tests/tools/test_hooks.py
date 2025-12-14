@@ -79,9 +79,9 @@ class TestGetHook:
         get_hook = mock_mcp._tools["get_hook"]
         result = await get_hook(hook_id=123)
 
-        assert result["id"] == 123
-        assert result["name"] == "Validation Hook"
-        assert result["type"] == "function"
+        assert result.id == 123
+        assert result.name == "Validation Hook"
+        assert result.type == "function"
         mock_client.retrieve_hook.assert_called_once_with(123)
 
 
@@ -108,8 +108,8 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks()
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
     @pytest.mark.asyncio
     async def test_list_hooks_with_queue_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -128,7 +128,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(queue_id=100)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_hooks.assert_called_once_with(queue=100)
 
     @pytest.mark.asyncio
@@ -148,7 +148,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(active=True)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_hooks.assert_called_once_with(active=True)
 
     @pytest.mark.asyncio
@@ -171,8 +171,8 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(first_n=2)
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
 
 @pytest.mark.unit
@@ -201,9 +201,8 @@ class TestCreateHook:
         create_hook = mock_mcp._tools["create_hook"]
         result = await create_hook(name="New Hook", type="function")
 
-        assert result["id"] == 200
-        assert result["name"] == "New Hook"
-        assert "created successfully" in result["message"]
+        assert result.id == 200
+        assert result.name == "New Hook"
 
     @pytest.mark.asyncio
     async def test_create_hook_with_config(
@@ -235,7 +234,7 @@ class TestCreateHook:
             queues=["https://api.test.rossum.ai/v1/queues/1"],
         )
 
-        assert result["id"] == 200
+        assert result.id == 200
         mock_client.create_new_hook.assert_called_once()
         call_args = mock_client.create_new_hook.call_args[0][0]
         assert call_args["name"] == "Configured Hook"

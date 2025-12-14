@@ -2,37 +2,45 @@
 
 from __future__ import annotations
 
-import dataclasses
 import logging
 import os
 from typing import TYPE_CHECKING, Any, Literal
+
+from pydantic import BaseModel
+from rossum_api.models.hook import Hook
 
 from rossum_mcp.tools.base import is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
-    from rossum_api.models.hook import Hook
 
 logger = logging.getLogger(__name__)
+
+
+class HookList(BaseModel):
+    """Response model for list_hooks."""
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    count: int
+    results: list[Hook]
 
 
 def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
     """Register hook-related tools with the FastMCP server."""
 
-    @mcp.tool(
-        description="Retrieve hook details. Returns: id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description."
-    )
-    async def get_hook(hook_id: int) -> dict:
+    @mcp.tool(description="Retrieve hook details.")
+    async def get_hook(hook_id: int) -> Hook:
         """Retrieve hook details."""
         logger.debug(f"Retrieving hook: hook_id={hook_id}")
         hook: Hook = await client.retrieve_hook(hook_id)
-        return dataclasses.asdict(hook)
+        return hook
 
-    @mcp.tool(
-        description="List all hooks/extensions. Returns: count, results array with hook details (id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description)."
-    )
-    async def list_hooks(queue_id: int | None = None, active: bool | None = None, first_n: int | None = None) -> dict:
+    @mcp.tool(description="List all hooks/extensions.")
+    async def list_hooks(
+        queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
+    ) -> HookList:
         """List all hooks/extensions, optionally filtered by queue and active status."""
         logger.debug(f"Listing hooks: queue_id={queue_id}, active={active}")
         filters: dict = {}
@@ -51,11 +59,9 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
         else:
             hooks_list = [hook async for hook in client.list_hooks(**filters)]
 
-        return {"count": len(hooks_list), "results": [dataclasses.asdict(hook) for hook in hooks_list]}
+        return HookList(count=len(hooks_list), results=hooks_list)
 
-    @mcp.tool(
-        description="Create a new hook. Returns: id, name, url, active, config, test, guide, read_more_url, extension_image_url, type, metadata, queues, run_after, events, settings, settings_schema, secrets, extension_source, sideload, token_owner, token_lifetime_s, description, message."
-    )
+    @mcp.tool(description="Create a new hook.")
     async def create_hook(
         name: str,
         type: Literal["webhook", "function"],
@@ -64,7 +70,7 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
         config: dict | None = None,
         settings: dict | None = None,
         secret: str | None = None,
-    ) -> dict:
+    ) -> Hook | dict:
         """Create a new hook."""
         if not is_read_write_mode():
             return {"error": "create_hook is not available in read-only mode"}
@@ -94,6 +100,4 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
             hook_data["secret"] = secret
 
         hook: Hook = await client.create_new_hook(hook_data)
-        result = dataclasses.asdict(hook)
-        result["message"] = f"Hook '{hook.name}' created successfully with ID {hook.id}"
-        return result
+        return hook

@@ -81,9 +81,9 @@ class TestGetSchema:
         get_schema = mock_mcp._tools["get_schema"]
         result = await get_schema(schema_id=50)
 
-        assert result["id"] == 50
-        assert result["name"] == "Invoice Schema"
-        assert len(result["content"]) == 1
+        assert result.id == 50
+        assert result.name == "Invoice Schema"
+        assert len(result.content) == 1
         mock_client.retrieve_schema.assert_called_once_with(50)
 
 
@@ -115,8 +115,8 @@ class TestUpdateSchema:
         update_schema = mock_mcp._tools["update_schema"]
         result = await update_schema(schema_id=50, schema_data={"name": "Updated Schema"})
 
-        assert result["id"] == 50
-        assert result["name"] == "Updated Schema"
+        assert result.id == 50
+        assert result.name == "Updated Schema"
 
     @pytest.mark.asyncio
     async def test_update_schema_read_only_mode(
@@ -178,8 +178,8 @@ class TestCreateSchema:
         create_schema = mock_mcp._tools["create_schema"]
         result = await create_schema(name="New Schema", content=content)
 
-        assert result["id"] == 100
-        assert result["name"] == "New Schema"
+        assert result.id == 100
+        assert result.name == "New Schema"
         mock_client.create_new_schema.assert_called_once_with({"name": "New Schema", "content": content})
 
     @pytest.mark.asyncio

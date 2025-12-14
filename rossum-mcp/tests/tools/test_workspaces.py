@@ -68,8 +68,8 @@ class TestGetWorkspace:
         get_workspace = mock_mcp._tools["get_workspace"]
         result = await get_workspace(workspace_id=100)
 
-        assert result["id"] == 100
-        assert result["name"] == "Production Workspace"
+        assert result.id == 100
+        assert result.name == "Production Workspace"
         mock_client.retrieve_workspace.assert_called_once_with(100)
 
 
@@ -96,8 +96,8 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces()
 
-        assert result["count"] == 2
-        assert len(result["results"]) == 2
+        assert result.count == 2
+        assert len(result.results) == 2
 
     @pytest.mark.asyncio
     async def test_list_workspaces_with_organization_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -116,7 +116,7 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces(organization_id=50)
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_workspaces.assert_called_once_with(organization=50)
 
     @pytest.mark.asyncio
@@ -136,7 +136,7 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces(name="Production")
 
-        assert result["count"] == 1
+        assert result.count == 1
         mock_client.list_workspaces.assert_called_once_with(name="Production")
 
 
@@ -168,9 +168,8 @@ class TestCreateWorkspace:
         create_workspace = mock_mcp._tools["create_workspace"]
         result = await create_workspace(name="New Workspace", organization_id=1)
 
-        assert result["id"] == 200
-        assert result["name"] == "New Workspace"
-        assert "created successfully" in result["message"]
+        assert result.id == 200
+        assert result.name == "New Workspace"
 
     @pytest.mark.asyncio
     async def test_create_workspace_with_metadata(
@@ -200,7 +199,7 @@ class TestCreateWorkspace:
             metadata={"department": "finance"},
         )
 
-        assert result["id"] == 200
+        assert result.id == 200
         call_args = mock_client.create_new_workspace.call_args[0][0]
         assert call_args["metadata"] == {"department": "finance"}
 
