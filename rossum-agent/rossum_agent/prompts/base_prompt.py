@@ -250,6 +250,17 @@ Example function hook structure:
 OUTPUT_FORMATTING = """
 # Output Formatting Standards
 
+## Response Length
+
+**Match response length to the question complexity:**
+- **Simple questions** (counts, yes/no, single facts): Give direct, concise answers
+  - "How many hooks are attached?" → "5 hooks"
+  - "Is this hook active?" → "Yes, it's active"
+  - "What's the queue ID?" → "12345"
+- **Detailed questions** (explain, document, analyze): Provide comprehensive responses with structure and diagrams
+
+Only elaborate when the user explicitly asks for details, explanation, or documentation.
+
 ## Document Structure
 
 All documentation outputs MUST follow this consistent structure:
