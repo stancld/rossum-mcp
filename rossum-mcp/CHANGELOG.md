@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added `list_hook_logs` tool for listing hook execution logs with filters for debugging and monitoring
+- Added `job` as a valid hook type in `create_hook` tool
 
 
 ## [0.3.2] - 2025-12-14

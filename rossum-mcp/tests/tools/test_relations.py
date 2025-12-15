@@ -118,8 +118,7 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations()
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_list_relations_with_type_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -138,7 +137,7 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations(type="duplicate")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_relations.assert_called_once_with(type="duplicate")
 
     @pytest.mark.asyncio
@@ -158,7 +157,7 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations(parent=500)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_relations.assert_called_once_with(parent=500)
 
     @pytest.mark.asyncio
@@ -178,7 +177,7 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations(annotation=600)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_relations.assert_called_once_with(annotation=600)
 
     @pytest.mark.asyncio
@@ -198,7 +197,7 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations(key="specific_key")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_relations.assert_called_once_with(key="specific_key")
 
     @pytest.mark.asyncio
@@ -217,5 +216,5 @@ class TestListRelations:
         list_relations = mock_mcp._tools["list_relations"]
         result = await list_relations()
 
-        assert result.count == 0
-        assert result.results == []
+        assert len(result) == 0
+        assert result == []

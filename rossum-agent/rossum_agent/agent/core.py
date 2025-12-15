@@ -7,6 +7,7 @@ using Claude models via AWS Bedrock and MCP tools.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import queue
@@ -29,7 +30,14 @@ from anthropic.types import (
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
-from rossum_agent.internal_tools import execute_internal_tool, get_internal_tool_names, get_internal_tools
+from rossum_agent.internal_tools import (
+    SubAgentProgress,
+    execute_internal_tool,
+    get_internal_tool_names,
+    get_internal_tools,
+    set_mcp_connection,
+    set_progress_callback,
+)
 from rossum_agent.mcp_tools import MCPConnection, mcp_tools_to_anthropic_format
 
 if TYPE_CHECKING:
@@ -102,6 +110,38 @@ class RossumAgent:
             mcp_tools = await self.mcp_connection.get_tools()
             self._tools_cache = mcp_tools_to_anthropic_format(mcp_tools) + get_internal_tools() + self.additional_tools
         return self._tools_cache
+
+    def _serialize_tool_result(self, result: object) -> str:
+        """Serialize a tool result to a string for storage in context.
+
+        Handles pydantic models, dataclasses, dicts, lists, and other objects properly.
+        """
+        if result is None:
+            return "Tool executed successfully (no output)"
+
+        # Handle dataclasses (check before pydantic since pydantic models aren't dataclasses)
+        if dataclasses.is_dataclass(result) and not isinstance(result, type):
+            return json.dumps(dataclasses.asdict(result), indent=2, default=str)
+
+        # Handle lists of dataclasses
+        if isinstance(result, list) and result and dataclasses.is_dataclass(result[0]):
+            return json.dumps([dataclasses.asdict(item) for item in result], indent=2, default=str)
+
+        # Handle pydantic models (BaseModel has model_dump method)
+        # Use mode='json' to ensure nested models are properly serialized to JSON-compatible dicts
+        if hasattr(result, "model_dump"):
+            return json.dumps(result.model_dump(mode="json"), indent=2, default=str)
+
+        # Handle lists of pydantic models
+        if isinstance(result, list) and result and hasattr(result[0], "model_dump"):
+            return json.dumps([item.model_dump(mode="json") for item in result], indent=2, default=str)
+
+        # Handle dicts and regular lists
+        if isinstance(result, dict | list):
+            return json.dumps(result, indent=2, default=str)
+
+        # Fallback to string representation
+        return str(result)
 
     def _sync_stream_events(
         self, model_id: str, messages: list[MessageParam], tools: list[ToolParam]
@@ -239,25 +279,50 @@ class RossumAgent:
             yield step
             return
 
+        async for step_or_result in self._execute_tools_with_progress(
+            step_num, thinking_text, tool_calls, step, input_tokens, output_tokens
+        ):
+            yield step_or_result
+
+    async def _execute_tools_with_progress(
+        self,
+        step_num: int,
+        thinking_text: str,
+        tool_calls: list[ToolCall],
+        step: AgentStep,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> AsyncIterator[AgentStep]:
+        """Execute tools and yield progress updates."""
         memory_step = MemoryStep(
-            step_number=step_num, tool_calls=tool_calls, input_tokens=input_tokens, output_tokens=output_tokens
+            step_number=step_num,
+            thinking=thinking_text if thinking_text else None,
+            tool_calls=tool_calls,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )
 
         tool_results: list[ToolResult] = []
         total_tools = len(tool_calls)
 
         for idx, tool_call in enumerate(tool_calls, 1):
+            tool_progress = (idx, total_tools)
             yield AgentStep(
                 step_number=step_num,
                 thinking=thinking_text if thinking_text else None,
                 tool_calls=tool_calls,
                 is_streaming=True,
                 current_tool=tool_call.name,
-                tool_progress=(idx, total_tools),
+                tool_progress=tool_progress,
             )
 
-            result = await self._execute_tool(tool_call)
-            tool_results.append(result)
+            async for progress_or_result in self._execute_tool_with_progress(
+                tool_call, step_num, tool_calls, tool_progress
+            ):
+                if isinstance(progress_or_result, AgentStep):
+                    yield progress_or_result
+                elif isinstance(progress_or_result, ToolResult):
+                    tool_results.append(progress_or_result)
 
         step.tool_results = tool_results
         memory_step.tool_results = tool_results
@@ -266,26 +331,56 @@ class RossumAgent:
 
         yield step
 
-    async def _execute_tool(self, tool_call: ToolCall) -> ToolResult:
+    async def _execute_tool_with_progress(
+        self, tool_call: ToolCall, step_num: int, tool_calls: list[ToolCall], tool_progress: tuple[int, int]
+    ) -> AsyncIterator[AgentStep | ToolResult]:
+        """Execute a tool and yield progress updates for sub-agents.
+
+        For tools with sub-agents (like debug_hook), this yields AgentStep updates
+        with sub_agent_progress. Always yields the final ToolResult.
+        """
+        progress_queue: queue.Queue[SubAgentProgress] = queue.Queue()
+
+        def progress_callback(progress: SubAgentProgress) -> None:
+            progress_queue.put(progress)
+
         try:
             if tool_call.name in get_internal_tool_names():
-                result = execute_internal_tool(tool_call.name, tool_call.arguments)
+                set_progress_callback(progress_callback)
+
+                loop = asyncio.get_event_loop()
+                future = loop.run_in_executor(None, execute_internal_tool, tool_call.name, tool_call.arguments)
+
+                while not future.done():
+                    try:
+                        progress = progress_queue.get_nowait()
+                        yield AgentStep(
+                            step_number=step_num,
+                            tool_calls=tool_calls,
+                            is_streaming=True,
+                            current_tool=tool_call.name,
+                            tool_progress=tool_progress,
+                            sub_agent_progress=progress,
+                        )
+                    except queue.Empty:
+                        pass
+                    await asyncio.sleep(0.1)
+
+                result = future.result()
                 content = str(result)
+                set_progress_callback(None)
             else:
                 result = await self.mcp_connection.call_tool(tool_call.name, tool_call.arguments)
-
-                if isinstance(result, dict | list):
-                    content = json.dumps(result, indent=2, default=str)
-                else:
-                    content = str(result) if result is not None else "Tool executed successfully (no output)"
+                content = self._serialize_tool_result(result)
 
             content = truncate_content(content)
-            return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
+            yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
 
         except Exception as e:
+            set_progress_callback(None)
             error_msg = f"Tool {tool_call.name} failed: {e}"
             logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
-            return ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
+            yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
     async def run(self, prompt: UserContent) -> AsyncIterator[AgentStep]:
         """Run the agent with the given prompt, yielding steps.
@@ -294,6 +389,7 @@ class RossumAgent:
         executing tools, and continuing until the model produces a final
         answer or the maximum number of steps is reached.
         """
+        set_mcp_connection(self.mcp_connection, asyncio.get_event_loop())
         self.memory.add_task(prompt)
 
         for step_num in range(1, self.config.max_steps + 1):

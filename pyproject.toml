@@ -124,3 +124,6 @@ python_functions = ["test_*"]
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}

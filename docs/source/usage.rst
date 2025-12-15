@@ -812,6 +812,75 @@ can be used for custom validation, data enrichment, or integration with external
      "message": "Hook 'My Hook' created successfully with ID 12345"
    }
 
+list_hook_logs
+^^^^^^^^^^^^^^
+
+Lists hook execution logs for debugging, monitoring performance, and troubleshooting errors.
+Logs are retained for 7 days and at most 100 logs are returned per call.
+
+**Parameters:**
+
+- ``hook_id`` (integer, optional): Filter by hook ID
+- ``queue_id`` (integer, optional): Filter by queue ID
+- ``annotation_id`` (integer, optional): Filter by annotation ID
+- ``email_id`` (integer, optional): Filter by email ID
+- ``log_level`` (string, optional): Filter by log level - 'INFO', 'ERROR', or 'WARNING'
+- ``status`` (string, optional): Filter by execution status
+- ``status_code`` (integer, optional): Filter by HTTP status code
+- ``request_id`` (string, optional): Filter by request ID
+- ``timestamp_before`` (string, optional): ISO 8601 timestamp, filter logs triggered before this time
+- ``timestamp_after`` (string, optional): ISO 8601 timestamp, filter logs triggered after this time
+- ``start_before`` (string, optional): ISO 8601 timestamp, filter logs started before this time
+- ``start_after`` (string, optional): ISO 8601 timestamp, filter logs started after this time
+- ``end_before`` (string, optional): ISO 8601 timestamp, filter logs ended before this time
+- ``end_after`` (string, optional): ISO 8601 timestamp, filter logs ended after this time
+- ``search`` (string, optional): Full-text search across log messages
+- ``page_size`` (integer, optional): Number of results per page (default 100, max 100)
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "log_level": "INFO",
+         "action": "initialize",
+         "event": "annotation_content",
+         "request_id": "abc123",
+         "organization_id": 100,
+         "hook_id": 12345,
+         "hook_type": "function",
+         "queue_id": 200,
+         "annotation_id": 300,
+         "message": "Hook executed successfully",
+         "start": "2024-01-01T00:00:00Z",
+         "end": "2024-01-01T00:00:01Z",
+         "status": "success",
+         "status_code": 200,
+         "timestamp": "2024-01-01T00:00:00Z",
+         "uuid": "uuid-here"
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all logs for a specific hook
+   logs = list_hook_logs(hook_id=12345)
+
+   # List error logs only
+   error_logs = list_hook_logs(log_level="ERROR")
+
+   # List logs for a specific annotation
+   annotation_logs = list_hook_logs(annotation_id=300)
+
+   # Search logs by message content
+   search_logs = list_hook_logs(search="validation failed")
+
 get_rule
 ^^^^^^^^
 
@@ -1283,3 +1352,149 @@ Lists all document relations with optional filters. Document relations introduce
    hooks_data = mcp.list_hooks(queue_id=12345)
    explanation = explain_hook_execution_order(hooks_data)
    print(explanation)
+
+   evaluate_python_hook
+   """"""""""""""""""""
+
+   Execute Rossum function hook Python code against test annotation/schema data for debugging.
+
+   This tool runs the provided code in a restricted sandbox, looks for a function named
+   ``rossum_hook_request_handler``, and calls it with a payload containing the annotation
+   and optional schema data. Use this to verify hook logic without making actual API calls.
+
+   **IMPORTANT**: This is for debugging only. No imports or external I/O are allowed.
+
+   **Parameters:**
+
+   - ``code`` (string, required): Full Python source containing a function:
+     ``def rossum_hook_request_handler(payload): ...``
+     The function receives a dict with 'annotation' and optionally 'schema' keys.
+   - ``annotation_json`` (string, required): JSON string of the annotation object as seen in hook payload["annotation"].
+     Get this from the ``get_annotation`` MCP tool.
+   - ``schema_json`` (string, optional): JSON string of the schema object as seen in payload["schema"].
+     Get this from the ``get_schema`` MCP tool.
+
+   **Returns:**
+
+   JSON string with structure:
+
+   .. code-block:: json
+
+      {
+        "status": "success",
+        "result": {"status": "ok", "document_id": 12345},
+        "stdout": "Debug: Processing annotation\nDocument ID: 12345\n",
+        "stderr": "",
+        "exception": null,
+        "elapsed_ms": 5.123
+      }
+
+   For errors:
+
+   .. code-block:: json
+
+      {
+        "status": "error",
+        "result": null,
+        "stdout": "",
+        "stderr": "",
+        "exception": {
+          "type": "KeyError",
+          "message": "'missing_field'",
+          "traceback": "Traceback (most recent call last):..."
+        },
+        "elapsed_ms": 2.5
+      }
+
+   **Limitations:**
+
+   - No imports allowed (sandboxed environment)
+   - No file I/O (``open()`` is blocked)
+   - Limited builtins (safe subset for data manipulation)
+
+   **Example usage:**
+
+   .. code-block:: python
+
+      # Get annotation data from MCP
+      annotation = mcp.get_annotation(annotation_id=12345, sideloads=["content"])
+
+      # Hook code to test
+      hook_code = '''
+      def rossum_hook_request_handler(payload):
+          annotation = payload["annotation"]
+          content = annotation.get("content", [])
+          total = 0
+          for field in content:
+              if field.get("schema_id") == "amount_total":
+                  total = float(field.get("value", 0))
+          return {"total_amount": total}
+      '''
+
+      # Test the hook
+      result = evaluate_python_hook(
+          code=hook_code,
+          annotation_json=json.dumps(annotation)
+      )
+      print(result)
+
+   debug_hook
+   """"""""""
+
+   Debug a Rossum hook using an Opus sub-agent for expert analysis.
+
+   This tool combines code execution with deep reasoning from Claude Opus 4 to:
+   1. Execute the hook code against test data (using ``evaluate_python_hook``)
+   2. Analyze the code and execution results with Opus
+   3. Provide detailed debugging insights and fix suggestions
+
+   Use this for complex hook debugging where you need expert-level analysis.
+
+   **Parameters:**
+
+   - ``code`` (string, required): Full Python source containing a ``rossum_hook_request_handler(payload)`` function.
+   - ``annotation_json`` (string, required): JSON string of the annotation object from ``get_annotation`` MCP tool.
+   - ``schema_json`` (string, optional): JSON string of the schema from ``get_schema`` MCP tool.
+
+   **Returns:**
+
+   JSON string with structure:
+
+   .. code-block:: json
+
+      {
+        "execution": {
+          "status": "success",
+          "result": {"status": "ok"},
+          "stdout": "",
+          "stderr": "",
+          "exception": null,
+          "elapsed_ms": 5.0
+        },
+        "analysis": "## What the hook does\n\nThis hook validates...\n\n## Issues Found\n\n1. KeyError...",
+        "elapsed_ms": 2500.0
+      }
+
+   **Features:**
+
+   - **Opus-powered analysis**: Uses Claude Opus 4 for deep reasoning about hook behavior
+   - **Root cause analysis**: Explains why errors occur, not just what the error is
+   - **Fix suggestions**: Provides corrected code snippets you can use directly
+   - **Best practices**: Recommends improvements to hook structure and patterns
+
+   **Example usage:**
+
+   .. code-block:: python
+
+      # Get annotation and hook code
+      annotation = mcp.get_annotation(annotation_id=12345, sideloads=["content"])
+      hook = mcp.get_hook(hook_id=67890)
+
+      # Debug the hook with Opus analysis
+      result = debug_hook(
+          code=hook["config"]["code"],
+          annotation_json=json.dumps(annotation)
+      )
+
+      # The result contains both execution details and expert analysis
+      print(result["analysis"])

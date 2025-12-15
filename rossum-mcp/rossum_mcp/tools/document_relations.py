@@ -5,23 +5,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
-from rossum_api.models.document_relation import DocumentRelation
+from rossum_api.models.document_relation import (
+    DocumentRelation,  # noqa: TC002 - needed at runtime for FastMCP
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
-
-
-class DocumentRelationList(BaseModel):
-    """Response model for list_document_relations."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[DocumentRelation]
 
 
 def register_document_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
@@ -43,7 +35,7 @@ def register_document_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient)
         annotation: int | None = None,
         key: str | None = None,
         documents: int | None = None,
-    ) -> DocumentRelationList:
+    ) -> list[DocumentRelation]:
         """List all document relations with optional filters."""
         logger.debug(
             f"Listing document relations: id={id}, type={type}, annotation={annotation}, key={key}, documents={documents}"
@@ -60,8 +52,7 @@ def register_document_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient)
         if documents is not None:
             filters["documents"] = documents
 
-        document_relations_list = [
+        return [
             document_relation
             async for document_relation in client.list_document_relations(**filters)  # type: ignore[arg-type]
         ]
-        return DocumentRelationList(count=len(document_relations_list), results=document_relations_list)

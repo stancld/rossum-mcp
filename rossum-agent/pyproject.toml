@@ -86,6 +86,7 @@ all = [
 ]
 
 [tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs" }
 rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
 
 [tool.setuptools.package-data]

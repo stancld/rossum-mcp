@@ -108,8 +108,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks()
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_list_hooks_with_queue_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -128,7 +127,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(queue_id=100)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_hooks.assert_called_once_with(queue=100)
 
     @pytest.mark.asyncio
@@ -148,7 +147,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(active=True)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_hooks.assert_called_once_with(active=True)
 
     @pytest.mark.asyncio
@@ -171,8 +170,7 @@ class TestListHooks:
         list_hooks = mock_mcp._tools["list_hooks"]
         result = await list_hooks(first_n=2)
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
 
 @pytest.mark.unit

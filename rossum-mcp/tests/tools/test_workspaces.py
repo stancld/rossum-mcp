@@ -96,8 +96,7 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces()
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_list_workspaces_with_organization_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -116,7 +115,7 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces(organization_id=50)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_workspaces.assert_called_once_with(organization=50)
 
     @pytest.mark.asyncio
@@ -136,7 +135,7 @@ class TestListWorkspaces:
         list_workspaces = mock_mcp._tools["list_workspaces"]
         result = await list_workspaces(name="Production")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_workspaces.assert_called_once_with(name="Production")
 
 

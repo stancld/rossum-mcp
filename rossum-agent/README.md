@@ -95,12 +95,72 @@ result = agent.run("Analyze the hooks on queue 12345 and explain their execution
 
 ## Available Tools
 
-### write_file
+### File System Tools
+
+#### write_file
 Write text or markdown content to a file. Use this to save documentation, reports, diagrams, or any text output.
 
 **Parameters:**
 - `filename` (string): The name of the file to create (e.g., 'report.md', 'hooks.txt')
 - `content` (string): The text content to write to the file
+
+### Hook Analysis Tools
+
+#### evaluate_python_hook
+Execute Rossum function hook Python code against test annotation/schema data for debugging. This tool runs hook code in a restricted sandbox to verify logic without making actual API calls.
+
+**Parameters:**
+- `code` (string, required): Full Python source containing a `rossum_hook_request_handler(payload)` function
+- `annotation_json` (string, required): JSON string of the annotation object (get from `get_annotation` MCP tool)
+- `schema_json` (string, optional): JSON string of the schema object (get from `get_schema` MCP tool)
+
+**Returns:** JSON with structure:
+```json
+{
+  "status": "success" | "error" | "invalid_input",
+  "result": "<return value from handler>",
+  "stdout": "<captured print statements>",
+  "stderr": "<captured stderr>",
+  "exception": {"type": "...", "message": "...", "traceback": "..."} | null,
+  "elapsed_ms": 5.123
+}
+```
+
+**Limitations:**
+- No imports allowed (sandboxed environment)
+- No file I/O (`open()` is blocked)
+- Limited builtins (safe subset for data manipulation)
+
+#### debug_hook
+**Expert-level hook debugging with Claude Opus sub-agent.** This tool combines code execution with deep reasoning from Claude Opus 4 to provide comprehensive debugging analysis.
+
+**How it works:**
+1. Executes the hook code against test data (using `evaluate_python_hook`)
+2. Sends code, data, and execution results to Claude Opus 4 for analysis
+3. Returns expert debugging insights, root cause analysis, and fix suggestions
+
+**Parameters:**
+- `code` (string, required): Full Python source containing a `rossum_hook_request_handler(payload)` function
+- `annotation_json` (string, required): JSON string of the annotation object
+- `schema_json` (string, optional): JSON string of the schema object
+
+**Returns:** JSON with structure:
+```json
+{
+  "execution": {
+    "status": "success" | "error",
+    "result": "<return value>",
+    "exception": {...} | null
+  },
+  "analysis": "<Opus expert analysis with debugging insights and fixes>",
+  "elapsed_ms": 2500.0
+}
+```
+
+**Use cases:**
+- Complex hook logic that's failing with unclear errors
+- Understanding what a hook does and how to fix it
+- Getting best practice recommendations for hook code
 
 ### Rossum MCP Tools
 

@@ -55,3 +55,6 @@ all = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["rossum_mcp*"]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}

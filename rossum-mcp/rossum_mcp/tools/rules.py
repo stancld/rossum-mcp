@@ -5,23 +5,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
-from rossum_api.models.rule import Rule
+from rossum_api.models.rule import Rule  # noqa: TC002 - needed at runtime for FastMCP
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
-
-
-class RuleList(BaseModel):
-    """Response model for list_rules."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[Rule]
 
 
 def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
@@ -37,7 +27,7 @@ def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="List all rules.")
     async def list_rules(
         schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None
-    ) -> RuleList:
+    ) -> list[Rule]:
         """List all rules, optionally filtered by schema, organization, and enabled status."""
         logger.debug(f"Listing rules: schema_id={schema_id}, organization_id={organization_id}, enabled={enabled}")
         filters: dict = {}
@@ -49,4 +39,4 @@ def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
             filters["enabled"] = enabled
 
         rules_list: list[Rule] = [rule async for rule in client.list_rules(**filters)]
-        return RuleList(count=len(rules_list), results=rules_list)
+        return rules_list

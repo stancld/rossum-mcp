@@ -96,7 +96,7 @@ class TestMemoryStep:
     """Test MemoryStep to_messages conversion."""
 
     def test_to_messages_with_tool_calls(self):
-        """Test that tool calls are converted to messages (thinking is NOT included)."""
+        """Test that tool calls are converted to messages (thinking IS included before tool_use)."""
         step = MemoryStep(
             step_number=1,
             thinking="Let me analyze this...",
@@ -108,6 +108,28 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
+        # Thinking text is included as first block, then tool_use
+        assert len(messages[0]["content"]) == 2
+        assert messages[0]["content"][0]["type"] == "text"
+        assert messages[0]["content"][0]["text"] == "Let me analyze this..."
+        assert messages[0]["content"][1]["type"] == "tool_use"
+
+        assert messages[1]["role"] == "user"
+        assert messages[1]["content"][0]["type"] == "tool_result"
+
+    def test_to_messages_with_tool_calls_no_thinking(self):
+        """Test that tool calls without thinking only include tool_use blocks."""
+        step = MemoryStep(
+            step_number=1,
+            tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"key": "value"})],
+            tool_results=[ToolResult(tool_call_id="tc1", name="get_data", content="result data")],
+        )
+
+        messages = step.to_messages()
+
+        assert len(messages) == 2
+        assert messages[0]["role"] == "assistant"
+        # No thinking, so only tool_use block
         assert len(messages[0]["content"]) == 1
         assert messages[0]["content"][0]["type"] == "tool_use"
 
@@ -658,7 +680,7 @@ class TestAgentRun:
 
 
 class TestExecuteTool:
-    """Test RossumAgent._execute_tool method."""
+    """Test RossumAgent._execute_tool_with_progress method."""
 
     def _create_agent(self) -> RossumAgent:
         """Helper to create an agent with mocked dependencies."""
@@ -673,6 +695,15 @@ class TestExecuteTool:
             config=config,
         )
 
+    async def _get_final_result(self, agent: RossumAgent, tool_call: ToolCall) -> ToolResult:
+        """Helper to get the final ToolResult from _execute_tool_with_progress."""
+        result = None
+        async for item in agent._execute_tool_with_progress(tool_call, 1, [tool_call], (1, 1)):
+            if isinstance(item, ToolResult):
+                result = item
+        assert result is not None
+        return result
+
     @pytest.mark.asyncio
     async def test_executes_internal_tool(self):
         """Test that internal tools are executed locally."""
@@ -685,7 +716,7 @@ class TestExecuteTool:
         )
 
         with patch("rossum_agent.agent.core.execute_internal_tool", return_value="Success") as mock_execute:
-            result = await agent._execute_tool(tool_call)
+            result = await self._get_final_result(agent, tool_call)
 
         mock_execute.assert_called_once_with("write_file", {"filename": "test.txt", "content": "Hello"})
         assert result.content == "Success"
@@ -703,7 +734,7 @@ class TestExecuteTool:
             arguments={"workspace_url": "https://example.com"},
         )
 
-        result = await agent._execute_tool(tool_call)
+        result = await self._get_final_result(agent, tool_call)
 
         agent.mcp_connection.call_tool.assert_called_once_with("list_queues", {"workspace_url": "https://example.com"})
         assert "queues" in result.content
@@ -721,7 +752,7 @@ class TestExecuteTool:
             arguments={},
         )
 
-        result = await agent._execute_tool(tool_call)
+        result = await self._get_final_result(agent, tool_call)
 
         assert result.is_error is True
         assert "Connection failed" in result.content
@@ -735,7 +766,7 @@ class TestExecuteTool:
 
         tool_call = ToolCall(id="tc_1", name="verbose_tool", arguments={})
 
-        result = await agent._execute_tool(tool_call)
+        result = await self._get_final_result(agent, tool_call)
 
         assert len(result.content) < 30000
         assert "truncated" in result.content.lower()

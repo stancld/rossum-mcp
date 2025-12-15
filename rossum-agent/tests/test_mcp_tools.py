@@ -162,6 +162,7 @@ class TestMCPConnection:
         """Test that call_tool returns the data property when available."""
         mock_client = AsyncMock()
         mock_result = MagicMock()
+        mock_result.structured_content = None
         mock_result.data = {"queues": [{"id": 1, "name": "Test Queue"}]}
         mock_result.content = []
         mock_client.call_tool.return_value = mock_result
@@ -178,6 +179,7 @@ class TestMCPConnection:
         """Test that call_tool returns text content when data is None."""
         mock_client = AsyncMock()
         mock_result = MagicMock()
+        mock_result.structured_content = None
         mock_result.data = None
         mock_text_block = MagicMock()
         mock_text_block.text = "Tool executed successfully"
@@ -195,6 +197,7 @@ class TestMCPConnection:
         """Test that call_tool joins multiple text content blocks."""
         mock_client = AsyncMock()
         mock_result = MagicMock()
+        mock_result.structured_content = None
         mock_result.data = None
 
         mock_text1 = MagicMock()
@@ -229,6 +232,7 @@ class TestMCPConnection:
         """Test that call_tool returns None when no data or content."""
         mock_client = AsyncMock()
         mock_result = MagicMock()
+        mock_result.structured_content = None
         mock_result.data = None
         mock_result.content = []
         mock_client.call_tool.return_value = mock_result
@@ -238,6 +242,24 @@ class TestMCPConnection:
         result = await connection.call_tool("void_tool")
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_call_tool_prefers_structured_content_over_data(self):
+        """Test that call_tool prefers structured_content over data to avoid FastMCP parsing bugs."""
+        mock_client = AsyncMock()
+        mock_result = MagicMock()
+        # structured_content is the raw dict, data is the parsed pydantic model (possibly broken)
+        mock_result.structured_content = {"id": 1, "config": {"code": "print(1)"}}
+        mock_result.data = {"id": 1, "config": {}}  # Simulates FastMCP bug where nested dicts are empty
+        mock_result.content = []
+        mock_client.call_tool.return_value = mock_result
+
+        connection = MCPConnection(client=mock_client)
+
+        result = await connection.call_tool("get_hook", {"hook_id": 1})
+
+        # Should return structured_content, not data
+        assert result == {"id": 1, "config": {"code": "print(1)"}}
 
 
 class TestConnectMCPServer:

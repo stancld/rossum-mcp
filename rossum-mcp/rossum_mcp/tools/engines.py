@@ -5,9 +5,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.engine import Engine, EngineField, EngineFieldType
+from rossum_api.models.engine import (
+    Engine,  # noqa: TC002 - needed at runtime for FastMCP
+    EngineField,  # noqa: TC002 - needed at runtime for FastMCP
+    EngineFieldType,  # noqa: TC002 - needed at runtime for FastMCP
+)
 
 from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
 
@@ -18,24 +21,6 @@ if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
-
-
-class EngineList(BaseModel):
-    """Response model for list_engines."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[Engine]
-
-
-class EngineFieldList(BaseModel):
-    """Response model for get_engine_fields."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[EngineField]
 
 
 def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
@@ -51,7 +36,7 @@ def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  
     @mcp.tool(description="List all engines with optional filters.")
     async def list_engines(
         id: int | None = None, engine_type: EngineType | None = None, agenda_id: str | None = None
-    ) -> EngineList:
+    ) -> list[Engine]:
         """List all engines with optional filters."""
         logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")
         filters: dict[str, int | str] = {}
@@ -61,8 +46,7 @@ def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  
             filters["type"] = engine_type
         if agenda_id is not None:
             filters["agenda_id"] = agenda_id
-        engines_list = [engine async for engine in client.list_engines(**filters)]  # type: ignore[arg-type]
-        return EngineList(count=len(engines_list), results=engines_list)
+        return [engine async for engine in client.list_engines(**filters)]  # type: ignore[arg-type]
 
     @mcp.tool(description="Update engine settings.")
     async def update_engine(engine_id: int, engine_data: dict) -> Engine | dict:
@@ -140,10 +124,7 @@ def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  
         return engine_field
 
     @mcp.tool(description="Retrieve engine fields for a specific engine or all engine fields.")
-    async def get_engine_fields(engine_id: int | None = None) -> EngineFieldList:
+    async def get_engine_fields(engine_id: int | None = None) -> list[EngineField]:
         """Retrieve engine fields for a specific engine or all engine fields."""
         logger.debug(f"Retrieving engine fields: engine_id={engine_id}")
-        engine_fields_list = [
-            engine_field async for engine_field in client.retrieve_engine_fields(engine_id=engine_id)
-        ]
-        return EngineFieldList(count=len(engine_fields_list), results=engine_fields_list)
+        return [engine_field async for engine_field in client.retrieve_engine_fields(engine_id=engine_id)]

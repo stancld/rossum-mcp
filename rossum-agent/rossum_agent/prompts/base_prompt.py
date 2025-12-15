@@ -160,6 +160,23 @@ Debugging checklist:
 - Check automation_level and score_threshold settings
 - **Parent-child relations can be chained** - when debugging, check children of children (nested relationships) as issues may propagate through the chain
 
+### Hook Code Debugging with Opus
+
+**MANDATORY**: When debugging Python hook code (function hooks), you MUST use the `debug_hook` tool. Do NOT attempt to debug hook code yourself - always delegate to the Opus sub-agent.
+
+The `debug_hook` tool:
+1. Spawns an Opus-based debugging sub-agent with deep reasoning capabilities
+2. Opus fetches the hook code and annotation data automatically
+3. Opus iteratively tests fixes until the code works correctly
+4. Returns detailed analysis with verified, working code
+
+**Simple usage**: Just pass the IDs - the sub-agent fetches everything itself:
+```
+debug_hook(hook_id="12345", annotation_id="67890")
+```
+
+You do NOT need to call `get_hook` or `get_annotation` first - the Opus sub-agent will do that.
+
 **Understanding Relations vs Document Relations:**
 - **Relations** (`get_relation`, `list_relations`): Links between annotations created by Rossum workflow actions
   - `edit`: Created after rotating or splitting documents in UI
