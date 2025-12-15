@@ -30,14 +30,18 @@ class HookList(BaseModel):
 def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
     """Register hook-related tools with the FastMCP server."""
 
-    @mcp.tool(description="Retrieve hook details.")
+    @mcp.tool(
+        description="Retrieve a single hook by ID. Use list_hooks first to get all hooks for a queue - only use get_hook if you need additional details for a specific hook not returned by list_hooks."
+    )
     async def get_hook(hook_id: int) -> Hook:
         """Retrieve hook details."""
         logger.debug(f"Retrieving hook: hook_id={hook_id}")
         hook: Hook = await client.retrieve_hook(hook_id)
         return hook
 
-    @mcp.tool(description="List all hooks/extensions.")
+    @mcp.tool(
+        description="List all hooks/extensions for a queue. ALWAYS use this first when you need information about hooks on a queue - it returns complete hook details including code, config, and settings in a single call. Only use get_hook afterward if you need details not present in the list response."
+    )
     async def list_hooks(
         queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
     ) -> HookList:
