@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Made LLM response to be streamed in API [#70](https://github.com/stancld/rossum-mcp/pull/70)
 
 
 ## [0.2.5] - 2025-12-14

@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from functools import partial
+import queue
 from typing import TYPE_CHECKING
 
 from anthropic import APIError, APITimeoutError, RateLimitError
@@ -180,10 +180,20 @@ class RossumAgent:
         pending_tools: dict[int, dict[str, str]] = {}
         final_message: Message | None = None
 
-        sync_generator = partial(self._sync_stream_events, model_id, messages, tools)
-        stream_iter = await asyncio.to_thread(lambda: list(sync_generator()))
+        event_queue: queue.Queue[tuple[MessageStreamEvent | None, Message | None] | None] = queue.Queue()
 
-        for event, final_msg in stream_iter:
+        def producer() -> None:
+            for item in self._sync_stream_events(model_id, messages, tools):
+                event_queue.put(item)
+            event_queue.put(None)
+
+        producer_task = asyncio.get_event_loop().run_in_executor(None, producer)
+
+        while True:
+            item = await asyncio.to_thread(event_queue.get)
+            if item is None:
+                break
+            event, final_msg = item
             if final_msg is not None:
                 final_message = final_msg
                 continue
@@ -192,6 +202,8 @@ class RossumAgent:
             if text_delta:
                 thinking_text += text_delta
                 yield AgentStep(step_number=step_num, thinking=thinking_text, is_streaming=True)
+
+        await producer_task
 
         if final_message is None:
             raise RuntimeError("Stream ended without final message")
