@@ -285,7 +285,7 @@ The agent includes file writing tools and Rossum integration via MCP. See [examp
 
 ## MCP Tools
 
-The MCP server provides 26 tools organized into six categories:
+The MCP server provides 32 tools organized into seven categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -320,22 +320,24 @@ The MCP server provides 26 tools organized into six categories:
 </details>
 
 <details>
-<summary><strong>Engine Management (5 tools)</strong></summary>
+<summary><strong>Engine Management (6 tools)</strong></summary>
 
 - `get_engine` - Retrieve engine details by ID
 - `list_engines` - List all engines with optional filters
 - `create_engine` - Create extraction or splitting engines
 - `update_engine` - Configure learning and training queues
 - `create_engine_field` - Define engine fields and link to schemas
+- `get_engine_fields` - Retrieve engine fields for an engine
 
 </details>
 
 <details>
-<summary><strong>Automation Management (4 tools)</strong></summary>
+<summary><strong>Automation Management (5 tools)</strong></summary>
 
 - `get_hook` - Get hook/extension details
 - `list_hooks` - List webhooks and extensions
 - `create_hook` - Create new hooks/extensions
+- `get_rule` - Get business rule details
 - `list_rules` - List validation rules
 
 </details>
@@ -344,8 +346,18 @@ The MCP server provides 26 tools organized into six categories:
 <summary><strong>Workspace Management (3 tools)</strong></summary>
 
 - `get_workspace` - Retrieve workspace details
-- `list_workspaces` - List all workspaces with filtering (returns count and results array)
+- `list_workspaces` - List all workspaces with filtering
 - `create_workspace` - Create new workspaces
+
+</details>
+
+<details>
+<summary><strong>Relations Management (4 tools)</strong></summary>
+
+- `get_relation` - Retrieve annotation relation details
+- `list_relations` - List relations (edit, attachment, duplicate)
+- `get_document_relation` - Retrieve document relation details
+- `list_document_relations` - List document relations (export, einvoice)
 
 </details>
 
