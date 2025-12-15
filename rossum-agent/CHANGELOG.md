@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Kept image in the context for the whole conversation [#72](https://github.com/stancld/rossum-mcp/pull/72)
+- Enabled short answers [#72](https://github.com/stancld/rossum-mcp/pull/72)
+- Improved list_hook and get_hook descriptions [#72](https://github.com/stancld/rossum-mcp/pull/72)
 
 
 ## [0.2.6] - 2025-12-15
