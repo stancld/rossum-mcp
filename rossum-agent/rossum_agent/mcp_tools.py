@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
@@ -18,6 +18,23 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from mcp.types import Tool as MCPTool
+
+
+@runtime_checkable
+class MCPConnectionProtocol(Protocol):
+    """Protocol for MCP connection-like objects.
+
+    This protocol allows for duck typing of MCP connections, enabling
+    subagents to use filtered connection wrappers.
+    """
+
+    async def get_tools(self) -> list[Any]:
+        """Get the list of available tools."""
+        ...
+
+    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
+        """Call a tool by name with the given arguments."""
+        ...
 
 
 @dataclass

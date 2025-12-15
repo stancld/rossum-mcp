@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added specialized subagent system for task delegation:
+  - `document_analyzer`: Expert at analyzing annotations, extraction results, and data quality
+  - `hook_debugger`: Specializes in debugging extensions, webhooks, and hook configurations
+  - `schema_expert`: Analyzes schema structures, field configurations, and formula dependencies
+  - `rule_optimizer`: Expert at analyzing and optimizing business rules and validation logic
+- Added `delegate_task` tool for orchestrating subagents with filtered tool access
+- Subagents use smaller context and focused prompts for efficient specialized execution
+
 
 
 ## [0.2.6] - 2025-12-15

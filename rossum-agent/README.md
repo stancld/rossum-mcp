@@ -18,6 +18,16 @@ AI agent for Rossum document processing. Built with Anthropic Claude and designe
 - **File Output**: Write reports, documentation, and analysis results to files
 - **Claude Code Execution**: Leverage Claude's native code execution for data analysis, plotting, and complex computations
 - **Image Input Support**: Attach images (PNG, JPEG, GIF, WebP) to messages for visual context and analysis
+- **Specialized Subagents**: Delegate complex tasks to specialized subagents with focused expertise
+
+### Subagent System
+The agent includes a multi-agent orchestration system with specialized subagents:
+- **Document Analyzer**: Expert at analyzing annotations, extraction results, and data quality
+- **Hook Debugger**: Specializes in debugging extensions, webhooks, and hook configurations
+- **Schema Expert**: Analyzes schema structures, field configurations, and formula dependencies
+- **Rule Optimizer**: Expert at analyzing and optimizing business rules and validation logic
+
+Subagents have restricted tool access for focused execution and can be invoked via the `delegate_task` tool.
 
 ### User Interfaces
 - **CLI**: Command-line interface for interactive agent conversations
@@ -95,12 +105,33 @@ result = agent.run("Analyze the hooks on queue 12345 and explain their execution
 
 ## Available Tools
 
-### write_file
+### Internal Tools
+
+#### write_file
 Write text or markdown content to a file. Use this to save documentation, reports, diagrams, or any text output.
 
 **Parameters:**
 - `filename` (string): The name of the file to create (e.g., 'report.md', 'hooks.txt')
 - `content` (string): The text content to write to the file
+
+#### delegate_task
+Delegate a specialized task to a subagent. Use this when a task requires focused expertise.
+
+**Parameters:**
+- `subagent_type` (string): The type of specialized subagent to use. One of:
+  - `document_analyzer`: For annotation and extraction analysis
+  - `hook_debugger`: For debugging extensions and webhooks
+  - `schema_expert`: For schema configuration analysis
+  - `rule_optimizer`: For business rule analysis
+- `task` (string): A detailed description of the task for the subagent
+
+**Example Usage:**
+```
+delegate_task(
+    subagent_type="hook_debugger",
+    task="Debug the hook 12345 and identify why it's not triggering on annotation initialization"
+)
+```
 
 ### Rossum MCP Tools
 
@@ -151,15 +182,26 @@ The agent uses a configuration file at `rossum_agent/assets/agent_config.yaml`. 
 └──────┬──────┘
        │
        ▼
-┌─────────────────┐
-│ Rossum Agent    │
-│ (Claude)        │
-├─────────────────┤
-│ • Write File    │
-│ • MCP Tools     │
-└────────┬────────┘
-         │
-         ▼
+┌─────────────────────────────────────────┐
+│ Rossum Agent (Lead)                     │
+│ (Claude)                                │
+├─────────────────────────────────────────┤
+│ Tools:                                  │
+│ • write_file                            │
+│ • delegate_task → Subagents             │
+│ • MCP Tools                             │
+└───┬─────────────────────────────────┬───┘
+    │                                 │
+    │  ┌───────────────────────────┐  │
+    │  │ Subagents (Specialized)   │  │
+    │  ├───────────────────────────┤  │
+    │  │ • Document Analyzer       │  │
+    │  │ • Hook Debugger           │  │
+    │  │ • Schema Expert           │  │
+    │  │ • Rule Optimizer          │  │
+    │  └───────────────────────────┘  │
+    │                                 │
+    ▼                                 ▼
 ┌─────────────────┐      ┌──────────────┐
 │  Rossum MCP     │─────▶│  Rossum API  │
 │    Server       │      └──────────────┘

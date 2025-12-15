@@ -28,9 +28,15 @@ from anthropic.types import (
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
+from rossum_agent.agent.subagents.factory import register_agent_factory
+from rossum_agent.async_tools import (
+    execute_task_tool,
+    get_async_tool_definitions,
+    is_task_tool,
+)
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.internal_tools import execute_internal_tool, get_internal_tool_names, get_internal_tools
-from rossum_agent.mcp_tools import MCPConnection, mcp_tools_to_anthropic_format
+from rossum_agent.mcp_tools import MCPConnectionProtocol, mcp_tools_to_anthropic_format
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -38,6 +44,7 @@ if TYPE_CHECKING:
     from anthropic import AnthropicBedrock
 
     from rossum_agent.agent.types import UserContent
+    from rossum_agent.mcp_tools import MCPConnection
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +63,7 @@ class RossumAgent:
     def __init__(
         self,
         client: AnthropicBedrock,
-        mcp_connection: MCPConnection,
+        mcp_connection: MCPConnectionProtocol,
         system_prompt: str,
         config: AgentConfig | None = None,
         additional_tools: list[ToolParam] | None = None,
@@ -100,7 +107,12 @@ class RossumAgent:
         """Get all available tools in Anthropic format (cached)."""
         if self._tools_cache is None:
             mcp_tools = await self.mcp_connection.get_tools()
-            self._tools_cache = mcp_tools_to_anthropic_format(mcp_tools) + get_internal_tools() + self.additional_tools
+            self._tools_cache = (
+                mcp_tools_to_anthropic_format(mcp_tools)
+                + get_internal_tools()
+                + get_async_tool_definitions()
+                + self.additional_tools
+            )
         return self._tools_cache
 
     def _sync_stream_events(
@@ -271,6 +283,12 @@ class RossumAgent:
             if tool_call.name in get_internal_tool_names():
                 result = execute_internal_tool(tool_call.name, tool_call.arguments)
                 content = str(result)
+            elif is_task_tool(tool_call.name):
+                content = await execute_task_tool(
+                    self.mcp_connection,
+                    tool_call.arguments.get("subagent_type", ""),
+                    tool_call.arguments.get("task", ""),
+                )
             else:
                 result = await self.mcp_connection.call_tool(tool_call.name, tool_call.arguments)
 
@@ -337,7 +355,7 @@ class RossumAgent:
 
 
 async def create_agent(
-    mcp_connection: MCPConnection,
+    mcp_connection: MCPConnectionProtocol | MCPConnection,
     system_prompt: str,
     config: AgentConfig | None = None,
     additional_tools: list[ToolParam] | None = None,
@@ -355,3 +373,26 @@ async def create_agent(
         config=config,
         additional_tools=additional_tools,
     )
+
+
+def _create_agent_for_subagent(
+    client: AnthropicBedrock,
+    mcp_connection: MCPConnectionProtocol,
+    system_prompt: str,
+    max_steps: int,
+) -> RossumAgent:
+    """Factory function for creating subagent instances.
+
+    This is registered with the subagent factory to break circular imports.
+    """
+    config = AgentConfig(max_steps=max_steps)
+    return RossumAgent(
+        client=client,
+        mcp_connection=mcp_connection,
+        system_prompt=system_prompt,
+        config=config,
+        additional_tools=[],
+    )
+
+
+register_agent_factory(_create_agent_for_subagent)

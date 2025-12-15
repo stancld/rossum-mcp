@@ -16,6 +16,13 @@ from rossum_agent.agent.models import (
     ToolResult,
     truncate_content,
 )
+from rossum_agent.agent.subagents import (
+    SubagentDefinition,
+    SubagentRegistry,
+    SubagentResult,
+    SubagentType,
+    get_subagent_registry,
+)
 
 __all__ = [
     "MAX_TOOL_OUTPUT_LENGTH",
@@ -24,9 +31,14 @@ __all__ = [
     "AgentStep",
     "MemoryStep",
     "RossumAgent",
+    "SubagentDefinition",
+    "SubagentRegistry",
+    "SubagentResult",
+    "SubagentType",
     "TaskStep",
     "ToolCall",
     "ToolResult",
     "create_agent",
+    "get_subagent_registry",
     "truncate_content",
 ]
