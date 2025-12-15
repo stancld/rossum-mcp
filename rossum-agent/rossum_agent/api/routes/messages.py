@@ -129,7 +129,7 @@ async def send_message(
             return
 
         updated_history = agent_service.build_updated_history(
-            existing_history=history, user_prompt=user_prompt, final_response=final_response
+            existing_history=history, user_prompt=user_prompt, final_response=final_response, images=images
         )
         chat_service.save_messages(
             user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir

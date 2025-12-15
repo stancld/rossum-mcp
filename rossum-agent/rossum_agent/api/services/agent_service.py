@@ -180,17 +180,55 @@ class AgentService:
         Args:
             agent: The RossumAgent instance.
             history: List of message dicts with 'role' and 'content' keys.
+                     Content can be a string or a list of content blocks (for multimodal).
         """
         for msg in history:
             role = msg.get("role")
             content = msg.get("content", "")
             if role == "user":
-                agent.add_user_message(content)
+                user_content = self._parse_stored_content(content)
+                agent.add_user_message(user_content)
             elif role == "assistant":
                 agent.add_assistant_message(content)
 
+    def _parse_stored_content(self, content: str | list[dict[str, Any]]) -> UserContent:
+        """Parse stored content back into UserContent format.
+
+        Args:
+            content: Either a string or a list of content block dicts.
+
+        Returns:
+            UserContent suitable for the agent.
+        """
+        if isinstance(content, str):
+            return content
+
+        result: list[ContentBlock] = []
+        for block in content:
+            block_type = block.get("type")
+            if block_type == "image":
+                source = block.get("source", {})
+                result.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": source.get("type", "base64"),
+                            "media_type": source.get("media_type", "image/png"),
+                            "data": source.get("data", ""),
+                        },
+                    }
+                )
+            elif block_type == "text":
+                result.append({"type": "text", "text": block.get("text", "")})
+
+        return result if result else ""
+
     def build_updated_history(
-        self, existing_history: list[dict[str, Any]], user_prompt: str, final_response: str | None
+        self,
+        existing_history: list[dict[str, Any]],
+        user_prompt: str,
+        final_response: str | None,
+        images: list[ImageContent] | None = None,
     ) -> list[dict[str, Any]]:
         """Build updated conversation history after agent execution.
 
@@ -198,9 +236,11 @@ class AgentService:
             existing_history: Previous conversation history.
             user_prompt: The user's prompt that was just processed.
             final_response: The agent's final response, if any.
+            images: Optional list of images included with the user prompt.
         """
         updated = list(existing_history)
-        updated.append({"role": "user", "content": user_prompt})
+        user_content = self._build_user_content(user_prompt, images)
+        updated.append({"role": "user", "content": user_content})
         if final_response:
             updated.append({"role": "assistant", "content": final_response})
         return updated
