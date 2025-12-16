@@ -17,6 +17,28 @@ import redis
 logger = logging.getLogger(__name__)
 
 
+def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str:
+    """Extract text from message content which can be a string or multimodal list.
+
+    Args:
+        content: Message content - either a string or list of content blocks.
+
+    Returns:
+        Extracted text as a string.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                text_parts.append(block.get("text", ""))
+        return " ".join(text_parts)
+    return ""
+
+
 def get_commit_sha() -> str | None:
     """Get the current git commit SHA.
 
@@ -251,11 +273,13 @@ class RedisStorage:
                     messages = chat_data.messages
                     timestamp_str = chat_id.split("_")[1]
                     timestamp = int(dt.datetime.strptime(timestamp_str, "%Y%m%d%H%M%S").timestamp())
-                    first_message = messages[0].get("content", "") if messages else ""
-                    first_user = next(
-                        (m.get("content", "") for m in messages if m.get("role") == "user"),
+                    first_message_content = messages[0].get("content") if messages else None
+                    first_message = extract_text_from_content(first_message_content)
+                    first_user_content = next(
+                        (m.get("content") for m in messages if m.get("role") == "user"),
                         None,
                     )
+                    first_user = extract_text_from_content(first_user_content)
                     preview = first_user[:100] if first_user else None
 
                     chats.append(
