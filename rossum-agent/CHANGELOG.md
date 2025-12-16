@@ -5,14 +5,26 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
+-
+
+
+## [0.2.7] - 2025-12-16
+
+### Added
 - Added `search_knowledge_base` internal tool for searching Rossum Knowledge Base documentation with Opus-powered analysis
-- Added `list_hook_logs` MCP tool for querying hook execution logs with filtering by hook_id, queue_id, log_level, timestamps, and full-text search
 - Added `evaluate_python_hook` internal tool for sandboxed hook execution against test annotation/schema data
 - Added `debug_hook` internal tool using Opus sub-agent for iterative hook debugging with root cause analysis and fix suggestions
+- Added `web_search` and `read_web_page` internal tools for web search capabilities
+- Added multi-turn conversation guidelines to prompts
+
+### Changed
 - Improved tool result serialization in agent core to handle pydantic models and dataclasses properly
 - Kept image in the context for the whole conversation
-- Enabled short answers
-- Improved list_hook and get_hook descriptions
+- Enabled short, concise answers by default
+- Improved `list_hook` and `get_hook` MCP tool descriptions
+
+### Fixed
+- Fixed sending generated files to front-end in API responses
 
 
 ## [0.2.6] - 2025-12-15
