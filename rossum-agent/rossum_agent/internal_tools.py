@@ -141,20 +141,6 @@ def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
     return future.result(timeout=60)
 
 
-# Debug file for tracing debug_hook execution
-_DEBUG_LOG_FILE = Path("/tmp/debug_hook_trace.log")
-
-
-def _debug_log(msg: str) -> None:
-    """Write debug message to file with timestamp."""
-    import datetime as dt  # noqa: PLC0415 - intentionally imported inside function to avoid import at module load
-
-    timestamp = dt.datetime.now().strftime("%H:%M:%S.%f")[:-3]
-    with open(_DEBUG_LOG_FILE, "a") as f:
-        f.write(f"[{timestamp}] {msg}\n")
-        f.flush()
-
-
 @beta_tool
 def write_file(filename: str, content: str) -> str:
     """Write text or markdown content to a file. Use this to save documentation, reports, diagrams, or any text output.
@@ -676,6 +662,15 @@ def _call_opus_for_web_search_analysis(query: str, search_results: str, user_que
         Opus model's analysis of the search results.
     """
     try:
+        _report_progress(
+            SubAgentProgress(
+                tool_name="search_knowledge_base",
+                iteration=0,
+                max_iterations=0,
+                status="thinking",
+            )
+        )
+
         client = create_bedrock_client()
 
         user_query_context = ""
@@ -715,7 +710,26 @@ Provide a clear, actionable summary that a developer can use immediately."""
         )
 
         text_parts = [block.text for block in response.content if hasattr(block, "text")]
-        return "\n".join(text_parts) if text_parts else "No analysis provided"
+        analysis_result = "\n".join(text_parts) if text_parts else "No analysis provided"
+
+        _report_progress(
+            SubAgentProgress(
+                tool_name="search_knowledge_base",
+                iteration=0,
+                max_iterations=0,
+                status="completed",
+            )
+        )
+
+        _report_text(
+            SubAgentText(
+                tool_name="search_knowledge_base",
+                text=analysis_result,
+                is_final=True,
+            )
+        )
+
+        return analysis_result
 
     except Exception as e:
         logger.exception("Error calling Opus for web search analysis")
@@ -804,7 +818,7 @@ def _search_knowledge_base(query: str, analyze_with_opus: bool = True, user_quer
             }
         )
 
-    logger.info(f"Found {len(results)} results for query: {query}. Sources: {[r['content'] for r in results]}")
+    logger.info(f"Found {len(results)} results for query: {query}")
 
     if analyze_with_opus:
         search_results_text = "\n\n---\n\n".join(
@@ -886,12 +900,10 @@ def _extract_web_search_results(
         }
 
     logger.info(f"debug_hook sub-agent [iter {iteration}/{max_iterations}]: processing web search results")
-    _debug_log("Processing web search results")
 
     if analyze_with_opus:
         query = getattr(block, "search_query", "Rossum documentation")
         logger.info(f"debug_hook sub-agent [iter {iteration}/{max_iterations}]: analyzing with Opus sub-agent")
-        _debug_log("Analyzing web search results with Opus")
         analyzed_results = _call_opus_for_web_search_analysis(query, full_results)
         content = f"Analyzed Rossum Knowledge Base search results:\n\n{analyzed_results}"
     else:
@@ -963,7 +975,6 @@ def _call_opus_for_debug(hook_id: str, annotation_id: str, schema_id: str | None
     Returns:
         Opus model's analysis and recommendations after iterative debugging
     """
-    _debug_log("Starting sub-agent for hook analysis...")
     try:
         client = create_bedrock_client()
 
@@ -982,7 +993,6 @@ Steps:
         response = None
         for iteration in range(max_iterations):
             logger.info(f"debug_hook sub-agent: iteration {iteration + 1}/{max_iterations}")
-            _debug_log(f"Sub-agent iteration {iteration + 1}/{max_iterations}")
 
             _report_progress(
                 SubAgentProgress(
@@ -1007,7 +1017,6 @@ Steps:
                 logger.info(
                     f"debug_hook sub-agent: completed after {iteration + 1} iterations (stop_reason={response.stop_reason}, has_tool_use={has_tool_use})"
                 )
-                _debug_log(f"Sub-agent completed after {iteration + 1} iterations")
                 _report_progress(
                     SubAgentProgress(
                         tool_name="debug_hook",
@@ -1039,7 +1048,6 @@ Steps:
                     logger.info(
                         f"debug_hook sub-agent [iter {iteration + 1}/{max_iterations}]: calling tool '{tool_name}'"
                     )
-                    _debug_log(f"Calling tool '{tool_name}'")
 
                     _report_progress(
                         SubAgentProgress(
@@ -1067,7 +1075,6 @@ Steps:
                                     f", exception={exc_type}" if exc_type else ""
                                 )
                                 logger.info(f"debug_hook sub-agent [iter {iteration + 1}/{max_iterations}]: {log_msg}")
-                                _debug_log(log_msg)
                             except Exception:
                                 pass
                         tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
@@ -1118,7 +1125,6 @@ def debug_hook(
     Returns:
         JSON with Opus expert analysis including fixed code.
     """
-    _debug_log("ENTERED debug_hook function")
     start_time = time.perf_counter()
 
     if not hook_id:
@@ -1131,7 +1137,6 @@ def debug_hook(
             {"error": "No annotation_id provided", "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3)}
         )
 
-    _debug_log(f"Calling sub-agent with hook_id={hook_id}, annotation_id={annotation_id}, schema_id={schema_id}")
     logger.info(f"debug_hook: Calling Opus sub-agent for hook_id={hook_id}, annotation_id={annotation_id}")
     analysis = _call_opus_for_debug(hook_id, annotation_id, schema_id)
 

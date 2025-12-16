@@ -227,6 +227,7 @@ class AgentService:
                     )
         finally:
             set_progress_callback(None)
+            set_text_callback(None)
             self._sub_agent_queue = None
 
     def _build_user_content(self, prompt: str, images: list[ImageContent] | None) -> UserContent:

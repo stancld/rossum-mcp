@@ -1191,6 +1191,56 @@ Lists all document relations with optional filters. Document relations introduce
 
    The ``rossum_agent`` package provides additional tools beyond the MCP server.
 
+   Knowledge Base Tools
+   ^^^^^^^^^^^^^^^^^^^^
+
+   search_knowledge_base
+   """"""""""""""""""""""
+
+   Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
+
+   Use this tool to find information about Rossum features, troubleshoot errors,
+   and understand extension configurations. The search is performed against
+   https://knowledge-base.rossum.ai/docs.
+
+   **Parameters:**
+
+   - ``query`` (string, required): Search query. Be specific - include extension names, error messages,
+     or feature names. Examples: 'document splitting extension', 'duplicate handling configuration',
+     'webhook timeout error'.
+   - ``user_query`` (string, optional): The original user question for context. Pass the user's full
+     question here so Opus can tailor the analysis to address their specific needs.
+
+   **Returns:**
+
+   JSON string with structure:
+
+   .. code-block:: json
+
+      {
+        "status": "success",
+        "query": "document splitting",
+        "analysis": "## Document Splitting Extension\n\nThe document splitting extension...",
+        "source_urls": ["https://knowledge-base.rossum.ai/docs/..."]
+      }
+
+   **Use cases:**
+
+   - Finding documentation about Rossum extensions
+   - Troubleshooting error messages
+   - Understanding hook configurations and behaviors
+
+   **Example usage:**
+
+   .. code-block:: python
+
+      # Search for document splitting documentation
+      result = search_knowledge_base(
+          query="document splitting extension",
+          user_query="How do I configure document splitting for my queue?"
+      )
+      print(result)
+
    Hook Analysis Tools
    ^^^^^^^^^^^^^^^^^^^
 

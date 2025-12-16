@@ -5,13 +5,14 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
-- Added `list_hook_logs` MCP tool for querying hook execution logs with filtering by hook_id, queue_id, log_level, timestamps, and full-text search [#73](https://github.com/stancld/rossum-mcp/pull/73)
-- Added `evaluate_python_hook` internal tool for sandboxed hook execution against test annotation/schema data [#73](https://github.com/stancld/rossum-mcp/pull/73)
-- Added `debug_hook` internal tool using Opus sub-agent for iterative hook debugging with root cause analysis and fix suggestions [#73](https://github.com/stancld/rossum-mcp/pull/73)
-- Improved tool result serialization in agent core to handle pydantic models and dataclasses properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
-- Kept image in the context for the whole conversation [#72](https://github.com/stancld/rossum-mcp/pull/72)
-- Enabled short answers [#72](https://github.com/stancld/rossum-mcp/pull/72)
-- Improved list_hook and get_hook descriptions [#72](https://github.com/stancld/rossum-mcp/pull/72)
+- Added `search_knowledge_base` internal tool for searching Rossum Knowledge Base documentation with Opus-powered analysis
+- Added `list_hook_logs` MCP tool for querying hook execution logs with filtering by hook_id, queue_id, log_level, timestamps, and full-text search
+- Added `evaluate_python_hook` internal tool for sandboxed hook execution against test annotation/schema data
+- Added `debug_hook` internal tool using Opus sub-agent for iterative hook debugging with root cause analysis and fix suggestions
+- Improved tool result serialization in agent core to handle pydantic models and dataclasses properly
+- Kept image in the context for the whole conversation
+- Enabled short answers
+- Improved list_hook and get_hook descriptions
 
 
 ## [0.2.6] - 2025-12-15

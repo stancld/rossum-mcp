@@ -95,7 +95,9 @@ The MCP server provides **33 tools** organized into six categories:
 
 The ``rossum_agent`` package provides additional capabilities:
 
+* Knowledge Base search for Rossum documentation with Opus-powered analysis
 * Hook analysis tools for understanding workflow dependencies and execution flow
+* Hook debugging tools with sandboxed code execution and Opus sub-agent analysis
 * Native Claude code execution for file operations, plotting, and data analysis
 * Image input support for attaching images (PNG, JPEG, GIF, WebP) to messages
 * Integration with AI agent frameworks (Anthropic Claude)

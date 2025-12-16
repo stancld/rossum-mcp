@@ -104,6 +104,22 @@ Write text or markdown content to a file. Use this to save documentation, report
 - `filename` (string): The name of the file to create (e.g., 'report.md', 'hooks.txt')
 - `content` (string): The text content to write to the file
 
+### Knowledge Base Tools
+
+#### search_knowledge_base
+Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
+
+**Parameters:**
+- `query` (string, required): Search query. Be specific - include extension names, error messages, or feature names. Examples: 'document splitting extension', 'duplicate handling configuration', 'webhook timeout error'.
+- `user_query` (string, optional): The original user question for context. Pass the user's full question here so Opus can tailor the analysis to address their specific needs.
+
+**Returns:** JSON with search results containing title, URL, and analyzed content from the knowledge base.
+
+**Use cases:**
+- Finding documentation about Rossum extensions
+- Troubleshooting error messages
+- Understanding hook configurations and behaviors
+
 ### Hook Analysis Tools
 
 #### evaluate_python_hook
