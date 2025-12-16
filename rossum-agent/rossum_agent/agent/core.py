@@ -22,7 +22,10 @@ from anthropic.types import (
     MessageStreamEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
+    TextBlock,
     TextDelta,
+    ThinkingBlock,
+    ThinkingDelta,
     ToolParam,
     ToolUseBlock,
 )
@@ -153,47 +156,75 @@ class RossumAgent:
         Yields:
             Tuples of (event, None) for each stream event, then (None, final_message) at the end.
         """
-        with self.client.messages.stream(
-            model=model_id,
-            max_tokens=self.config.max_tokens,
-            system=self.system_prompt,
-            messages=messages,
-            tools=tools,
-            temperature=self.config.temperature,
-        ) as stream:
-            for event in stream:
-                yield (event, None)
-            yield (None, stream.get_final_message())
+        thinking_config = self.config.thinking
+        if thinking_config.enabled:
+            with self.client.messages.stream(
+                model=model_id,
+                max_tokens=self.config.max_tokens,
+                system=self.system_prompt,
+                messages=messages,
+                tools=tools,
+                thinking={"type": "enabled", "budget_tokens": thinking_config.budget_tokens},
+            ) as stream:
+                for event in stream:
+                    yield (event, None)
+                yield (None, stream.get_final_message())
+        else:
+            with self.client.messages.stream(
+                model=model_id,
+                max_tokens=self.config.max_tokens,
+                system=self.system_prompt,
+                messages=messages,
+                tools=tools,
+                temperature=0.0,
+            ) as stream:
+                for event in stream:
+                    yield (event, None)
+                yield (None, stream.get_final_message())
 
-    def _process_stream_event(
-        self, event: MessageStreamEvent, pending_tools: dict[int, dict[str, str]], tool_calls: list[ToolCall]
-    ) -> str | None:
-        """Process a single stream event.
+    def _handle_content_block_start(
+        self,
+        event: RawContentBlockStartEvent,
+        pending_tools: dict[int, dict[str, str]],
+        block_types: dict[int, str],
+    ) -> None:
+        """Handle content_block_start events."""
+        if isinstance(event.content_block, ToolUseBlock):
+            pending_tools[event.index] = {
+                "name": event.content_block.name,
+                "id": event.content_block.id,
+                "json": "",
+            }
+        elif isinstance(event.content_block, ThinkingBlock):
+            block_types[event.index] = "thinking"
+        elif isinstance(event.content_block, TextBlock):
+            block_types[event.index] = "text"
 
-        Args:
-            event: The stream event to process.
-            pending_tools: Dict tracking in-progress tool use blocks.
-            tool_calls: List to append completed tool calls to.
+    def _handle_content_block_delta(
+        self,
+        event: RawContentBlockDeltaEvent,
+        pending_tools: dict[int, dict[str, str]],
+        block_types: dict[int, str],
+    ) -> tuple[str | None, str | None]:
+        """Handle content_block_delta events."""
+        if isinstance(event.delta, ThinkingDelta):
+            return (event.delta.thinking, "thinking")
+        if isinstance(event.delta, TextDelta):
+            block_type = block_types.get(event.index, "text")
+            return (event.delta.text, block_type)
+        if isinstance(event.delta, InputJSONDelta) and event.index in pending_tools:
+            pending_tools[event.index]["json"] += event.delta.partial_json
+        return (None, None)
 
-        Returns:
-            Text delta if this event contained text, None otherwise.
-        """
-        if isinstance(event, RawContentBlockStartEvent):
-            if isinstance(event.content_block, ToolUseBlock):
-                pending_tools[event.index] = {
-                    "name": event.content_block.name,
-                    "id": event.content_block.id,
-                    "json": "",
-                }
-
-        elif isinstance(event, RawContentBlockDeltaEvent):
-            if isinstance(event.delta, TextDelta):
-                text: str = event.delta.text
-                return text
-            if isinstance(event.delta, InputJSONDelta) and event.index in pending_tools:
-                pending_tools[event.index]["json"] += event.delta.partial_json
-
-        elif isinstance(event, ContentBlockStopEvent) and event.index in pending_tools:
+    def _handle_content_block_stop(
+        self,
+        event: ContentBlockStopEvent,
+        pending_tools: dict[int, dict[str, str]],
+        tool_calls: list[ToolCall],
+        block_types: dict[int, str],
+    ) -> None:
+        """Handle content_block_stop events."""
+        if event.index in pending_tools:
             tool_info = pending_tools.pop(event.index)
             try:
                 arguments = json.loads(tool_info["json"]) if tool_info["json"] else {}
@@ -201,11 +232,45 @@ class RossumAgent:
                 logger.warning("Failed to decode tool arguments for %s: %s", tool_info["name"], e)
                 arguments = {}
             tool_calls.append(ToolCall(id=tool_info["id"], name=tool_info["name"], arguments=arguments))
+        if event.index in block_types:
+            del block_types[event.index]
 
-        return None
+    def _process_stream_event(
+        self,
+        event: MessageStreamEvent,
+        pending_tools: dict[int, dict[str, str]],
+        tool_calls: list[ToolCall],
+        block_types: dict[int, str],
+    ) -> tuple[str | None, str | None]:
+        """Process a single stream event.
+
+        Args:
+            event: The stream event to process.
+            pending_tools: Dict tracking in-progress tool use blocks.
+            tool_calls: List to append completed tool calls to.
+            block_types: Dict mapping block index to block type ('thinking' or 'text').
+
+        Returns:
+            Tuple of (content_delta, block_type) where block_type is 'thinking' or 'text',
+            or (None, None) if no content delta.
+        """
+        if isinstance(event, RawContentBlockStartEvent):
+            self._handle_content_block_start(event, pending_tools, block_types)
+        elif isinstance(event, RawContentBlockDeltaEvent):
+            return self._handle_content_block_delta(event, pending_tools, block_types)
+        elif isinstance(event, ContentBlockStopEvent):
+            self._handle_content_block_stop(event, pending_tools, tool_calls, block_types)
+        return (None, None)
 
     async def _stream_model_response(self, step_num: int) -> AsyncIterator[AgentStep]:
-        """Stream model response, yielding partial steps as thinking streams in.
+        """Stream model response, yielding partial steps as content streams in.
+
+        With extended thinking enabled, yields AgentStep objects with:
+        - is_thinking_stream=True for thinking content (intermediate reasoning)
+        - is_final_answer_stream=True for text content (final answer to user)
+
+        This allows callers to distinguish at the first token whether content
+        is internal reasoning or the final answer.
 
         Yields:
             AgentStep objects - partial steps while streaming, then final step with tool results.
@@ -216,8 +281,10 @@ class RossumAgent:
         model_id = get_model_id()
 
         thinking_text = ""
+        final_answer_text = ""
         tool_calls: list[ToolCall] = []
         pending_tools: dict[int, dict[str, str]] = {}
+        block_types: dict[int, str] = {}
         final_message: Message | None = None
 
         event_queue: queue.Queue[tuple[MessageStreamEvent | None, Message | None] | None] = queue.Queue()
@@ -238,10 +305,25 @@ class RossumAgent:
                 final_message = final_msg
                 continue
 
-            text_delta = self._process_stream_event(event, pending_tools, tool_calls)
-            if text_delta:
-                thinking_text += text_delta
-                yield AgentStep(step_number=step_num, thinking=thinking_text, is_streaming=True)
+            content_delta, block_type = self._process_stream_event(event, pending_tools, tool_calls, block_types)
+            if content_delta and block_type:
+                if block_type == "thinking":
+                    thinking_text += content_delta
+                    yield AgentStep(
+                        step_number=step_num,
+                        thinking=thinking_text,
+                        is_streaming=True,
+                        is_thinking_stream=True,
+                    )
+                else:
+                    final_answer_text += content_delta
+                    yield AgentStep(
+                        step_number=step_num,
+                        thinking=thinking_text if thinking_text else None,
+                        final_answer=final_answer_text,
+                        is_streaming=True,
+                        is_final_answer_stream=True,
+                    )
 
         await producer_task
 
@@ -257,6 +339,8 @@ class RossumAgent:
             f"total_input={self._total_input_tokens}, total_output={self._total_output_tokens}"
         )
 
+        model_output = final_answer_text if final_answer_text else thinking_text
+
         step = AgentStep(
             step_number=step_num,
             thinking=thinking_text if thinking_text else None,
@@ -267,11 +351,11 @@ class RossumAgent:
         )
 
         if not tool_calls:
-            step.final_answer = thinking_text if thinking_text else None
+            step.final_answer = model_output if model_output else None
             step.is_final = True
             memory_step = MemoryStep(
                 step_number=step_num,
-                model_output=thinking_text if thinking_text else None,
+                model_output=model_output if model_output else None,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
             )

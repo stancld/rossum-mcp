@@ -12,6 +12,7 @@ from anthropic.types import (
     Message,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
+    TextBlock,
     TextDelta,
     ToolUseBlock,
     Usage,
@@ -61,18 +62,22 @@ class TestAgentConfig:
         config = AgentConfig()
         assert config.max_tokens == 128000
         assert config.max_steps == 50
-        assert config.temperature == 0.0
+        assert config.thinking.enabled is True
+        assert config.thinking.budget_tokens == 10000
 
     def test_custom_values(self):
         """Test custom configuration values."""
+        from rossum_agent.agent.models import ThinkingConfig
+
         config = AgentConfig(
             max_tokens=4096,
             max_steps=10,
-            temperature=0.5,
+            thinking=ThinkingConfig(enabled=False, budget_tokens=5000),
         )
         assert config.max_tokens == 4096
         assert config.max_steps == 10
-        assert config.temperature == 0.5
+        assert config.thinking.enabled is False
+        assert config.thinking.budget_tokens == 5000
 
 
 class TestAgentStep:
@@ -467,10 +472,20 @@ class TestStreamModelResponse:
 
     @pytest.mark.asyncio
     async def test_text_with_tool_call(self):
-        """Test streaming with both text and tool call."""
+        """Test streaming with both text and tool call.
+
+        With extended thinking, text blocks go to final_answer, not thinking.
+        Thinking blocks require ThinkingBlock content_block_start + ThinkingDelta.
+        """
         agent = self._create_agent()
         agent.memory.add_task("Help me")
         agent.mcp_connection.call_tool.return_value = "result"
+
+        text_block_start = RawContentBlockStartEvent(
+            type="content_block_start",
+            index=0,
+            content_block=TextBlock(type="text", text=""),
+        )
 
         text_delta = RawContentBlockDeltaEvent(
             type="content_block_delta",
@@ -503,7 +518,9 @@ class TestStreamModelResponse:
         )
 
         final_message = self._create_final_message()
-        mock_stream = self._create_mock_stream([text_delta, tool_start, tool_delta, tool_stop], final_message)
+        mock_stream = self._create_mock_stream(
+            [text_block_start, text_delta, tool_start, tool_delta, tool_stop], final_message
+        )
 
         with patch.object(agent.client.messages, "stream", return_value=mock_stream):
             steps = []
@@ -511,7 +528,7 @@ class TestStreamModelResponse:
                 steps.append(step)
 
         final_step = steps[-1]
-        assert final_step.thinking == "Let me check that for you."
+        assert final_step.final_answer is None
         assert len(final_step.tool_calls) == 1
 
 

@@ -48,6 +48,8 @@ class AgentStep:
     is_final: bool = False
     error: str | None = None
     is_streaming: bool = False
+    is_thinking_stream: bool = False
+    is_final_answer_stream: bool = False
     input_tokens: int = 0
     output_tokens: int = 0
     current_tool: str | None = None
@@ -60,12 +62,23 @@ class AgentStep:
 
 
 @dataclass
+class ThinkingConfig:
+    """Configuration for extended thinking."""
+
+    enabled: bool = True
+    budget_tokens: int = 10000
+
+
+@dataclass
 class AgentConfig:
-    """Configuration for the RossumAgent."""
+    """Configuration for the RossumAgent.
+
+    Note: When extended thinking is enabled, temperature must be 1.0 (the only allowed value).
+    """
 
     max_tokens: int = 128000
     max_steps: int = 50
-    temperature: float = 0.0
+    thinking: ThinkingConfig = field(default_factory=ThinkingConfig)
 
 
 MAX_TOOL_OUTPUT_LENGTH = 20000
