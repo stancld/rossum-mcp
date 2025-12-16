@@ -506,6 +506,15 @@ def main() -> None:  # noqa: C901
                         elif step.error:
                             final_error_text = f"❌ Error: {step.error}"
 
+                logger.info(
+                    f"Agent input context:\n"
+                    f"  - Prompt: {prompt[:500]}{'...' if len(prompt) > 500 else ''}\n"
+                    f"  - Num images: {num_images}\n"
+                    f"  - Conversation history length: {len(conversation_history)}\n"
+                    f"  - MCP mode: {mcp_mode}\n"
+                    f"  - Rossum URL context: {st.session_state.rossum_url_context.raw_url}"
+                )
+
                 asyncio.run(
                     run_agent_turn(
                         rossum_api_token=st.session_state.rossum_api_token,

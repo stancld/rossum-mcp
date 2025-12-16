@@ -39,6 +39,7 @@ from rossum_agent.internal_tools import (
     set_progress_callback,
 )
 from rossum_agent.mcp_tools import MCPConnection, mcp_tools_to_anthropic_format
+from rossum_agent.utils import get_session_output_dir
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -110,6 +111,27 @@ class RossumAgent:
             mcp_tools = await self.mcp_connection.get_tools()
             self._tools_cache = mcp_tools_to_anthropic_format(mcp_tools) + get_internal_tools() + self.additional_tools
         return self._tools_cache
+
+    def _save_debug_context(
+        self, step_num: int, model_id: str, messages: list[MessageParam], tools: list[ToolParam]
+    ) -> None:
+        """Save agent input context to file for debugging."""
+        try:
+            output_dir = get_session_output_dir()
+            context_file = output_dir / f"sonnet_agent_context_step_{step_num}.json"
+            context_data = {
+                "step_num": step_num,
+                "model": model_id,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "system_prompt": self.system_prompt,
+                "messages": messages,
+                "tools": tools,
+            }
+            context_file.write_text(json.dumps(context_data, indent=2, default=str))
+            logger.info(f"Sonnet agent: saved context to {context_file}")
+        except Exception as e:
+            logger.warning(f"Failed to save Sonnet agent context: {e}")
 
     def _serialize_tool_result(self, result: object) -> str:
         """Serialize a tool result to a string for storage in context.
@@ -214,6 +236,9 @@ class RossumAgent:
 
         tools = await self._get_tools()
         model_id = get_model_id()
+
+        # Save agent input context to file for debugging
+        self._save_debug_context(step_num, model_id, messages, tools)
 
         thinking_text = ""
         tool_calls: list[ToolCall] = []

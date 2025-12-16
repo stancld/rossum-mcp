@@ -29,7 +29,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import requests
 from anthropic import beta_tool
+from ddgs import DDGS
+from ddgs.exceptions import DDGSException
 
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.utils import get_session_output_dir
@@ -56,7 +59,7 @@ class SubAgentProgress:
 
 @dataclass
 class SubAgentText:
-    """Text output from a sub-agent for streaming."""
+    """Text output from a sub-agent (e.g., debug_hook's Opus sub-agent)."""
 
     tool_name: str
     text: str
@@ -65,10 +68,14 @@ class SubAgentText:
 
 # Type alias for progress callback
 SubAgentProgressCallback = Callable[[SubAgentProgress], None]
+
+# Type alias for text callback
 SubAgentTextCallback = Callable[[SubAgentText], None]
 
 # Module-level progress callback for sub-agent progress reporting
 _progress_callback: SubAgentProgressCallback | None = None
+
+# Module-level text callback for sub-agent text reporting
 _text_callback: SubAgentTextCallback | None = None
 
 
@@ -83,7 +90,7 @@ def set_progress_callback(callback: SubAgentProgressCallback | None) -> None:
 
 
 def set_text_callback(callback: SubAgentTextCallback | None) -> None:
-    """Set the text callback for sub-agent text streaming.
+    """Set the text callback for sub-agent text reporting.
 
     Args:
         callback: Callback function called with SubAgentText updates.
@@ -182,6 +189,29 @@ def write_file(filename: str, content: str) -> str:
         error_msg = f"Error writing file '{safe_filename}': {e}"
         logger.error(error_msg)
         return error_msg
+
+
+@beta_tool
+def search_knowledge_base(query: str, user_query: str | None = None) -> str:
+    """Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
+
+    Use this tool to find information about Rossum features, troubleshoot errors,
+    and understand extension configurations. The search is performed against
+    https://knowledge-base.rossum.ai/docs.
+
+    Args:
+        query: Search query. Be specific - include extension names, error messages,
+        or feature names. Examples: 'document splitting extension',
+        'duplicate handling configuration', 'webhook timeout error'.
+        user_query: The original user question for context. Pass the user's full
+        question here so Opus can tailor the analysis to address their specific needs.
+
+    Returns:
+        JSON with search results containing title, URL, and snippet for each result.
+    """
+    if not query:
+        return json.dumps({"status": "error", "message": "Query is required"})
+    return _search_knowledge_base(query, user_query=user_query)
 
 
 def _strip_imports(code: str) -> str:
@@ -409,7 +439,25 @@ OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
 # System prompt for the hook debugging sub-agent
 _HOOK_DEBUG_SYSTEM_PROMPT = """You are an expert Rossum hook debugger. Your role is to fetch hook code and annotation data, \
-analyze the code, identify issues, and FIX THEM by iteratively testing with the evaluate_python_hook tool.
+analyze the code, identify ALL issues, and FIX THEM by iteratively testing with the evaluate_python_hook tool.
+
+## CRITICAL: Investigate ALL Issues
+
+**DO NOT stop at the first issue you find.** You MUST:
+- Continue investigating after fixing each issue
+- Look for multiple problems in the code (there are often several)
+- Check for edge cases, missing error handling, and potential runtime failures
+- Analyze the ENTIRE codebase, not just the first error location
+- Keep iterating until the code handles ALL scenarios correctly
+
+Common categories of issues to check:
+- Syntax errors and typos
+- Missing null/empty value checks
+- Type conversion errors (especially Decimal)
+- Missing fields or incorrect field access
+- Logic errors in calculations
+- Edge cases (empty lists, missing data, zero values)
+- Return value format errors
 
 ## Available Tools
 
@@ -418,6 +466,7 @@ You have access to:
 2. `get_annotation` - Fetch annotation data by ID. Use `content` for datapoints.
 3. `get_schema` - Optionally fetch schema by ID.
 4. `evaluate_python_hook` - Execute hook code against annotation data.
+5. `web_search` - Search Rossum Knowledge Base for documentation on extensions, hooks, and best practices that cannot be obtained from the API.
 
 ## Rossum Hook Context
 
@@ -447,31 +496,32 @@ In this debugging environment:
 - **Missing fields**: Always check if fields exist before accessing them.
 - **Type mismatches**: Field values are often strings, not numbers. Convert explicitly.
 
-## Your Task - ITERATIVE DEBUGGING
+## Your Task - EXHAUSTIVE ITERATIVE DEBUGGING
 
 You MUST follow this process:
 
 1. **Fetch data**: Call `get_hook` and `get_annotation` to get the hook code and annotation data.
-2. **Analyze**: Understand what the hook is supposed to do.
+2. **Analyze thoroughly**: Understand what the hook is supposed to do. Look for ALL potential issues, not just the first one.
 3. **Execute**: Use `evaluate_python_hook` tool to run the code and see the actual error.
-4. **Fix**: Based on the execution result, write corrected code.
+4. **Fix ALL issues**: Based on the execution result AND your analysis, fix all problems you identified.
 5. **Verify**: Use `evaluate_python_hook` again to confirm your fix works (status="success").
-6. **Repeat**: If still failing, iterate until you have working code.
+6. **Continue investigating**: Even after getting "success", review the code for other potential issues, edge cases, and improvements.
+7. **Repeat**: Keep iterating until the code is robust and handles all scenarios.
 
 IMPORTANT: You MUST call `evaluate_python_hook` at least once to verify your fix works before providing \
 your final answer. Do not just analyze - actually execute the code!
 
 ## Final Output Format
 
-After your iterative debugging, provide:
+After your exhaustive debugging, provide:
 
 1. **What the hook does**: Brief explanation of the hook's intended purpose.
-2. **Issues found**: List specific problems you discovered through execution.
-3. **Root cause**: Explain why the error(s) occurred based on actual execution results.
-4. **Fixed code**: The complete, working code that you have VERIFIED by executing it.
+2. **ALL issues found**: List EVERY problem you discovered through analysis and execution (not just the first one).
+3. **Root causes**: Explain why each error occurred based on actual execution results.
+4. **Fixed code**: The complete, working code that you have VERIFIED by executing it and that addresses ALL issues.
 5. **Verification**: Show the successful execution result proving your fix works.
 
-Be concise but thorough. Your primary goal is to provide WORKING code, verified by actual execution."""
+Be thorough and exhaustive. Your primary goal is to provide ROBUST, WORKING code that handles all edge cases, verified by actual execution."""
 
 
 # Tool definitions for Opus sub-agent
@@ -546,8 +596,332 @@ _EVALUATE_HOOK_TOOL = {
     },
 }
 
+# Knowledge base search tool definition
+_SEARCH_KNOWLEDGE_BASE_TOOL: dict[str, Any] = {
+    "name": "search_knowledge_base",
+    "description": (
+        "Search the Rossum Knowledge Base (https://knowledge-base.rossum.ai/docs) "
+        "for documentation about extensions, hooks, configurations, and best practices. "
+        "Use this tool to find information about Rossum features, troubleshoot errors, "
+        "and understand extension configurations."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": (
+                    "Search query. Be specific - include extension names, error messages, "
+                    "or feature names. Examples: 'document splitting extension', "
+                    "'duplicate handling configuration', 'webhook timeout error'"
+                ),
+            },
+        },
+        "required": ["query"],
+    },
+}
+
 # All tools available to the Opus sub-agent
-_OPUS_TOOLS = [_GET_HOOK_TOOL, _GET_ANNOTATION_TOOL, _GET_SCHEMA_TOOL, _EVALUATE_HOOK_TOOL]
+_OPUS_TOOLS: list[dict[str, Any]] = [
+    _GET_HOOK_TOOL,
+    _GET_ANNOTATION_TOOL,
+    _GET_SCHEMA_TOOL,
+    _EVALUATE_HOOK_TOOL,
+    _SEARCH_KNOWLEDGE_BASE_TOOL,
+]
+
+
+class WebSearchError(Exception):
+    """Raised when web search fails."""
+
+    pass
+
+
+_WEB_SEARCH_NO_RESULTS = "__NO_RESULTS__"
+
+# System prompt for the web search analysis sub-agent
+_WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT = """You are a Rossum documentation expert. Your role is to analyze search results from the Rossum Knowledge Base and extract the most relevant information.
+
+## Your Task
+
+Given search results from the Rossum Knowledge Base, you must:
+
+1. **Analyze the results**: Identify which results are most relevant to the user's query
+2. **Extract key information**: Pull out the specific technical details, code examples, and JSON configurations
+3. **Synthesize a response**: Provide a clear, actionable summary that directly addresses the user's needs
+
+## Output Format
+
+Your response should be structured and concise:
+
+1. **Most Relevant Information**: The key facts, JSON configurations, or code examples that answer the query
+2. **Implementation Details**: Specific steps or code patterns if applicable
+3. **Configuration Details**: Specific configuration details, i.e. file datatypes, singlevalue vs multivalue datapoints must be returned as bold text
+4. **Related Topics**: Brief mention of related documentation pages for further reading
+
+IMPORTANT: You must return exact configuration requirements and mention they are CRITICAL!.
+
+Be direct and technical. Focus on actionable information that helps with Rossum hook development, extension configuration, or API usage."""
+
+
+def _call_opus_for_web_search_analysis(query: str, search_results: str, user_query: str | None = None) -> str:
+    """Call Opus model to analyze web search results.
+
+    Args:
+        query: The search query used to find the results.
+        search_results: The raw search results text.
+        user_query: The original user query/question for context (optional).
+
+    Returns:
+        Opus model's analysis of the search results.
+    """
+    try:
+        client = create_bedrock_client()
+
+        user_query_context = ""
+        if user_query and user_query != query:
+            user_query_context = f"""
+## User's Original Question
+
+The user asked: "{user_query}"
+
+Keep this context in mind when analyzing the search results and tailor your response to address the user's specific question.
+
+"""
+
+        user_content = f"""Analyze these Rossum Knowledge Base search results for the query: "{query}"
+{user_query_context}
+## Search Results
+
+{search_results}
+
+## Instructions
+
+Extract and summarize the most relevant information from these search results. Focus on:
+- Specific technical details, configurations, and code examples
+- **Exact schema definition - data types, singlevalue datapoints vs multivalues**
+- Step-by-step instructions if present
+- API endpoints, parameters, and payloads
+- Common patterns and best practices
+
+Provide a clear, actionable summary that a developer can use immediately."""
+
+        response = client.messages.create(
+            model=OPUS_MODEL_ID,
+            max_tokens=4096,
+            temperature=0.25,
+            system=_WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_content}],
+        )
+
+        text_parts = [block.text for block in response.content if hasattr(block, "text")]
+        return "\n".join(text_parts) if text_parts else "No analysis provided"
+
+    except Exception as e:
+        logger.exception("Error calling Opus for web search analysis")
+        return f"Error analyzing search results: {e}\n\nRaw results:\n{search_results}"
+
+
+# Constants for knowledge base search
+_KNOWLEDGE_BASE_DOMAIN = "knowledge-base.rossum.ai"
+_MAX_SEARCH_RESULTS = 5
+_WEBPAGE_FETCH_TIMEOUT = 30
+_JINA_READER_PREFIX = "https://r.jina.ai/"
+
+
+def _fetch_webpage_content(url: str) -> str:
+    """Fetch and extract webpage content using Jina Reader for JS-rendered pages.
+
+    Uses Jina Reader API to render JavaScript content from SPAs like the
+    Rossum knowledge base.
+
+    Args:
+        url: The URL to fetch.
+
+    Returns:
+        Markdown content of the page, or error message if fetch fails.
+    """
+    jina_url = f"{_JINA_READER_PREFIX}{url}"
+    try:
+        response = requests.get(jina_url, timeout=_WEBPAGE_FETCH_TIMEOUT)
+        response.raise_for_status()
+        content = response.text
+        return content[:50000]
+    except requests.RequestException as e:
+        logger.warning(f"Failed to fetch webpage {url} via Jina Reader: {e}")
+        return f"[Failed to fetch content: {e}]"
+
+
+def _search_knowledge_base(query: str, analyze_with_opus: bool = True, user_query: str | None = None) -> str:
+    """Search Rossum Knowledge Base using DDGS metasearch library.
+
+    Args:
+        query: Search query string.
+        analyze_with_opus: Whether to analyze results with Opus sub-agent.
+        user_query: The original user query/question for context (optional).
+
+    Returns:
+        JSON string with analyzed results, raw results, or error message.
+
+    Raises:
+        WebSearchError: If search fails completely.
+    """
+    site_query = f"site:{_KNOWLEDGE_BASE_DOMAIN} {query}"
+    logger.info(f"Searching knowledge base: {site_query}")
+
+    try:
+        with DDGS() as ddgs:
+            raw_results = ddgs.text(site_query, max_results=_MAX_SEARCH_RESULTS)
+    except DDGSException as e:
+        logger.error(f"Knowledge base search failed: {e}")
+        raise WebSearchError(f"Search failed: {e}")
+
+    filtered_results = [r for r in raw_results if _KNOWLEDGE_BASE_DOMAIN in r.get("href", "")][:2]
+
+    results = []
+    for r in filtered_results:
+        url = r.get("href", "")
+        logger.info(f"Fetching full content from: {url}")
+        full_content = _fetch_webpage_content(url)
+        results.append(
+            {
+                "title": r.get("title", ""),
+                "url": url,
+                "content": full_content,
+            }
+        )
+
+    if not results:
+        logger.warning(f"No results found for query: {query}")
+        return json.dumps(
+            {
+                "status": "no_results",
+                "query": query,
+                "message": (
+                    f"No results found in Rossum Knowledge Base for: '{query}'. "
+                    "Try different keywords or check the extension/hook name spelling."
+                ),
+            }
+        )
+
+    logger.info(f"Found {len(results)} results for query: {query}. Sources: {[r['content'] for r in results]}")
+
+    if analyze_with_opus:
+        search_results_text = "\n\n---\n\n".join(
+            f"## {r['title']}\nURL: {r['url']}\n\n{r['content']}" for r in results
+        )
+        logger.info("Analyzing knowledge base results with Opus sub-agent")
+        analyzed = _call_opus_for_web_search_analysis(query, search_results_text, user_query=user_query)
+        return json.dumps(
+            {"status": "success", "query": query, "analysis": analyzed, "source_urls": [r["url"] for r in results]}
+        )
+
+    return json.dumps({"status": "success", "query": query, "results": results})
+
+
+def _extract_web_search_text_from_block(block: Any) -> str | None:
+    """Extract full web search results text from a single web_search_tool_result block.
+
+    Args:
+        block: The response content block to process.
+
+    Returns:
+        Formatted text with full search results, _WEB_SEARCH_NO_RESULTS if search
+        returned empty, or None if not a web search block.
+
+    Raises:
+        WebSearchError: If web search returned an error.
+    """
+    if not (hasattr(block, "type") and block.type == "web_search_tool_result"):
+        return None
+
+    search_results_text = []
+    if hasattr(block, "content") and block.content:
+        for result in block.content:
+            result_type = getattr(result, "type", None)
+
+            if result_type == "web_search_result_error":
+                error_code = getattr(result, "error_code", "unknown")
+                error_message = getattr(result, "message", "Web search failed")
+                logger.error(f"Web search error: code={error_code}, message={error_message}")
+                raise WebSearchError(f"Web search failed: {error_code} - {error_message}")
+
+            if result_type == "web_search_result":
+                title = getattr(result, "title", "")
+                url = getattr(result, "url", "")
+                page_content = getattr(result, "page_content", "")
+                search_results_text.append(f"## {title}\nURL: {url}\n\n{page_content}\n")
+
+    if not search_results_text:
+        logger.warning("Web search returned no results for the query")
+        return _WEB_SEARCH_NO_RESULTS
+
+    return "\n---\n".join(search_results_text)
+
+
+def _extract_web_search_results(
+    block: Any, iteration: int, max_iterations: int, analyze_with_opus: bool = True
+) -> dict[str, Any] | None:
+    """Extract web search results from a web_search_tool_result block for sub-agent.
+
+    Args:
+        block: The response content block to process.
+        iteration: Current iteration number for logging.
+        max_iterations: Maximum iterations for logging.
+        analyze_with_opus: Whether to analyze results with Opus sub-agent.
+
+    Returns:
+        Tool result dict with search results (analyzed or raw), or None if not a web search block.
+    """
+    full_results = _extract_web_search_text_from_block(block)
+    if full_results is None:
+        return None
+
+    if full_results == _WEB_SEARCH_NO_RESULTS:
+        logger.info(f"debug_hook sub-agent [iter {iteration}/{max_iterations}]: web search returned no results")
+        return {
+            "type": "tool_result",
+            "tool_use_id": block.id,
+            "content": "Web search returned no results for the query.",
+        }
+
+    logger.info(f"debug_hook sub-agent [iter {iteration}/{max_iterations}]: processing web search results")
+    _debug_log("Processing web search results")
+
+    if analyze_with_opus:
+        query = getattr(block, "search_query", "Rossum documentation")
+        logger.info(f"debug_hook sub-agent [iter {iteration}/{max_iterations}]: analyzing with Opus sub-agent")
+        _debug_log("Analyzing web search results with Opus")
+        analyzed_results = _call_opus_for_web_search_analysis(query, full_results)
+        content = f"Analyzed Rossum Knowledge Base search results:\n\n{analyzed_results}"
+    else:
+        content = f"Full Rossum Knowledge Base search results:\n\n{full_results}"
+
+    return {
+        "type": "tool_result",
+        "tool_use_id": block.id,
+        "content": content,
+    }
+
+
+def _save_debug_context(iteration: int, max_iterations: int, messages: list[dict[str, Any]]) -> None:
+    """Save agent input context to file for debugging."""
+    try:
+        output_dir = get_session_output_dir()
+        context_file = output_dir / f"debug_hook_context_iter_{iteration}.json"
+        context_data = {
+            "iteration": iteration,
+            "max_iterations": max_iterations,
+            "model": OPUS_MODEL_ID,
+            "max_tokens": 16384,
+            "system_prompt": _HOOK_DEBUG_SYSTEM_PROMPT,
+            "messages": messages,
+            "tools": _OPUS_TOOLS,
+        }
+        context_file.write_text(json.dumps(context_data, indent=2, default=str))
+        logger.info(f"debug_hook sub-agent: saved context to {context_file}")
+    except Exception as e:
+        logger.warning(f"Failed to save debug_hook context: {e}")
 
 
 def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
@@ -567,6 +941,11 @@ def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
             schema_json=tool_input.get("schema_json"),
         )
         return result
+    if tool_name == "search_knowledge_base":
+        query = tool_input.get("query", "")
+        if not query:
+            return json.dumps({"status": "error", "message": "Query is required"})
+        return _search_knowledge_base(query, analyze_with_opus=False)
     if tool_name in ("get_hook", "get_annotation", "get_schema"):
         mcp_result = _call_mcp_tool(tool_name, tool_input)
         return json.dumps(mcp_result, indent=2, default=str) if mcp_result else "No data returned"
@@ -611,6 +990,8 @@ Steps:
                 )
             )
 
+            _save_debug_context(iteration + 1, max_iterations, messages)
+
             response = client.messages.create(
                 model=OPUS_MODEL_ID,
                 max_tokens=16384,
@@ -643,6 +1024,13 @@ Steps:
 
             tool_results: list[dict[str, Any]] = []
             iteration_tool_calls: list[str] = []
+
+            # Process web_search_tool_result blocks - add full results to context
+            for block in response.content:
+                web_result = _extract_web_search_results(block, iteration + 1, max_iterations)
+                if web_result:
+                    tool_results.append(web_result)
+
             for block in response.content:
                 if hasattr(block, "type") and block.type == "tool_use":
                     tool_name = block.name
@@ -757,7 +1145,7 @@ def debug_hook(
     return json.dumps(response, ensure_ascii=False, default=str)
 
 
-INTERNAL_TOOLS: list[BetaTool[..., str]] = [write_file, evaluate_python_hook, debug_hook]
+INTERNAL_TOOLS: list[BetaTool[..., str]] = [write_file, search_knowledge_base, evaluate_python_hook, debug_hook]
 
 
 def get_internal_tools() -> list[dict[str, object]]:
