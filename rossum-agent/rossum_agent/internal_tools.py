@@ -35,7 +35,6 @@ from ddgs import DDGS
 from ddgs.exceptions import DDGSException
 
 from rossum_agent.bedrock_client import create_bedrock_client
-from rossum_agent.utils import get_session_output_dir
 
 if TYPE_CHECKING:
     from anthropic._tools import BetaTool
@@ -116,6 +115,37 @@ def _report_text(text: SubAgentText) -> None:
 _mcp_connection: MCPConnection | None = None
 _mcp_event_loop: asyncio.AbstractEventLoop | None = None
 
+# Module-level output directory for file operations
+# Set by the agent service before running the agent
+# This is needed because ContextVars don't propagate to ThreadPoolExecutor threads
+_output_dir: Path | None = None
+
+
+def set_output_dir(output_dir: Path | None) -> None:
+    """Set the output directory for internal tools.
+
+    This must be called before running the agent to ensure write_file
+    saves files to the correct session-specific directory.
+
+    Args:
+        output_dir: The output directory path, or None to clear.
+    """
+    global _output_dir
+    _output_dir = output_dir
+
+
+def get_output_dir() -> Path:
+    """Get the output directory for internal tools.
+
+    Returns:
+        The configured output directory, or a fallback './outputs' directory.
+    """
+    if _output_dir is not None:
+        return _output_dir
+    fallback = Path("./outputs")
+    fallback.mkdir(exist_ok=True)
+    return fallback
+
 
 def set_mcp_connection(connection: MCPConnection, loop: asyncio.AbstractEventLoop) -> None:
     """Set the MCP connection for use by internal tools.
@@ -164,7 +194,7 @@ def write_file(filename: str, content: str) -> str:
     if not safe_filename:
         return "Error: invalid filename"
 
-    output_dir = get_session_output_dir()
+    output_dir = get_output_dir()
     file_path = output_dir / safe_filename
 
     try:
@@ -919,7 +949,7 @@ def _extract_web_search_results(
 def _save_debug_context(iteration: int, max_iterations: int, messages: list[dict[str, Any]]) -> None:
     """Save agent input context to file for debugging."""
     try:
-        output_dir = get_session_output_dir()
+        output_dir = get_output_dir()
         context_file = output_dir / f"debug_hook_context_iter_{iteration}.json"
         context_data = {
             "iteration": iteration,

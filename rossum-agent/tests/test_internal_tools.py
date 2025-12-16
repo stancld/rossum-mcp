@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -13,11 +13,10 @@ from rossum_agent.internal_tools import (
     execute_internal_tool,
     get_internal_tool_names,
     get_internal_tools,
+    get_output_dir,
+    set_output_dir,
     write_file,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class TestGetInternalTools:
@@ -60,6 +59,32 @@ class TestGetInternalToolNames:
         assert "write_file" in names
 
 
+class TestOutputDir:
+    """Test set_output_dir and get_output_dir functions."""
+
+    def test_set_and_get_output_dir(self, tmp_path: Path):
+        """Test that set_output_dir correctly sets the output directory."""
+        set_output_dir(tmp_path)
+        try:
+            result = get_output_dir()
+            assert result == tmp_path
+        finally:
+            set_output_dir(None)
+
+    def test_get_output_dir_returns_fallback_when_none(self):
+        """Test that get_output_dir returns fallback when not set."""
+        set_output_dir(None)
+        result = get_output_dir()
+        assert result == Path("./outputs")
+
+    def test_set_output_dir_clears_with_none(self, tmp_path: Path):
+        """Test that setting None clears the output directory."""
+        set_output_dir(tmp_path)
+        set_output_dir(None)
+        result = get_output_dir()
+        assert result == Path("./outputs")
+
+
 class TestWriteFileTool:
     """Test write_file tool definition."""
 
@@ -93,12 +118,15 @@ class TestExecuteInternalTool:
 
     def test_executes_write_file(self, tmp_path: Path):
         """Test that execute_internal_tool calls write_file for write_file."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = execute_internal_tool("write_file", {"filename": "test.txt", "content": "Hello World"})
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "test.txt").exists()
-        assert (tmp_path / "test.txt").read_text() == "Hello World"
+            assert "Successfully wrote" in result
+            assert (tmp_path / "test.txt").exists()
+            assert (tmp_path / "test.txt").read_text() == "Hello World"
+        finally:
+            set_output_dir(None)
 
     def test_raises_for_unknown_tool(self):
         """Test that ValueError is raised for unknown tool names."""
@@ -107,10 +135,12 @@ class TestExecuteInternalTool:
 
     def test_handles_missing_arguments(self, tmp_path: Path):
         """Test that missing arguments are handled gracefully."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = execute_internal_tool("write_file", {"filename": "", "content": ""})
-
-        assert "Error" in result
+            assert "Error" in result
+        finally:
+            set_output_dir(None)
 
 
 class TestWriteFile:
@@ -118,106 +148,134 @@ class TestWriteFile:
 
     def test_writes_file_successfully(self, tmp_path: Path):
         """Test successful file write."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("output.txt", "Test content here")
 
-        assert "Successfully wrote" in result
-        assert "17 characters" in result
-        assert (tmp_path / "output.txt").exists()
-        assert (tmp_path / "output.txt").read_text() == "Test content here"
+            assert "Successfully wrote" in result
+            assert "17 characters" in result
+            assert (tmp_path / "output.txt").exists()
+            assert (tmp_path / "output.txt").read_text() == "Test content here"
+        finally:
+            set_output_dir(None)
 
     def test_writes_markdown_file(self, tmp_path: Path):
         """Test writing markdown content."""
         markdown_content = "# Header\n\n- Item 1\n- Item 2\n"
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("report.md", markdown_content)
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "report.md").exists()
-        assert (tmp_path / "report.md").read_text() == markdown_content
+            assert "Successfully wrote" in result
+            assert (tmp_path / "report.md").exists()
+            assert (tmp_path / "report.md").read_text() == markdown_content
+        finally:
+            set_output_dir(None)
 
     def test_returns_error_when_filename_empty(self, tmp_path: Path):
         """Test that empty filename returns error."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("", "Some content")
 
-        assert "Error" in result
-        assert "filename is required" in result
+            assert "Error" in result
+            assert "filename is required" in result
+        finally:
+            set_output_dir(None)
 
     def test_returns_error_when_content_empty(self, tmp_path: Path):
         """Test that empty content returns error."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("test.txt", "")
 
-        assert "Error" in result
-        assert "content is required" in result
+            assert "Error" in result
+            assert "content is required" in result
+        finally:
+            set_output_dir(None)
 
     def test_sanitizes_path_traversal_attempts(self, tmp_path: Path):
         """Test that path traversal attacks are prevented."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("../../../etc/passwd", "malicious content")
 
-        assert "Successfully wrote" in result
-        assert not (tmp_path.parent / "etc" / "passwd").exists()
-        assert (tmp_path / "passwd").exists()
-        assert (tmp_path / "passwd").read_text() == "malicious content"
+            assert "Successfully wrote" in result
+            assert not (tmp_path.parent / "etc" / "passwd").exists()
+            assert (tmp_path / "passwd").exists()
+            assert (tmp_path / "passwd").read_text() == "malicious content"
+        finally:
+            set_output_dir(None)
 
     def test_sanitizes_absolute_path(self, tmp_path: Path):
         """Test that absolute paths are converted to just filename."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("/absolute/path/to/file.txt", "content")
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "file.txt").exists()
+            assert "Successfully wrote" in result
+            assert (tmp_path / "file.txt").exists()
+        finally:
+            set_output_dir(None)
 
     def test_handles_unicode_content(self, tmp_path: Path):
         """Test writing unicode content."""
         unicode_content = "Hello 世界 🌍 مرحبا"
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("unicode.txt", unicode_content)
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "unicode.txt").read_text(encoding="utf-8") == unicode_content
+            assert "Successfully wrote" in result
+            assert (tmp_path / "unicode.txt").read_text(encoding="utf-8") == unicode_content
+        finally:
+            set_output_dir(None)
 
     def test_overwrites_existing_file(self, tmp_path: Path):
         """Test that existing files are overwritten."""
         (tmp_path / "existing.txt").write_text("old content")
 
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("existing.txt", "new content")
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "existing.txt").read_text() == "new content"
+            assert "Successfully wrote" in result
+            assert (tmp_path / "existing.txt").read_text() == "new content"
+        finally:
+            set_output_dir(None)
 
     def test_handles_write_permission_error(self, tmp_path: Path):
         """Test handling of permission errors during write."""
-        with (
-            patch(
-                "rossum_agent.internal_tools.get_session_output_dir",
-                return_value=tmp_path,
-            ),
-            patch("pathlib.Path.write_text", side_effect=PermissionError("Access denied")),
-        ):
-            result = write_file("test.txt", "content")
+        set_output_dir(tmp_path)
+        try:
+            with patch("pathlib.Path.write_text", side_effect=PermissionError("Access denied")):
+                result = write_file("test.txt", "content")
 
-        assert "Error" in result
-        assert "Access denied" in result
+            assert "Error" in result
+            assert "Access denied" in result
+        finally:
+            set_output_dir(None)
 
     def test_returns_error_for_invalid_filename(self, tmp_path: Path):
         """Test that invalid filenames (just path components) return error."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file(".", "content")
 
-        assert "Error" in result
-        assert "invalid filename" in result.lower()
+            assert "Error" in result
+            assert "invalid filename" in result.lower()
+        finally:
+            set_output_dir(None)
 
     def test_handles_special_characters_in_filename(self, tmp_path: Path):
         """Test handling of special characters in filename."""
-        with patch("rossum_agent.internal_tools.get_session_output_dir", return_value=tmp_path):
+        set_output_dir(tmp_path)
+        try:
             result = write_file("file with spaces.txt", "content")
 
-        assert "Successfully wrote" in result
-        assert (tmp_path / "file with spaces.txt").exists()
+            assert "Successfully wrote" in result
+            assert (tmp_path / "file with spaces.txt").exists()
+        finally:
+            set_output_dir(None)
 
 
 class TestEvaluatePythonHookTool:

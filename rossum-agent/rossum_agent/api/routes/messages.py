@@ -71,15 +71,21 @@ def _format_sse_event(event_type: str, data: str) -> str:
 
 def _yield_file_events(output_dir: Path | None, chat_id: str) -> Iterator[str]:
     """Yield SSE events for created files in the output directory."""
+    logger.info(f"_yield_file_events called with output_dir={output_dir}, chat_id={chat_id}")
     if output_dir is None:
+        logger.info("output_dir is None, returning")
         return
     if output_dir.exists():
+        logger.info(f"output_dir exists, listing files: {list(output_dir.iterdir())}")
         for file_path in output_dir.iterdir():
             if file_path.is_file():
+                logger.info(f"Yielding file_created event for {file_path.name}")
                 file_event = FileCreatedEvent(
                     filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
                 )
                 yield _format_sse_event("file_created", file_event.model_dump_json())
+    else:
+        logger.info(f"output_dir {output_dir} does not exist")
 
 
 @router.post(

@@ -19,6 +19,7 @@ from rossum_agent.internal_tools import (
     SubAgentProgress,
     SubAgentText,
     set_mcp_connection,
+    set_output_dir,
     set_progress_callback,
     set_text_callback,
 )
@@ -158,6 +159,7 @@ class AgentService:
 
         self._output_dir = create_session_output_dir()
         set_session_output_dir(self._output_dir)
+        set_output_dir(self._output_dir)
         logger.info(f"Created session output directory: {self._output_dir}")
 
         self._sub_agent_queue = asyncio.Queue(maxsize=100)
@@ -228,6 +230,7 @@ class AgentService:
         finally:
             set_progress_callback(None)
             set_text_callback(None)
+            set_output_dir(None)
             self._sub_agent_queue = None
 
     def _build_user_content(self, prompt: str, images: list[ImageContent] | None) -> UserContent:
