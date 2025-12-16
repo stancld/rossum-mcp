@@ -311,6 +311,18 @@ Example function hook structure:
 }
 ```"""
 
+CONVERSATION_GUIDELINES = """
+# Conversation Guidelines
+
+## Multi-turn Conversations
+
+When responding in ongoing conversations:
+- **Focus on the current question** - Address what the user is asking now, not what was already answered
+- **Avoid repetition** - Do not restate information you provided in previous responses unless the user explicitly asks for a summary
+- **Build on prior context** - Reference previous answers briefly if relevant, but don't repeat them
+- **Be incremental** - If the user asks a follow-up, provide only the new/additional information
+- **Stay concise** - The user already has context from earlier messages; don't re-explain what they already know"""
+
 OUTPUT_FORMATTING = """
 # Output Formatting Standards
 
@@ -499,6 +511,7 @@ def get_shared_prompt_sections() -> str:
             CRITICAL_REQUIREMENTS,
             DOCUMENTATION_WORKFLOWS,
             CONFIGURATION_WORKFLOWS,
+            CONVERSATION_GUIDELINES,
             OUTPUT_FORMATTING,
         ]
     )
