@@ -7,7 +7,10 @@ for representing tool calls, results, and agent steps.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any  # noqa: TC003 - Any used in dataclass field type hints at runtime
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from rossum_agent.internal_tools import SubAgentProgress
 
 
 @dataclass
@@ -49,6 +52,7 @@ class AgentStep:
     output_tokens: int = 0
     current_tool: str | None = None
     tool_progress: tuple[int, int] | None = None
+    sub_agent_progress: SubAgentProgress | None = None
 
     def has_tool_calls(self) -> bool:
         """Check if this step contains tool calls."""

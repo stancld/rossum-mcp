@@ -7,10 +7,7 @@ The prompt is adapted for use with Anthropic's native tool use API.
 
 from __future__ import annotations
 
-from rossum_agent.prompts.base_prompt import (
-    ROSSUM_EXPERT_INTRO,
-    get_shared_prompt_sections,
-)
+from rossum_agent.prompts.base_prompt import ROSSUM_EXPERT_INTRO, get_shared_prompt_sections
 
 TOOL_USE_INTRO = """
 You have access to tools for interacting with the Rossum API. Use these tools to:

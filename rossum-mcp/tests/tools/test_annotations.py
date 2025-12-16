@@ -246,10 +246,9 @@ class TestListAnnotations:
         list_annotations = mock_mcp._tools["list_annotations"]
         result = await list_annotations(queue_id=100, status="confirmed,to_review")
 
-        assert result.count == 2
-        assert len(result.results) == 2
-        assert result.results[0].id == 1
-        assert result.results[1].id == 2
+        assert len(result) == 2
+        assert result[0].id == 1
+        assert result[1].id == 2
 
     @pytest.mark.asyncio
     async def test_list_annotations_no_status_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -267,8 +266,8 @@ class TestListAnnotations:
         list_annotations = mock_mcp._tools["list_annotations"]
         result = await list_annotations(queue_id=100, status=None)
 
-        assert result.count == 0
-        assert result.results == []
+        assert len(result) == 0
+        assert result == []
 
 
 @pytest.mark.unit

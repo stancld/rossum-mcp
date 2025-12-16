@@ -17,6 +17,7 @@ dependencies = [
     "anthropic>=0.75.0",
     "boto3>=1.0",
     "cryptography>=41.0",
+    "ddgs>=9.9.0",
     "elasticsearch>=9.0",
     "fastmcp>=2.13.0",
     "jinja2>=3.0",
@@ -86,6 +87,7 @@ all = [
 ]
 
 [tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs" }
 rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
 
 [tool.setuptools.package-data]

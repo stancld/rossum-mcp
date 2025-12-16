@@ -172,12 +172,39 @@ class ChatResponse:
         if step.current_tool and step.tool_progress:
             current, total = step.tool_progress
             progress_text = f"🔧 Running tool {current}/{total}: **{step.current_tool}**..."
+
+            if step.sub_agent_progress:
+                sub_progress = step.sub_agent_progress
+                sub_agent_text = self._format_sub_agent_progress(sub_progress)
+                progress_text = f"{progress_text}\n\n{sub_agent_text}"
+
             if step.thinking:
                 self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n\n{progress_text}\n"
             else:
                 self.current_step_markdown = f"#### Step {step.step_number}\n\n{progress_text}\n"
         elif step.thinking:
             self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n"
+
+    def _format_sub_agent_progress(self, progress: Any) -> str:
+        """Format sub-agent progress for display."""
+        iteration = progress.iteration
+        max_iterations = progress.max_iterations
+        status = progress.status
+        current_tool = progress.current_tool
+        tool_calls = progress.tool_calls
+
+        lines = [f"> 🤖 **Sub-agent ({progress.tool_name})** - Iteration {iteration}/{max_iterations}"]
+
+        if status == "thinking":
+            lines.append("> ⏳ _Thinking..._")
+        elif status == "running_tool" and current_tool:
+            lines.append(f"> 🔧 Running: `{current_tool}`")
+            if tool_calls:
+                lines.append(f"> Tools this iteration: {', '.join(f'`{t}`' for t in tool_calls)}")
+        elif status == "completed":
+            lines.append("> ✅ _Completed_")
+
+        return "\n".join(lines)
 
     def _process_completed_step(self, step: AgentStep) -> None:
         """Process a completed step with full content."""

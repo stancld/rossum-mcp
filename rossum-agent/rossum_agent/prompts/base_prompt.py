@@ -79,6 +79,27 @@ To find a datapoint in annotation content, traverse the nested structure looking
 DOCUMENTATION_WORKFLOWS = """
 # Documentation & Analysis Workflows
 
+## MANDATORY: Knowledge Base Research with search_knowledge_base
+
+**The `search_knowledge_base` tool searches the Rossum Knowledge Base.** When you need to "search the Knowledge Base" or "check documentation", you MUST call the `search_knowledge_base` tool. There is no other way to access Rossum documentation.
+
+**You MUST use the `search_knowledge_base` tool when analyzing hooks, extensions, or rules.** This is NOT optional.
+
+**How to use search_knowledge_base:**
+- Call `search_knowledge_base` with a search query - it searches https://knowledge-base.rossum.ai/docs
+- Focus queries on Rossum-specific topics: extension names, error messages, configuration options
+- Example queries:
+  - "document splitting extension configuration"
+  - "serverless function hook annotation_content.initialize event"
+  - "automation thresholds best practices"
+
+**When to search (MANDATORY):**
+1. Before explaining non-function hook/extension functionality - search for official documentation
+2. When debugging hook issues - search for known issues and solutions
+3. When configuring hooks - search for configuration examples and best practices
+
+Use searches liberally to ensure accurate information.
+
 ## Explaining Hook/Extension/Rule Functionality
 
 When asked to explain hook, extension, or rule functionality, provide a clear, well-organized explanation that covers:
@@ -145,20 +166,63 @@ When analyzing rules:
 
 ## Debugging Workflows
 
+### Knowledge Base Research (MANDATORY)
+
+**When investigating hook or extension issues, you MUST use `search_knowledge_base` first:**
+- Use the `search_knowledge_base` tool with queries like "[extension name] configuration" or "[error message]"
+- Use ALL configuration-related information in your reasoning
+- Search for the specific extension name, error message, or behavior you're investigating
+- The Knowledge Base contains official documentation on extension configuration, common issues, and best practices
+- This step is REQUIRED before attempting to debug code or configuration
+
 Investigation priority order:
-1. **Configuration issues** (hooks, schemas, rules) - most common
-2. **Field ID mismatches** - check schema_id vs annotation content
-3. **Trigger event misconfiguration** - verify correct events
-4. **Automation thresholds** - check queue and field-level settings
-5. **External service failures** - webhooks, integrations
+1. **Search Rossum Knowledge Base** - for official documentation and known issues
+2. **Configuration issues** (hooks, schemas, rules) - most common
+3. **Field ID mismatches** - check schema_id vs annotation content
+4. **Trigger event misconfiguration** - verify correct events
+5. **Automation thresholds** - check queue and field-level settings
+6. **External service failures** - webhooks, integrations
 
 Debugging checklist:
+- Check knowledge base if more information about the hook is available
 - Verify hook is active and attached to correct queue
 - Check trigger events match the workflow stage
 - Validate field IDs exist in schema
 - Review hook code for syntax/logic errors
 - Check automation_level and score_threshold settings
 - **Parent-child relations can be chained** - when debugging, check children of children (nested relationships) as issues may propagate through the chain
+- **Schema compatibility for extensions** - search the knowledge base for extension schema requirements, then verify the schema matches (correct **data types**, **singlevalue vs multivalue datapoint**, required fields exist)
+
+### Hook Code Debugging with Opus
+
+**MANDATORY**: When debugging Python hook code (function hooks), you MUST use the `debug_hook` tool. Do NOT attempt to debug hook code yourself - always delegate to the Opus sub-agent.
+
+**CRITICAL: Investigate ALL Issues**
+- DO NOT stop at the first issue found - there are often multiple problems
+- The Opus sub-agent will exhaustively analyze the code for ALL potential issues
+- Continue investigating even after fixing one error - look for edge cases, missing error handling, and other problems
+- The goal is robust, production-ready code that handles all scenarios
+
+The `debug_hook` tool:
+1. Spawns an Opus-based debugging sub-agent with deep reasoning capabilities
+2. Opus fetches the hook code and annotation data automatically
+3. Opus exhaustively analyzes the code for ALL issues (not just the first one)
+4. Opus iteratively tests fixes until the code works correctly for all cases
+5. Returns detailed analysis with verified, working code that addresses ALL issues found
+
+**CRITICAL: Trust and Apply Opus Results**
+- When Opus returns analysis and fixed code, you MUST trust its findings and apply them
+- DO NOT second-guess or re-analyze what Opus has already thoroughly investigated
+- DO NOT simplify or modify the fixed code Opus provides - use it exactly as returned
+- Opus has deep reasoning capabilities and has already verified the solution works
+- Your job after receiving Opus results is to present them clearly to the user and help apply the fix, NOT to re-do the analysis
+
+**Simple usage**: Just pass the IDs - the sub-agent fetches everything itself:
+```
+debug_hook(hook_id="12345", annotation_id="67890")
+```
+
+You do NOT need to call `get_hook` or `get_annotation` first - the Opus sub-agent will do that.
 
 **Understanding Relations vs Document Relations:**
 - **Relations** (`get_relation`, `list_relations`): Links between annotations created by Rossum workflow actions
@@ -247,8 +311,31 @@ Example function hook structure:
 }
 ```"""
 
+CONVERSATION_GUIDELINES = """
+# Conversation Guidelines
+
+## Multi-turn Conversations
+
+When responding in ongoing conversations:
+- **Focus on the current question** - Address what the user is asking now, not what was already answered
+- **Avoid repetition** - Do not restate information you provided in previous responses unless the user explicitly asks for a summary
+- **Build on prior context** - Reference previous answers briefly if relevant, but don't repeat them
+- **Be incremental** - If the user asks a follow-up, provide only the new/additional information
+- **Stay concise** - The user already has context from earlier messages; don't re-explain what they already know"""
+
 OUTPUT_FORMATTING = """
 # Output Formatting Standards
+
+## Response Length
+
+**Match response length to the question complexity:**
+- **Simple questions** (counts, yes/no, single facts): Give direct, concise answers
+  - "How many hooks are attached?" → "5 hooks"
+  - "Is this hook active?" → "Yes, it's active"
+  - "What's the queue ID?" → "12345"
+- **Detailed questions** (explain, document, analyze): Provide comprehensive responses with structure and diagrams
+
+Only elaborate when the user explicitly asks for details, explanation, or documentation.
 
 ## Document Structure
 
@@ -424,6 +511,7 @@ def get_shared_prompt_sections() -> str:
             CRITICAL_REQUIREMENTS,
             DOCUMENTATION_WORKFLOWS,
             CONFIGURATION_WORKFLOWS,
+            CONVERSATION_GUIDELINES,
             OUTPUT_FORMATTING,
         ]
     )

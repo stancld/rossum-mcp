@@ -437,3 +437,161 @@ class TestAgentServiceBuildUserContent:
         result = service._build_user_content("Hello", [])
         assert result == "Hello"
         assert isinstance(result, str)
+
+
+class TestAgentServiceBuildUpdatedHistoryWithImages:
+    """Tests for build_updated_history with images."""
+
+    def test_build_history_with_images(self):
+        """Test building history with images included."""
+        service = AgentService()
+        existing = [{"role": "user", "content": "Previous message"}]
+        images = [ImageContent(media_type="image/png", data="aGVsbG8=")]
+
+        updated = service.build_updated_history(
+            existing_history=existing,
+            user_prompt="Analyze this image",
+            final_response="Analysis complete",
+            images=images,
+        )
+
+        assert len(updated) == 3
+        assert updated[0] == {"role": "user", "content": "Previous message"}
+        assert isinstance(updated[1]["content"], list)
+        assert len(updated[1]["content"]) == 2
+        assert updated[1]["content"][0]["type"] == "image"
+        assert updated[1]["content"][0]["source"]["data"] == "aGVsbG8="
+        assert updated[1]["content"][1]["type"] == "text"
+        assert updated[1]["content"][1]["text"] == "Analyze this image"
+        assert updated[2] == {"role": "assistant", "content": "Analysis complete"}
+
+    def test_build_history_without_images(self):
+        """Test building history without images returns text-only content."""
+        service = AgentService()
+        existing = []
+
+        updated = service.build_updated_history(
+            existing_history=existing, user_prompt="Text only", final_response="Response", images=None
+        )
+
+        assert len(updated) == 2
+        assert updated[0] == {"role": "user", "content": "Text only"}
+
+
+class TestAgentServiceParseStoredContent:
+    """Tests for _parse_stored_content method."""
+
+    def test_parse_string_content(self):
+        """Test parsing string content returns string."""
+        service = AgentService()
+        result = service._parse_stored_content("Hello, world!")
+        assert result == "Hello, world!"
+
+    def test_parse_multimodal_content(self):
+        """Test parsing multimodal content with images and text."""
+        service = AgentService()
+        stored_content = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": "aGVsbG8=",
+                },
+            },
+            {"type": "text", "text": "Analyze this"},
+        ]
+
+        result = service._parse_stored_content(stored_content)
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["type"] == "image"
+        assert result[0]["source"]["type"] == "base64"
+        assert result[0]["source"]["media_type"] == "image/png"
+        assert result[0]["source"]["data"] == "aGVsbG8="
+        assert result[1]["type"] == "text"
+        assert result[1]["text"] == "Analyze this"
+
+    def test_parse_empty_list_returns_empty_string(self):
+        """Test parsing empty list returns empty string."""
+        service = AgentService()
+        result = service._parse_stored_content([])
+        assert result == ""
+
+    def test_parse_unknown_block_types_ignored(self):
+        """Test that unknown block types are ignored."""
+        service = AgentService()
+        stored_content = [
+            {"type": "unknown", "data": "something"},
+            {"type": "text", "text": "Valid text"},
+        ]
+
+        result = service._parse_stored_content(stored_content)
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["type"] == "text"
+
+
+class TestAgentServiceRestoreConversationHistoryWithImages:
+    """Tests for _restore_conversation_history with multimodal content."""
+
+    def test_restore_multimodal_user_message(self):
+        """Test restoring user messages with images."""
+        service = AgentService()
+        mock_agent = MagicMock()
+
+        history = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": "image/png", "data": "aGVsbG8="},
+                    },
+                    {"type": "text", "text": "What's in this image?"},
+                ],
+            },
+            {"role": "assistant", "content": "I see a document."},
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        mock_agent.add_user_message.assert_called_once()
+        call_args = mock_agent.add_user_message.call_args[0][0]
+        assert isinstance(call_args, list)
+        assert len(call_args) == 2
+        assert call_args[0]["type"] == "image"
+        assert call_args[1]["type"] == "text"
+        mock_agent.add_assistant_message.assert_called_once_with("I see a document.")
+
+    def test_restore_mixed_text_and_multimodal_messages(self):
+        """Test restoring a mix of text-only and multimodal messages."""
+        service = AgentService()
+        mock_agent = MagicMock()
+
+        history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "img1"}},
+                    {"type": "text", "text": "What's this?"},
+                ],
+            },
+            {"role": "assistant", "content": "That's a chart."},
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        assert mock_agent.add_user_message.call_count == 2
+        assert mock_agent.add_assistant_message.call_count == 2
+
+        first_call = mock_agent.add_user_message.call_args_list[0][0][0]
+        assert first_call == "Hello"
+
+        second_call = mock_agent.add_user_message.call_args_list[1][0][0]
+        assert isinstance(second_call, list)
+        assert len(second_call) == 2

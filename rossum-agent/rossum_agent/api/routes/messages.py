@@ -18,6 +18,8 @@ from rossum_agent.api.models.schemas import (
     MessageRequest,
     StepEvent,
     StreamDoneEvent,
+    SubAgentProgressEvent,
+    SubAgentTextEvent,
 )
 from rossum_agent.api.services.agent_service import (
     AgentService,  # noqa: TC001 - Required at runtime for FastAPI Depends()
@@ -28,6 +30,7 @@ from rossum_agent.api.services.chat_service import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,30 @@ def get_agent_service_dep() -> AgentService:
     if _get_agent_service is None:
         raise RuntimeError("Agent service getter not configured")
     return _get_agent_service()
+
+
+def _format_sse_event(event_type: str, data: str) -> str:
+    """Format an SSE event string."""
+    return f"event: {event_type}\ndata: {data}\n\n"
+
+
+def _yield_file_events(output_dir: Path | None, chat_id: str) -> Iterator[str]:
+    """Yield SSE events for created files in the output directory."""
+    logger.info(f"_yield_file_events called with output_dir={output_dir}, chat_id={chat_id}")
+    if output_dir is None:
+        logger.info("output_dir is None, returning")
+        return
+    if output_dir.exists():
+        logger.info(f"output_dir exists, listing files: {list(output_dir.iterdir())}")
+        for file_path in output_dir.iterdir():
+            if file_path.is_file():
+                logger.info(f"Yielding file_created event for {file_path.name}")
+                file_event = FileCreatedEvent(
+                    filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
+                )
+                yield _format_sse_event("file_created", file_event.model_dump_json())
+    else:
+        logger.info(f"output_dir {output_dir} does not exist")
 
 
 @router.post(
@@ -117,34 +144,33 @@ async def send_message(
             ):
                 if isinstance(event, StreamDoneEvent):
                     done_event = event
+                elif isinstance(event, SubAgentProgressEvent):
+                    yield _format_sse_event("sub_agent_progress", event.model_dump_json())
+                elif isinstance(event, SubAgentTextEvent):
+                    yield _format_sse_event("sub_agent_text", event.model_dump_json())
                 elif isinstance(event, StepEvent):
                     if event.type == "final_answer" and event.content:
                         final_response = event.content
-                    yield f"event: step\ndata: {event.model_dump_json()}\n\n"
+                    yield _format_sse_event("step", event.model_dump_json())
 
         except Exception as e:
             logger.error(f"Error during agent execution: {e}", exc_info=True)
             error_event = StepEvent(type="error", step_number=0, content=str(e), is_final=True)
-            yield f"event: error\ndata: {error_event.model_dump_json()}\n\n"
+            yield _format_sse_event("error", error_event.model_dump_json())
             return
 
         updated_history = agent_service.build_updated_history(
-            existing_history=history, user_prompt=user_prompt, final_response=final_response
+            existing_history=history, user_prompt=user_prompt, final_response=final_response, images=images
         )
         chat_service.save_messages(
             user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir
         )
 
-        if agent_service.output_dir and agent_service.output_dir.exists():
-            for file_path in agent_service.output_dir.iterdir():
-                if file_path.is_file():
-                    file_event = FileCreatedEvent(
-                        filename=file_path.name, url=f"/api/v1/chats/{chat_id}/files/{file_path.name}"
-                    )
-                    yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
+        for sse_event in _yield_file_events(agent_service.output_dir, chat_id):
+            yield sse_event
 
         if done_event:
-            yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
+            yield _format_sse_event("done", done_event.model_dump_json())
 
     return StreamingResponse(
         event_generator(),

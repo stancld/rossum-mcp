@@ -121,8 +121,7 @@ class TestListEngines:
         list_engines = mock_mcp._tools["list_engines"]
         result = await list_engines()
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_list_engines_with_filters(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -141,7 +140,7 @@ class TestListEngines:
         list_engines = mock_mcp._tools["list_engines"]
         result = await list_engines(engine_type="extractor")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_engines.assert_called_once_with(type="extractor")
 
 
@@ -401,8 +400,7 @@ class TestGetEngineFields:
         get_engine_fields = mock_mcp._tools["get_engine_fields"]
         result = await get_engine_fields(engine_id=123)
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
         mock_client.retrieve_engine_fields.assert_called_once_with(engine_id=123)
 
     @pytest.mark.asyncio
@@ -421,5 +419,5 @@ class TestGetEngineFields:
         get_engine_fields = mock_mcp._tools["get_engine_fields"]
         result = await get_engine_fields()
 
-        assert result.count == 0
+        assert len(result) == 0
         mock_client.retrieve_engine_fields.assert_called_once_with(engine_id=None)

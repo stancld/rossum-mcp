@@ -53,6 +53,10 @@ class MemoryStep:
         if self.tool_calls:
             assistant_content: list[dict[str, object]] = []
 
+            # Include thinking text before tool calls (matches Anthropic API format)
+            if self.thinking:
+                assistant_content.append({"type": "text", "text": self.thinking})
+
             for tc in self.tool_calls:
                 assistant_content.append({"type": "tool_use", "id": tc.id, "name": tc.name, "input": tc.arguments})
 

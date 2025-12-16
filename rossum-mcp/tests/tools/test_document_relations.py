@@ -115,8 +115,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations()
 
-        assert result.count == 2
-        assert len(result.results) == 2
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_list_document_relations_with_type_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -135,7 +134,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(type="export")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_document_relations.assert_called_once_with(type="export")
 
     @pytest.mark.asyncio
@@ -157,7 +156,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(annotation=500)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_document_relations.assert_called_once_with(annotation=500)
 
     @pytest.mark.asyncio
@@ -177,7 +176,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(documents=700)
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_document_relations.assert_called_once_with(documents=700)
 
     @pytest.mark.asyncio
@@ -197,7 +196,7 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations(key="specific_key")
 
-        assert result.count == 1
+        assert len(result) == 1
         mock_client.list_document_relations.assert_called_once_with(key="specific_key")
 
     @pytest.mark.asyncio
@@ -216,5 +215,5 @@ class TestListDocumentRelations:
         list_document_relations = mock_mcp._tools["list_document_relations"]
         result = await list_document_relations()
 
-        assert result.count == 0
-        assert result.results == []
+        assert len(result) == 0
+        assert result == []

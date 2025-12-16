@@ -5,24 +5,17 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.relation import Relation, RelationType
+from rossum_api.models.relation import (
+    Relation,  # noqa: TC002 - needed at runtime for FastMCP
+    RelationType,  # noqa: TC002 - needed at runtime for FastMCP
+)
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
-
-
-class RelationList(BaseModel):
-    """Response model for list_relations."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[Relation]
 
 
 def register_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
@@ -45,7 +38,7 @@ def register_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         parent: int | None = None,
         key: str | None = None,
         annotation: int | None = None,
-    ) -> RelationList:
+    ) -> list[Relation]:
         """List all relations with optional filters."""
         logger.debug(f"Listing relations: id={id}, type={type}, parent={parent}, key={key}, annotation={annotation}")
         filters: dict[str, int | str] = {}
@@ -60,5 +53,4 @@ def register_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         if annotation is not None:
             filters["annotation"] = annotation
 
-        relations_list = [relation async for relation in client.list_relations(**filters)]  # type: ignore[arg-type]
-        return RelationList(count=len(relations_list), results=relations_list)
+        return [relation async for relation in client.list_relations(**filters)]  # type: ignore[arg-type]

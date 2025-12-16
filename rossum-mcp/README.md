@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-32-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-34-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -50,6 +50,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **list_hook_logs**: List hook execution logs for debugging and monitoring
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
 
@@ -115,7 +116,7 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Queues:** `get_queue`, `get_queue_schema`, `get_queue_engine`
 - **Schemas:** `get_schema`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
-- **Hooks:** `get_hook`, `list_hooks`
+- **Hooks:** `get_hook`, `list_hooks`, `list_hook_logs`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
 - **Document Relations:** `get_document_relation`, `list_document_relations`
@@ -686,6 +687,75 @@ create_hook(
     config={"url": "https://example.com/validate"},
     secret="webhook_secret_123"
 )
+```
+
+#### list_hook_logs
+
+Lists hook execution logs for debugging, monitoring performance, and troubleshooting errors. Logs are retained for 7 days and at most 100 logs are returned per call.
+
+**Parameters:**
+- `hook_id` (integer, optional): Filter by hook ID
+- `queue_id` (integer, optional): Filter by queue ID
+- `annotation_id` (integer, optional): Filter by annotation ID
+- `email_id` (integer, optional): Filter by email ID
+- `log_level` (string, optional): Filter by log level - 'INFO', 'ERROR', or 'WARNING'
+- `status` (string, optional): Filter by execution status
+- `status_code` (integer, optional): Filter by HTTP status code
+- `request_id` (string, optional): Filter by request ID
+- `timestamp_before` (string, optional): ISO 8601 timestamp, filter logs triggered before this time
+- `timestamp_after` (string, optional): ISO 8601 timestamp, filter logs triggered after this time
+- `start_before` (string, optional): ISO 8601 timestamp, filter logs started before this time
+- `start_after` (string, optional): ISO 8601 timestamp, filter logs started after this time
+- `end_before` (string, optional): ISO 8601 timestamp, filter logs ended before this time
+- `end_after` (string, optional): ISO 8601 timestamp, filter logs ended after this time
+- `search` (string, optional): Full-text search across log messages
+- `page_size` (integer, optional): Number of results per page (default 100, max 100)
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "log_level": "INFO",
+      "action": "initialize",
+      "event": "annotation_content",
+      "request_id": "abc123",
+      "organization_id": 100,
+      "hook_id": 12345,
+      "hook_type": "function",
+      "queue_id": 200,
+      "annotation_id": 300,
+      "message": "Hook executed successfully",
+      "start": "2024-01-01T00:00:00Z",
+      "end": "2024-01-01T00:00:01Z",
+      "status": "success",
+      "status_code": 200,
+      "timestamp": "2024-01-01T00:00:00Z",
+      "uuid": "uuid-here"
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all logs for a specific hook
+logs = list_hook_logs(hook_id=12345)
+
+# List error logs only
+error_logs = list_hook_logs(log_level="ERROR")
+
+# List logs for a specific annotation
+annotation_logs = list_hook_logs(annotation_id=300)
+
+# Search logs by message content
+search_logs = list_hook_logs(search="validation failed")
+
+# List logs from the last hour
+from datetime import datetime, timedelta
+one_hour_ago = (datetime.utcnow() - timedelta(hours=1)).isoformat() + "Z"
+recent_logs = list_hook_logs(timestamp_after=one_hour_ago)
 ```
 
 #### create_engine_field

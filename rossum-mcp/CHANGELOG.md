@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file.
 -
 
 
+## [0.3.3] - 2025-12-16
+- Added `list_hook_logs` tool for listing hook execution logs with filters for debugging and monitoring
+- Added `job` as a valid hook type in `create_hook` tool
+- Improved `list_hooks` and `get_hook` tool descriptions
+
+
 ## [0.3.2] - 2025-12-14
 - Fixed allowed sideloads for `get_annotation` [#63](https://github.com/stancld/rossum-mcp/pull/63)
 - Refactored tools to return class instances directly instead of `dataclasses.asdict()` conversions,

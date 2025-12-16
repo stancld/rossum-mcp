@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-mcp"
-version = "0.3.2"
+version = "0.3.3dev"
 description = "MCP server for AI-powered Rossum orchestration: document workflows, debug pipelines automatically, and configure intelligent document processing through natural language."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -55,3 +55,6 @@ all = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["rossum_mcp*"]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}

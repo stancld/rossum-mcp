@@ -126,6 +126,27 @@ class StepEvent(BaseModel):
     is_final: bool = False
 
 
+class SubAgentProgressEvent(BaseModel):
+    """Event emitted during sub-agent (e.g., debug_hook Opus) execution via SSE."""
+
+    type: Literal["sub_agent_progress"] = "sub_agent_progress"
+    tool_name: str
+    iteration: int
+    max_iterations: int
+    current_tool: str | None = None
+    tool_calls: list[str] = Field(default_factory=list)
+    status: Literal["thinking", "running_tool", "completed", "running"] = "running"
+
+
+class SubAgentTextEvent(BaseModel):
+    """Event emitted when sub-agent streams text output via SSE."""
+
+    type: Literal["sub_agent_text"] = "sub_agent_text"
+    tool_name: str
+    text: str
+    is_final: bool = False
+
+
 class StreamDoneEvent(BaseModel):
     """Final event emitted when streaming completes."""
 

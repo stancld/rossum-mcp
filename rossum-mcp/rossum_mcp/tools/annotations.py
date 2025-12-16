@@ -7,8 +7,7 @@ from collections.abc import Sequence  # noqa: TC003 - needed at runtime for Fast
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel
-from rossum_api.models.annotation import Annotation
+from rossum_api.models.annotation import Annotation  # noqa: TC002 - needed at runtime for FastMCP
 
 from rossum_mcp.tools.base import is_read_write_mode
 
@@ -20,15 +19,6 @@ logger = logging.getLogger(__name__)
 
 # Fixed sideloads (critical for well-behaving agent)
 type Sideload = Literal["content", "document", "automation_blocker"]
-
-
-class AnnotationList(BaseModel):
-    """Response model for list_annotations."""
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    count: int
-    results: list[Annotation]
 
 
 def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
@@ -86,14 +76,14 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
     @mcp.tool(description="List annotations for a queue.")
     async def list_annotations(
         queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
-    ) -> AnnotationList:
+    ) -> list[Annotation]:
         """List annotations for a queue with optional filtering."""
         logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}")
         params: dict = {"queue": queue_id, "page_size": 100}
         if status:
             params["status"] = status
         annotations_list: list[Annotation] = [item async for item in client.list_annotations(**params)]
-        return AnnotationList(count=len(annotations_list), results=annotations_list)
+        return annotations_list
 
     @mcp.tool(description="Start annotation (move from 'to_review' to 'reviewing').")
     async def start_annotation(annotation_id: int) -> dict:

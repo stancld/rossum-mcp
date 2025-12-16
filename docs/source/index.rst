@@ -43,7 +43,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-The MCP server provides **32 tools** organized into six categories:
+The MCP server provides **34 tools** organized into six categories:
 
 **Document Processing**
 
@@ -80,6 +80,7 @@ The MCP server provides **32 tools** organized into six categories:
 * **get_hook** - Get hook/extension details
 * **list_hooks** - List webhooks and extensions
 * **create_hook** - Create webhooks or serverless function hooks
+* **list_hook_logs** - List hook execution logs for debugging and monitoring
 * **get_rule** - Get business rule details
 * **list_rules** - List business rules with trigger conditions and actions
 
@@ -94,7 +95,9 @@ The MCP server provides **32 tools** organized into six categories:
 
 The ``rossum_agent`` package provides additional capabilities:
 
+* Knowledge Base search for Rossum documentation with Opus-powered analysis
 * Hook analysis tools for understanding workflow dependencies and execution flow
+* Hook debugging tools with sandboxed code execution and Opus sub-agent analysis
 * Native Claude code execution for file operations, plotting, and data analysis
 * Image input support for attaching images (PNG, JPEG, GIF, WebP) to messages
 * Integration with AI agent frameworks (Anthropic Claude)
