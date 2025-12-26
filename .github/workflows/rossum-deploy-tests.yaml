@@ -1,0 +1,45 @@
+name: Rossum Deploy Tests
+
+# Trigger on push or pull request to master branch
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --extra tests
+        shell: bash
+        working-directory: rossum-deploy
+
+      - name: Run tests
+        run: |
+          uv run coverage run --source=rossum_deploy -m pytest tests -v --junitxml=report.xml
+        shell: bash
+        working-directory: rossum-deploy
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: rossum-deploy-test-report
+          path: rossum-deploy/report.xml
+        if: failure()
+
+      - name: Coverage statistics
+        if: success()
+        run: |
+          uv run coverage xml
+          uv run coverage report
+        shell: bash
+        working-directory: rossum-deploy

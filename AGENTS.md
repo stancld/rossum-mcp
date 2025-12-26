@@ -13,6 +13,7 @@
 - **Python setup**: `pip install -e .`
 - **Run server**: `python server.py`
 - **Run tests**: `pytest` (run all tests), `pytest path/to/test_file.py` (run specific test)
+- **Run rossum-deploy tests**: `cd rossum-deploy && pytest tests/` (ALWAYS run when modifying `rossum-deploy/rossum_deploy/workspace.py`)
 - **Lint & type check**: `pre-commit run --all-files`
 - **Individual tools**: `ruff check --fix`, `ruff format`, `mypy --config-file=mypy.ini`
 
