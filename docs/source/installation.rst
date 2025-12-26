@@ -12,7 +12,7 @@ This repository contains three packages:
 
 * **rossum_mcp**: MCP server for Rossum API interactions
 * **rossum_agent**: AI agent with data manipulation and visualization tools
-* **rossum_deploy**: Minimalistic pull/diff/push deployment for Rossum configurations
+* **rossum_deploy**: Lightweight deployment tool (alternative to `deployment-manager <https://github.com/rossumai/deployment-manager>`_)
 
 Installation Methods
 --------------------
