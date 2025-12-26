@@ -51,7 +51,7 @@ def get_session_output_dir() -> Path:
 
 
 def get_generated_files(output_dir: Path | None = None) -> list[str]:
-    """Get list of files in the outputs directory.
+    """Get list of files in the outputs directory (recursively).
 
     Args:
         output_dir: Optional explicit output directory. If not provided,
@@ -63,11 +63,11 @@ def get_generated_files(output_dir: Path | None = None) -> list[str]:
     if not output_dir.exists():
         return []
 
-    return [str(f.resolve()) for f in output_dir.iterdir() if f.is_file()]
+    return [str(f.resolve()) for f in output_dir.rglob("*") if f.is_file()]
 
 
 def get_generated_files_with_metadata(output_dir: Path | None = None) -> dict[str, float]:
-    """Get files in the outputs directory with their modification times.
+    """Get files in the outputs directory with their modification times (recursively).
 
     Args:
         output_dir: Optional explicit output directory. If not provided,
@@ -79,7 +79,7 @@ def get_generated_files_with_metadata(output_dir: Path | None = None) -> dict[st
     if not output_dir.exists():
         return {}
 
-    return {str(f.resolve()): f.stat().st_mtime for f in output_dir.iterdir() if f.is_file()}
+    return {str(f.resolve()): f.stat().st_mtime for f in output_dir.rglob("*") if f.is_file()}
 
 
 def clear_generated_files(output_dir: Path | None = None) -> None:

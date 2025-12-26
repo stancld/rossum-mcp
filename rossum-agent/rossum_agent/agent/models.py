@@ -66,6 +66,7 @@ class AgentConfig:
     max_tokens: int = 128000
     max_steps: int = 50
     temperature: float = 0.0
+    request_delay: float = 3.0  # Delay in seconds between API calls to avoid rate limiting
 
 
 MAX_TOOL_OUTPUT_LENGTH = 20000

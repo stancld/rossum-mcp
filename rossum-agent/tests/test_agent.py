@@ -618,7 +618,7 @@ class TestAgentRun:
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_handling(self):
-        """Test that RateLimitError is handled gracefully."""
+        """Test that RateLimitError is handled gracefully with retries."""
         agent = self._create_agent()
 
         async def mock_stream_response(step_num):
@@ -634,9 +634,10 @@ class TestAgentRun:
             async for step in agent.run("Test prompt"):
                 steps.append(step)
 
-        assert len(steps) == 1
-        assert steps[0].is_final is True
-        assert "Rate limit" in steps[0].error
+        final_steps = [s for s in steps if s.is_final]
+        assert len(final_steps) == 1
+        assert final_steps[0].is_final is True
+        assert "Rate limit" in final_steps[0].error
 
     @pytest.mark.asyncio
     async def test_api_timeout_error_handling(self):

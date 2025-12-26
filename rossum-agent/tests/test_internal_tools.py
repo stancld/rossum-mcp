@@ -8,6 +8,9 @@ from unittest.mock import patch
 
 import pytest
 from rossum_agent.internal_tools import (
+    call_on_connection,
+    cleanup_all_spawned_connections,
+    close_connection,
     debug_hook,
     evaluate_python_hook,
     execute_internal_tool,
@@ -15,6 +18,7 @@ from rossum_agent.internal_tools import (
     get_internal_tools,
     get_output_dir,
     set_output_dir,
+    spawn_mcp_connection,
     write_file,
 )
 
@@ -664,3 +668,150 @@ class TestDebugHook:
             result = json.loads(result_json)
 
         assert result["analysis"] == mock_analysis
+
+
+class TestSpawnMcpConnection:
+    """Test spawn_mcp_connection and related functions."""
+
+    def test_spawn_mcp_connection_without_event_loop(self):
+        """Test that spawn_mcp_connection returns error when event loop not set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            result = spawn_mcp_connection(
+                connection_id="test",
+                api_token="token",
+                api_base_url="https://api.example.com/v1",
+            )
+            assert "Error" in result
+            assert "event loop not set" in result
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_call_on_connection_without_event_loop(self):
+        """Test that call_on_connection returns error when event loop not set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            result = call_on_connection(
+                connection_id="test",
+                tool_name="list_queues",
+                arguments="{}",
+            )
+            assert "Error" in result
+            assert "event loop not set" in result
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_call_on_connection_not_found(self):
+        """Test that call_on_connection returns error when connection not found."""
+        import asyncio
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        internal_tools._spawned_connections.clear()
+        try:
+            result = call_on_connection(
+                connection_id="nonexistent",
+                tool_name="list_queues",
+                arguments="{}",
+            )
+            assert "Error" in result
+            assert "not found" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_call_on_connection_invalid_json(self):
+        """Test that call_on_connection returns error for invalid JSON arguments."""
+        import asyncio
+        from unittest.mock import MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        mock_conn = MagicMock()
+        internal_tools._spawned_connections["test"] = mock_conn
+        try:
+            result = call_on_connection(
+                connection_id="test",
+                tool_name="list_queues",
+                arguments="not valid json",
+            )
+            assert "Error parsing arguments JSON" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_close_connection_not_found(self):
+        """Test that close_connection returns error when connection not found."""
+        import asyncio
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        internal_tools._spawned_connections.clear()
+        try:
+            result = close_connection(connection_id="nonexistent")
+            assert "not found" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_cleanup_all_spawned_connections_no_loop(self):
+        """Test cleanup_all_spawned_connections when no event loop is set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            cleanup_all_spawned_connections()
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_spawn_connection_already_exists(self):
+        """Test that spawn_mcp_connection returns error if connection already exists."""
+        import asyncio
+        from unittest.mock import MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        mock_conn = MagicMock()
+        internal_tools._spawned_connections["existing"] = mock_conn
+        try:
+            result = spawn_mcp_connection(
+                connection_id="existing",
+                api_token="token",
+                api_base_url="https://api.example.com/v1",
+            )
+            assert "already exists" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_tools_include_spawn_mcp_connection(self):
+        """Test that spawn_mcp_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "spawn_mcp_connection" in names
+
+    def test_tools_include_call_on_connection(self):
+        """Test that call_on_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "call_on_connection" in names
+
+    def test_tools_include_close_connection(self):
+        """Test that close_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "close_connection" in names

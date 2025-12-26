@@ -23,8 +23,6 @@ const fileList = $('#file-list');
 const messages = $('#messages');
 const input = $('#input');
 const send = $('#send');
-const modeIndicator = $('#mode-indicator');
-const currentMode = $('#current-mode');
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadChats();
         enableInput();
     }
-    updateModeIndicator();
 });
 
 function setupEvents() {
@@ -44,10 +41,6 @@ function setupEvents() {
     $('#get-link').onclick = getShareableLink;
     $('#chat-form').onsubmit = handleSubmit;
     $('#toggle-token').onclick = toggleTokenVisibility;
-
-    document.querySelectorAll('input[name="mode"]').forEach(radio => {
-        radio.onchange = updateModeIndicator;
-    });
 
     input.onkeydown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -64,28 +57,15 @@ function toggleTokenVisibility() {
     $('#toggle-token .eye-icon').textContent = isPassword ? '🙈' : '👁';
 }
 
-// Mode indicator
-function updateModeIndicator() {
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    const isReadOnly = mode === 'read-only';
-    currentMode.textContent = isReadOnly ? 'Read-Only' : 'Read-Write';
-    modeIndicator.querySelector('.mode-lock').textContent = isReadOnly ? '🔒' : '✏️';
-}
-
 // Settings
 function loadSettings() {
     apiUrl.value = localStorage.getItem('rossum_url') || '';
     apiToken.value = localStorage.getItem('rossum_token') || '';
-
-    const savedMode = localStorage.getItem('rossum_mode') || 'read-only';
-    const modeRadio = document.querySelector(`input[name="mode"][value="${savedMode}"]`);
-    if (modeRadio) modeRadio.checked = true;
 }
 
 function saveSettings() {
     localStorage.setItem('rossum_url', apiUrl.value);
     localStorage.setItem('rossum_token', apiToken.value);
-    localStorage.setItem('rossum_mode', document.querySelector('input[name="mode"]:checked').value);
 
     updateCredStatus(hasCredentials());
     if (hasCredentials()) {
@@ -221,11 +201,10 @@ function renderChats(chats) {
 
 async function newChat() {
     try {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
         const res = await fetch(`${API}/chats`, {
             method: 'POST',
             headers: headers(),
-            body: JSON.stringify({ mcp_mode: mode }),
+            body: JSON.stringify({}),
         });
         if (!res.ok) throw new Error(res.status);
         const data = await res.json();

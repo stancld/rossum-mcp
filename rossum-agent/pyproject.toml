@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-agent"
-version = "0.2.8dev"
+version = "0.3.0dev"
 description = "AI agent toolkit for Rossum: document workflows conversationally, debug pipelines automatically, and enable agentic configuration of intelligent document processing."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,6 +26,7 @@ dependencies = [
     "python-dotenv",
     "requests>=2.32",
     "rossum-api>=3.7.0",
+    "rossum-deploy>=0.1.0",
     "rossum-mcp>=0.3.2",
 ]
 
@@ -88,7 +89,11 @@ all = [
 
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs" }
+rossum-deploy = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-deploy" }
 rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
+
+[tool.setuptools.packages.find]
+include = ["rossum_mcp*", "rossum_agent*", "rossum_deploy*"]
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]
