@@ -24,6 +24,35 @@
 - Sync API client wrapped in async executors for MCP compatibility
 - Examples in `examples/` directory
 
+## FastMCP Tool Guidelines (rossum-mcp)
+
+**CRITICAL**: rossum-mcp uses FastMCP. Follow these patterns to avoid token waste:
+
+### Tool Description vs Docstring
+- **`description` parameter**: Concise LLM-facing guidance (when to use, key tips). This is shown to the LLM.
+- **Docstring**: Only add if parameters need clarification not obvious from type hints. Avoid repeating the description.
+- **DO NOT** duplicate information between description and docstring.
+
+### Pattern to Follow:
+```python
+@mcp.tool(description="List users. Filter by username/email to find specific users. Returns user URLs usable as token_owner in create_hook.")
+async def list_users(
+    username: str | None = None,  # Type hints are self-documenting
+    email: str | None = None,
+) -> list[User]:
+    # No docstring needed - description + type hints are sufficient
+    ...
+```
+
+### Only Add Docstring When:
+- Parameters have non-obvious formats (e.g., ISO 8601 timestamps)
+- Complex filtering logic needs explanation
+- Default behavior isn't clear from types
+
+### Type Imports for FastMCP:
+- Import return types at module level (not in TYPE_CHECKING) so FastMCP can serialize them
+- Use `# noqa: TC002 - needed at runtime for FastMCP` for these imports
+
 ## Documentation Updates
 
 **CRITICAL**: When adding, removing, or modifying tools (MCP or agent tools), you MUST update documentation to keep it in sync with the code.
