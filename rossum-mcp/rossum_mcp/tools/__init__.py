@@ -10,6 +10,7 @@ from rossum_mcp.tools.queues import register_queue_tools
 from rossum_mcp.tools.relations import register_relation_tools
 from rossum_mcp.tools.rules import register_rule_tools
 from rossum_mcp.tools.schemas import register_schema_tools
+from rossum_mcp.tools.users import register_user_tools
 from rossum_mcp.tools.workspaces import register_workspace_tools
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "register_relation_tools",
     "register_rule_tools",
     "register_schema_tools",
+    "register_user_tools",
     "register_workspace_tools",
 ]

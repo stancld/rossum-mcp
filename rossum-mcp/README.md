@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-37-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -38,6 +38,10 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_workspace**: Retrieve workspace details by ID
 - **list_workspaces**: List all workspaces with optional filtering
 - **create_workspace**: Create a new workspace
+
+### User Management
+- **get_user**: Retrieve user details by ID
+- **list_users**: List users with optional filtering by username, email, etc.
 
 ### Engine Management
 - **get_engine**: Retrieve engine details by ID
@@ -120,6 +124,7 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Schemas:** `get_schema`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
 - **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
+- **Users:** `get_user`, `list_users`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
 - **Document Relations:** `get_document_relation`, `list_document_relations`
@@ -986,6 +991,68 @@ engine_fields = get_engine_fields(engine_id=123)
 
 # Get all engine fields
 all_fields = get_engine_fields()
+```
+
+### User Management
+
+#### get_user
+
+Retrieves a single user by ID. Use `list_users` first to find users by username or email.
+
+**Parameters:**
+- `user_id` (integer, required): The user ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "url": "https://elis.rossum.ai/api/v1/users/12345",
+  "username": "john.doe@example.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@example.com",
+  "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+  "is_active": true,
+  "date_joined": "2024-01-01T00:00:00Z",
+  "last_login": "2024-01-15T10:30:00Z"
+}
+```
+
+#### list_users
+
+Lists users in the organization. Use this to find a user's URL when you need it for `token_owner` in `create_hook_from_template`.
+
+**Parameters:**
+- `username` (string, optional): Filter by exact username
+- `email` (string, optional): Filter by email address
+- `first_name` (string, optional): Filter by first name
+- `last_name` (string, optional): Filter by last name
+- `is_active` (boolean, optional): Filter by active status
+- `first_n` (integer, optional): Limit the number of results returned
+
+**Returns:**
+```json
+[
+  {
+    "id": 12345,
+    "url": "https://elis.rossum.ai/api/v1/users/12345",
+    "username": "john.doe@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john.doe@example.com",
+    "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+    "is_active": true
+  }
+]
+```
+
+**Example usage:**
+```python
+# Find user by username to get their URL for token_owner
+users = list_users(username="john.doe@example.com")
+if users:
+    user_url = users[0].url
+    # Use user_url in create_hook_from_template
 ```
 
 ### Rules Management
