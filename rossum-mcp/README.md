@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-34-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-36-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -50,6 +50,8 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **list_hook_templates**: List available hook templates from Rossum Store
+- **create_hook_from_template**: Create a hook from a Rossum Store template
 - **list_hook_logs**: List hook execution logs for debugging and monitoring
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
@@ -116,7 +118,7 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Queues:** `get_queue`, `get_queue_schema`, `get_queue_engine`
 - **Schemas:** `get_schema`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
-- **Hooks:** `get_hook`, `list_hooks`, `list_hook_logs`
+- **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
 - **Document Relations:** `get_document_relation`, `list_document_relations`
@@ -686,6 +688,88 @@ create_hook(
     events=["annotation_content.confirm"],
     config={"url": "https://example.com/validate"},
     secret="webhook_secret_123"
+)
+```
+
+#### list_hook_templates
+
+Lists available hook templates from Rossum Store. Hook templates provide pre-built extension configurations (e.g., data validation, field mapping, notifications) that can be used to quickly create hooks instead of writing code from scratch.
+
+**Parameters:**
+None
+
+**Returns:**
+```json
+[
+  {
+    "id": 5,
+    "url": "https://elis.rossum.ai/api/v1/hook_templates/5",
+    "name": "Document Splitting",
+    "description": "Automatically split multi-page documents into separate annotations",
+    "type": "function",
+    "events": ["annotation_content.initialize"],
+    "config": {"runtime": "python3.12", "function": "..."},
+    "settings_schema": {"type": "object", "properties": {...}},
+    "guide": "https://knowledge-base.rossum.ai/docs/..."
+  }
+]
+```
+
+**Example usage:**
+```python
+# List all available hook templates
+templates = list_hook_templates()
+
+# Find a template by name
+for template in templates:
+    if "splitting" in template.name.lower():
+        print(f"Found: {template.name} (ID: {template.id})")
+```
+
+#### create_hook_from_template
+
+Creates a hook from a Rossum Store template. Use `list_hook_templates` first to find available templates and their IDs. This is the recommended way to create hooks as it uses battle-tested configurations from the Rossum Store.
+
+**Parameters:**
+- `name` (string, required): Name for the new hook
+- `hook_template_id` (integer, required): ID of the hook template to use (from `list_hook_templates`)
+- `queues` (array, required): List of queue URLs to attach the hook to
+- `events` (array, optional): List of events to trigger the hook (overrides template defaults if provided)
+- `token_owner` (string, optional): User URL for token ownership. Required when the hook template has `use_token_owner=True`. Use `list_users` to find the user URL by username.
+
+**Important:** If the hook template has `use_token_owner=True`, you must provide the `token_owner` parameter with a valid user URL. Ask the user for their username and use `list_users` to find the correct user URL.
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "My Document Splitting Hook",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "hook_template": "https://elis.rossum.ai/api/v1/hook_templates/5",
+  "type": "function",
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_content.initialize"],
+  "config": {...},
+  "settings": {...}
+}
+```
+
+**Example usage:**
+```python
+# Create a hook from template
+create_hook_from_template(
+    name="Invoice Splitting",
+    hook_template_id=5,
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    settings={"split_by": "barcode", "target_queue": 67890}
+)
+
+# Create a hook with token_owner (for templates with use_token_owner=True)
+create_hook_from_template(
+    name="Data Export Hook",
+    hook_template_id=17,
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    token_owner="https://api.elis.rossum.ai/v1/users/456"
 )
 ```
 

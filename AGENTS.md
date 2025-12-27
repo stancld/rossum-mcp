@@ -148,6 +148,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - **Mock external dependencies**: Use `unittest.mock` for API calls, file I/O, etc.
 - **Edge cases**: Test error conditions, empty inputs, boundary values
 - **Async code**: Use `pytest-asyncio` for async function tests
+- **Imports**: Always place imports at the top of test files, not inside test functions or classes. This improves readability and avoids repeated import overhead.
 
 ### Development Workflow:
 1. Write/modify code
