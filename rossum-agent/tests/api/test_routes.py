@@ -106,8 +106,8 @@ class TestCreateChatEndpoint:
         assert "created_at" in data
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_create_chat_with_mcp_mode(self, mock_httpx, client, mock_chat_service, valid_headers):
-        """Test creating a chat with specific mcp_mode."""
+    def test_create_chat_always_uses_read_write_mode(self, mock_httpx, client, mock_chat_service, valid_headers):
+        """Test creating a chat always uses read-write mode regardless of request."""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"id": 12345}
@@ -121,7 +121,7 @@ class TestCreateChatEndpoint:
         now = datetime.now(UTC)
         mock_chat_service.create_chat.return_value = ChatResponse(chat_id="chat_123", created_at=now)
 
-        response = client.post("/api/v1/chats", headers=valid_headers, json={"mcp_mode": "read-write"})
+        response = client.post("/api/v1/chats", headers=valid_headers, json={"mcp_mode": "read-only"})
 
         assert response.status_code == 201
         mock_chat_service.create_chat.assert_called_once()

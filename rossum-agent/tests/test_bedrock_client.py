@@ -42,6 +42,7 @@ class TestCreateBedrockClient:
                 aws_secret_key="test_secret_key",
                 aws_session_token="test_token",
                 aws_region="us-west-2",
+                max_retries=5,
             )
 
     def test_creates_client_with_profile_name(self):
@@ -183,6 +184,7 @@ class TestCreateBedrockClientFromStsCredentials:
                 aws_secret_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY",
                 aws_session_token="FwoGZXIvYXdzEBYaDNYC4FeH...",
                 aws_region="eu-west-1",
+                max_retries=5,
             )
 
     def test_passes_none_region_when_not_provided(self):
@@ -200,6 +202,7 @@ class TestCreateBedrockClientFromStsCredentials:
                 aws_secret_key="secret",
                 aws_session_token=None,
                 aws_region=None,
+                max_retries=5,
             )
 
     def test_handles_missing_session_token(self):

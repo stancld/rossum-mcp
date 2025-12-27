@@ -76,10 +76,10 @@ def create_mcp_transport(
         command="rossum-mcp",
         args=[],
         env={
-            "ROSSUM_API_BASE_URL": rossum_api_base_url,
+            **os.environ,
+            "ROSSUM_API_BASE_URL": rossum_api_base_url.rstrip("/"),
             "ROSSUM_API_TOKEN": rossum_api_token,
             "ROSSUM_MCP_MODE": mcp_mode,
-            **os.environ,
         },
     )
 

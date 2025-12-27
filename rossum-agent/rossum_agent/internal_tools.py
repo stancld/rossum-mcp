@@ -18,6 +18,7 @@ import itertools
 import json
 import logging
 import math
+import os
 import re
 import string
 import time
@@ -33,13 +34,14 @@ import requests
 from anthropic import beta_tool
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
+from fastmcp import Client
+from rossum_deploy.workspace import Workspace
 
 from rossum_agent.bedrock_client import create_bedrock_client
+from rossum_agent.mcp_tools import MCPConnection, create_mcp_transport
 
 if TYPE_CHECKING:
     from anthropic._tools import BetaTool
-
-    from rossum_agent.mcp_tools import MCPConnection
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +117,13 @@ def _report_text(text: SubAgentText) -> None:
 _mcp_connection: MCPConnection | None = None
 _mcp_event_loop: asyncio.AbstractEventLoop | None = None
 
+# Secondary MCP connections spawned at runtime for different environments
+# Maps connection_id -> (MCPConnection, cleanup_coroutine)
+_spawned_connections: dict[str, MCPConnection] = {}
+_spawned_connection_contexts: dict[str, Any] = {}
+# Store credentials for spawned connections for logging purposes
+_spawned_connection_credentials: dict[str, tuple[str, str]] = {}  # connection_id -> (api_base_url, api_token)
+
 # Module-level output directory for file operations
 # Set by the agent service before running the agent
 # This is needed because ContextVars don't propagate to ThreadPoolExecutor threads
@@ -169,6 +178,159 @@ def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
 
     future = asyncio.run_coroutine_threadsafe(_mcp_connection.call_tool(name, arguments), _mcp_event_loop)
     return future.result(timeout=60)
+
+
+async def _spawn_connection_async(
+    connection_id: str,
+    api_token: str,
+    api_base_url: str,
+    mcp_mode: str = "read-write",
+) -> MCPConnection:
+    """Spawn a new MCP connection asynchronously."""
+    transport = create_mcp_transport(api_token, api_base_url, mcp_mode)  # type: ignore[arg-type]
+    client = Client(transport)
+
+    await client.__aenter__()
+    connection = MCPConnection(client=client)
+
+    _spawned_connections[connection_id] = connection
+    _spawned_connection_contexts[connection_id] = client
+    _spawned_connection_credentials[connection_id] = (api_base_url, api_token)
+
+    return connection
+
+
+async def _close_spawned_connection_async(connection_id: str) -> None:
+    """Close a spawned MCP connection."""
+    if connection_id in _spawned_connection_contexts:
+        client = _spawned_connection_contexts[connection_id]
+        await client.__aexit__(None, None, None)
+        del _spawned_connection_contexts[connection_id]
+    _spawned_connections.pop(connection_id, None)
+    _spawned_connection_credentials.pop(connection_id, None)
+
+
+def cleanup_all_spawned_connections() -> None:
+    """Cleanup all spawned connections. Call this when the agent session ends."""
+    if _mcp_event_loop is None:
+        return
+
+    for conn_id in list(_spawned_connection_contexts.keys()):
+        try:
+            future = asyncio.run_coroutine_threadsafe(_close_spawned_connection_async(conn_id), _mcp_event_loop)
+            future.result(timeout=10)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup connection {conn_id}: {e}")
+
+
+@beta_tool
+def spawn_mcp_connection(connection_id: str, api_token: str, api_base_url: str, mcp_mode: str = "read-write") -> str:
+    """Spawn a new MCP connection to a different Rossum environment.
+
+    Use this when you need to make changes to a different Rossum environment
+    than the one the agent was initialized with. For example, when deploying
+    changes from a source environment to a target environment.
+
+    Args:
+        connection_id: A unique identifier for this connection (e.g., 'target', 'sandbox')
+
+    Returns:
+        Success message with available tools, or error message if failed.
+    """
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set. Agent not properly initialized."
+
+    if connection_id in _spawned_connections:
+        return f"Connection '{connection_id}' already exists. Use call_on_connection to use it, or close it first."
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(
+            _spawn_connection_async(connection_id, api_token, api_base_url, mcp_mode),
+            _mcp_event_loop,
+        )
+        connection = future.result(timeout=30)
+
+        tools_future = asyncio.run_coroutine_threadsafe(connection.get_tools(), _mcp_event_loop)
+        tools = tools_future.result(timeout=30)
+        tool_names = [t.name for t in tools]
+
+        return f"Successfully spawned MCP connection '{connection_id}' to {api_base_url} with {api_token}. Available tools: {', '.join(tool_names[:10])}{'...' if len(tool_names) > 10 else ''}"
+    except Exception as e:
+        logger.error(f"Failed to spawn connection: {e}")
+        return f"Error spawning connection: {e}"
+
+
+@beta_tool
+def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> str:
+    """Call a tool on a spawned MCP connection.
+
+    Use this to execute MCP tools on a connection that was previously spawned
+    with spawn_mcp_connection.
+
+    Args:
+        connection_id: The identifier of the spawned connection.
+        tool_name: The name of the MCP tool to call.
+        arguments: JSON string of arguments to pass to the tool.
+
+    Returns:
+        The result of the tool call as a JSON string, or error message.
+    """
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set."
+
+    if connection_id not in _spawned_connections:
+        available = list(_spawned_connections.keys())
+        return f"Error: Connection '{connection_id}' not found. Available: {available}"
+
+    connection = _spawned_connections[connection_id]
+
+    if connection_id in _spawned_connection_credentials:
+        api_base_url, api_token = _spawned_connection_credentials[connection_id]
+        logger.info(
+            f"call_on_connection: Using connection '{connection_id}' - API URL: {api_base_url}, Token: {api_token}"
+        )
+    else:
+        logger.warning(f"call_on_connection: No credentials found for connection '{connection_id}'")
+
+    try:
+        args = json.loads(arguments) if arguments else {}
+    except json.JSONDecodeError as e:
+        return f"Error parsing arguments JSON: {e}"
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(connection.call_tool(tool_name, args), _mcp_event_loop)
+        result = future.result(timeout=60)
+
+        if isinstance(result, (dict, list)):
+            return json.dumps(result, indent=2, default=str)
+        return str(result) if result is not None else "Tool executed successfully"
+    except Exception as e:
+        logger.error(f"Error calling tool on connection: {e}")
+        return f"Error calling {tool_name}: {e}"
+
+
+@beta_tool
+def close_connection(connection_id: str) -> str:
+    """Close a spawned MCP connection.
+
+    Args:
+        connection_id: The identifier of the connection to close.
+
+    Returns:
+        Success or error message.
+    """
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set."
+
+    if connection_id not in _spawned_connections:
+        return f"Connection '{connection_id}' not found."
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(_close_spawned_connection_async(connection_id), _mcp_event_loop)
+        future.result(timeout=10)
+        return f"Successfully closed connection '{connection_id}'."
+    except Exception as e:
+        return f"Error closing connection: {e}"
 
 
 @beta_tool
@@ -1131,11 +1293,7 @@ Steps:
 
 
 @beta_tool
-def debug_hook(
-    hook_id: str,
-    annotation_id: str,
-    schema_id: str | None = None,
-) -> str:
+def debug_hook(hook_id: str, annotation_id: str, schema_id: str | None = None) -> str:
     """Debug a Rossum hook using an Opus sub-agent. ALWAYS use this tool when debugging hook code errors.
 
     This is the PRIMARY tool for debugging Python function hooks. Simply pass the hook ID and annotation ID,
@@ -1180,7 +1338,444 @@ def debug_hook(
     return json.dumps(response, ensure_ascii=False, default=str)
 
 
-INTERNAL_TOOLS: list[BetaTool[..., str]] = [write_file, search_knowledge_base, evaluate_python_hook, debug_hook]
+@beta_tool
+def load_skill(name: str) -> str:
+    """Load a specialized skill that provides domain-specific instructions and workflows.
+
+    Use this tool when you recognize that a task matches one of the available skills.
+    The skill will provide detailed instructions, workflows, and context for the task.
+
+    Available skills:
+    - rossum-deployment: Safe workflow for creating and deploying Rossum configurations.
+      **LOAD THIS SKILL WHEN:**
+      - Creating new queues, schemas, hooks, or extensions
+      - Setting up document splitting, sorting, or automation
+      - Deploying configuration changes
+      - Copying configurations between organizations
+      - Any configuration task that modifies Rossum resources
+
+    Args:
+        name: The name of the skill to load (e.g., "rossum-deployment").
+
+    Returns:
+        The skill instructions and workflows, or an error if skill not found.
+    """
+    from rossum_agent.agent.skills import get_skill  # noqa: PLC0415 - avoid circular import
+
+    skill = get_skill(name)
+    if skill is None:
+        available = _get_available_skill_names()
+        return json.dumps(
+            {
+                "status": "error",
+                "message": f"Skill '{name}' not found.",
+                "available_skills": available,
+            }
+        )
+
+    return json.dumps(
+        {
+            "status": "success",
+            "skill_name": skill.name,
+            "instructions": skill.content,
+        }
+    )
+
+
+def _get_available_skill_names() -> list[str]:
+    """Get list of available skill names for error messages."""
+    from rossum_agent.agent.skills import get_skill_registry  # noqa: PLC0415 - avoid circular import
+
+    return get_skill_registry().get_skill_names()
+
+
+def _get_workspace_credentials() -> tuple[str, str]:
+    """Get Rossum API credentials from environment.
+
+    Returns:
+        Tuple of (api_base_url, api_token).
+
+    Raises:
+        ValueError: If required environment variables are not set.
+    """
+    api_base = os.environ.get("ROSSUM_API_BASE_URL")
+    token = os.environ.get("ROSSUM_API_TOKEN")
+
+    if not api_base:
+        raise ValueError("ROSSUM_API_BASE_URL environment variable is required")
+    if not token:
+        raise ValueError("ROSSUM_API_TOKEN environment variable is required")
+
+    return api_base, token
+
+
+def _create_workspace(path: str | None = None, api_base_url: str | None = None, token: str | None = None) -> Any:
+    """Create a Workspace instance with current credentials.
+
+    Args:
+        path: Optional workspace directory path. Defaults to output directory.
+        api_base_url: Optional API base URL. Defaults to env ROSSUM_API_BASE_URL.
+        token: Optional API token. Defaults to env ROSSUM_API_TOKEN.
+
+    Returns:
+        Workspace instance.
+    """
+    default_api_base, default_token = _get_workspace_credentials()
+    api_base = api_base_url or default_api_base
+    api_token = token or default_token
+
+    workspace_path = Path(path) if path else get_output_dir() / "rossum-config"
+    workspace_path.mkdir(parents=True, exist_ok=True)
+
+    return Workspace(workspace_path, api_base=api_base, token=api_token)
+
+
+@beta_tool
+def deploy_pull(
+    org_id: int, workspace_path: str | None = None, api_base_url: str | None = None, token: str | None = None
+) -> str:
+    """Pull Rossum configuration objects from an organization to local files.
+
+    Downloads workspaces, queues, schemas, hooks, inboxes, and other objects
+    to local JSON files for version control and deployment workflows.
+
+    Args:
+        org_id: The organization ID to pull from.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+        api_base_url: Optional API base URL for the target environment.
+            Use this when pulling from sandbox/different environment.
+        token: Optional API token for the target environment.
+            Use this when pulling from sandbox/different environment.
+
+    Returns:
+        JSON with pull summary including counts of pulled objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path, api_base_url=api_base_url, token=token)
+        result = ws.pull(org_id=org_id)
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(),
+                "pulled_count": len(result.pulled),
+                "skipped_count": len(result.skipped),
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_pull")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
+def deploy_diff(workspace_path: str | None = None) -> str:
+    """Compare local workspace files with remote Rossum configuration.
+
+    Shows which objects have been modified locally, remotely, or have conflicts.
+
+    Args:
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+
+    Returns:
+        JSON with diff summary showing unchanged, modified, and conflicting objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path)
+        result = ws.diff()
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(),
+                "unchanged": result.total_unchanged,
+                "local_modified": result.total_local_modified,
+                "remote_modified": result.total_remote_modified,
+                "conflicts": result.total_conflicts,
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_diff")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
+def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str | None = None) -> str:
+    """Push local changes to Rossum.
+
+    Uploads modified local configuration to the remote Rossum organization.
+
+    Args:
+        dry_run: If True, only show what would be pushed without making changes.
+        force: If True, push even if there are conflicts.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+
+    Returns:
+        JSON with push summary including counts of pushed, skipped, and failed objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path)
+
+        if dry_run:
+            result = ws.push(dry_run=True)
+            return json.dumps(
+                {
+                    "status": "success",
+                    "dry_run": True,
+                    "summary": result.summary(),
+                    "would_push_count": len(result.pushed),
+                    "would_skip_count": len(result.skipped),
+                    "workspace_path": str(ws.path),
+                    "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+                }
+            )
+
+        result = ws.push(confirm=True, force=force)
+
+        return json.dumps(
+            {
+                "status": "success",
+                "dry_run": False,
+                "summary": result.summary(),
+                "pushed_count": len(result.pushed),
+                "skipped_count": len(result.skipped),
+                "failed_count": len(result.failed),
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_push")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
+def deploy_copy_org(
+    source_org_id: int,
+    target_org_id: int,
+    target_api_base: str | None = None,
+    target_token: str | None = None,
+    workspace_path: str | None = None,
+) -> str:
+    """Copy all objects from source organization to target organization.
+
+    Creates copies of all workspaces, queues, schemas, hooks, and other objects
+    from source org to target org. Saves ID mappings for later deployment.
+
+    Use this to mirror production to sandbox before making changes.
+
+    Args:
+        source_org_id: Source organization ID (e.g., production).
+        target_org_id: Target organization ID (e.g., sandbox).
+        target_api_base: Target API base URL if different from source.
+        target_token: Target API token if different from source.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+
+    Returns:
+        JSON with copy summary including counts of created, skipped, and failed objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path)
+
+        result = ws.copy_org(
+            source_org_id=source_org_id,
+            target_org_id=target_org_id,
+            target_api_base=target_api_base,
+            target_token=target_token,
+        )
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(),
+                "created_count": len(result.created),
+                "skipped_count": len(result.skipped),
+                "failed_count": len(result.failed),
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_copy_org")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
+def deploy_copy_workspace(
+    source_workspace_id: int,
+    target_org_id: int,
+    target_api_base: str | None = None,
+    target_token: str | None = None,
+    workspace_path: str | None = None,
+) -> str:
+    """Copy a single workspace and all its objects to target organization.
+
+    Copies a workspace with all its queues, schemas, engines, hooks, connectors,
+    inboxes, email templates, and rules to the target organization.
+
+    Useful when you only need to replicate part of an org rather than the entire organization.
+
+    Args:
+        source_workspace_id: Source workspace ID to copy.
+        target_org_id: Target organization ID to copy to.
+        target_api_base: Target API base URL if different from source.
+        target_token: Target API token if different from source.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+
+    Returns:
+        JSON with copy summary including counts of created, skipped, and failed objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path)
+
+        result = ws.copy_workspace(
+            source_workspace_id=source_workspace_id,
+            target_org_id=target_org_id,
+            target_api_base=target_api_base,
+            target_token=target_token,
+        )
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(),
+                "created_count": len(result.created),
+                "skipped_count": len(result.skipped),
+                "failed_count": len(result.failed),
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_copy_workspace")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
+def deploy_to_org(
+    target_org_id: int,
+    target_api_base: str | None = None,
+    target_token: str | None = None,
+    dry_run: bool = False,
+    workspace_path: str | None = None,
+) -> str:
+    """Deploy local configuration changes to a target organization.
+
+    Uses saved ID mappings from copy_org to update the corresponding objects
+    in the target organization. This is the final step in the deployment workflow.
+
+    Args:
+        target_org_id: Target organization ID to deploy to.
+        target_api_base: Target API base URL if different from source.
+        target_token: Target API token if different from source.
+        dry_run: If True, only show what would be deployed without making changes.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+
+    Returns:
+        JSON with deploy summary including counts of created, updated, skipped, and failed objects.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        ws = _create_workspace(workspace_path)
+
+        result = ws.deploy(
+            target_org_id=target_org_id,
+            target_api_base=target_api_base,
+            target_token=target_token,
+            dry_run=dry_run,
+            confirm=not dry_run,
+        )
+
+        return json.dumps(
+            {
+                "status": "success",
+                "dry_run": dry_run,
+                "summary": result.summary(),
+                "created_count": len(result.created),
+                "updated_count": len(result.updated),
+                "skipped_count": len(result.skipped),
+                "failed_count": len(result.failed),
+                "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_to_org")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+INTERNAL_TOOLS: list[BetaTool[..., str]] = [
+    write_file,
+    search_knowledge_base,
+    evaluate_python_hook,
+    debug_hook,
+    load_skill,
+    deploy_pull,
+    deploy_diff,
+    deploy_push,
+    deploy_copy_org,
+    deploy_copy_workspace,
+    deploy_to_org,
+    spawn_mcp_connection,
+    call_on_connection,
+    close_connection,
+]
 
 
 def get_internal_tools() -> list[dict[str, object]]:

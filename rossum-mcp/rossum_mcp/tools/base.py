@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-BASE_URL = os.environ.get("ROSSUM_API_BASE_URL", "")
+BASE_URL = os.environ.get("ROSSUM_API_BASE_URL", "").rstrip("/")
 MODE = os.environ.get("ROSSUM_MCP_MODE", "read-write").lower()
 
 

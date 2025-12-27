@@ -77,9 +77,6 @@ ignore = [
 # modules
 "matplotlib.pyplot" = "plt"
 "numpy.typing" = "npt"
-"torch.nn" = "nn"
-# classes
-"torch.utils.data.Dataset" = "TorchDataset"
 
 [lint.flake8-unused-arguments]
 # No error for unused *args and **kwargs

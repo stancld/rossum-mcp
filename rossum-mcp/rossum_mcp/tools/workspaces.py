@@ -47,13 +47,19 @@ def register_workspace_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None
         if not is_read_write_mode():
             return {"error": "create_workspace is not available in read-only mode"}
 
-        logger.debug(f"Creating workspace: name={name}, organization_id={organization_id}, metadata={metadata}")
+        organization_url = build_resource_url("organizations", organization_id)
+        logger.info(
+            f"Creating workspace: name={name}, organization_id={organization_id}, "
+            f"organization_url={organization_url}, metadata={metadata}"
+        )
         workspace_data: dict = {
             "name": name,
-            "organization": build_resource_url("organizations", organization_id),
+            "organization": organization_url,
         }
         if metadata is not None:
             workspace_data["metadata"] = metadata
 
+        logger.debug(f"Workspace creation payload: {workspace_data}")
         workspace: Workspace = await client.create_new_workspace(workspace_data)
+        logger.info(f"Successfully created workspace: id={workspace.id}, name={workspace.name}")
         return workspace
