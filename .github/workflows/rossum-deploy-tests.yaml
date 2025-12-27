@@ -43,3 +43,11 @@ jobs:
           uv run coverage report
         shell: bash
         working-directory: rossum-deploy
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: rossum-deploy/coverage.xml
+          flags: rossum-deploy
+          fail_ci_if_error: true
