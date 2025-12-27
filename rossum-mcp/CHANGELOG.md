@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 - Added `list_hook_templates` tool for listing available hook templates from Rossum Store
 - Added `create_hook_from_template` tool for creating hooks from pre-built templates
+- Added `patch_schema` tool for adding, updating, or removing individual schema nodes without replacing entire content
 
 
 ## [0.3.3] - 2025-12-16

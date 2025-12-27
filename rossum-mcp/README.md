@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-36-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-37-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -32,6 +32,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **create_schema**: Create a new schema with sections and datapoints
 - **update_queue**: Update queue settings including automation thresholds
 - **update_schema**: Update schema with field-level automation thresholds
+- **patch_schema**: Add, update, or remove individual schema nodes without replacing entire content
 
 ### Workspace Management
 - **get_workspace**: Retrieve workspace details by ID
@@ -418,6 +419,69 @@ Updates an existing schema, typically used to set field-level automation thresho
 **Parameters:**
 - `schema_id` (integer, required): Schema ID to update
 - `schema_data` (object, required): Dictionary containing schema fields to update
+
+#### patch_schema
+
+Patch a schema by adding, updating, or removing individual nodes without replacing the entire content. This is particularly useful for making incremental changes to schemas.
+
+**Parameters:**
+- `schema_id` (integer, required): Schema ID to patch
+- `operation` (string, required): One of "add", "update", or "remove"
+- `node_id` (string, required): ID of the node to operate on
+- `node_data` (object, optional): Data for add/update operations. Required for "add" and "update"
+- `parent_id` (string, optional): Parent node ID for add operation. Required for "add"
+- `position` (integer, optional): Position for add operation (appends if not specified)
+
+**Operations:**
+- **add**: Add a new datapoint/multivalue to a parent (section or tuple). Requires `parent_id` and `node_data`.
+- **update**: Update properties of an existing node. Requires `node_data` with fields to update.
+- **remove**: Remove a node from the schema. Only `node_id` is required.
+
+**Returns:**
+```json
+{
+  "id": 123,
+  "name": "Invoice Schema",
+  "content": [
+    {
+      "id": "header_section",
+      "label": "Header",
+      "category": "section",
+      "children": [
+        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint"},
+        {"id": "vendor_name", "label": "Vendor Name", "category": "datapoint"}
+      ]
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Add a new datapoint to a section
+patch_schema(
+    schema_id=123,
+    operation="add",
+    node_id="vendor_name",
+    parent_id="header_section",
+    node_data={"label": "Vendor Name", "type": "string", "category": "datapoint"}
+)
+
+# Update a field's label and threshold
+patch_schema(
+    schema_id=123,
+    operation="update",
+    node_id="invoice_number",
+    node_data={"label": "Invoice #", "score_threshold": 0.9}
+)
+
+# Remove a field
+patch_schema(
+    schema_id=123,
+    operation="remove",
+    node_id="old_field"
+)
+```
 
 ### Engine Management
 
