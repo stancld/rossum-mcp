@@ -1,4 +1,4 @@
-name: Rossum Agent Tests
+name: Rossum Deploy Tests
 
 # Trigger on push or pull request to master branch
 on:
@@ -19,21 +19,21 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv sync --extra api --extra tests
+          uv sync --extra tests
         shell: bash
-        working-directory: rossum-agent
+        working-directory: rossum-deploy
 
       - name: Run tests
         run: |
-          uv run coverage run --source=rossum_agent -m pytest tests -v --junitxml=report.xml
+          uv run coverage run --source=rossum_deploy -m pytest tests -v --junitxml=report.xml
         shell: bash
-        working-directory: rossum-agent
+        working-directory: rossum-deploy
 
       - name: Upload pytest results
         uses: actions/upload-artifact@v4
         with:
-          name: rossum-agent-test-report
-          path: rossum-agent/report.xml
+          name: rossum-deploy-test-report
+          path: rossum-deploy/report.xml
         if: failure()
 
       - name: Coverage statistics
@@ -42,12 +42,12 @@ jobs:
           uv run coverage xml
           uv run coverage report
         shell: bash
-        working-directory: rossum-agent
+        working-directory: rossum-deploy
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: rossum-agent/coverage.xml
-          flags: rossum-agent
+          files: rossum-deploy/coverage.xml
+          flags: rossum-deploy
           fail_ci_if_error: true

@@ -11,3 +11,4 @@ build
 extension_explanation.md
 .env
 .agents/
+outputs/

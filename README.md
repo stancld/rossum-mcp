@@ -147,10 +147,11 @@ The agent automatically creates the queue, uploads documents, monitors processin
 
 ## 📦 Repository Structure
 
-This repository contains two standalone Python packages:
+This repository contains three standalone Python packages:
 
 - **[rossum-mcp/](rossum-mcp/)** - MCP server for Rossum API integration with AI assistants
 - **[rossum-agent/](rossum-agent/)** - Specialized AI agent toolkit with Streamlit UI
+- **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment for Rossum configurations
 
 Each package can be installed and used independently or together for complete functionality.
 
@@ -368,6 +369,7 @@ For detailed API documentation, parameters, and workflows, see the [full documen
 - **[Full Documentation](https://stancld.github.io/rossum-mcp/)** - Complete guides and API reference
 - **[MCP Server README](rossum-mcp/README.md)** - MCP server setup and tools
 - **[Agent README](rossum-agent/README.md)** - Agent toolkit and UI usage
+- **[Deploy README](rossum-deploy/README.md)** - Deployment tool usage
 - **[Examples](examples/)** - Sample workflows and use cases
 
 ## Resources
@@ -375,6 +377,7 @@ For detailed API documentation, parameters, and workflows, see the [full documen
 - [Rossum API](https://elis.rossum.ai/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
 - [Rossum SDK](https://github.com/rossumai/rossum-sdk) - Python SDK
+- [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
 
 
 ## 🛠️ Development

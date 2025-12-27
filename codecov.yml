@@ -1,0 +1,26 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+
+flags:
+  rossum-mcp:
+    paths:
+      - rossum-mcp/
+    carryforward: true
+  rossum-agent:
+    paths:
+      - rossum-agent/
+    carryforward: true
+  rossum-deploy:
+    paths:
+      - rossum-deploy/
+    carryforward: true

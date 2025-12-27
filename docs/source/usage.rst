@@ -61,6 +61,87 @@ The ``rossum_agent`` package provides CLI and web interfaces:
 The agent includes file system tools, plotting capabilities, and Rossum integration.
 See the :doc:`examples` section for complete workflows.
 
+Using Rossum Deploy
+-------------------
+
+The ``rossum_deploy`` package provides Python API and CLI for configuration deployment.
+
+Python API
+^^^^^^^^^^
+
+.. code-block:: python
+
+   from rossum_deploy import Workspace
+
+   # Initialize workspace
+   ws = Workspace(
+       "./my-project",
+       api_base="https://api.elis.rossum.ai/v1",
+       token="your-token"
+   )
+
+   # Pull all objects from an organization
+   result = ws.pull(org_id=123456)
+   print(result.summary())
+
+   # Show diff between local and remote
+   diff = ws.diff()
+   print(diff.summary())
+
+   # Push changes (dry run first)
+   result = ws.push(dry_run=True)
+   print(result.summary())
+
+   # Push for real
+   result = ws.push()
+
+CLI Commands
+^^^^^^^^^^^^
+
+Set environment variables:
+
+.. code-block:: bash
+
+   export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+   export ROSSUM_API_TOKEN="your-token"
+
+Commands:
+
+.. code-block:: bash
+
+   # Pull from organization
+   rossum-deploy pull 123456
+
+   # Show diff
+   rossum-deploy diff
+
+   # Push (dry run)
+   rossum-deploy push --dry-run
+
+   # Push for real
+   rossum-deploy push
+
+Cross-Organization Deployment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Deploy configurations from sandbox to production:
+
+.. code-block:: python
+
+   from rossum_deploy import Workspace
+
+   ws = Workspace("./my-project", api_base="...", token="...")
+
+   # Copy production config to sandbox (one-time setup)
+   result = ws.copy_org(
+       source_org_id=123456,  # Production
+       target_org_id=789012,  # Sandbox
+   )
+
+   # After agent modifies sandbox, deploy back to production
+   result = ws.deploy(target_org_id=123456, dry_run=True)
+   print(result.summary())
+
 Using with AI Agents
 --------------------
 

@@ -8,10 +8,11 @@ Prerequisites
 * Rossum account with API credentials
 * A Rossum queue ID
 
-This repository contains two packages:
+This repository contains three packages:
 
 * **rossum_mcp**: MCP server for Rossum API interactions
 * **rossum_agent**: AI agent with data manipulation and visualization tools
+* **rossum_deploy**: Minimalistic pull/diff/push deployment for Rossum configurations
 
 Installation Methods
 --------------------
@@ -54,10 +55,27 @@ With extras:
    uv sync --extra streamlit  # Install Streamlit UI
    uv sync --extra tests  # Install testing dependencies
 
-Installing Both Packages (Workspace)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Installing Deploy Package Only
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For development work with both packages:
+To install only the deployment package:
+
+.. code-block:: bash
+
+   git clone https://github.com/stancld/rossum-mcp.git
+   cd rossum-mcp/rossum-deploy
+   uv sync
+
+With extras:
+
+.. code-block:: bash
+
+   uv sync --extra tests  # Install testing dependencies
+
+Installing All Packages (Workspace)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For development work with all packages:
 
 .. code-block:: bash
 
@@ -65,7 +83,7 @@ For development work with both packages:
    cd rossum-mcp
    uv sync --extra all --no-install-project
 
-This installs both packages together with all dependencies.
+This installs all packages together with all dependencies.
 
 From GitHub (Direct)
 ^^^^^^^^^^^^^^^^^^^^
@@ -80,7 +98,10 @@ Install directly from GitHub:
    # Agent only
    uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_agent"
 
-   # Both packages (workspace)
+   # Deploy only
+   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum-deploy"
+
+   # All packages (workspace)
    uv pip install "git+https://github.com/stancld/rossum-mcp.git"
 
 Environment Variables

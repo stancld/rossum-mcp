@@ -91,6 +91,16 @@ The MCP server provides **34 tools** organized into six categories:
 * **get_document_relation** - Retrieve document relation details by ID
 * **list_document_relations** - List all document relations (export, einvoice)
 
+**Deployment Toolkit**
+
+The ``rossum_deploy`` package provides configuration deployment:
+
+* Pull configurations from Rossum organizations to local files
+* Diff local vs remote configurations
+* Push changes back to Rossum (with dry-run support)
+* Cross-organization deployment with ID mapping
+* Workspace comparison for safe agent workflows
+
 **AI Agent Toolkit**
 
 The ``rossum_agent`` package provides additional capabilities:

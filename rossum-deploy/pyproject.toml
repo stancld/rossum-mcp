@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rossum-deploy"
+version = "0.1.0dev"
+description = "Minimalistic pull/diff/push deployment for Rossum configurations"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Dan Stancl (Rossum AI)", email = "daniel.stancl@gmail.com"}
+]
+keywords = ["rossum", "deployment", "configuration-management"]
+dependencies = [
+    "pydantic>=2.0.0",
+    "rossum-api>=3.7.0",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rossum_deploy*"]
+
+[tool.uv.sources]
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
