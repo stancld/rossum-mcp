@@ -289,11 +289,16 @@ templates = list_hook_templates()
 # 2. Find matching template (e.g., for document splitting)
 splitting_template = next(t for t in templates if "split" in t.name.lower())
 
-# 3. Create hook from template
+# 3. If template requires token_owner, find a valid user first
+users = list_users()
+valid_owner = next(u for u in users if u.role != "organization_group_admin")
+
+# 4. Create hook from template
 create_hook_from_template(
     name="Invoice Splitting",
     hook_template_id=splitting_template.id,
     queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    token_owner=valid_owner.url,  # Required if use_token_owner=True
     settings={"split_by": "barcode"}  # Configure via settings_schema
 )
 ```

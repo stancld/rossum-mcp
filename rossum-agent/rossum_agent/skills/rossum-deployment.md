@@ -269,3 +269,5 @@ Deploy local configuration changes to a target organization.
 4. **Deploying without diff review** - Always run `deploy_diff()` and show the user before deploying.
 
 5. **Deploying without confirmation** - Always require explicit user approval before calling `deploy_to_org`.
+
+6. **Forgetting to remap token owners** - Hooks with `token_owner` reference users that don't exist in the target organization. When deploying hooks to a different org, **ask the user which user in the target org should be the token owner**. Use `list_users` on the target org to find available users.

@@ -77,7 +77,11 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
 
         return hooks_list
 
-    @mcp.tool(description="Create a new hook.")
+    # NOTE: We explicitly document token_owner restrictions in the tool description because
+    # Sonnet 4.5 respects tool descriptions more reliably than instructions in system prompts.
+    @mcp.tool(
+        description="Create a new hook. If token_owner is provided, organization_group_admin users CANNOT be used (API will reject)."
+    )
     async def create_hook(
         name: str,
         type: HookType,
@@ -226,8 +230,10 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
             )
         return templates
 
+    # NOTE: We explicitly document token_owner restrictions in the tool description because
+    # Sonnet 4.5 respects tool descriptions more reliably than instructions in system prompts.
     @mcp.tool(
-        description="Create a hook from a Rossum Store template. Uses pre-built configurations from the Rossum Store. The 'events' parameter is optional and can override template defaults. If the template has 'use_token_owner=True', a valid 'token_owner' user URL is required. Note: organization_group_admin users cannot be token owners."
+        description="Create a hook from a Rossum Store template. Uses pre-built configurations from the Rossum Store. The 'events' parameter is optional and can override template defaults. If the template has 'use_token_owner=True', a valid 'token_owner' user URL is required - use list_users to find one. CRITICAL RESTRICTION: organization_group_admin users are FORBIDDEN as token_owner - the API returns HTTP 400 error."
     )
     async def create_hook_from_template(
         name: str,
