@@ -75,6 +75,7 @@ The following tools are available for deployment operations:
 | `deploy_push` | Push local changes to remote |
 | `deploy_copy_org` | Copy entire organization to target org |
 | `deploy_copy_workspace` | Copy a workspace and all objects to target org |
+| `deploy_compare_workspaces` | Compare two local workspaces to see before/after differences |
 | `deploy_to_org` | Deploy local changes to target org using ID mappings |
 
 ---
@@ -129,9 +130,43 @@ call_on_connection("sandbox", "create_hook", '{"name": "...", ...}')
 
 ---
 
-### Step 3: Pull and Diff
+### Step 3: Pull and Compare
 
-After making changes, pull the sandbox configuration and check the diff:
+After making changes, pull both configurations and compare them:
+
+**Option A: Compare workspaces (recommended for before/after diff)**
+
+Use `deploy_compare_workspaces` to see field-level diffs between sandbox state BEFORE and AFTER your changes:
+
+```python
+# Pull sandbox workspace BEFORE making changes (right after deploy_copy_workspace)
+deploy_pull(
+    workspace_id=<target_workspace_id>,  # Use ID from deploy_copy_workspace output
+    workspace_path="./before-changes",
+    api_base_url="https://api.elis.rossum.ai/v1",
+    token="<sandbox_token>"
+)
+
+# ... make changes in sandbox via call_on_connection() ...
+
+# Pull sandbox workspace AFTER making changes
+deploy_pull(
+    workspace_id=<target_workspace_id>,  # Same workspace ID
+    workspace_path="./after-changes",
+    api_base_url="https://api.elis.rossum.ai/v1",
+    token="<sandbox_token>"
+)
+
+# Compare the two states to see what changed
+deploy_compare_workspaces(
+    source_workspace_path="./before-changes",
+    target_workspace_path="./after-changes"
+)
+```
+
+**Option B: Local vs remote diff**
+
+Use `deploy_diff` to compare local files with remote configuration:
 
 ```
 # Pull sandbox configuration
@@ -141,7 +176,7 @@ deploy_pull(
     token="<sandbox_token>"
 )
 
-# Check what changed
+# Check what changed vs remote
 deploy_diff()
 ```
 
@@ -195,10 +230,11 @@ deploy_to_org(
 
 ### deploy_pull
 
-Pull Rossum configuration objects from an organization to local files.
+Pull Rossum configuration objects to local files. **Use `workspace_id` (not `org_id`) for before/after comparisons.**
 
 **Parameters:**
-- `org_id` (required): The organization ID to pull from
+- `workspace_id` (recommended): The workspace ID to pull - use this for comparing workspaces
+- `org_id` (alternative): The organization ID to pull from - pulls ALL workspaces (overkill for comparisons)
 - `workspace_path` (optional): Path to workspace directory
 - `api_base_url` (optional): API base URL for target environment
 - `token` (optional): API token for target environment
@@ -240,6 +276,39 @@ Copy a single workspace and all its objects to target organization.
 - `target_api_base` (optional): Target API base URL
 - `target_token` (optional): Target API token
 - `workspace_path` (optional): Path to workspace directory
+
+### deploy_compare_workspaces
+
+Compare two local workspaces to see differences between source and target. Use this to see exactly what changed after making modifications in the sandbox.
+
+**When to use:**
+- After copying a workspace to sandbox and making changes, to see a detailed before/after diff
+- When you need field-level comparison between source (production) and target (sandbox) configurations
+
+**Parameters:**
+- `source_workspace_path` (required): Path to the source (original/production) workspace directory
+- `target_workspace_path` (required): Path to the target (modified/sandbox) workspace directory
+- `id_mapping_path` (optional): Path to ID mapping JSON file from `deploy_copy_workspace`. If None, objects are matched by their original IDs.
+
+**Example workflow:**
+```python
+# 1. Copy workspace to sandbox
+deploy_copy_workspace(source_workspace_id=1787227, target_org_id=729505, ...)
+
+# 2. Pull sandbox workspace BEFORE making changes
+deploy_pull(workspace_id=<target_workspace_id>, workspace_path="./before-changes", token="<sandbox_token>")
+
+# 3. Make changes in sandbox via call_on_connection()...
+
+# 4. Pull sandbox workspace AFTER changes
+deploy_pull(workspace_id=<target_workspace_id>, workspace_path="./after-changes", token="<sandbox_token>")
+
+# 5. Compare before vs after states
+deploy_compare_workspaces(
+    source_workspace_path="./before-changes",
+    target_workspace_path="./after-changes"
+)
+```
 
 ### deploy_to_org
 

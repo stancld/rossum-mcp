@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from anthropic import beta_tool
+from rossum_deploy.models import IdMapping
 from rossum_deploy.workspace import Workspace
 
 if TYPE_CHECKING:
@@ -333,6 +334,70 @@ def deploy_copy_workspace(
 
 
 @beta_tool
+def deploy_compare_workspaces(
+    source_workspace_path: str,
+    target_workspace_path: str,
+    id_mapping_path: str | None = None,
+) -> str:
+    """Compare two local workspaces to see differences between source and target.
+
+    Use after copying a workspace to sandbox and making changes to see exactly
+    what changed. Shows field-level diffs for all modified objects.
+
+    Two use cases:
+    1. Compare prod vs sandbox: Pass id_mapping_path from copy_workspace to map IDs
+    2. Compare before vs after: Pass id_mapping_path=None to compare same workspace
+
+    Args:
+        source_workspace_path: Path to the source (original/production) workspace directory.
+        target_workspace_path: Path to the target (modified/sandbox) workspace directory.
+        id_mapping_path: Optional path to ID mapping JSON file from copy_workspace.
+            If None, objects are matched by their original IDs.
+
+    Returns:
+        JSON with comparison summary showing identical, different, source-only,
+        and target-only objects with field-level diffs.
+    """
+    start_time = time.perf_counter()
+
+    try:
+        api_base, token = _get_workspace_credentials()
+
+        source_ws = Workspace(Path(source_workspace_path), api_base=api_base, token=token)
+        target_ws = Workspace(Path(target_workspace_path), api_base=api_base, token=token)
+
+        id_mapping = None
+        if id_mapping_path:
+            with open(id_mapping_path) as f:
+                id_mapping = IdMapping.model_validate(json.load(f))
+
+        result = source_ws.compare_workspaces(target_ws, id_mapping=id_mapping)
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(color=False),
+                "source_workspace_id": result.source_workspace_id,
+                "target_workspace_id": result.target_workspace_id,
+                "total_identical": result.total_identical,
+                "total_different": result.total_different,
+                "source_only_count": len(result.source_only),
+                "target_only_count": len(result.target_only),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_compare_workspaces")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
+
+
+@beta_tool
 def deploy_to_org(
     target_org_id: int,
     target_api_base: str | None = None,
@@ -398,6 +463,7 @@ DEPLOY_TOOLS: list[BetaTool[..., str]] = [
     deploy_push,
     deploy_copy_org,
     deploy_copy_workspace,
+    deploy_compare_workspaces,
     deploy_to_org,
 ]
 
