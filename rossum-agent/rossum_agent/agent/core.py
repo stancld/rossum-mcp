@@ -31,6 +31,7 @@ from anthropic.types import (
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
+from rossum_agent.deploy_tools import execute_deploy_tool, get_deploy_tool_names, get_deploy_tools
 from rossum_agent.internal_tools import (
     SubAgentProgress,
     execute_internal_tool,
@@ -115,7 +116,12 @@ class RossumAgent:
         """Get all available tools in Anthropic format (cached)."""
         if self._tools_cache is None:
             mcp_tools = await self.mcp_connection.get_tools()
-            self._tools_cache = mcp_tools_to_anthropic_format(mcp_tools) + get_internal_tools() + self.additional_tools
+            self._tools_cache = (
+                mcp_tools_to_anthropic_format(mcp_tools)
+                + get_internal_tools()
+                + get_deploy_tools()
+                + self.additional_tools
+            )
         return self._tools_cache
 
     def _serialize_tool_result(self, result: object) -> str:
@@ -376,6 +382,11 @@ class RossumAgent:
                 result = future.result()
                 content = str(result)
                 set_progress_callback(None)
+            elif tool_call.name in get_deploy_tool_names():
+                loop = asyncio.get_event_loop()
+                future = loop.run_in_executor(None, execute_deploy_tool, tool_call.name, tool_call.arguments)
+                result = await future
+                content = str(result)
             else:
                 result = await self.mcp_connection.call_tool(tool_call.name, tool_call.arguments)
                 content = self._serialize_tool_result(result)

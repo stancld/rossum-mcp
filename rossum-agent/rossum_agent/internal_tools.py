@@ -1380,6 +1380,8 @@ def load_skill(name: str) -> str:
 
     Available skills:
     - rossum-deployment: Safe workflow for creating and deploying Rossum configurations.
+      Provides access to deployment tools: deploy_pull, deploy_diff, deploy_push,
+      deploy_copy_org, deploy_copy_workspace, deploy_to_org.
       **LOAD THIS SKILL WHEN:**
       - Creating new queues, schemas, hooks, or extensions
       - Setting up document splitting, sorting, or automation
