@@ -8,6 +8,9 @@ from unittest.mock import patch
 
 import pytest
 from rossum_agent.internal_tools import (
+    call_on_connection,
+    cleanup_all_spawned_connections,
+    close_connection,
     debug_hook,
     evaluate_python_hook,
     execute_internal_tool,
@@ -15,6 +18,7 @@ from rossum_agent.internal_tools import (
     get_internal_tools,
     get_output_dir,
     set_output_dir,
+    spawn_mcp_connection,
     write_file,
 )
 
@@ -664,3 +668,368 @@ class TestDebugHook:
             result = json.loads(result_json)
 
         assert result["analysis"] == mock_analysis
+
+
+class TestSpawnMcpConnection:
+    """Test spawn_mcp_connection and related functions."""
+
+    def test_spawn_mcp_connection_without_event_loop(self):
+        """Test that spawn_mcp_connection returns error when event loop not set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            result = spawn_mcp_connection(
+                connection_id="test",
+                api_token="token",
+                api_base_url="https://api.example.com/v1",
+            )
+            assert "Error" in result
+            assert "event loop not set" in result
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_call_on_connection_without_event_loop(self):
+        """Test that call_on_connection returns error when event loop not set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            result = call_on_connection(
+                connection_id="test",
+                tool_name="list_queues",
+                arguments="{}",
+            )
+            assert "Error" in result
+            assert "event loop not set" in result
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_call_on_connection_not_found(self):
+        """Test that call_on_connection returns error when connection not found."""
+        import asyncio
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        internal_tools._spawned_connections.clear()
+        try:
+            result = call_on_connection(
+                connection_id="nonexistent",
+                tool_name="list_queues",
+                arguments="{}",
+            )
+            assert "Error" in result
+            assert "not found" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_call_on_connection_invalid_json(self):
+        """Test that call_on_connection returns error for invalid JSON arguments."""
+        import asyncio
+        from unittest.mock import MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+        from rossum_agent.internal_tools import SpawnedConnection
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        mock_conn = MagicMock()
+        mock_client = MagicMock()
+        internal_tools._spawned_connections["test"] = SpawnedConnection(
+            connection=mock_conn, client=mock_client, api_base_url="https://api.example.com"
+        )
+        try:
+            result = call_on_connection(
+                connection_id="test",
+                tool_name="list_queues",
+                arguments="not valid json",
+            )
+            assert "Error parsing arguments JSON" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_close_connection_not_found(self):
+        """Test that close_connection returns error when connection not found."""
+        import asyncio
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        internal_tools._spawned_connections.clear()
+        try:
+            result = close_connection(connection_id="nonexistent")
+            assert "not found" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_cleanup_all_spawned_connections_no_loop(self):
+        """Test cleanup_all_spawned_connections when no event loop is set."""
+        import rossum_agent.internal_tools as internal_tools
+
+        original_loop = internal_tools._mcp_event_loop
+        internal_tools._mcp_event_loop = None
+        try:
+            cleanup_all_spawned_connections()
+        finally:
+            internal_tools._mcp_event_loop = original_loop
+
+    def test_spawn_connection_already_exists(self):
+        """Test that spawn_mcp_connection returns error if connection already exists."""
+        import asyncio
+        import threading
+        from unittest.mock import MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+        from rossum_agent.internal_tools import SpawnedConnection
+
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+        loop_thread.start()
+
+        internal_tools._mcp_event_loop = loop
+        mock_conn = MagicMock()
+        mock_client = MagicMock()
+        internal_tools._spawned_connections["existing"] = SpawnedConnection(
+            connection=mock_conn, client=mock_client, api_base_url="https://api.example.com"
+        )
+        try:
+            result = spawn_mcp_connection(
+                connection_id="existing",
+                api_token="token",
+                api_base_url="https://api.example.com/v1",
+            )
+            assert "already exists" in result
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=1)
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_tools_include_spawn_mcp_connection(self):
+        """Test that spawn_mcp_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "spawn_mcp_connection" in names
+
+    def test_tools_include_call_on_connection(self):
+        """Test that call_on_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "call_on_connection" in names
+
+    def test_tools_include_close_connection(self):
+        """Test that close_connection is in the internal tools list."""
+        names = get_internal_tool_names()
+        assert "close_connection" in names
+
+    def test_spawn_mcp_connection_empty_connection_id(self):
+        """Test that spawn_mcp_connection returns error for empty connection_id."""
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = __import__("asyncio").new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        try:
+            result = spawn_mcp_connection(
+                connection_id="",
+                api_token="token",
+                api_base_url="https://api.example.com/v1",
+            )
+            assert "Error" in result
+            assert "non-empty" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_spawn_mcp_connection_invalid_url(self):
+        """Test that spawn_mcp_connection returns error for non-https URL."""
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = __import__("asyncio").new_event_loop()
+        internal_tools._mcp_event_loop = loop
+        try:
+            result = spawn_mcp_connection(
+                connection_id="test",
+                api_token="token",
+                api_base_url="http://api.example.com/v1",
+            )
+            assert "Error" in result
+            assert "https://" in result
+        finally:
+            loop.close()
+            internal_tools._mcp_event_loop = None
+
+    def test_spawn_mcp_connection_success(self):
+        """Test happy path for spawn_mcp_connection."""
+        import asyncio
+        import threading
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        import rossum_agent.internal_tools as internal_tools
+
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+        loop_thread.start()
+
+        internal_tools._mcp_event_loop = loop
+        internal_tools._spawned_connections.clear()
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        mock_tool = MagicMock()
+        mock_tool.name = "list_queues"
+        mock_tools = [mock_tool]
+
+        try:
+            with (
+                patch("rossum_agent.internal_tools.create_mcp_transport") as mock_transport,
+                patch("rossum_agent.internal_tools.Client", return_value=mock_client),
+                patch("rossum_agent.internal_tools.MCPConnection") as mock_mcp_conn,
+            ):
+                mock_mcp_conn.return_value.get_tools = AsyncMock(return_value=mock_tools)
+
+                result = spawn_mcp_connection(
+                    connection_id="target",
+                    api_token="test-token",
+                    api_base_url="https://api.example.com/v1",
+                )
+
+                assert "Successfully spawned" in result
+                assert "target" in result
+                assert "https://api.example.com/v1" in result
+                assert "list_queues" in result
+                assert "test-token" not in result
+                assert "target" in internal_tools._spawned_connections
+                mock_transport.assert_called_once()
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=1)
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_call_on_connection_success(self):
+        """Test happy path for call_on_connection."""
+        import asyncio
+        import threading
+        from unittest.mock import AsyncMock, MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+        from rossum_agent.internal_tools import SpawnedConnection
+
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+        loop_thread.start()
+
+        internal_tools._mcp_event_loop = loop
+
+        mock_connection = MagicMock()
+        mock_connection.call_tool = AsyncMock(return_value={"queues": [{"id": 1, "name": "Test Queue"}]})
+        mock_client = MagicMock()
+
+        internal_tools._spawned_connections["target"] = SpawnedConnection(
+            connection=mock_connection, client=mock_client, api_base_url="https://api.example.com"
+        )
+
+        try:
+            result = call_on_connection(
+                connection_id="target",
+                tool_name="list_queues",
+                arguments="{}",
+            )
+
+            assert "queues" in result
+            assert "Test Queue" in result
+            mock_connection.call_tool.assert_called_once_with("list_queues", {})
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=1)
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_close_connection_success(self):
+        """Test happy path for close_connection."""
+        import asyncio
+        import threading
+        from unittest.mock import AsyncMock, MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+        from rossum_agent.internal_tools import SpawnedConnection
+
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+        loop_thread.start()
+
+        internal_tools._mcp_event_loop = loop
+
+        mock_connection = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        internal_tools._spawned_connections["target"] = SpawnedConnection(
+            connection=mock_connection, client=mock_client, api_base_url="https://api.example.com"
+        )
+
+        try:
+            result = close_connection(connection_id="target")
+
+            assert "Successfully closed" in result
+            assert "target" in result
+            assert "target" not in internal_tools._spawned_connections
+            mock_client.__aexit__.assert_called_once()
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=1)
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
+
+    def test_cleanup_all_spawned_connections_success(self):
+        """Test happy path for cleanup_all_spawned_connections."""
+        import asyncio
+        import threading
+        from unittest.mock import AsyncMock, MagicMock
+
+        import rossum_agent.internal_tools as internal_tools
+        from rossum_agent.internal_tools import SpawnedConnection
+
+        loop = asyncio.new_event_loop()
+        loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+        loop_thread.start()
+
+        internal_tools._mcp_event_loop = loop
+
+        mock_client1 = MagicMock()
+        mock_client1.__aexit__ = AsyncMock(return_value=None)
+        mock_client2 = MagicMock()
+        mock_client2.__aexit__ = AsyncMock(return_value=None)
+
+        internal_tools._spawned_connections["conn1"] = SpawnedConnection(
+            connection=MagicMock(), client=mock_client1, api_base_url="https://api1.example.com"
+        )
+        internal_tools._spawned_connections["conn2"] = SpawnedConnection(
+            connection=MagicMock(), client=mock_client2, api_base_url="https://api2.example.com"
+        )
+
+        try:
+            cleanup_all_spawned_connections()
+
+            assert len(internal_tools._spawned_connections) == 0
+            mock_client1.__aexit__.assert_called_once()
+            mock_client2.__aexit__.assert_called_once()
+        finally:
+            loop.call_soon_threadsafe(loop.stop)
+            loop_thread.join(timeout=1)
+            loop.close()
+            internal_tools._mcp_event_loop = None
+            internal_tools._spawned_connections.clear()
