@@ -147,11 +147,20 @@ deploy_diff()
 
 ### Step 4: Show Diff to User and Wait for Approval
 
-Present the diff to the user:
+Present the diff to the user. **Always call `.summary()` on the comparison result** to get a concise, readable output:
 
+```python
+# Get the comparison result
+result = deploy_diff()
+
+# Display the summary to the user (NOT the raw result)
+print(result.summary())
+```
+
+Example output format:
 ```
 === Deployment Diff ===
-[Show deploy_diff output here]
+[Show result.summary() output here]
 
 Do you want to deploy these changes to production?
 ```
