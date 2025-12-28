@@ -21,6 +21,7 @@ from rossum_mcp.logging_config import setup_logging
 
 from rossum_agent.agent import AgentConfig, create_agent
 from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.internal_tools import set_output_dir
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
@@ -150,8 +151,9 @@ def main() -> None:  # noqa: C901
     # Initialize session-specific output directory
     if "output_dir" not in st.session_state:
         st.session_state.output_dir = create_session_output_dir()
-    # Set the context variable for the current session
+    # Set both the context variable and global output directory for internal tools
     set_session_output_dir(st.session_state.output_dir)
+    set_output_dir(st.session_state.output_dir)
 
     # Initialize credentials in session state
     # Read from env variables for debugging if suitable
