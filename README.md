@@ -151,7 +151,7 @@ This repository contains three standalone Python packages:
 
 - **[rossum-mcp/](rossum-mcp/)** - MCP server for Rossum API integration with AI assistants
 - **[rossum-agent/](rossum-agent/)** - Specialized AI agent toolkit with Streamlit UI
-- **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment for Rossum configurations
+- **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment tool (lightweight alternative to [deployment-manager](https://github.com/rossumai/deployment-manager))
 
 Each package can be installed and used independently or together for complete functionality.
 

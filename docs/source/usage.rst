@@ -433,6 +433,75 @@ Field-level thresholds override the queue's default_score_threshold.
      "message": "Schema 'Invoice Schema' (ID 67890) updated successfully"
    }
 
+patch_schema
+^^^^^^^^^^^^
+
+Patch a schema by adding, updating, or removing individual nodes without replacing the entire content.
+This is particularly useful for making incremental changes to schemas.
+
+**Parameters:**
+
+- ``schema_id`` (integer, required): Schema ID to patch
+- ``operation`` (string, required): One of "add", "update", or "remove"
+- ``node_id`` (string, required): ID of the node to operate on
+- ``node_data`` (object, optional): Data for add/update operations. Required for "add" and "update"
+- ``parent_id`` (string, optional): Parent node ID for add operation. Required for "add"
+- ``position`` (integer, optional): Position for add operation (appends if not specified)
+
+**Operations:**
+
+- **add**: Add a new datapoint/multivalue to a parent (section or tuple). Requires ``parent_id`` and ``node_data``.
+- **update**: Update properties of an existing node. Requires ``node_data`` with fields to update.
+- **remove**: Remove a node from the schema. Only ``node_id`` is required.
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 123,
+     "name": "Invoice Schema",
+     "content": [
+       {
+         "id": "header_section",
+         "label": "Header",
+         "category": "section",
+         "children": [
+           {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint"},
+           {"id": "vendor_name", "label": "Vendor Name", "category": "datapoint"}
+         ]
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Add a new datapoint to a section
+   patch_schema(
+       schema_id=123,
+       operation="add",
+       node_id="vendor_name",
+       parent_id="header_section",
+       node_data={"label": "Vendor Name", "type": "string", "category": "datapoint"}
+   )
+
+   # Update a field's label and threshold
+   patch_schema(
+       schema_id=123,
+       operation="update",
+       node_id="invoice_number",
+       node_data={"label": "Invoice #", "score_threshold": 0.9}
+   )
+
+   # Remove a field
+   patch_schema(
+       schema_id=123,
+       operation="remove",
+       node_id="old_field"
+   )
+
 update_engine
 ^^^^^^^^^^^^^
 
@@ -522,6 +591,31 @@ Creates a new schema with sections and datapoints.
      "url": "https://elis.rossum.ai/api/v1/schemas/12345",
      "content": [...],
      "message": "Schema 'My Schema' created successfully with ID 12345"
+   }
+
+get_engine
+^^^^^^^^^^
+
+Retrieves a single engine by ID.
+
+**Parameters:**
+
+- ``engine_id`` (integer, required): The engine ID to retrieve
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "My Engine",
+     "url": "https://elis.rossum.ai/api/v1/engines/12345",
+     "type": "extractor",
+     "learning_enabled": true,
+     "training_queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+     "description": "Engine description",
+     "agenda_id": "abc123",
+     "organization": "https://elis.rossum.ai/api/v1/organizations/123"
    }
 
 list_engines
@@ -893,6 +987,134 @@ can be used for custom validation, data enrichment, or integration with external
      "message": "Hook 'My Hook' created successfully with ID 12345"
    }
 
+update_hook
+^^^^^^^^^^^
+
+Updates an existing hook. Use this to modify hook properties like name, queues, events, config,
+settings, or active status. Only provide the fields you want to change - other fields will remain unchanged.
+
+**Parameters:**
+
+- ``hook_id`` (integer, required): ID of the hook to update
+- ``name`` (string, optional): New name for the hook
+- ``queues`` (array, optional): List of queue URLs to attach the hook to
+- ``events`` (array, optional): List of events that trigger the hook
+- ``config`` (object, optional): Hook configuration
+- ``settings`` (object, optional): Hook settings
+- ``active`` (boolean, optional): Whether the hook is active
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "Updated Hook Name",
+     "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+     "active": true,
+     "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+     "events": ["annotation_content.initialize"],
+     "config": {"runtime": "python3.12", "function": "..."},
+     "settings": {}
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Rename a hook
+   update_hook(hook_id=12345, name="New Hook Name")
+
+   # Deactivate a hook
+   update_hook(hook_id=12345, active=False)
+
+   # Change hook events
+   update_hook(hook_id=12345, events=["annotation_content.confirm"])
+
+list_hook_templates
+^^^^^^^^^^^^^^^^^^^
+
+Lists available hook templates from Rossum Store. Hook templates provide pre-built extension
+configurations (e.g., data validation, field mapping, notifications) that can be used to
+quickly create hooks instead of writing code from scratch.
+
+**Parameters:**
+
+None
+
+**Returns:**
+
+.. code-block:: json
+
+   [
+     {
+       "id": 5,
+       "url": "https://elis.rossum.ai/api/v1/hook_templates/5",
+       "name": "Document Splitting",
+       "description": "Automatically split multi-page documents into separate annotations",
+       "type": "function",
+       "events": ["annotation_content.initialize"],
+       "config": {"runtime": "python3.12", "function": "..."},
+       "settings_schema": {"type": "object", "properties": {}},
+       "guide": "https://knowledge-base.rossum.ai/docs/..."
+     }
+   ]
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all available hook templates
+   templates = list_hook_templates()
+
+   # Find a template by name
+   for template in templates:
+       if "splitting" in template.name.lower():
+           print(f"Found: {template.name} (ID: {template.id})")
+
+create_hook_from_template
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Creates a hook from a Rossum Store template. Use ``list_hook_templates`` first to find
+available templates and their IDs. This is the recommended way to create hooks as it
+uses battle-tested configurations from the Rossum Store.
+
+**Parameters:**
+
+- ``name`` (string, required): Name for the new hook
+- ``hook_template_id`` (integer, required): ID of the hook template to use (from ``list_hook_templates``)
+- ``queues`` (array, required): List of queue URLs to attach the hook to
+- ``events`` (array, optional): List of events to trigger the hook (overrides template defaults if provided)
+- ``token_owner`` (string, optional but required for some templates): User URL to use as token owner when the template has ``use_token_owner=True``. Obtain this via ``list_users``.
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "My Document Splitting Hook",
+     "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+     "hook_template": "https://elis.rossum.ai/api/v1/hook_templates/5",
+     "type": "function",
+     "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+     "events": ["annotation_content.initialize"],
+     "config": {},
+     "settings": {}
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Create a hook from template
+   create_hook_from_template(
+       name="Invoice Splitting",
+       hook_template_id=5,
+       queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+       token_owner="https://api.elis.rossum.ai/v1/users/12345"
+   )
+
 list_hook_logs
 ^^^^^^^^^^^^^^
 
@@ -1071,6 +1293,111 @@ logic with trigger conditions (TxScript formulas) and actions that execute when 
 
    # List only enabled rules
    enabled_rules = list_rules(enabled=True)
+
+User Management
+---------------
+
+get_user
+^^^^^^^^
+
+Retrieves a single user by ID. Use ``list_users`` first to find users by username or email.
+
+**Parameters:**
+
+- ``user_id`` (integer, required): The user ID to retrieve
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "url": "https://elis.rossum.ai/api/v1/users/12345",
+     "username": "john.doe@example.com",
+     "first_name": "John",
+     "last_name": "Doe",
+     "email": "john.doe@example.com",
+     "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+     "is_active": true,
+     "date_joined": "2024-01-01T00:00:00Z",
+     "last_login": "2024-01-15T10:30:00Z"
+   }
+
+list_users
+^^^^^^^^^^
+
+Lists users in the organization. Use this to find a user's URL when you need it for
+``token_owner`` in ``create_hook_from_template``.
+
+**Parameters:**
+
+- ``username`` (string, optional): Filter by exact username
+- ``email`` (string, optional): Filter by email address
+- ``first_name`` (string, optional): Filter by first name
+- ``last_name`` (string, optional): Filter by last name
+- ``is_active`` (boolean, optional): Filter by active status
+
+**Returns:**
+
+.. code-block:: json
+
+   [
+     {
+       "id": 12345,
+       "url": "https://elis.rossum.ai/api/v1/users/12345",
+       "username": "john.doe@example.com",
+       "first_name": "John",
+       "last_name": "Doe",
+       "email": "john.doe@example.com",
+       "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+       "is_active": true
+     }
+   ]
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Find user by username to get their URL for token_owner
+   users = list_users(username="john.doe@example.com")
+   if users:
+       user_url = users[0].url
+       # Use user_url in create_hook_from_template
+
+list_user_roles
+^^^^^^^^^^^^^^^
+
+Lists all user roles (groups of permissions) in the organization.
+
+**Parameters:**
+
+None
+
+**Returns:**
+
+.. code-block:: json
+
+   [
+     {
+       "id": 12345,
+       "name": "Organization group admin",
+       "url": "https://elis.rossum.ai/api/v1/groups/12345"
+     },
+     {
+       "id": 12346,
+       "name": "Admin",
+       "url": "https://elis.rossum.ai/api/v1/groups/12346"
+     }
+   ]
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all available roles
+   roles = list_user_roles()
+   for role in roles:
+       print(f"{role.name} (ID: {role.id})")
 
 Relations Management
 --------------------
@@ -1629,3 +1956,149 @@ Lists all document relations with optional filters. Document relations introduce
 
       # The result contains both execution details and expert analysis
       print(result["analysis"])
+
+Deployment Tools
+----------------
+
+The ``rossum_deploy`` package provides lightweight configuration deployment capabilities.
+This is a minimalistic alternative to `deployment-manager (PRD2) <https://github.com/rossumai/deployment-manager>`_.
+
+Workspace
+^^^^^^^^^
+
+The ``Workspace`` class is the main entry point for deployment operations.
+
+.. code-block:: python
+
+   from rossum_deploy import Workspace
+
+   # Initialize workspace
+   ws = Workspace(
+       "./my-project",
+       api_base="https://api.elis.rossum.ai/v1",
+       token="your-token"
+   )
+
+   # Pull all objects from an organization
+   result = ws.pull(org_id=123456)
+   print(result.summary())
+
+   # Show diff between local and remote
+   diff = ws.diff()
+   print(diff.summary())
+
+   # Push changes (dry run first)
+   result = ws.push(dry_run=True)
+   print(result.summary())
+
+   # Push for real
+   result = ws.push(confirm=True)
+   print(result.summary())
+
+pull
+^^^^
+
+Pull objects from Rossum to local workspace.
+
+**Parameters:**
+
+- ``org_id`` (integer, optional): Organization ID to pull from
+- ``types`` (list, optional): Object types to pull (default: all)
+
+**Returns:**
+
+``PullResult`` with summary of pulled objects.
+
+.. code-block:: python
+
+   # Pull all objects
+   result = ws.pull(org_id=123456)
+
+   # Pull specific types only
+   from rossum_deploy import ObjectType
+   result = ws.pull(org_id=123456, types=[ObjectType.QUEUE, ObjectType.HOOK])
+
+diff
+^^^^
+
+Compare local workspace with remote Rossum.
+
+**Returns:**
+
+``DiffResult`` with status of each object (unchanged, local_modified, remote_modified, conflict).
+
+.. code-block:: python
+
+   diff = ws.diff()
+   print(diff.summary())
+   # Output:
+   # # Diff Summary
+   # - Unchanged: 10
+   # - Local modified: 2
+   # - Remote modified: 0
+   # - Conflicts: 0
+
+push
+^^^^
+
+Push local changes to Rossum.
+
+**Parameters:**
+
+- ``dry_run`` (boolean): If True, only show what would be pushed
+- ``confirm`` (boolean): Must be True to actually push (safety mechanism)
+- ``force`` (boolean): If True, push even if there are conflicts
+
+**Returns:**
+
+``PushResult`` with summary of pushed objects.
+
+.. code-block:: python
+
+   # Dry run first
+   result = ws.push(dry_run=True)
+   print(result.summary())
+
+   # Push for real
+   result = ws.push(confirm=True)
+
+   # Force push (override conflicts)
+   result = ws.push(confirm=True, force=True)
+
+CLI Usage
+^^^^^^^^^
+
+Set environment variables:
+
+.. code-block:: bash
+
+   export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+   export ROSSUM_API_TOKEN="your-token"
+
+Commands:
+
+.. code-block:: bash
+
+   # Pull from organization
+   rossum-deploy pull 123456
+
+   # Show diff
+   rossum-deploy diff
+
+   # Push (dry run)
+   rossum-deploy push --dry-run
+
+   # Push for real
+   rossum-deploy push
+
+Comparison with deployment-manager
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For complex deployments across multiple organizations, attribute overrides, and GIT-based
+workflow tracking, use `deployment-manager (PRD2) <https://github.com/rossumai/deployment-manager>`_.
+
+``rossum_deploy`` is designed for:
+
+- Simple pull/push workflows within an AI agent
+- Minimal dependency footprint
+- Programmatic Python-first access

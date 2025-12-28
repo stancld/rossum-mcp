@@ -43,7 +43,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-The MCP server provides **34 tools** organized into six categories:
+The MCP server provides **40 tools** organized into seven categories:
 
 **Document Processing**
 
@@ -60,6 +60,7 @@ The MCP server provides **34 tools** organized into six categories:
 * **get_queue_engine** - Get engine information
 * **create_queue**, **create_schema** - Create new queues and schemas
 * **update_queue**, **update_schema** - Configure automation thresholds
+* **patch_schema** - Add, update, or remove individual schema nodes
 
 **Workspace Management**
 
@@ -67,8 +68,15 @@ The MCP server provides **34 tools** organized into six categories:
 * **list_workspaces** - List all workspaces with optional filtering
 * **create_workspace** - Create a new workspace
 
+**User Management**
+
+* **get_user** - Retrieve user details by ID
+* **list_users** - List users with filtering (for finding user URLs for token_owner)
+* **list_user_roles** - List all user roles (permission groups) in the organization
+
 **Engine Management**
 
+* **get_engine** - Retrieve a single engine by ID
 * **list_engines** - List all engines with optional filters
 * **create_engine** - Create extraction or splitting engines
 * **update_engine** - Configure learning and training queues
@@ -80,6 +88,9 @@ The MCP server provides **34 tools** organized into six categories:
 * **get_hook** - Get hook/extension details
 * **list_hooks** - List webhooks and extensions
 * **create_hook** - Create webhooks or serverless function hooks
+* **update_hook** - Update hook properties (name, queues, events, config, settings, active)
+* **list_hook_templates** - List available hook templates from Rossum Store
+* **create_hook_from_template** - Create hooks from pre-built templates
 * **list_hook_logs** - List hook execution logs for debugging and monitoring
 * **get_rule** - Get business rule details
 * **list_rules** - List business rules with trigger conditions and actions
@@ -113,6 +124,16 @@ The ``rossum_agent`` package provides additional capabilities:
 * Integration with AI agent frameworks (Anthropic Claude)
 * CLI and Streamlit web interfaces
 * See the :doc:`examples` section for complete workflows
+
+**Deployment Tools**
+
+The ``rossum_deploy`` package provides lightweight deployment capabilities:
+
+* Pull/diff/push workflow for Rossum configurations
+* Support for Workspace, Queue, Schema, Hook, and Inbox objects
+* Conflict detection when both local and remote have changed
+* Python-first API designed for agent integration
+* Lightweight alternative to `deployment-manager (PRD2) <https://github.com/rossumai/deployment-manager>`_
 
 Quick Start
 -----------
