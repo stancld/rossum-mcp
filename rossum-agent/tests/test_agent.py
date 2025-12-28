@@ -96,10 +96,10 @@ class TestMemoryStep:
     """Test MemoryStep to_messages conversion."""
 
     def test_to_messages_with_tool_calls(self):
-        """Test that tool calls are converted to messages (thinking IS included before tool_use)."""
+        """Test that tool calls are converted to messages (text IS included before tool_use)."""
         step = MemoryStep(
             step_number=1,
-            thinking="Let me analyze this...",
+            text="Let me analyze this...",
             tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"key": "value"})],
             tool_results=[ToolResult(tool_call_id="tc1", name="get_data", content="result data")],
         )
@@ -108,7 +108,7 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
-        # Thinking text is included as first block, then tool_use
+        # Text is included as first block, then tool_use
         assert len(messages[0]["content"]) == 2
         assert messages[0]["content"][0]["type"] == "text"
         assert messages[0]["content"][0]["text"] == "Let me analyze this..."
@@ -117,8 +117,8 @@ class TestMemoryStep:
         assert messages[1]["role"] == "user"
         assert messages[1]["content"][0]["type"] == "tool_result"
 
-    def test_to_messages_with_tool_calls_no_thinking(self):
-        """Test that tool calls without thinking only include tool_use blocks."""
+    def test_to_messages_with_tool_calls_no_text(self):
+        """Test that tool calls without text only include tool_use blocks."""
         step = MemoryStep(
             step_number=1,
             tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"key": "value"})],
@@ -129,24 +129,24 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
-        # No thinking, so only tool_use block
+        # No text, so only tool_use block
         assert len(messages[0]["content"]) == 1
         assert messages[0]["content"][0]["type"] == "tool_use"
 
         assert messages[1]["role"] == "user"
         assert messages[1]["content"][0]["type"] == "tool_result"
 
-    def test_to_messages_no_tool_calls_returns_empty(self):
-        """Test that step without tool calls and no model_output returns empty messages."""
-        step = MemoryStep(step_number=1, thinking="Just thinking...")
+    def test_to_messages_no_text_returns_empty(self):
+        """Test that step without tool calls and no text returns empty messages."""
+        step = MemoryStep(step_number=1)
 
         messages = step.to_messages()
 
         assert messages == []
 
-    def test_to_messages_with_model_output(self):
-        """Test that final answer steps include model_output as assistant content."""
-        step = MemoryStep(step_number=1, model_output="Here is the final answer.")
+    def test_to_messages_with_text(self):
+        """Test that final answer steps include text as assistant content."""
+        step = MemoryStep(step_number=1, text="Here is the final answer.")
 
         messages = step.to_messages()
 
@@ -186,7 +186,7 @@ class TestAgentMemory:
         """Test adding tasks and steps."""
         memory = AgentMemory()
         memory.add_task("Task 1")
-        memory.add_step(MemoryStep(step_number=1, thinking="Thinking..."))
+        memory.add_step(MemoryStep(step_number=1, text="Thinking..."))
 
         assert len(memory.steps) == 2
         assert isinstance(memory.steps[0], TaskStep)
@@ -199,7 +199,7 @@ class TestAgentMemory:
         memory.add_step(
             MemoryStep(
                 step_number=1,
-                thinking="Thinking",
+                text="Thinking",
                 tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
                 tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
             )
@@ -258,7 +258,7 @@ class TestRossumAgentMemoryIntegration:
         agent.memory.add_step(
             MemoryStep(
                 step_number=1,
-                thinking="Thinking",
+                text="Thinking",
                 tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
                 tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
             )
@@ -617,11 +617,14 @@ class TestAgentRun:
         assert "3" in steps[-1].error
 
     @pytest.mark.asyncio
-    async def test_rate_limit_error_handling(self):
-        """Test that RateLimitError is handled gracefully."""
+    async def test_rate_limit_error_exhausts_retries(self):
+        """Test that RateLimitError exhausts retries and returns error."""
         agent = self._create_agent()
 
+        call_count = [0]
+
         async def mock_stream_response(step_num):
+            call_count[0] += 1
             raise RateLimitError(
                 message="Rate limit exceeded",
                 response=MagicMock(status_code=429),
@@ -629,14 +632,118 @@ class TestAgentRun:
             )
             yield  # Make it a generator
 
-        with patch.object(agent, "_stream_model_response", side_effect=mock_stream_response):
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock),
+        ):
             steps = []
             async for step in agent.run("Test prompt"):
                 steps.append(step)
 
-        assert len(steps) == 1
-        assert steps[0].is_final is True
-        assert "Rate limit" in steps[0].error
+        final_steps = [s for s in steps if s.is_final]
+        assert len(final_steps) == 1
+        assert final_steps[0].is_final is True
+        assert "Rate limit" in final_steps[0].error
+        assert "5 retries" in final_steps[0].error
+        assert call_count[0] == 6  # Initial attempt + 5 retries
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_retry_succeeds_after_transient_failure(self):
+        """Test that rate limit retry succeeds after transient failure."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] < 3:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Success!", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        assert call_count[0] == 3  # 2 failures + 1 success
+        assert mock_sleep.await_count == 2  # Called for each retry wait
+        final_steps = [s for s in steps if s.is_final]
+        assert len(final_steps) == 1
+        assert final_steps[0].final_answer == "Success!"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_yields_progress_step_during_wait(self):
+        """Test that rate limit retry yields a progress step during wait."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        streaming_steps = [s for s in steps if s.is_streaming and s.thinking]
+        assert len(streaming_steps) >= 1
+        assert "Rate limited" in streaming_steps[0].thinking
+        assert "waiting" in streaming_steps[0].thinking.lower()
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_exponential_backoff_delay(self):
+        """Test that rate limit uses exponential backoff with jitter."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] <= 3:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        sleep_durations = []
+
+        async def capture_sleep(duration):
+            sleep_durations.append(duration)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", side_effect=capture_sleep),
+            patch("rossum_agent.agent.core.random.uniform", return_value=0.0),  # No jitter for deterministic test
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        assert len(sleep_durations) == 3
+        # Base delay is 2.0, so: 2.0, 4.0, 8.0
+        assert sleep_durations[0] == 2.0
+        assert sleep_durations[1] == 4.0
+        assert sleep_durations[2] == 8.0
 
     @pytest.mark.asyncio
     async def test_api_timeout_error_handling(self):

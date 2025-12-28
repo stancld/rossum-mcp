@@ -11,6 +11,7 @@ import dataclasses
 import json
 import logging
 import queue
+import random
 from typing import TYPE_CHECKING
 
 from anthropic import APIError, APITimeoutError, RateLimitError
@@ -48,6 +49,11 @@ if TYPE_CHECKING:
     from rossum_agent.agent.types import UserContent
 
 logger = logging.getLogger(__name__)
+
+
+RATE_LIMIT_MAX_RETRIES = 5
+RATE_LIMIT_BASE_DELAY = 2.0
+RATE_LIMIT_MAX_DELAY = 60.0
 
 
 class RossumAgent:
@@ -98,10 +104,11 @@ class RossumAgent:
     def add_assistant_message(self, content: str) -> None:
         """Add an assistant message to the conversation history.
 
-        Note: This creates a MemoryStep with just thinking text, no tool calls.
-        For proper conversation flow, use the run() method instead.
+        This creates a MemoryStep with text set, which ensures the
+        message is properly serialized when rebuilding conversation history.
+        For proper conversation flow with tool use, use the run() method instead.
         """
-        step = MemoryStep(step_number=0, thinking=content)
+        step = MemoryStep(step_number=0, text=content)
         self.memory.add_step(step)
 
     async def _get_tools(self) -> list[ToolParam]:
@@ -271,7 +278,7 @@ class RossumAgent:
             step.is_final = True
             memory_step = MemoryStep(
                 step_number=step_num,
-                model_output=thinking_text if thinking_text else None,
+                text=thinking_text if thinking_text else None,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
             )
@@ -296,7 +303,7 @@ class RossumAgent:
         """Execute tools and yield progress updates."""
         memory_step = MemoryStep(
             step_number=step_num,
-            thinking=thinking_text if thinking_text else None,
+            text=thinking_text if thinking_text else None,
             tool_calls=tool_calls,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -388,41 +395,68 @@ class RossumAgent:
         This method implements the main agent loop, calling the model,
         executing tools, and continuing until the model produces a final
         answer or the maximum number of steps is reached.
+
+        Rate limiting is handled with exponential backoff and jitter.
         """
         set_mcp_connection(self.mcp_connection, asyncio.get_event_loop())
         self.memory.add_task(prompt)
 
         for step_num in range(1, self.config.max_steps + 1):
-            try:
-                final_step: AgentStep | None = None
-                async for step in self._stream_model_response(step_num):
-                    yield step
-                    if not step.is_streaming:
-                        final_step = step
+            rate_limit_retries = 0
 
-                if final_step and final_step.is_final:
+            # Throttle requests to avoid rate limiting (skip delay on first step)
+            if step_num > 1 and self.config.request_delay > 0:
+                await asyncio.sleep(self.config.request_delay)
+
+            while True:
+                try:
+                    final_step: AgentStep | None = None
+                    async for step in self._stream_model_response(step_num):
+                        yield step
+                        if not step.is_streaming:
+                            final_step = step
+
+                    if final_step and final_step.is_final:
+                        return
+
                     break
 
-            except RateLimitError as e:
-                logger.warning(f"Rate limit hit at step {step_num}: {e}")
-                yield AgentStep(
-                    step_number=step_num,
-                    error=f"Rate limit exceeded. Please wait and try again. Details: {e}",
-                    is_final=True,
-                )
-                break
+                except RateLimitError as e:
+                    rate_limit_retries += 1
+                    if rate_limit_retries > RATE_LIMIT_MAX_RETRIES:
+                        logger.error(f"Rate limit retries exhausted at step {step_num}: {e}")
+                        yield AgentStep(
+                            step_number=step_num,
+                            error=f"Rate limit exceeded after {RATE_LIMIT_MAX_RETRIES} retries. Please try again later.",
+                            is_final=True,
+                        )
+                        return
 
-            except APITimeoutError as e:
-                logger.warning(f"API timeout at step {step_num}: {e}")
-                yield AgentStep(
-                    step_number=step_num, error=f"Request timed out. Please try again. Details: {e}", is_final=True
-                )
-                break
+                    delay = min(RATE_LIMIT_BASE_DELAY * (2 ** (rate_limit_retries - 1)), RATE_LIMIT_MAX_DELAY)
+                    jitter = random.uniform(0, delay * 0.1)
+                    wait_time = delay + jitter
+                    logger.warning(
+                        f"Rate limit hit at step {step_num} (attempt {rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES}), "
+                        f"retrying in {wait_time:.1f}s: {e}"
+                    )
+                    yield AgentStep(
+                        step_number=step_num,
+                        thinking=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
+                        is_streaming=True,
+                    )
+                    await asyncio.sleep(wait_time)
 
-            except APIError as e:
-                logger.error(f"API error at step {step_num}: {e}")
-                yield AgentStep(step_number=step_num, error=f"API error occurred: {e}", is_final=True)
-                break
+                except APITimeoutError as e:
+                    logger.warning(f"API timeout at step {step_num}: {e}")
+                    yield AgentStep(
+                        step_number=step_num, error=f"Request timed out. Please try again. Details: {e}", is_final=True
+                    )
+                    return
+
+                except APIError as e:
+                    logger.error(f"API error at step {step_num}: {e}")
+                    yield AgentStep(step_number=step_num, error=f"API error occurred: {e}", is_final=True)
+                    return
 
         else:
             yield AgentStep(

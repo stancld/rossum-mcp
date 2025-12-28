@@ -37,6 +37,7 @@ from ddgs import DDGS
 from ddgs.exceptions import DDGSException
 from fastmcp import Client
 
+from rossum_agent.agent.skills import get_skill, get_skill_registry
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.mcp_tools import MCPConnection, create_mcp_transport
 
@@ -1325,11 +1326,7 @@ Steps:
 
 
 @beta_tool
-def debug_hook(
-    hook_id: str,
-    annotation_id: str,
-    schema_id: str | None = None,
-) -> str:
+def debug_hook(hook_id: str, annotation_id: str, schema_id: str | None = None) -> str:
     """Debug a Rossum hook using an Opus sub-agent. ALWAYS use this tool when debugging hook code errors.
 
     This is the PRIMARY tool for debugging Python function hooks. Simply pass the hook ID and annotation ID,
@@ -1374,11 +1371,42 @@ def debug_hook(
     return json.dumps(response, ensure_ascii=False, default=str)
 
 
+@beta_tool
+def load_skill(name: str) -> str:
+    """Load a specialized skill that provides domain-specific instructions and workflows.
+
+    Use this tool when you recognize that a task matches one of the available skills.
+    The skill will provide detailed instructions, workflows, and context for the task.
+
+    Available skills:
+    - rossum-deployment: Safe workflow for creating and deploying Rossum configurations.
+      **LOAD THIS SKILL WHEN:**
+      - Creating new queues, schemas, hooks, or extensions
+      - Setting up document splitting, sorting, or automation
+      - Deploying configuration changes
+      - Copying configurations between organizations
+      - Any configuration task that modifies Rossum resources
+
+    Args:
+        name: The name of the skill to load (e.g., "rossum-deployment").
+
+    Returns:
+        The skill instructions and workflows, or an error if skill not found.
+    """
+    skill = get_skill(name)
+    if skill is None:
+        available = get_skill_registry().get_skill_names()
+        return json.dumps({"status": "error", "message": f"Skill '{name}' not found.", "available_skills": available})
+
+    return json.dumps({"status": "success", "skill_name": skill.name, "instructions": skill.content})
+
+
 INTERNAL_TOOLS: list[BetaTool[..., str]] = [
     write_file,
     search_knowledge_base,
     evaluate_python_hook,
     debug_hook,
+    load_skill,
     spawn_mcp_connection,
     call_on_connection,
     close_connection,

@@ -171,7 +171,7 @@ def main() -> None:  # noqa: C901
             "yes",
         ]
     if "mcp_mode" not in st.session_state:
-        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
+        st.session_state.mcp_mode = "read-write"
 
     if "rossum_url_context" not in st.session_state:
         st.session_state.rossum_url_context = RossumUrlContext()
@@ -260,37 +260,6 @@ def main() -> None:  # noqa: C901
                 st.session_state.credentials_saved = False
                 st.rerun()
 
-        # MCP Mode selection
-        st.markdown("---")
-        st.subheader("Agent Mode")
-
-        if st.session_state.read_write_disabled:
-            st.info("ℹ️ Read-write mode is disabled for current release.")  # noqa: RUF001
-            new_mode = "read-only"
-            st.radio(
-                "Select mode:",
-                options=["read-only"],
-                index=0,
-                help="Read-only mode prevents the agent from making changes to Rossum.",
-                disabled=False,
-            )
-        else:
-            new_mode = st.radio(
-                "Select mode:",
-                options=["read-write", "read-only"],
-                index=0 if st.session_state.mcp_mode == "read-write" else 1,
-                help="Read-only mode prevents the agent from making changes to Rossum. "
-                "Read-write mode allows full operations including creating/updating resources.",
-            )
-
-        if new_mode != st.session_state.mcp_mode:
-            st.session_state.mcp_mode = new_mode
-            os.environ["ROSSUM_MCP_MODE"] = new_mode
-            st.rerun()
-
-        mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
-        st.info(f"Current mode: **{mode_indicator}**")
-
         # URL Context section
         st.markdown("---")
         st.subheader("Current Context")
@@ -347,8 +316,8 @@ def main() -> None:  # noqa: C901
         # Generated files section
         st.markdown("---")
         st.subheader("Generated Files")
-        generated_files = get_generated_files()
-        generated_files_metadata = get_generated_files_with_metadata()
+        generated_files = get_generated_files(st.session_state.output_dir)
+        generated_files_metadata = get_generated_files_with_metadata(st.session_state.output_dir)
 
         if generated_files:
             st.write(f"📁 {len(generated_files)} file(s) generated:")
@@ -571,7 +540,7 @@ def main() -> None:  # noqa: C901
                     st.components.v1.html(BEEP_HTML, height=0)
 
                 # Check if files were generated/modified and rerun to update sidebar
-                current_files_metadata = get_generated_files_with_metadata()
+                current_files_metadata = get_generated_files_with_metadata(st.session_state.output_dir)
                 if current_files_metadata != generated_files_metadata:
                     st.rerun()
 

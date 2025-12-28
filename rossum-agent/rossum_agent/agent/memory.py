@@ -26,14 +26,11 @@ class MemoryStep:
     on-the-fly via to_messages(), allowing summary_mode to compress old steps.
 
     Attributes:
-        model_output: User-visible response text (final answers). Serialized to messages.
-        thinking: Internal chain-of-thought reasoning. NOT serialized to messages
-            to avoid token bloat from replaying reasoning on every call.
+        text: Model's text output (reasoning before tool calls, or final answer).
     """
 
     step_number: int
-    model_output: str | None = None
-    thinking: str | None = None
+    text: str | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     tool_results: list[ToolResult] = field(default_factory=list)
     input_tokens: int = 0
@@ -42,8 +39,8 @@ class MemoryStep:
     def to_messages(self) -> list[MessageParam]:
         """Convert this step to Anthropic message format.
 
-        For tool-use steps: Only includes tool_use blocks (no thinking text).
-        For final answer steps: Includes model_output as assistant content.
+        For tool-use steps: Includes text block followed by tool_use blocks.
+        For final answer steps: Includes text as assistant content.
 
         Returns:
             List of message dicts for the Anthropic API.
@@ -53,9 +50,8 @@ class MemoryStep:
         if self.tool_calls:
             assistant_content: list[dict[str, object]] = []
 
-            # Include thinking text before tool calls (matches Anthropic API format)
-            if self.thinking:
-                assistant_content.append({"type": "text", "text": self.thinking})
+            if self.text:
+                assistant_content.append({"type": "text", "text": self.text})
 
             for tc in self.tool_calls:
                 assistant_content.append({"type": "tool_use", "id": tc.id, "name": tc.name, "input": tc.arguments})
@@ -76,8 +72,8 @@ class MemoryStep:
 
                 messages.append({"role": "user", "content": tool_result_blocks})
 
-        elif self.model_output:
-            messages.append({"role": "assistant", "content": self.model_output})
+        elif self.text:
+            messages.append({"role": "assistant", "content": self.text})
 
         return messages
 
