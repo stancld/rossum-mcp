@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import rossum_agent.internal_tools as internal_tools
 from rossum_agent.internal_tools import (
+    SpawnedConnection,
     call_on_connection,
     cleanup_all_spawned_connections,
     close_connection,
@@ -17,6 +20,7 @@ from rossum_agent.internal_tools import (
     get_internal_tool_names,
     get_internal_tools,
     get_output_dir,
+    set_mcp_connection,
     set_output_dir,
     spawn_mcp_connection,
     write_file,
@@ -1033,3 +1037,31 @@ class TestSpawnMcpConnection:
             loop.close()
             internal_tools._mcp_event_loop = None
             internal_tools._spawned_connections.clear()
+
+
+class TestSetMcpConnection:
+    """Test set_mcp_connection function."""
+
+    def test_set_mcp_connection_clears_spawned_connections(self):
+        """Test that set_mcp_connection clears stale spawned connections from previous turns."""
+        loop = asyncio.new_event_loop()
+        mock_conn = MagicMock()
+        mock_client = MagicMock()
+        internal_tools._spawned_connections["stale_sandbox"] = SpawnedConnection(
+            connection=mock_conn, client=mock_client, api_base_url="https://stale.example.com"
+        )
+        internal_tools._spawned_connections["stale_target"] = SpawnedConnection(
+            connection=mock_conn, client=mock_client, api_base_url="https://stale2.example.com"
+        )
+        assert len(internal_tools._spawned_connections) == 2
+
+        new_mcp_connection = MagicMock()
+        set_mcp_connection(new_mcp_connection, loop)
+
+        assert len(internal_tools._spawned_connections) == 0
+        assert internal_tools._mcp_connection is new_mcp_connection
+        assert internal_tools._mcp_event_loop is loop
+
+        loop.close()
+        internal_tools._mcp_event_loop = None
+        internal_tools._mcp_connection = None

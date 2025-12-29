@@ -128,6 +128,10 @@ call_on_connection("sandbox", "create_hook", '{"name": "...", ...}')
 | `get_schema(schema_id=123)` | `call_on_connection("sandbox", "get_schema", '{"schema_id": 123}')` |
 | `update_schema(schema_id=123, ...)` | `call_on_connection("sandbox", "update_schema", '{"schema_id": 123, ...}')` |
 
+**⚠️ IMPORTANT: Spawned connections do NOT persist across conversation turns.**
+
+If you started a sandbox connection in a previous message and the user sends a new message, you MUST call `spawn_mcp_connection()` again before using `call_on_connection()`. Check if you have an active connection by looking for a successful `spawn_mcp_connection` call **in your current turn**, not in previous messages.
+
 ---
 
 ### Step 3: Pull and Compare
@@ -349,3 +353,5 @@ Deploy local configuration changes to a target organization.
 5. **Deploying without confirmation** - Always require explicit user approval before calling `deploy_to_org`.
 
 6. **Forgetting to remap token owners** - Hooks with `token_owner` reference users that don't exist in the target organization. When deploying hooks to a different org, **ask the user which user in the target org should be the token owner**. Use `list_users` on the target org to find available users.
+
+7. **Assuming spawned connections persist across turns** - Spawned MCP connections are cleared when a new conversation turn starts. If you used `spawn_mcp_connection` in a previous message, you must call it again in your current turn before using `call_on_connection`.

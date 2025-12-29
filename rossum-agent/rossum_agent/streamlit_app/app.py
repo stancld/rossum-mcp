@@ -21,7 +21,7 @@ from rossum_mcp.logging_config import setup_logging
 
 from rossum_agent.agent import AgentConfig, create_agent
 from rossum_agent.agent_logging import log_agent_result
-from rossum_agent.internal_tools import set_output_dir
+from rossum_agent.internal_tools import set_mcp_connection, set_output_dir
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
@@ -94,6 +94,8 @@ async def run_agent_turn(
     async with connect_mcp_server(
         rossum_api_token=rossum_api_token, rossum_api_base_url=rossum_api_base_url, mcp_mode=mcp_mode
     ) as mcp_connection:
+        set_mcp_connection(mcp_connection, asyncio.get_event_loop())
+
         agent = await create_agent(mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig())
 
         for msg in conversation_history:

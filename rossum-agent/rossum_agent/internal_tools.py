@@ -171,6 +171,9 @@ def get_output_dir() -> Path:
 def set_mcp_connection(connection: MCPConnection, loop: asyncio.AbstractEventLoop) -> None:
     """Set the MCP connection for use by internal tools.
 
+    This also clears any stale spawned connections from previous turns, since their
+    underlying clients become disconnected when the main MCP connection's subprocess exits.
+
     Args:
         connection: The MCP connection to use for tool calls.
         loop: The event loop where the MCP connection was created.
@@ -178,6 +181,11 @@ def set_mcp_connection(connection: MCPConnection, loop: asyncio.AbstractEventLoo
     global _mcp_connection, _mcp_event_loop
     _mcp_connection = connection
     _mcp_event_loop = loop
+
+    # Clear stale spawned connections from previous turns
+    # Their underlying clients are disconnected when the main connection's subprocess exited
+    with _spawned_connections_lock:
+        _spawned_connections.clear()
 
 
 def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
