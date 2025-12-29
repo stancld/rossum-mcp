@@ -20,9 +20,9 @@ Conversational AI toolkit for the Rossum intelligent document processing platfor
 
 This project enables three progressive levels of AI-powered Rossum orchestration:
 
-1. **📝 Workflow Documentation** *(Current Focus)* - Conversationally document Rossum setups, analyze existing workflows, and generate comprehensive configuration reports through natural language prompts
+1. **📝 Workflow Documentation** *(In Progress)* - Conversationally document Rossum setups, analyze existing workflows, and generate comprehensive configuration reports through natural language prompts
 2. **🔍 Automated Debugging** *(In Progress)* - Automatically diagnose pipeline issues, identify misconfigured hooks, detect schema problems, and suggest fixes through intelligent analysis
-3. **🤖 Agentic Configuration** *(Planned)* - Fully autonomous setup and optimization of Rossum workflows - from queue creation to engine training to hook deployment - guided only by high-level business requirements
+3. **🤖 Agentic Configuration** *(In Progress)* - Fully autonomous setup and optimization of Rossum workflows - from queue creation to engine training to hook deployment - guided only by high-level business requirements
 
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
