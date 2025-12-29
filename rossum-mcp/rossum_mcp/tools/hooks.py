@@ -3,24 +3,44 @@
 from __future__ import annotations
 
 import logging
-import os
-from typing import TYPE_CHECKING, Any, Literal
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from rossum_api.models.hook import Hook  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.hook import (  # noqa: TC002 - needed at runtime for FastMCP
+    Hook,
+    HookRunData,
+    HookType,
+)
 
 from rossum_mcp.tools.base import is_read_write_mode
-
-# HookRunData is from ds-feat-hook-logs branch (not yet released)
-try:
-    from rossum_api.models.hook import HookRunData  # type: ignore[attr-defined]
-except ImportError:
-    HookRunData = None  # type: ignore[misc, assignment]
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
+type Timestamp = Annotated[str, "ISO 8601 timestamp (e.g., '2024-01-15T10:30:00Z')"]
+
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class HookTemplate:
+    """Represents a hook template from Rossum Store.
+
+    Hook templates provide pre-built extension configurations that can be
+    used to quickly create hooks with standard functionality.
+    """
+
+    id: int
+    url: str
+    name: str
+    description: str
+    type: str
+    events: list[str]
+    config: dict[str, Any]
+    settings_schema: dict[str, Any] | None
+    guide: str | None
+    use_token_owner: bool
 
 
 def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
@@ -30,8 +50,6 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
         description="Retrieve a single hook by ID. Use list_hooks first to get all hooks for a queue - only use get_hook if you need additional details for a specific hook not returned by list_hooks. For Python-based function hooks, the source code is accessible via hook.config['code']."
     )
     async def get_hook(hook_id: int) -> Hook:
-        """Retrieve hook details."""
-        logger.debug(f"Retrieving hook: hook_id={hook_id}")
         hook: Hook = await client.retrieve_hook(hook_id)
         return hook
 
@@ -41,8 +59,6 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
     async def list_hooks(
         queue_id: int | None = None, active: bool | None = None, first_n: int | None = None
     ) -> list[Hook]:
-        """List all hooks/extensions, optionally filtered by queue and active status."""
-        logger.debug(f"Listing hooks: queue_id={queue_id}, active={active}")
         filters: dict = {}
         if queue_id is not None:
             filters["queue"] = queue_id
@@ -59,30 +75,26 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
         else:
             hooks_list = [hook async for hook in client.list_hooks(**filters)]
 
-        logger.info(hooks_list)
         return hooks_list
 
-    @mcp.tool(description="Create a new hook.")
+    # NOTE: We explicitly document token_owner restrictions in the tool description because
+    # Sonnet 4.5 respects tool descriptions more reliably than instructions in system prompts.
+    @mcp.tool(
+        description="Create a new hook. If token_owner is provided, organization_group_admin users CANNOT be used (API will reject)."
+    )
     async def create_hook(
         name: str,
-        type: Literal["webhook", "function", "job"],
+        type: HookType,
         queues: list[str] | None = None,
         events: list[str] | None = None,
         config: dict | None = None,
         settings: dict | None = None,
         secret: str | None = None,
     ) -> Hook | dict:
-        """Create a new hook."""
         if not is_read_write_mode():
             return {"error": "create_hook is not available in read-only mode"}
 
-        logger.debug(f"Creating hook: name={name}")
-        hook_data: dict[str, Any] = {
-            "name": name,
-            "type": type,
-            "sideload": ["schemas"],
-            "token_owner": os.environ["API_TOKEN_OWNER"],
-        }
+        hook_data: dict[str, Any] = {"name": name, "type": type, "sideload": ["schemas"]}
 
         if queues is not None:
             hook_data["queues"] = queues
@@ -94,6 +106,8 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
             config["function"] = config.pop("source")
         if type == "function" and "runtime" not in config:
             config["runtime"] = "python3.12"
+        if "timeout_s" in config and config["timeout_s"] > 60:
+            config["timeout_s"] = 60
         hook_data["config"] = config
         if settings is not None:
             hook_data["settings"] = settings
@@ -102,6 +116,49 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
 
         hook: Hook = await client.create_new_hook(hook_data)
         return hook
+
+    @mcp.tool(
+        description="Update an existing hook. Use this to modify hook properties like name, queues, config, events, or settings. Only provide the fields you want to change - other fields will remain unchanged."
+    )
+    async def update_hook(
+        hook_id: int,
+        name: str | None = None,
+        queues: list[str] | None = None,
+        events: list[str] | None = None,
+        config: dict | None = None,
+        settings: dict | None = None,
+        active: bool | None = None,
+    ) -> Hook | dict:
+        if not is_read_write_mode():
+            return {"error": "update_hook is not available in read-only mode"}
+
+        logger.debug(f"Updating hook: hook_id={hook_id}")
+
+        # Fetch existing hook data first (PUT requires all fields)
+        existing_hook: Hook = await client.retrieve_hook(hook_id)
+        hook_data: dict[str, Any] = {
+            "name": existing_hook.name,
+            "queues": existing_hook.queues,
+            "events": list(existing_hook.events),
+            "config": dict(existing_hook.config) if existing_hook.config else {},
+        }
+
+        # Override with provided values
+        if name is not None:
+            hook_data["name"] = name
+        if queues is not None:
+            hook_data["queues"] = queues
+        if events is not None:
+            hook_data["events"] = events
+        if config is not None:
+            hook_data["config"] = config
+        if settings is not None:
+            hook_data["settings"] = settings
+        if active is not None:
+            hook_data["active"] = active
+
+        updated_hook: Hook = await client.update_part_hook(hook_id, hook_data)
+        return updated_hook
 
     @mcp.tool(
         description="List hook execution logs. Use this to debug hook executions, monitor performance, and troubleshoot errors. Logs are retained for 7 days. Returns at most 100 logs per call."
@@ -115,36 +172,15 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
         status: str | None = None,
         status_code: int | None = None,
         request_id: str | None = None,
-        timestamp_before: str | None = None,
-        timestamp_after: str | None = None,
-        start_before: str | None = None,
-        start_after: str | None = None,
-        end_before: str | None = None,
-        end_after: str | None = None,
+        timestamp_before: Timestamp | None = None,
+        timestamp_after: Timestamp | None = None,
+        start_before: Timestamp | None = None,
+        start_after: Timestamp | None = None,
+        end_before: Timestamp | None = None,
+        end_after: Timestamp | None = None,
         search: str | None = None,
         page_size: int | None = None,
     ) -> list[HookRunData]:
-        """List hook execution logs with optional filters.
-
-        Args:
-            hook_id: Filter by hook ID.
-            queue_id: Filter by queue ID.
-            annotation_id: Filter by annotation ID.
-            email_id: Filter by email ID.
-            log_level: Filter by log level (INFO, ERROR, WARNING).
-            status: Filter by execution status.
-            status_code: Filter by HTTP status code.
-            request_id: Filter by request ID.
-            timestamp_before: ISO 8601 timestamp, filter logs triggered before this time.
-            timestamp_after: ISO 8601 timestamp, filter logs triggered after this time.
-            start_before: ISO 8601 timestamp, filter logs started before this time.
-            start_after: ISO 8601 timestamp, filter logs started after this time.
-            end_before: ISO 8601 timestamp, filter logs ended before this time.
-            end_after: ISO 8601 timestamp, filter logs ended after this time.
-            search: Full-text search across log messages.
-            page_size: Number of results per page (default 100, max 100).
-        """
-        logger.debug(f"Listing hook logs: hook_id={hook_id}, queue_id={queue_id}")
         filter_mapping: dict[str, Any] = {
             "hook": hook_id,
             "queue": queue_id,
@@ -170,3 +206,60 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # 
             log
             async for log in client.list_hook_run_data(**filters)  # type: ignore[attr-defined]
         ]
+
+    @mcp.tool(
+        description="List available hook templates from Rossum Store. Hook templates provide pre-built extension configurations (e.g., data validation, field mapping, notifications) that can be used to quickly create hooks instead of writing code from scratch. Use list_hook_templates first to find a suitable template, then use create_hook_from_template to create a hook based on that template."
+    )
+    async def list_hook_templates() -> list[HookTemplate]:
+        templates: list[HookTemplate] = []
+        async for item in client.request_paginated("hook_templates"):
+            url = item["url"]
+            templates.append(
+                HookTemplate(
+                    id=int(url.split("/")[-1]),
+                    url=url,
+                    name=item["name"],
+                    description=item.get("description", ""),
+                    type=item["type"],
+                    events=[],
+                    config={},
+                    settings_schema=item.get("settings_schema"),
+                    guide="<truncated>",
+                    use_token_owner=item.get("use_token_owner", False),
+                )
+            )
+        return templates
+
+    # NOTE: We explicitly document token_owner restrictions in the tool description because
+    # Sonnet 4.5 respects tool descriptions more reliably than instructions in system prompts.
+    @mcp.tool(
+        description="Create a hook from a Rossum Store template. Uses pre-built configurations from the Rossum Store. The 'events' parameter is optional and can override template defaults. If the template has 'use_token_owner=True', a valid 'token_owner' user URL is required - use list_users to find one. CRITICAL RESTRICTION: organization_group_admin users are FORBIDDEN as token_owner - the API returns HTTP 400 error."
+    )
+    async def create_hook_from_template(
+        name: str,
+        hook_template_id: int,
+        queues: list[str],
+        events: list[str] | None = None,
+        token_owner: str | None = None,
+    ) -> Hook | dict:
+        if not is_read_write_mode():
+            return {"error": "create_hook_from_template is not available in read-only mode"}
+
+        logger.debug(f"Creating hook from template: name={name}, template_id={hook_template_id}")
+
+        # Build the hook template URL and fetch template to get its config
+        hook_template_url = f"{client._http_client.base_url.rstrip('/')}/hook_templates/{hook_template_id}"
+
+        hook_data: dict[str, Any] = {"name": name, "hook_template": hook_template_url, "queues": queues}
+        if events is not None:
+            hook_data["events"] = events
+        if token_owner is not None:
+            hook_data["token_owner"] = token_owner
+
+        result = await client._http_client.request_json("POST", "hooks/create", json=hook_data)
+
+        # Return the created hook
+        if hook_id := result.get("id"):
+            hook: Hook = await client.retrieve_hook(hook_id)
+            return hook
+        return {"error": "Hook wasn't likely created. Hook ID not available."}

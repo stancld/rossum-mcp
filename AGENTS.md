@@ -24,6 +24,35 @@
 - Sync API client wrapped in async executors for MCP compatibility
 - Examples in `examples/` directory
 
+## FastMCP Tool Guidelines (rossum-mcp)
+
+**CRITICAL**: rossum-mcp uses FastMCP. Follow these patterns to avoid token waste:
+
+### Tool Description vs Docstring
+- **`description` parameter**: Concise LLM-facing guidance (when to use, key tips). This is shown to the LLM.
+- **Docstring**: Only add if parameters need clarification not obvious from type hints. Avoid repeating the description.
+- **DO NOT** duplicate information between description and docstring.
+
+### Pattern to Follow:
+```python
+@mcp.tool(description="List users. Filter by username/email to find specific users. Returns user URLs usable as token_owner in create_hook.")
+async def list_users(
+    username: str | None = None,  # Type hints are self-documenting
+    email: str | None = None,
+) -> list[User]:
+    # No docstring needed - description + type hints are sufficient
+    ...
+```
+
+### Only Add Docstring When:
+- Parameters have non-obvious formats (e.g., ISO 8601 timestamps)
+- Complex filtering logic needs explanation
+- Default behavior isn't clear from types
+
+### Type Imports for FastMCP:
+- Import return types at module level (not in TYPE_CHECKING) so FastMCP can serialize them
+- Use `# noqa: TC002 - needed at runtime for FastMCP` for these imports
+
 ## Documentation Updates
 
 **CRITICAL**: When adding, removing, or modifying tools (MCP or agent tools), you MUST update documentation to keep it in sync with the code.
@@ -119,6 +148,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - **Mock external dependencies**: Use `unittest.mock` for API calls, file I/O, etc.
 - **Edge cases**: Test error conditions, empty inputs, boundary values
 - **Async code**: Use `pytest-asyncio` for async function tests
+- **Imports**: Always place imports at the top of test files, not inside test functions or classes. This improves readability and avoids repeated import overhead.
 
 ### Development Workflow:
 1. Write/modify code
@@ -138,6 +168,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 - **Logging**: File-based logging to `/tmp/` since stdout is MCP protocol
 - **Error handling**: Return JSON error objects, include tracebacks for debugging
 - **Comments**: Brief, explain why not what
+- **Trailing commas**: Avoid trailing commas to save lines (e.g., `[1, 2, 3]` not `[1, 2, 3,]`)
 - **Noqa/type-ignore comments**: Always add an explanatory comment when using `# noqa` or `# type: ignore`. Explain why the suppression is necessary (e.g., `# noqa: TC003 - Callable used in type annotation at runtime for FastAPI`)
 - **Quality**: Use pre-commit hooks (ruff, mypy, codespell) before committing
 - **Development workflow**: After making code changes, iteratively run `pre-commit run --all-files` and fix all mypy type errors until the checks pass cleanly

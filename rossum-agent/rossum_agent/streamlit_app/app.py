@@ -21,6 +21,7 @@ from rossum_mcp.logging_config import setup_logging
 
 from rossum_agent.agent import AgentConfig, create_agent
 from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.internal_tools import set_output_dir
 from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
@@ -150,8 +151,9 @@ def main() -> None:  # noqa: C901
     # Initialize session-specific output directory
     if "output_dir" not in st.session_state:
         st.session_state.output_dir = create_session_output_dir()
-    # Set the context variable for the current session
+    # Set both the context variable and global output directory for internal tools
     set_session_output_dir(st.session_state.output_dir)
+    set_output_dir(st.session_state.output_dir)
 
     # Initialize credentials in session state
     # Read from env variables for debugging if suitable
@@ -171,7 +173,7 @@ def main() -> None:  # noqa: C901
             "yes",
         ]
     if "mcp_mode" not in st.session_state:
-        st.session_state.mcp_mode = os.getenv("ROSSUM_MCP_MODE", "read-only")
+        st.session_state.mcp_mode = "read-write"
 
     if "rossum_url_context" not in st.session_state:
         st.session_state.rossum_url_context = RossumUrlContext()
@@ -260,37 +262,6 @@ def main() -> None:  # noqa: C901
                 st.session_state.credentials_saved = False
                 st.rerun()
 
-        # MCP Mode selection
-        st.markdown("---")
-        st.subheader("Agent Mode")
-
-        if st.session_state.read_write_disabled:
-            st.info("ℹ️ Read-write mode is disabled for current release.")  # noqa: RUF001
-            new_mode = "read-only"
-            st.radio(
-                "Select mode:",
-                options=["read-only"],
-                index=0,
-                help="Read-only mode prevents the agent from making changes to Rossum.",
-                disabled=False,
-            )
-        else:
-            new_mode = st.radio(
-                "Select mode:",
-                options=["read-write", "read-only"],
-                index=0 if st.session_state.mcp_mode == "read-write" else 1,
-                help="Read-only mode prevents the agent from making changes to Rossum. "
-                "Read-write mode allows full operations including creating/updating resources.",
-            )
-
-        if new_mode != st.session_state.mcp_mode:
-            st.session_state.mcp_mode = new_mode
-            os.environ["ROSSUM_MCP_MODE"] = new_mode
-            st.rerun()
-
-        mode_indicator = "🔒 Read-Only" if new_mode == "read-only" else "✏️ Read-Write"
-        st.info(f"Current mode: **{mode_indicator}**")
-
         # URL Context section
         st.markdown("---")
         st.subheader("Current Context")
@@ -347,8 +318,8 @@ def main() -> None:  # noqa: C901
         # Generated files section
         st.markdown("---")
         st.subheader("Generated Files")
-        generated_files = get_generated_files()
-        generated_files_metadata = get_generated_files_with_metadata()
+        generated_files = get_generated_files(st.session_state.output_dir)
+        generated_files_metadata = get_generated_files_with_metadata(st.session_state.output_dir)
 
         if generated_files:
             st.write(f"📁 {len(generated_files)} file(s) generated:")
@@ -571,7 +542,7 @@ def main() -> None:  # noqa: C901
                     st.components.v1.html(BEEP_HTML, height=0)
 
                 # Check if files were generated/modified and rerun to update sidebar
-                current_files_metadata = get_generated_files_with_metadata()
+                current_files_metadata = get_generated_files_with_metadata(st.session_state.output_dir)
                 if current_files_metadata != generated_files_metadata:
                     st.rerun()
 

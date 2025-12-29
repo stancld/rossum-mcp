@@ -53,6 +53,94 @@ class TestTruncateContent:
         assert result == content
 
 
+class TestToolCallSerialization:
+    """Test ToolCall serialization methods."""
+
+    def test_to_dict(self):
+        """Test serializing ToolCall to dict."""
+        tool_call = ToolCall(id="tc1", name="get_data", arguments={"key": "value", "count": 5})
+        result = tool_call.to_dict()
+
+        assert result == {"id": "tc1", "name": "get_data", "arguments": {"key": "value", "count": 5}}
+
+    def test_from_dict(self):
+        """Test deserializing ToolCall from dict."""
+        data = {"id": "tc2", "name": "list_items", "arguments": {"filter": "active"}}
+        tool_call = ToolCall.from_dict(data)
+
+        assert tool_call.id == "tc2"
+        assert tool_call.name == "list_items"
+        assert tool_call.arguments == {"filter": "active"}
+
+    def test_from_dict_with_missing_arguments(self):
+        """Test deserializing ToolCall with missing arguments defaults to empty dict."""
+        data = {"id": "tc3", "name": "simple_tool"}
+        tool_call = ToolCall.from_dict(data)
+
+        assert tool_call.arguments == {}
+
+    def test_roundtrip(self):
+        """Test serialization roundtrip preserves data."""
+        original = ToolCall(id="tc1", name="complex_tool", arguments={"nested": {"a": 1}, "list": [1, 2, 3]})
+        restored = ToolCall.from_dict(original.to_dict())
+
+        assert restored.id == original.id
+        assert restored.name == original.name
+        assert restored.arguments == original.arguments
+
+
+class TestToolResultSerialization:
+    """Test ToolResult serialization methods."""
+
+    def test_to_dict(self):
+        """Test serializing ToolResult to dict."""
+        tool_result = ToolResult(tool_call_id="tc1", name="get_data", content='{"data": [1, 2, 3]}', is_error=False)
+        result = tool_result.to_dict()
+
+        assert result == {
+            "tool_call_id": "tc1",
+            "name": "get_data",
+            "content": '{"data": [1, 2, 3]}',
+            "is_error": False,
+        }
+
+    def test_to_dict_with_error(self):
+        """Test serializing error ToolResult to dict."""
+        tool_result = ToolResult(tool_call_id="tc2", name="failing_tool", content="Error: not found", is_error=True)
+        result = tool_result.to_dict()
+
+        assert result["is_error"] is True
+        assert result["content"] == "Error: not found"
+
+    def test_from_dict(self):
+        """Test deserializing ToolResult from dict."""
+        data = {"tool_call_id": "tc1", "name": "test_tool", "content": "success", "is_error": False}
+        tool_result = ToolResult.from_dict(data)
+
+        assert tool_result.tool_call_id == "tc1"
+        assert tool_result.name == "test_tool"
+        assert tool_result.content == "success"
+        assert tool_result.is_error is False
+
+    def test_from_dict_with_defaults(self):
+        """Test deserializing ToolResult with missing optional fields."""
+        data = {"tool_call_id": "tc1", "name": "test_tool"}
+        tool_result = ToolResult.from_dict(data)
+
+        assert tool_result.content == ""
+        assert tool_result.is_error is False
+
+    def test_roundtrip(self):
+        """Test serialization roundtrip preserves data."""
+        original = ToolResult(tool_call_id="tc1", name="tool", content="result", is_error=True)
+        restored = ToolResult.from_dict(original.to_dict())
+
+        assert restored.tool_call_id == original.tool_call_id
+        assert restored.name == original.name
+        assert restored.content == original.content
+        assert restored.is_error == original.is_error
+
+
 class TestAgentConfig:
     """Test AgentConfig dataclass."""
 
@@ -96,10 +184,10 @@ class TestMemoryStep:
     """Test MemoryStep to_messages conversion."""
 
     def test_to_messages_with_tool_calls(self):
-        """Test that tool calls are converted to messages (thinking IS included before tool_use)."""
+        """Test that tool calls are converted to messages (text IS included before tool_use)."""
         step = MemoryStep(
             step_number=1,
-            thinking="Let me analyze this...",
+            text="Let me analyze this...",
             tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"key": "value"})],
             tool_results=[ToolResult(tool_call_id="tc1", name="get_data", content="result data")],
         )
@@ -108,7 +196,7 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
-        # Thinking text is included as first block, then tool_use
+        # Text is included as first block, then tool_use
         assert len(messages[0]["content"]) == 2
         assert messages[0]["content"][0]["type"] == "text"
         assert messages[0]["content"][0]["text"] == "Let me analyze this..."
@@ -117,8 +205,8 @@ class TestMemoryStep:
         assert messages[1]["role"] == "user"
         assert messages[1]["content"][0]["type"] == "tool_result"
 
-    def test_to_messages_with_tool_calls_no_thinking(self):
-        """Test that tool calls without thinking only include tool_use blocks."""
+    def test_to_messages_with_tool_calls_no_text(self):
+        """Test that tool calls without text only include tool_use blocks."""
         step = MemoryStep(
             step_number=1,
             tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"key": "value"})],
@@ -129,30 +217,128 @@ class TestMemoryStep:
 
         assert len(messages) == 2
         assert messages[0]["role"] == "assistant"
-        # No thinking, so only tool_use block
+        # No text, so only tool_use block
         assert len(messages[0]["content"]) == 1
         assert messages[0]["content"][0]["type"] == "tool_use"
 
         assert messages[1]["role"] == "user"
         assert messages[1]["content"][0]["type"] == "tool_result"
 
-    def test_to_messages_no_tool_calls_returns_empty(self):
-        """Test that step without tool calls and no model_output returns empty messages."""
-        step = MemoryStep(step_number=1, thinking="Just thinking...")
+    def test_to_messages_no_text_returns_empty(self):
+        """Test that step without tool calls and no text returns empty messages."""
+        step = MemoryStep(step_number=1)
 
         messages = step.to_messages()
 
         assert messages == []
 
-    def test_to_messages_with_model_output(self):
-        """Test that final answer steps include model_output as assistant content."""
-        step = MemoryStep(step_number=1, model_output="Here is the final answer.")
+    def test_to_messages_with_text(self):
+        """Test that final answer steps include text as assistant content."""
+        step = MemoryStep(step_number=1, text="Here is the final answer.")
 
         messages = step.to_messages()
 
         assert len(messages) == 1
         assert messages[0]["role"] == "assistant"
         assert messages[0]["content"] == "Here is the final answer."
+
+
+class TestMemoryStepSerialization:
+    """Test MemoryStep serialization methods."""
+
+    def test_to_dict_simple(self):
+        """Test serializing simple MemoryStep."""
+        step = MemoryStep(step_number=1, text="Final answer here")
+        result = step.to_dict()
+
+        assert result["type"] == "memory_step"
+        assert result["step_number"] == 1
+        assert result["text"] == "Final answer here"
+        assert result["tool_calls"] == []
+        assert result["tool_results"] == []
+
+    def test_to_dict_with_tools(self):
+        """Test serializing MemoryStep with tool calls and results."""
+        step = MemoryStep(
+            step_number=2,
+            text="Let me check...",
+            tool_calls=[ToolCall(id="tc1", name="get_data", arguments={"id": 123})],
+            tool_results=[ToolResult(tool_call_id="tc1", name="get_data", content="data found")],
+            input_tokens=100,
+            output_tokens=50,
+        )
+        result = step.to_dict()
+
+        assert result["type"] == "memory_step"
+        assert result["step_number"] == 2
+        assert result["text"] == "Let me check..."
+        assert len(result["tool_calls"]) == 1
+        assert result["tool_calls"][0]["name"] == "get_data"
+        assert len(result["tool_results"]) == 1
+        assert result["tool_results"][0]["content"] == "data found"
+        assert result["input_tokens"] == 100
+        assert result["output_tokens"] == 50
+
+    def test_from_dict(self):
+        """Test deserializing MemoryStep from dict."""
+        data = {
+            "type": "memory_step",
+            "step_number": 3,
+            "text": "Analysis complete",
+            "tool_calls": [{"id": "tc1", "name": "analyze", "arguments": {"depth": 5}}],
+            "tool_results": [{"tool_call_id": "tc1", "name": "analyze", "content": "result", "is_error": False}],
+            "input_tokens": 200,
+            "output_tokens": 100,
+        }
+        step = MemoryStep.from_dict(data)
+
+        assert step.step_number == 3
+        assert step.text == "Analysis complete"
+        assert len(step.tool_calls) == 1
+        assert step.tool_calls[0].name == "analyze"
+        assert len(step.tool_results) == 1
+        assert step.tool_results[0].content == "result"
+        assert step.input_tokens == 200
+        assert step.output_tokens == 100
+
+    def test_from_dict_with_defaults(self):
+        """Test deserializing MemoryStep with missing optional fields."""
+        data = {"type": "memory_step"}
+        step = MemoryStep.from_dict(data)
+
+        assert step.step_number == 0
+        assert step.text is None
+        assert step.tool_calls == []
+        assert step.tool_results == []
+        assert step.input_tokens == 0
+        assert step.output_tokens == 0
+
+    def test_roundtrip(self):
+        """Test serialization roundtrip preserves data."""
+        original = MemoryStep(
+            step_number=1,
+            text="Thinking...",
+            tool_calls=[
+                ToolCall(id="tc1", name="tool1", arguments={"a": 1}),
+                ToolCall(id="tc2", name="tool2", arguments={"b": 2}),
+            ],
+            tool_results=[
+                ToolResult(tool_call_id="tc1", name="tool1", content="result1"),
+                ToolResult(tool_call_id="tc2", name="tool2", content="result2", is_error=True),
+            ],
+            input_tokens=500,
+            output_tokens=250,
+        )
+        restored = MemoryStep.from_dict(original.to_dict())
+
+        assert restored.step_number == original.step_number
+        assert restored.text == original.text
+        assert len(restored.tool_calls) == len(original.tool_calls)
+        assert len(restored.tool_results) == len(original.tool_results)
+        assert restored.tool_calls[0].name == original.tool_calls[0].name
+        assert restored.tool_results[1].is_error == original.tool_results[1].is_error
+        assert restored.input_tokens == original.input_tokens
+        assert restored.output_tokens == original.output_tokens
 
 
 class TestTaskStep:
@@ -167,6 +353,54 @@ class TestTaskStep:
         assert len(messages) == 1
         assert messages[0]["role"] == "user"
         assert messages[0]["content"] == "Help me with this task"
+
+
+class TestTaskStepSerialization:
+    """Test TaskStep serialization methods."""
+
+    def test_to_dict_text(self):
+        """Test serializing TaskStep with text content."""
+        step = TaskStep(task="Simple text task")
+        result = step.to_dict()
+
+        assert result == {"type": "task_step", "task": "Simple text task"}
+
+    def test_to_dict_multimodal(self):
+        """Test serializing TaskStep with multimodal content."""
+        task_content = [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "abc123"}},
+            {"type": "text", "text": "Analyze this image"},
+        ]
+        step = TaskStep(task=task_content)
+        result = step.to_dict()
+
+        assert result["type"] == "task_step"
+        assert result["task"] == task_content
+
+    def test_from_dict(self):
+        """Test deserializing TaskStep from dict."""
+        data = {"type": "task_step", "task": "Restore this task"}
+        step = TaskStep.from_dict(data)
+
+        assert step.task == "Restore this task"
+
+    def test_from_dict_multimodal(self):
+        """Test deserializing TaskStep with multimodal content."""
+        task_content = [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "xyz789"}},
+            {"type": "text", "text": "What is this?"},
+        ]
+        data = {"type": "task_step", "task": task_content}
+        step = TaskStep.from_dict(data)
+
+        assert step.task == task_content
+
+    def test_roundtrip(self):
+        """Test serialization roundtrip preserves data."""
+        original = TaskStep(task="Complex task with special chars: äöü 日本語")
+        restored = TaskStep.from_dict(original.to_dict())
+
+        assert restored.task == original.task
 
 
 class TestAgentMemory:
@@ -186,7 +420,7 @@ class TestAgentMemory:
         """Test adding tasks and steps."""
         memory = AgentMemory()
         memory.add_task("Task 1")
-        memory.add_step(MemoryStep(step_number=1, thinking="Thinking..."))
+        memory.add_step(MemoryStep(step_number=1, text="Thinking..."))
 
         assert len(memory.steps) == 2
         assert isinstance(memory.steps[0], TaskStep)
@@ -199,7 +433,7 @@ class TestAgentMemory:
         memory.add_step(
             MemoryStep(
                 step_number=1,
-                thinking="Thinking",
+                text="Thinking",
                 tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
                 tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
             )
@@ -212,6 +446,146 @@ class TestAgentMemory:
         assert messages[0]["content"] == "Task"
         assert messages[1]["role"] == "assistant"
         assert messages[2]["role"] == "user"
+
+
+class TestAgentMemorySerialization:
+    """Test AgentMemory serialization methods."""
+
+    def test_to_dict_empty(self):
+        """Test serializing empty memory."""
+        memory = AgentMemory()
+        result = memory.to_dict()
+
+        assert result == []
+
+    def test_to_dict_with_steps(self):
+        """Test serializing memory with multiple steps."""
+        memory = AgentMemory()
+        memory.add_task("Hello, help me")
+        memory.add_step(
+            MemoryStep(
+                step_number=1,
+                text="Sure, let me help",
+                tool_calls=[ToolCall(id="tc1", name="get_info", arguments={"query": "test"})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="get_info", content="info here")],
+            )
+        )
+        memory.add_task("Follow-up question")
+        memory.add_step(MemoryStep(step_number=2, text="Here is the answer"))
+
+        result = memory.to_dict()
+
+        assert len(result) == 4
+        assert result[0]["type"] == "task_step"
+        assert result[0]["task"] == "Hello, help me"
+        assert result[1]["type"] == "memory_step"
+        assert result[1]["tool_calls"][0]["name"] == "get_info"
+        assert result[2]["type"] == "task_step"
+        assert result[2]["task"] == "Follow-up question"
+        assert result[3]["type"] == "memory_step"
+        assert result[3]["text"] == "Here is the answer"
+
+    def test_from_dict_empty(self):
+        """Test deserializing empty list."""
+        memory = AgentMemory.from_dict([])
+
+        assert memory.steps == []
+
+    def test_from_dict_with_steps(self):
+        """Test deserializing memory with multiple steps."""
+        data = [
+            {"type": "task_step", "task": "First question"},
+            {
+                "type": "memory_step",
+                "step_number": 1,
+                "text": "First answer",
+                "tool_calls": [],
+                "tool_results": [],
+            },
+            {"type": "task_step", "task": "Second question"},
+            {
+                "type": "memory_step",
+                "step_number": 2,
+                "text": "Second answer",
+                "tool_calls": [{"id": "tc1", "name": "tool", "arguments": {}}],
+                "tool_results": [{"tool_call_id": "tc1", "name": "tool", "content": "result"}],
+            },
+        ]
+
+        memory = AgentMemory.from_dict(data)
+
+        assert len(memory.steps) == 4
+        assert isinstance(memory.steps[0], TaskStep)
+        assert memory.steps[0].task == "First question"
+        assert isinstance(memory.steps[1], MemoryStep)
+        assert memory.steps[1].text == "First answer"
+        assert isinstance(memory.steps[2], TaskStep)
+        assert memory.steps[2].task == "Second question"
+        assert isinstance(memory.steps[3], MemoryStep)
+        assert len(memory.steps[3].tool_calls) == 1
+
+    def test_from_dict_ignores_unknown_types(self):
+        """Test that unknown step types are ignored."""
+        data = [
+            {"type": "task_step", "task": "Valid task"},
+            {"type": "unknown_step", "data": "something"},
+            {"type": "memory_step", "step_number": 1, "text": "Valid step"},
+        ]
+
+        memory = AgentMemory.from_dict(data)
+
+        assert len(memory.steps) == 2
+        assert isinstance(memory.steps[0], TaskStep)
+        assert isinstance(memory.steps[1], MemoryStep)
+
+    def test_roundtrip(self):
+        """Test serialization roundtrip preserves full conversation."""
+        original = AgentMemory()
+        original.add_task("What is the weather?")
+        original.add_step(
+            MemoryStep(
+                step_number=1,
+                text="Let me check the weather.",
+                tool_calls=[ToolCall(id="tc1", name="get_weather", arguments={"city": "Prague"})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="get_weather", content="Sunny, 25C")],
+                input_tokens=100,
+                output_tokens=50,
+            )
+        )
+        original.add_step(MemoryStep(step_number=2, text="The weather in Prague is sunny and 25°C."))
+
+        restored = AgentMemory.from_dict(original.to_dict())
+
+        assert len(restored.steps) == len(original.steps)
+        assert isinstance(restored.steps[0], TaskStep)
+        assert restored.steps[0].task == "What is the weather?"
+        assert isinstance(restored.steps[1], MemoryStep)
+        assert restored.steps[1].tool_calls[0].arguments == {"city": "Prague"}
+        assert restored.steps[1].tool_results[0].content == "Sunny, 25C"
+        assert isinstance(restored.steps[2], MemoryStep)
+        assert restored.steps[2].text == "The weather in Prague is sunny and 25°C."
+
+    def test_roundtrip_produces_same_messages(self):
+        """Test that restored memory produces identical messages."""
+        original = AgentMemory()
+        original.add_task("Test task")
+        original.add_step(
+            MemoryStep(
+                step_number=1,
+                text="Thinking...",
+                tool_calls=[ToolCall(id="tc1", name="tool", arguments={"x": 1})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="done")],
+            )
+        )
+        original.add_step(MemoryStep(step_number=2, text="Final answer"))
+
+        original_messages = original.write_to_messages()
+        restored = AgentMemory.from_dict(original.to_dict())
+        restored_messages = restored.write_to_messages()
+
+        assert len(original_messages) == len(restored_messages)
+        for orig, rest in zip(original_messages, restored_messages):
+            assert orig["role"] == rest["role"]
 
 
 class TestRossumAgentMemoryIntegration:
@@ -258,7 +632,7 @@ class TestRossumAgentMemoryIntegration:
         agent.memory.add_step(
             MemoryStep(
                 step_number=1,
-                thinking="Thinking",
+                text="Thinking",
                 tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
                 tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
             )
@@ -617,11 +991,14 @@ class TestAgentRun:
         assert "3" in steps[-1].error
 
     @pytest.mark.asyncio
-    async def test_rate_limit_error_handling(self):
-        """Test that RateLimitError is handled gracefully."""
+    async def test_rate_limit_error_exhausts_retries(self):
+        """Test that RateLimitError exhausts retries and returns error."""
         agent = self._create_agent()
 
+        call_count = [0]
+
         async def mock_stream_response(step_num):
+            call_count[0] += 1
             raise RateLimitError(
                 message="Rate limit exceeded",
                 response=MagicMock(status_code=429),
@@ -629,14 +1006,118 @@ class TestAgentRun:
             )
             yield  # Make it a generator
 
-        with patch.object(agent, "_stream_model_response", side_effect=mock_stream_response):
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock),
+        ):
             steps = []
             async for step in agent.run("Test prompt"):
                 steps.append(step)
 
-        assert len(steps) == 1
-        assert steps[0].is_final is True
-        assert "Rate limit" in steps[0].error
+        final_steps = [s for s in steps if s.is_final]
+        assert len(final_steps) == 1
+        assert final_steps[0].is_final is True
+        assert "Rate limit" in final_steps[0].error
+        assert "5 retries" in final_steps[0].error
+        assert call_count[0] == 6  # Initial attempt + 5 retries
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_retry_succeeds_after_transient_failure(self):
+        """Test that rate limit retry succeeds after transient failure."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] < 3:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Success!", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        assert call_count[0] == 3  # 2 failures + 1 success
+        assert mock_sleep.await_count == 2  # Called for each retry wait
+        final_steps = [s for s in steps if s.is_final]
+        assert len(final_steps) == 1
+        assert final_steps[0].final_answer == "Success!"
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_yields_progress_step_during_wait(self):
+        """Test that rate limit retry yields a progress step during wait."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock),
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        streaming_steps = [s for s in steps if s.is_streaming and s.thinking]
+        assert len(streaming_steps) >= 1
+        assert "Rate limited" in streaming_steps[0].thinking
+        assert "waiting" in streaming_steps[0].thinking.lower()
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_exponential_backoff_delay(self):
+        """Test that rate limit uses exponential backoff with jitter."""
+        agent = self._create_agent()
+
+        call_count = [0]
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] <= 3:
+                raise RateLimitError(
+                    message="Rate limit exceeded",
+                    response=MagicMock(status_code=429),
+                    body=None,
+                )
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        sleep_durations = []
+
+        async def capture_sleep(duration):
+            sleep_durations.append(duration)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", side_effect=capture_sleep),
+            patch("rossum_agent.agent.core.random.uniform", return_value=0.0),  # No jitter for deterministic test
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        assert len(sleep_durations) == 3
+        # Base delay is 2.0, so: 2.0, 4.0, 8.0
+        assert sleep_durations[0] == 2.0
+        assert sleep_durations[1] == 4.0
+        assert sleep_durations[2] == 8.0
 
     @pytest.mark.asyncio
     async def test_api_timeout_error_handling(self):

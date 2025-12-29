@@ -193,7 +193,10 @@ class ChatResponse:
         current_tool = progress.current_tool
         tool_calls = progress.tool_calls
 
-        lines = [f"> 🤖 **Sub-agent ({progress.tool_name})** - Iteration {iteration}/{max_iterations}"]
+        if max_iterations > 0:
+            lines = [f"> 🤖 **Sub-agent ({progress.tool_name})** - Iteration {iteration}/{max_iterations}"]
+        else:
+            lines = [f"> 🤖 **Sub-agent ({progress.tool_name})**"]
 
         if status == "thinking":
             lines.append("> ⏳ _Thinking..._")

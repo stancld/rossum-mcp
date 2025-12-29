@@ -20,9 +20,11 @@ import logging
 import math
 import re
 import string
+import threading
 import time
 import traceback
 from collections.abc import Callable
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -33,13 +35,14 @@ import requests
 from anthropic import beta_tool
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
+from fastmcp import Client
 
+from rossum_agent.agent.skills import get_skill, get_skill_registry
 from rossum_agent.bedrock_client import create_bedrock_client
+from rossum_agent.mcp_tools import MCPConnection, create_mcp_transport
 
 if TYPE_CHECKING:
     from anthropic._tools import BetaTool
-
-    from rossum_agent.mcp_tools import MCPConnection
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +118,24 @@ def _report_text(text: SubAgentText) -> None:
 _mcp_connection: MCPConnection | None = None
 _mcp_event_loop: asyncio.AbstractEventLoop | None = None
 
+
+@dataclass
+class SpawnedConnection:
+    """Record for a spawned MCP connection to a different environment."""
+
+    connection: MCPConnection
+    client: Client
+    api_base_url: str
+
+
+# Secondary MCP connections spawned at runtime for different environments
+# NOTE: This module keeps global MCP connection state and assumes:
+# - A single agent session per process
+# - _mcp_event_loop is set once per process and is not changed concurrently
+# If multi-session in a single process is needed, this registry must become per-session.
+_spawned_connections: dict[str, SpawnedConnection] = {}
+_spawned_connections_lock = threading.Lock()
+
 # Module-level output directory for file operations
 # Set by the agent service before running the agent
 # This is needed because ContextVars don't propagate to ThreadPoolExecutor threads
@@ -169,6 +190,180 @@ def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
 
     future = asyncio.run_coroutine_threadsafe(_mcp_connection.call_tool(name, arguments), _mcp_event_loop)
     return future.result(timeout=60)
+
+
+async def _spawn_connection_async(
+    connection_id: str, api_token: str, api_base_url: str, mcp_mode: str = "read-write"
+) -> SpawnedConnection:
+    """Spawn a new MCP connection asynchronously.
+
+    Raises:
+        ValueError: If connection_id already exists.
+    """
+    with _spawned_connections_lock:
+        if connection_id in _spawned_connections:
+            raise ValueError(f"Connection '{connection_id}' already exists")
+
+    transport = create_mcp_transport(api_token, api_base_url, mcp_mode)  # type: ignore[arg-type]
+    client = Client(transport)
+
+    await client.__aenter__()
+    connection = MCPConnection(client=client)
+
+    record = SpawnedConnection(
+        connection=connection,
+        client=client,
+        api_base_url=api_base_url,
+    )
+
+    with _spawned_connections_lock:
+        _spawned_connections[connection_id] = record
+
+    return record
+
+
+async def _close_spawned_connection_async(connection_id: str) -> None:
+    """Close a spawned MCP connection."""
+    with _spawned_connections_lock:
+        record = _spawned_connections.pop(connection_id, None)
+
+    if record is not None:
+        await record.client.__aexit__(None, None, None)
+
+
+def cleanup_all_spawned_connections() -> None:
+    """Cleanup all spawned connections. Call this when the agent session ends.
+
+    Should only be called once at session teardown, after no more tool calls are expected.
+    """
+    if _mcp_event_loop is None:
+        return
+
+    with _spawned_connections_lock:
+        conn_ids = list(_spawned_connections.keys())
+
+    for conn_id in conn_ids:
+        try:
+            future = asyncio.run_coroutine_threadsafe(_close_spawned_connection_async(conn_id), _mcp_event_loop)
+            future.result(timeout=10)
+        except FuturesTimeoutError:
+            future.cancel()
+            logger.warning(f"Timeout cleaning up connection {conn_id}")
+        except Exception as e:
+            logger.warning(f"Failed to cleanup connection {conn_id}: {e}")
+
+
+@beta_tool
+def spawn_mcp_connection(connection_id: str, api_token: str, api_base_url: str, mcp_mode: str = "read-write") -> str:
+    """Spawn a new MCP connection to a different Rossum environment.
+
+    Use this when you need to make changes to a different Rossum environment than the one the agent was initialized with.
+    For example, when deploying changes from a source environment to a target environment.
+
+    Args:
+        connection_id: A unique identifier for this connection (e.g., 'target', 'sandbox')
+
+    Returns:
+        Success message with available tools, or error message if failed.
+    """
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set. Agent not properly initialized."
+
+    if not connection_id or not connection_id.strip():
+        return "Error: connection_id must be non-empty."
+
+    if not api_base_url or not api_base_url.startswith("https://"):
+        return "Error: api_base_url must start with https://"
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(
+            _spawn_connection_async(connection_id, api_token, api_base_url, mcp_mode),
+            _mcp_event_loop,
+        )
+        record = future.result(timeout=30)
+
+        tools_future = asyncio.run_coroutine_threadsafe(record.connection.get_tools(), _mcp_event_loop)
+        tools = tools_future.result(timeout=30)
+        tool_names = [t.name for t in tools]
+
+        return f"Successfully spawned MCP connection '{connection_id}' to {api_base_url}. Available tools: {', '.join(tool_names[:10])}{'...' if len(tool_names) > 10 else ''}"
+    except ValueError as e:
+        return f"Error: {e}"
+    except FuturesTimeoutError:
+        future.cancel()
+        return "Error: Timed out while spawning MCP connection."
+    except RuntimeError as e:
+        logger.exception("Error scheduling MCP call")
+        return f"Error: Failed to schedule MCP call: {e}"
+    except Exception as e:
+        logger.error(f"Failed to spawn connection: {e}")
+        return f"Error spawning connection: {e}"
+
+
+@beta_tool
+def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> str:
+    """Call a tool on a spawned MCP connection.
+
+    Use this to execute MCP tools on a connection that was previously spawned with spawn_mcp_connection.
+
+    Args:
+        connection_id: The identifier of the spawned connection.
+        tool_name: The name of the MCP tool to call.
+        arguments: JSON string of arguments to pass to the tool.
+
+    Returns:
+        The result of the tool call as a JSON string, or error message.
+    """
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set."
+
+    with _spawned_connections_lock:
+        if connection_id not in _spawned_connections:
+            available = list(_spawned_connections.keys())
+            return f"Error: Connection '{connection_id}' not found. Available: {available}"
+        record = _spawned_connections[connection_id]
+
+    logger.debug(f"call_on_connection: Using connection '{connection_id}' - API URL: {record.api_base_url}")
+
+    try:
+        args = json.loads(arguments) if arguments else {}
+    except json.JSONDecodeError as e:
+        return f"Error parsing arguments JSON: {e}"
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(record.connection.call_tool(tool_name, args), _mcp_event_loop)
+        result = future.result(timeout=60)
+
+        if isinstance(result, (dict, list)):
+            return json.dumps(result, indent=2, default=str)
+        return str(result) if result is not None else "Tool executed successfully"
+    except FuturesTimeoutError:
+        future.cancel()
+        return f"Error: Timed out calling {tool_name} after 60 seconds."
+    except Exception as e:
+        logger.error(f"Error calling tool on connection: {e}")
+        return f"Error calling {tool_name}: {e}"
+
+
+@beta_tool
+def close_connection(connection_id: str) -> str:
+    """Close a spawned MCP connection."""
+    if _mcp_event_loop is None:
+        return "Error: MCP event loop not set."
+
+    with _spawned_connections_lock:
+        if connection_id not in _spawned_connections:
+            return f"Connection '{connection_id}' not found."
+
+    try:
+        future = asyncio.run_coroutine_threadsafe(_close_spawned_connection_async(connection_id), _mcp_event_loop)
+        future.result(timeout=10)
+        return f"Successfully closed connection '{connection_id}'."
+    except FuturesTimeoutError:
+        future.cancel()
+        return f"Error: Timed out closing connection '{connection_id}'."
+    except Exception as e:
+        return f"Error closing connection: {e}"
 
 
 @beta_tool
@@ -1131,11 +1326,7 @@ Steps:
 
 
 @beta_tool
-def debug_hook(
-    hook_id: str,
-    annotation_id: str,
-    schema_id: str | None = None,
-) -> str:
+def debug_hook(hook_id: str, annotation_id: str, schema_id: str | None = None) -> str:
     """Debug a Rossum hook using an Opus sub-agent. ALWAYS use this tool when debugging hook code errors.
 
     This is the PRIMARY tool for debugging Python function hooks. Simply pass the hook ID and annotation ID,
@@ -1180,7 +1371,48 @@ def debug_hook(
     return json.dumps(response, ensure_ascii=False, default=str)
 
 
-INTERNAL_TOOLS: list[BetaTool[..., str]] = [write_file, search_knowledge_base, evaluate_python_hook, debug_hook]
+@beta_tool
+def load_skill(name: str) -> str:
+    """Load a specialized skill that provides domain-specific instructions and workflows.
+
+    Use this tool when you recognize that a task matches one of the available skills.
+    The skill will provide detailed instructions, workflows, and context for the task.
+
+    Available skills:
+    - rossum-deployment: Safe workflow for creating and deploying Rossum configurations.
+      Provides access to deployment tools: deploy_pull, deploy_diff, deploy_push,
+      deploy_copy_org, deploy_copy_workspace, deploy_to_org.
+      **LOAD THIS SKILL WHEN:**
+      - Creating new queues, schemas, hooks, or extensions
+      - Setting up document splitting, sorting, or automation
+      - Deploying configuration changes
+      - Copying configurations between organizations
+      - Any configuration task that modifies Rossum resources
+
+    Args:
+        name: The name of the skill to load (e.g., "rossum-deployment").
+
+    Returns:
+        The skill instructions and workflows, or an error if skill not found.
+    """
+    skill = get_skill(name)
+    if skill is None:
+        available = get_skill_registry().get_skill_names()
+        return json.dumps({"status": "error", "message": f"Skill '{name}' not found.", "available_skills": available})
+
+    return json.dumps({"status": "success", "skill_name": skill.name, "instructions": skill.content})
+
+
+INTERNAL_TOOLS: list[BetaTool[..., str]] = [
+    write_file,
+    search_knowledge_base,
+    evaluate_python_hook,
+    debug_hook,
+    load_skill,
+    spawn_mcp_connection,
+    call_on_connection,
+    close_connection,
+]
 
 
 def get_internal_tools() -> list[dict[str, object]]:

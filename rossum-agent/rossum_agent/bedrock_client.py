@@ -59,6 +59,7 @@ def create_bedrock_client(
         aws_secret_key=frozen_credentials.secret_key,
         aws_session_token=frozen_credentials.token,
         aws_region=session.region_name or region,
+        max_retries=5,
     )
 
 
@@ -84,6 +85,7 @@ def create_bedrock_client_from_sts_credentials(
         aws_secret_key=credentials["SecretAccessKey"],
         aws_session_token=credentials.get("SessionToken"),
         aws_region=aws_region,
+        max_retries=5,
     )
 
 

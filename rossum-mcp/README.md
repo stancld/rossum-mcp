@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-34-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 
 </div>
@@ -32,11 +32,16 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **create_schema**: Create a new schema with sections and datapoints
 - **update_queue**: Update queue settings including automation thresholds
 - **update_schema**: Update schema with field-level automation thresholds
+- **patch_schema**: Add, update, or remove individual schema nodes without replacing entire content
 
 ### Workspace Management
 - **get_workspace**: Retrieve workspace details by ID
 - **list_workspaces**: List all workspaces with optional filtering
 - **create_workspace**: Create a new workspace
+
+### User Management
+- **get_user**: Retrieve user details by ID
+- **list_users**: List users with optional filtering by username, email, etc.
 
 ### Engine Management
 - **get_engine**: Retrieve engine details by ID
@@ -50,6 +55,8 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **list_hook_templates**: List available hook templates from Rossum Store
+- **create_hook_from_template**: Create a hook from a Rossum Store template
 - **list_hook_logs**: List hook execution logs for debugging and monitoring
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
@@ -116,7 +123,8 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Queues:** `get_queue`, `get_queue_schema`, `get_queue_engine`
 - **Schemas:** `get_schema`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
-- **Hooks:** `get_hook`, `list_hooks`, `list_hook_logs`
+- **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
+- **Users:** `get_user`, `list_users`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
 - **Document Relations:** `get_document_relation`, `list_document_relations`
@@ -417,6 +425,69 @@ Updates an existing schema, typically used to set field-level automation thresho
 - `schema_id` (integer, required): Schema ID to update
 - `schema_data` (object, required): Dictionary containing schema fields to update
 
+#### patch_schema
+
+Patch a schema by adding, updating, or removing individual nodes without replacing the entire content. This is particularly useful for making incremental changes to schemas.
+
+**Parameters:**
+- `schema_id` (integer, required): Schema ID to patch
+- `operation` (string, required): One of "add", "update", or "remove"
+- `node_id` (string, required): ID of the node to operate on
+- `node_data` (object, optional): Data for add/update operations. Required for "add" and "update"
+- `parent_id` (string, optional): Parent node ID for add operation. Required for "add"
+- `position` (integer, optional): Position for add operation (appends if not specified)
+
+**Operations:**
+- **add**: Add a new datapoint/multivalue to a parent (section or tuple). Requires `parent_id` and `node_data`.
+- **update**: Update properties of an existing node. Requires `node_data` with fields to update.
+- **remove**: Remove a node from the schema. Only `node_id` is required.
+
+**Returns:**
+```json
+{
+  "id": 123,
+  "name": "Invoice Schema",
+  "content": [
+    {
+      "id": "header_section",
+      "label": "Header",
+      "category": "section",
+      "children": [
+        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint"},
+        {"id": "vendor_name", "label": "Vendor Name", "category": "datapoint"}
+      ]
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# Add a new datapoint to a section
+patch_schema(
+    schema_id=123,
+    operation="add",
+    node_id="vendor_name",
+    parent_id="header_section",
+    node_data={"label": "Vendor Name", "type": "string", "category": "datapoint"}
+)
+
+# Update a field's label and threshold
+patch_schema(
+    schema_id=123,
+    operation="update",
+    node_id="invoice_number",
+    node_data={"label": "Invoice #", "score_threshold": 0.9}
+)
+
+# Remove a field
+patch_schema(
+    schema_id=123,
+    operation="remove",
+    node_id="old_field"
+)
+```
+
 ### Engine Management
 
 #### get_engine
@@ -689,6 +760,88 @@ create_hook(
 )
 ```
 
+#### list_hook_templates
+
+Lists available hook templates from Rossum Store. Hook templates provide pre-built extension configurations (e.g., data validation, field mapping, notifications) that can be used to quickly create hooks instead of writing code from scratch.
+
+**Parameters:**
+None
+
+**Returns:**
+```json
+[
+  {
+    "id": 5,
+    "url": "https://elis.rossum.ai/api/v1/hook_templates/5",
+    "name": "Document Splitting",
+    "description": "Automatically split multi-page documents into separate annotations",
+    "type": "function",
+    "events": ["annotation_content.initialize"],
+    "config": {"runtime": "python3.12", "function": "..."},
+    "settings_schema": {"type": "object", "properties": {...}},
+    "guide": "https://knowledge-base.rossum.ai/docs/..."
+  }
+]
+```
+
+**Example usage:**
+```python
+# List all available hook templates
+templates = list_hook_templates()
+
+# Find a template by name
+for template in templates:
+    if "splitting" in template.name.lower():
+        print(f"Found: {template.name} (ID: {template.id})")
+```
+
+#### create_hook_from_template
+
+Creates a hook from a Rossum Store template. Use `list_hook_templates` first to find available templates and their IDs. This is the recommended way to create hooks as it uses battle-tested configurations from the Rossum Store.
+
+**Parameters:**
+- `name` (string, required): Name for the new hook
+- `hook_template_id` (integer, required): ID of the hook template to use (from `list_hook_templates`)
+- `queues` (array, required): List of queue URLs to attach the hook to
+- `events` (array, optional): List of events to trigger the hook (overrides template defaults if provided)
+- `token_owner` (string, optional): User URL for token ownership. Required when the hook template has `use_token_owner=True`. Use `list_users` to find the user URL by username.
+
+**Important:** If the hook template has `use_token_owner=True`, you must provide the `token_owner` parameter with a valid user URL. Ask the user for their username and use `list_users` to find the correct user URL.
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "My Document Splitting Hook",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "hook_template": "https://elis.rossum.ai/api/v1/hook_templates/5",
+  "type": "function",
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_content.initialize"],
+  "config": {...},
+  "settings": {...}
+}
+```
+
+**Example usage:**
+```python
+# Create a hook from template
+create_hook_from_template(
+    name="Invoice Splitting",
+    hook_template_id=5,
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    settings={"split_by": "barcode", "target_queue": 67890}
+)
+
+# Create a hook with token_owner (for templates with use_token_owner=True)
+create_hook_from_template(
+    name="Data Export Hook",
+    hook_template_id=17,
+    queues=["https://api.elis.rossum.ai/v1/queues/12345"],
+    token_owner="https://api.elis.rossum.ai/v1/users/456"
+)
+```
+
 #### list_hook_logs
 
 Lists hook execution logs for debugging, monitoring performance, and troubleshooting errors. Logs are retained for 7 days and at most 100 logs are returned per call.
@@ -838,6 +991,68 @@ engine_fields = get_engine_fields(engine_id=123)
 
 # Get all engine fields
 all_fields = get_engine_fields()
+```
+
+### User Management
+
+#### get_user
+
+Retrieves a single user by ID. Use `list_users` first to find users by username or email.
+
+**Parameters:**
+- `user_id` (integer, required): The user ID to retrieve
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "url": "https://elis.rossum.ai/api/v1/users/12345",
+  "username": "john.doe@example.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@example.com",
+  "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+  "is_active": true,
+  "date_joined": "2024-01-01T00:00:00Z",
+  "last_login": "2024-01-15T10:30:00Z"
+}
+```
+
+#### list_users
+
+Lists users in the organization. Use this to find a user's URL when you need it for `token_owner` in `create_hook_from_template`.
+
+**Parameters:**
+- `username` (string, optional): Filter by exact username
+- `email` (string, optional): Filter by email address
+- `first_name` (string, optional): Filter by first name
+- `last_name` (string, optional): Filter by last name
+- `is_active` (boolean, optional): Filter by active status
+- `first_n` (integer, optional): Limit the number of results returned
+
+**Returns:**
+```json
+[
+  {
+    "id": 12345,
+    "url": "https://elis.rossum.ai/api/v1/users/12345",
+    "username": "john.doe@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john.doe@example.com",
+    "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+    "is_active": true
+  }
+]
+```
+
+**Example usage:**
+```python
+# Find user by username to get their URL for token_owner
+users = list_users(username="john.doe@example.com")
+if users:
+    user_url = users[0].url
+    # Use user_url in create_hook_from_template
 ```
 
 ### Rules Management

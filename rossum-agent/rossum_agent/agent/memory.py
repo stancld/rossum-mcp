@@ -9,12 +9,13 @@ This module implements the memory storage system following the smolagents patter
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from rossum_agent.agent.models import ToolCall, ToolResult
 
 if TYPE_CHECKING:
     from anthropic.types import MessageParam
 
-    from rossum_agent.agent.models import ToolCall, ToolResult
     from rossum_agent.agent.types import UserContent
 
 
@@ -26,14 +27,11 @@ class MemoryStep:
     on-the-fly via to_messages(), allowing summary_mode to compress old steps.
 
     Attributes:
-        model_output: User-visible response text (final answers). Serialized to messages.
-        thinking: Internal chain-of-thought reasoning. NOT serialized to messages
-            to avoid token bloat from replaying reasoning on every call.
+        text: Model's text output (reasoning before tool calls, or final answer).
     """
 
     step_number: int
-    model_output: str | None = None
-    thinking: str | None = None
+    text: str | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     tool_results: list[ToolResult] = field(default_factory=list)
     input_tokens: int = 0
@@ -42,8 +40,8 @@ class MemoryStep:
     def to_messages(self) -> list[MessageParam]:
         """Convert this step to Anthropic message format.
 
-        For tool-use steps: Only includes tool_use blocks (no thinking text).
-        For final answer steps: Includes model_output as assistant content.
+        For tool-use steps: Includes text block followed by tool_use blocks.
+        For final answer steps: Includes text as assistant content.
 
         Returns:
             List of message dicts for the Anthropic API.
@@ -53,9 +51,8 @@ class MemoryStep:
         if self.tool_calls:
             assistant_content: list[dict[str, object]] = []
 
-            # Include thinking text before tool calls (matches Anthropic API format)
-            if self.thinking:
-                assistant_content.append({"type": "text", "text": self.thinking})
+            if self.text:
+                assistant_content.append({"type": "text", "text": self.text})
 
             for tc in self.tool_calls:
                 assistant_content.append({"type": "tool_use", "id": tc.id, "name": tc.name, "input": tc.arguments})
@@ -76,10 +73,34 @@ class MemoryStep:
 
                 messages.append({"role": "user", "content": tool_result_blocks})
 
-        elif self.model_output:
-            messages.append({"role": "assistant", "content": self.model_output})
+        elif self.text:
+            messages.append({"role": "assistant", "content": self.text})
 
         return messages
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {
+            "type": "memory_step",
+            "step_number": self.step_number,
+            "text": self.text,
+            "tool_calls": [tc.to_dict() for tc in self.tool_calls],
+            "tool_results": [tr.to_dict() for tr in self.tool_results],
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MemoryStep:
+        """Deserialize from dictionary."""
+        return cls(
+            step_number=data.get("step_number", 0),
+            text=data.get("text"),
+            tool_calls=[ToolCall.from_dict(tc) for tc in data.get("tool_calls", [])],
+            tool_results=[ToolResult.from_dict(tr) for tr in data.get("tool_results", [])],
+            input_tokens=data.get("input_tokens", 0),
+            output_tokens=data.get("output_tokens", 0),
+        )
 
 
 @dataclass
@@ -93,6 +114,15 @@ class TaskStep:
 
     def to_messages(self) -> list[MessageParam]:
         return [{"role": "user", "content": self.task}]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {"type": "task_step", "task": self.task}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TaskStep:
+        """Deserialize from dictionary."""
+        return cls(task=data["task"])
 
 
 @dataclass
@@ -129,3 +159,19 @@ class AgentMemory:
             messages.extend(step_messages)
 
         return messages
+
+    def to_dict(self) -> list[dict[str, Any]]:
+        """Serialize all steps to a list of dictionaries for storage."""
+        return [step.to_dict() for step in self.steps]
+
+    @classmethod
+    def from_dict(cls, data: list[dict[str, Any]]) -> AgentMemory:
+        """Deserialize from a list of step dictionaries."""
+        memory = cls()
+        for step_data in data:
+            step_type = step_data.get("type")
+            if step_type == "task_step":
+                memory.steps.append(TaskStep.from_dict(step_data))
+            elif step_type == "memory_step":
+                memory.steps.append(MemoryStep.from_dict(step_data))
+        return memory

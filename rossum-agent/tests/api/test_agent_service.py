@@ -5,7 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from rossum_agent.agent.models import AgentStep, ToolResult
+from rossum_agent.agent.memory import AgentMemory, MemoryStep, TaskStep
+from rossum_agent.agent.models import AgentStep, ToolCall, ToolResult
 from rossum_agent.api.models.schemas import ImageContent, StepEvent
 from rossum_agent.api.services.agent_service import AgentService, convert_step_to_event
 
@@ -218,6 +219,202 @@ class TestAgentServiceRestoreConversationHistory:
 
         mock_agent.add_user_message.assert_not_called()
         mock_agent.add_assistant_message.assert_not_called()
+
+
+class TestAgentServiceRestoreConversationHistoryNewFormat:
+    """Tests for _restore_conversation_history with new memory format."""
+
+    def test_restore_new_format_sets_memory_directly(self):
+        """Test that new format history sets agent.memory directly."""
+        service = AgentService()
+        mock_agent = MagicMock()
+        mock_agent.memory = AgentMemory()
+
+        history = [
+            {"type": "task_step", "task": "What is 2+2?"},
+            {
+                "type": "memory_step",
+                "step_number": 1,
+                "text": "The answer is 4.",
+                "tool_calls": [],
+                "tool_results": [],
+                "input_tokens": 100,
+                "output_tokens": 50,
+            },
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        assert isinstance(mock_agent.memory, AgentMemory)
+        assert len(mock_agent.memory.steps) == 2
+        assert isinstance(mock_agent.memory.steps[0], TaskStep)
+        assert mock_agent.memory.steps[0].task == "What is 2+2?"
+        assert isinstance(mock_agent.memory.steps[1], MemoryStep)
+        assert mock_agent.memory.steps[1].text == "The answer is 4."
+
+    def test_restore_new_format_with_tool_calls(self):
+        """Test restoring new format with tool calls and results."""
+        service = AgentService()
+        mock_agent = MagicMock()
+        mock_agent.memory = AgentMemory()
+
+        history = [
+            {"type": "task_step", "task": "Get the weather"},
+            {
+                "type": "memory_step",
+                "step_number": 1,
+                "text": "Let me check the weather.",
+                "tool_calls": [{"id": "tc1", "name": "get_weather", "arguments": {"city": "Prague"}}],
+                "tool_results": [
+                    {"tool_call_id": "tc1", "name": "get_weather", "content": "Sunny, 25C", "is_error": False}
+                ],
+                "input_tokens": 200,
+                "output_tokens": 100,
+            },
+            {
+                "type": "memory_step",
+                "step_number": 2,
+                "text": "It's sunny and 25°C in Prague.",
+                "tool_calls": [],
+                "tool_results": [],
+            },
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        assert len(mock_agent.memory.steps) == 3
+        step1 = mock_agent.memory.steps[1]
+        assert len(step1.tool_calls) == 1
+        assert step1.tool_calls[0].name == "get_weather"
+        assert step1.tool_calls[0].arguments == {"city": "Prague"}
+        assert len(step1.tool_results) == 1
+        assert step1.tool_results[0].content == "Sunny, 25C"
+
+    def test_restore_new_format_multi_turn(self):
+        """Test restoring multi-turn conversation in new format."""
+        service = AgentService()
+        mock_agent = MagicMock()
+        mock_agent.memory = AgentMemory()
+
+        history = [
+            {"type": "task_step", "task": "Hello"},
+            {"type": "memory_step", "step_number": 1, "text": "Hi there!"},
+            {"type": "task_step", "task": "What can you do?"},
+            {"type": "memory_step", "step_number": 2, "text": "I can help with many things."},
+            {"type": "task_step", "task": "Tell me a joke"},
+            {"type": "memory_step", "step_number": 3, "text": "Why did the programmer quit? No arrays!"},
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        assert len(mock_agent.memory.steps) == 6
+        messages = mock_agent.memory.write_to_messages()
+        assert len(messages) == 6
+        assert messages[0]["role"] == "user"
+        assert messages[1]["role"] == "assistant"
+        assert messages[2]["role"] == "user"
+
+    def test_restore_detects_legacy_format(self):
+        """Test that legacy format (with 'role') uses old restore method."""
+        service = AgentService()
+        mock_agent = MagicMock()
+
+        history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+        ]
+
+        service._restore_conversation_history(mock_agent, history)
+
+        mock_agent.add_user_message.assert_called_once_with("Hello")
+        mock_agent.add_assistant_message.assert_called_once_with("Hi there!")
+
+
+class TestAgentServiceBuildUpdatedHistoryWithMemory:
+    """Tests for build_updated_history using stored memory."""
+
+    def test_build_history_uses_stored_memory(self):
+        """Test that build_updated_history uses _last_memory when available."""
+        service = AgentService()
+
+        memory = AgentMemory()
+        memory.add_task("What is 2+2?")
+        memory.steps.append(MemoryStep(step_number=1, text="The answer is 4."))
+        service._last_memory = memory
+
+        updated = service.build_updated_history(existing_history=[], user_prompt="ignored", final_response="ignored")
+
+        assert len(updated) == 2
+        assert updated[0]["type"] == "task_step"
+        assert updated[0]["task"] == "What is 2+2?"
+        assert updated[1]["type"] == "memory_step"
+        assert updated[1]["text"] == "The answer is 4."
+
+    def test_build_history_strips_tool_calls_for_lean_context(self):
+        """Test that tool calls and results are stripped from history for lean context."""
+        service = AgentService()
+
+        memory = AgentMemory()
+        memory.add_task("Check the weather")
+        memory.steps.append(
+            MemoryStep(
+                step_number=1,
+                text="Let me check...",
+                tool_calls=[ToolCall(id="tc1", name="weather", arguments={"city": "NYC"})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="weather", content="Rainy")],
+            )
+        )
+        memory.steps.append(MemoryStep(step_number=2, text="It's rainy in NYC."))
+        service._last_memory = memory
+
+        updated = service.build_updated_history(existing_history=[], user_prompt="ignored", final_response="ignored")
+
+        assert len(updated) == 3
+        assert updated[0]["type"] == "task_step"
+        assert updated[1]["type"] == "memory_step"
+        assert updated[1]["text"] == "Let me check..."
+        assert updated[1]["tool_calls"] == []
+        assert updated[1]["tool_results"] == []
+        assert updated[2]["text"] == "It's rainy in NYC."
+
+    def test_build_history_skips_memory_steps_without_text(self):
+        """Test that memory steps without text are skipped."""
+        service = AgentService()
+
+        memory = AgentMemory()
+        memory.add_task("Do something")
+        memory.steps.append(
+            MemoryStep(
+                step_number=1,
+                text=None,
+                tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
+            )
+        )
+        memory.steps.append(MemoryStep(step_number=2, text="Final answer"))
+        service._last_memory = memory
+
+        updated = service.build_updated_history(existing_history=[], user_prompt="ignored", final_response="ignored")
+
+        assert len(updated) == 2
+        assert updated[0]["type"] == "task_step"
+        assert updated[1]["type"] == "memory_step"
+        assert updated[1]["text"] == "Final answer"
+
+    def test_build_history_falls_back_when_no_memory(self):
+        """Test fallback to legacy behavior when _last_memory is None."""
+        service = AgentService()
+        service._last_memory = None
+
+        existing = [{"role": "user", "content": "Previous"}]
+        updated = service.build_updated_history(
+            existing_history=existing, user_prompt="New question", final_response="Answer"
+        )
+
+        assert len(updated) == 3
+        assert updated[0] == {"role": "user", "content": "Previous"}
+        assert updated[1] == {"role": "user", "content": "New question"}
+        assert updated[2] == {"role": "assistant", "content": "Answer"}
 
 
 class TestAgentServiceRunAgent:

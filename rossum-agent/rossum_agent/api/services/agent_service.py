@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal
 
 from rossum_agent.agent.core import RossumAgent, create_agent
+from rossum_agent.agent.memory import AgentMemory
 from rossum_agent.agent.models import AgentConfig, AgentStep
 from rossum_agent.api.models.schemas import (
     ImageContent,
@@ -104,6 +105,7 @@ class AgentService:
         """Initialize agent service."""
         self._output_dir: Path | None = None
         self._sub_agent_queue: asyncio.Queue[SubAgentProgressEvent | SubAgentTextEvent] | None = None
+        self._last_memory: AgentMemory | None = None
 
     @property
     def output_dir(self) -> Path | None:
@@ -215,6 +217,8 @@ class AgentService:
                         except asyncio.QueueEmpty:
                             break
 
+                    self._last_memory = agent.memory
+
                     yield StreamDoneEvent(
                         total_steps=total_steps, input_tokens=total_input_tokens, output_tokens=total_output_tokens
                     )
@@ -266,17 +270,24 @@ class AgentService:
 
         Args:
             agent: The RossumAgent instance.
-            history: List of message dicts with 'role' and 'content' keys.
-                     Content can be a string or a list of content blocks (for multimodal).
+            history: List of step dicts with 'type' key indicating step type.
+                     Supports both new format (with 'type') and legacy format (with 'role').
         """
-        for msg in history:
-            role = msg.get("role")
-            content = msg.get("content", "")
-            if role == "user":
-                user_content = self._parse_stored_content(content)
-                agent.add_user_message(user_content)
-            elif role == "assistant":
-                agent.add_assistant_message(content)
+        if not history:
+            return
+
+        first_item = history[0]
+        if "type" in first_item and first_item["type"] in ("task_step", "memory_step"):
+            agent.memory = AgentMemory.from_dict(history)
+        else:
+            for msg in history:
+                role = msg.get("role")
+                content = msg.get("content", "")
+                if role == "user":
+                    user_content = self._parse_stored_content(content)
+                    agent.add_user_message(user_content)
+                elif role == "assistant":
+                    agent.add_assistant_message(content)
 
     def _parse_stored_content(self, content: str | list[dict[str, Any]]) -> UserContent:
         """Parse stored content back into UserContent format.
@@ -319,12 +330,34 @@ class AgentService:
     ) -> list[dict[str, Any]]:
         """Build updated conversation history after agent execution.
 
+        Stores task steps and assistant text responses, but strips out tool calls
+        and tool results to keep context lean for multi-turn conversations.
+
         Args:
-            existing_history: Previous conversation history.
+            existing_history: Previous conversation history (ignored if memory available).
             user_prompt: The user's prompt that was just processed.
             final_response: The agent's final response, if any.
             images: Optional list of images included with the user prompt.
         """
+        if self._last_memory is not None:
+            lean_history: list[dict[str, Any]] = []
+            for step_dict in self._last_memory.to_dict():
+                if step_dict.get("type") == "task_step":
+                    lean_history.append(step_dict)
+                elif step_dict.get("type") == "memory_step":
+                    text = step_dict.get("text")
+                    if text:
+                        lean_history.append(
+                            {
+                                "type": "memory_step",
+                                "step_number": step_dict.get("step_number", 0),
+                                "text": text,
+                                "tool_calls": [],
+                                "tool_results": [],
+                            }
+                        )
+            return lean_history
+
         updated = list(existing_history)
         user_content = self._build_user_content(user_prompt, images)
         updated.append({"role": "user", "content": user_content})

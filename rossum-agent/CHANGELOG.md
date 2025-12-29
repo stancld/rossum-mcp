@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+
+### Added
+- Added skills system for dynamic skill loading from markdown files
+- Added `hook-debugging` skill for systematic hook debugging workflow
+- Added `rossum-deployment` skill for workspace deployment workflows
+- Added deployment-related internal tools: `pull_workspace`, `compare_workspaces`, `copy_workspace`, `get_id_mapping`
+- Added `list_local_files` and `clean_schema_dict` internal tools
 
 
 ## [0.2.7] - 2025-12-16

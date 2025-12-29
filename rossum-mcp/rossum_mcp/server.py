@@ -24,6 +24,7 @@ from rossum_mcp.tools import (
     register_relation_tools,
     register_rule_tools,
     register_schema_tools,
+    register_user_tools,
     register_workspace_tools,
 )
 
@@ -31,7 +32,7 @@ setup_logging(app_name="rossum-mcp-server", log_level="DEBUG", use_console=False
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = os.environ["ROSSUM_API_BASE_URL"]
+BASE_URL = os.environ["ROSSUM_API_BASE_URL"].rstrip("/")
 API_TOKEN = os.environ["ROSSUM_API_TOKEN"]
 MODE = os.environ.get("ROSSUM_MCP_MODE", "read-write").lower()
 
@@ -51,6 +52,7 @@ register_hook_tools(mcp, client)
 register_document_relation_tools(mcp, client)
 register_relation_tools(mcp, client)
 register_rule_tools(mcp, client)
+register_user_tools(mcp, client)
 register_workspace_tools(mcp, client)
 
 

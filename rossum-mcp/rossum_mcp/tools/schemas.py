@@ -1,9 +1,9 @@
-"""Schema tools for Rossum MCP Server."""
-
 from __future__ import annotations
 
+import copy
 import logging
-from typing import TYPE_CHECKING
+from dataclasses import asdict, dataclass
+from typing import TYPE_CHECKING, Literal
 
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.schema import Schema  # noqa: TC002 - needed at runtime for FastMCP
@@ -16,6 +16,284 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+PatchOperation = Literal["add", "update", "remove"]
+DatapointType = Literal["string", "number", "date", "enum", "button"]
+NodeCategory = Literal["datapoint", "multivalue", "tuple"]
+
+
+@dataclass
+class SchemaDatapoint:
+    """A datapoint node for schema patch operations.
+
+    Use for adding/updating fields that capture or display values.
+    When used inside a tuple (table), id is required.
+    """
+
+    label: str
+    id: str | None = None
+    category: Literal["datapoint"] = "datapoint"
+    type: DatapointType | None = None
+    rir_field_names: list[str] | None = None
+    default_value: str | None = None
+    score_threshold: float | None = None
+    hidden: bool = False
+    disable_prediction: bool = False
+    can_export: bool = True
+    constraints: dict | None = None
+    options: list[dict] | None = None
+    ui_configuration: dict | None = None
+    formula: str | None = None
+    prompt: str | None = None
+    context: list[str] | None = None
+    width: int | None = None
+    stretch: bool | None = None
+
+    def to_dict(self) -> dict:
+        """Convert to dict, excluding None values."""
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+@dataclass
+class SchemaTuple:
+    """A tuple node for schema patch operations.
+
+    Use within multivalue to define table row structure with multiple columns.
+    """
+
+    id: str
+    label: str
+    children: list[SchemaDatapoint]
+    category: Literal["tuple"] = "tuple"
+    hidden: bool = False
+
+    def to_dict(self) -> dict:
+        """Convert to dict, excluding None values."""
+        result: dict = {"id": self.id, "category": self.category, "label": self.label}
+        if self.hidden:
+            result["hidden"] = self.hidden
+        result["children"] = [child.to_dict() for child in self.children]
+        return result
+
+
+@dataclass
+class SchemaMultivalue:
+    """A multivalue node for schema patch operations.
+
+    Use for repeating fields or tables. Children is a single Tuple or Datapoint (NOT a list).
+    The id is optional here since it gets set from node_id in patch_schema.
+    """
+
+    label: str
+    children: SchemaTuple | SchemaDatapoint
+    id: str | None = None
+    category: Literal["multivalue"] = "multivalue"
+    rir_field_names: list[str] | None = None
+    min_occurrences: int | None = None
+    max_occurrences: int | None = None
+    hidden: bool = False
+
+    def to_dict(self) -> dict:
+        """Convert to dict, excluding None values."""
+        result: dict = {"label": self.label, "category": self.category}
+        if self.id:
+            result["id"] = self.id
+        if self.rir_field_names:
+            result["rir_field_names"] = self.rir_field_names
+        if self.min_occurrences is not None:
+            result["min_occurrences"] = self.min_occurrences
+        if self.max_occurrences is not None:
+            result["max_occurrences"] = self.max_occurrences
+        if self.hidden:
+            result["hidden"] = self.hidden
+        result["children"] = self.children.to_dict()
+        return result
+
+
+@dataclass
+class SchemaNodeUpdate:
+    """Partial update for an existing schema node.
+
+    Only include fields you want to update - all fields are optional.
+    """
+
+    label: str | None = None
+    type: DatapointType | None = None
+    score_threshold: float | None = None
+    hidden: bool | None = None
+    disable_prediction: bool | None = None
+    can_export: bool | None = None
+    default_value: str | None = None
+    rir_field_names: list[str] | None = None
+    constraints: dict | None = None
+    options: list[dict] | None = None
+    ui_configuration: dict | None = None
+    formula: str | None = None
+    prompt: str | None = None
+    context: list[str] | None = None
+    width: int | None = None
+    stretch: bool | None = None
+    min_occurrences: int | None = None
+    max_occurrences: int | None = None
+
+    def to_dict(self) -> dict:
+        """Convert to dict, excluding None values."""
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+SchemaNode = SchemaDatapoint | SchemaMultivalue | SchemaTuple
+
+
+def _find_node_in_children(
+    children: list[dict], node_id: str, parent_node: dict | None = None
+) -> tuple[dict | None, int | None, list[dict] | None, dict | None]:
+    """Recursively find a node by ID in schema children.
+
+    Returns (node, index, parent_children_list, parent_node) or (None, None, None, None) if not found.
+    The parent_node is needed for multivalue's dict children where we need to modify the parent directly.
+    """
+    for i, child in enumerate(children):
+        if child.get("id") == node_id:
+            return child, i, children, parent_node
+
+        nested_children = child.get("children")
+        if nested_children:
+            if isinstance(nested_children, list):
+                result = _find_node_in_children(nested_children, node_id, child)
+                if result[0] is not None:
+                    return result
+            elif isinstance(nested_children, dict):
+                # Multivalue has a single dict child (tuple), not a list
+                if nested_children.get("id") == node_id:
+                    # Return the parent node so caller can modify child["children"] directly
+                    return nested_children, 0, None, child
+                if "children" in nested_children:
+                    result = _find_node_in_children(nested_children["children"], node_id, nested_children)
+                    if result[0] is not None:
+                        return result
+
+    return None, None, None, None
+
+
+def _find_parent_children_list(content: list[dict], parent_id: str) -> list[dict] | None:
+    """Find the children list of a parent node by its ID."""
+    for section in content:
+        if section.get("id") == parent_id:
+            children: list[dict] = section.setdefault("children", [])
+            return children
+
+        section_children = section.get("children", [])
+        node, _, _, _ = _find_node_in_children(section_children, parent_id)
+        if node is not None:
+            if "children" in node:
+                if isinstance(node["children"], list):
+                    result: list[dict] = node["children"]
+                    return result
+                if isinstance(node["children"], dict):
+                    return [node["children"]]
+            else:
+                node["children"] = []
+                node_children: list[dict] = node["children"]
+                return node_children
+
+    return None
+
+
+def _apply_add_operation(
+    content: list[dict], node_id: str, node_data: dict | None, parent_id: str | None, position: int | None
+) -> list[dict]:
+    if node_data is None:
+        raise ValueError("node_data is required for 'add' operation")
+    if parent_id is None:
+        raise ValueError("parent_id is required for 'add' operation")
+
+    node_data = copy.deepcopy(node_data)
+    node_data["id"] = node_id
+
+    parent_children = _find_parent_children_list(content, parent_id)
+    if parent_children is None:
+        raise ValueError(f"Parent node '{parent_id}' not found in schema")
+
+    if position is not None and 0 <= position <= len(parent_children):
+        parent_children.insert(position, node_data)
+    else:
+        parent_children.append(node_data)
+    return content
+
+
+def _apply_update_operation(content: list[dict], node_id: str, node_data: dict | None) -> list[dict]:
+    if node_data is None:
+        raise ValueError("node_data is required for 'update' operation")
+
+    for section in content:
+        if section.get("id") == node_id:
+            section.update(node_data)
+            return content
+
+    node: dict | None = None
+    for section in content:
+        node, _, _, _ = _find_node_in_children(section.get("children", []), node_id)
+        if node is not None:
+            break
+
+    if node is None:
+        raise ValueError(f"Node '{node_id}' not found in schema")
+
+    node.update(node_data)
+    return content
+
+
+def _apply_remove_operation(content: list[dict], node_id: str) -> list[dict]:
+    for section in content:
+        if section.get("id") == node_id:
+            raise ValueError("Cannot remove a section - sections must exist")
+
+    for section in content:
+        section_children = section.get("children", [])
+        node, idx, parent_list, parent_node = _find_node_in_children(section_children, node_id)
+        if node is not None and idx is not None:
+            if parent_list is not None:
+                # Node is in a regular list of children
+                parent_list.pop(idx)
+            elif parent_node is not None:
+                # Node is multivalue's single dict child - cannot remove tuple from multivalue
+                raise ValueError(f"Cannot remove tuple '{node_id}' from multivalue - remove the multivalue instead")
+            return content
+
+    raise ValueError(f"Node '{node_id}' not found in schema")
+
+
+def apply_schema_patch(
+    content: list[dict],
+    operation: PatchOperation,
+    node_id: str,
+    node_data: dict | None = None,
+    parent_id: str | None = None,
+    position: int | None = None,
+) -> list[dict]:
+    """Apply a patch operation to schema content.
+
+    Args:
+        content: The schema content (list of sections)
+        operation: One of "add", "update", "remove"
+        node_id: ID of the node to operate on
+        node_data: Data for add/update operations
+        parent_id: Parent node ID for add operation (section ID or multivalue/tuple ID)
+        position: Optional position for add operation (appends if not specified)
+
+    Returns:
+        Modified content
+    """
+    content = copy.deepcopy(content)
+
+    if operation == "add":
+        return _apply_add_operation(content, node_id, node_data, parent_id, position)
+    if operation == "update":
+        return _apply_update_operation(content, node_id, node_data)
+    if operation == "remove":
+        return _apply_remove_operation(content, node_id)
+
+    return content
+
 
 def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register schema-related tools with the FastMCP server."""
@@ -23,7 +301,6 @@ def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="Retrieve schema details.")
     async def get_schema(schema_id: int) -> Schema:
         """Retrieve schema details."""
-        logger.debug(f"Retrieving schema: schema_id={schema_id}")
         schema: Schema = await client.retrieve_schema(schema_id)
         return schema
 
@@ -48,3 +325,60 @@ def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         schema_data = {"name": name, "content": content}
         schema: Schema = await client.create_new_schema(schema_data)
         return schema
+
+    @mcp.tool(
+        description="""Patch schema nodes (add/update/remove fields in a schema).
+
+Operations:
+- add: Create new field. Requires parent_id (section or tuple id) and node_data.
+- update: Modify existing field. Requires node_data with fields to change.
+- remove: Delete field. Only requires node_id.
+
+Node types for add:
+- Datapoint (simple field): {"label": "Field Name", "category": "datapoint", "type": "string|number|date|enum"}
+- Enum field: Include "options": [{"value": "v1", "label": "Label 1"}, ...]
+- Multivalue (table): {"label": "Table", "category": "multivalue", "children": <tuple>}
+- Tuple (table row): {"id": "row_id", "label": "Row", "category": "tuple", "children": [<datapoints with id>]}
+
+Important: Datapoints inside a tuple MUST have an "id" field. Section-level datapoints get id from node_id parameter."""
+    )
+    async def patch_schema(
+        schema_id: int,
+        operation: PatchOperation,
+        node_id: str,
+        node_data: SchemaNode | SchemaNodeUpdate | None = None,
+        parent_id: str | None = None,
+        position: int | None = None,
+    ) -> Schema | dict:
+        if not is_read_write_mode():
+            return {"error": "patch_schema is not available in read-only mode"}
+
+        if operation not in ("add", "update", "remove"):
+            return {"error": f"Invalid operation '{operation}'. Must be 'add', 'update', or 'remove'."}
+
+        logger.debug(f"Patching schema: schema_id={schema_id}, operation={operation}, node_id={node_id}")
+
+        node_data_dict: dict | None = None
+        if node_data is not None:
+            node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)  # type: ignore[call-overload]
+
+        current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
+        content_list = current_schema.get("content", [])
+        if not isinstance(content_list, list):
+            return {"error": "Unexpected schema content format"}
+
+        try:
+            patched_content = apply_schema_patch(
+                content=content_list,
+                operation=operation,  # type: ignore[arg-type]
+                node_id=node_id,
+                node_data=node_data_dict,
+                parent_id=parent_id,
+                position=position,
+            )
+        except ValueError as e:
+            return {"error": str(e)}
+
+        await client._http_client.update(Resource.Schema, schema_id, {"content": patched_content})
+        updated_schema: Schema = await client.retrieve_schema(schema_id)
+        return updated_schema
