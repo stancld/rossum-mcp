@@ -14,7 +14,7 @@ from rossum_agent.agent.skills import (
     get_skill_content,
     get_skill_registry,
 )
-from rossum_agent.tools import INTERNAL_TOOLS, execute_tool, get_internal_tool_names, load_skill
+from rossum_agent.internal_tools import execute_internal_tool, get_internal_tool_names, load_skill
 
 
 class TestSkill:
@@ -177,8 +177,8 @@ class TestLoadSkillTool:
                     assert "error" in result
                     assert "not found" in result
 
-    def test_execute_tool_integration(self):
-        """Test load_skill via execute_tool."""
+    def test_execute_internal_tool_integration(self):
+        """Test load_skill via execute_internal_tool."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "deploy.md"
             skill_file.write_text("# Deploy Guide")
@@ -191,7 +191,7 @@ class TestLoadSkillTool:
                     "rossum_agent.agent.skills._default_registry",
                     None,
                 ):
-                    result = execute_tool("load_skill", {"name": "deploy"}, INTERNAL_TOOLS)
+                    result = execute_internal_tool("load_skill", {"name": "deploy"})
 
                     assert "success" in result
                     assert "Deploy Guide" in result

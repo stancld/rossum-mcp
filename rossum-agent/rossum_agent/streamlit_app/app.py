@@ -21,13 +21,13 @@ from rossum_mcp.logging_config import setup_logging
 
 from rossum_agent.agent import AgentConfig, create_agent
 from rossum_agent.agent_logging import log_agent_result
+from rossum_agent.internal_tools import set_mcp_connection, set_output_dir
+from rossum_agent.mcp_tools import connect_mcp_server
 from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
 from rossum_agent.streamlit_app.beep_sound import generate_beep_wav
 from rossum_agent.streamlit_app.render_modules import render_chat_history
 from rossum_agent.streamlit_app.response_formatting import ChatResponse, parse_and_format_final_answer
-from rossum_agent.tools import set_mcp_connection, set_output_dir
 from rossum_agent.url_context import RossumUrlContext, extract_url_context, format_context_for_prompt
 from rossum_agent.user_detection import detect_user_id, normalize_user_id
 from rossum_agent.utils import (

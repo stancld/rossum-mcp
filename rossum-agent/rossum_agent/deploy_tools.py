@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,16 +17,17 @@ from anthropic import beta_tool
 from rossum_deploy.models import IdMapping
 from rossum_deploy.workspace import Workspace
 
-from rossum_agent.tools.core import get_output_dir
-
 if TYPE_CHECKING:
     from anthropic._tools import BetaTool
     from rossum_deploy.workspace import Workspace as WorkspaceType
 
 logger = logging.getLogger(__name__)
 
+# Import get_output_dir from internal_tools to share output directory
+from rossum_agent.internal_tools import get_output_dir
 
-def get_workspace_credentials() -> tuple[str, str]:
+
+def _get_workspace_credentials() -> tuple[str, str]:
     """Get Rossum API credentials from environment.
 
     Returns:
@@ -39,11 +41,20 @@ def get_workspace_credentials() -> tuple[str, str]:
     return api_base, token
 
 
-def create_workspace(
+def _create_workspace(
     path: str | None = None, api_base_url: str | None = None, token: str | None = None
 ) -> WorkspaceType:
-    """Create a Workspace instance for deployment operations."""
-    default_api_base, default_token = get_workspace_credentials()
+    """Create a Workspace instance with current credentials.
+
+    Args:
+        path: Optional workspace directory path. Defaults to output directory.
+        api_base_url: Optional API base URL. Defaults to env ROSSUM_API_BASE_URL.
+        token: Optional API token. Defaults to env ROSSUM_API_TOKEN.
+
+    Returns:
+        Workspace instance.
+    """
+    default_api_base, default_token = _get_workspace_credentials()
     api_base = api_base_url or default_api_base
     api_token = token or default_token
 
@@ -75,9 +86,10 @@ def deploy_pull(
         JSON with pull summary including counts of pulled objects.
     """
     logger.info(f"deploy_pull called with {org_id=}, {workspace_path=}, {api_base_url=}")
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path, api_base_url=api_base_url, token=token)
+        ws = _create_workspace(workspace_path, api_base_url=api_base_url, token=token)
         result = ws.pull(org_id=org_id)
 
         return json.dumps(
@@ -87,11 +99,18 @@ def deploy_pull(
                 "pulled_count": len(result.pulled),
                 "skipped_count": len(result.skipped),
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_pull")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
@@ -108,9 +127,10 @@ def deploy_diff(workspace_path: str | None = None) -> str:
         JSON with diff summary showing unchanged, modified, and conflicting objects.
     """
     logger.info(f"deploy_diff called with {workspace_path=}")
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path)
+        ws = _create_workspace(workspace_path)
         result = ws.diff()
 
         return json.dumps(
@@ -122,11 +142,18 @@ def deploy_diff(workspace_path: str | None = None) -> str:
                 "remote_modified": result.total_remote_modified,
                 "conflicts": result.total_conflicts,
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_diff")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
@@ -145,9 +172,10 @@ def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str 
         JSON with push summary including counts of pushed, skipped, and failed objects.
     """
     logger.info(f"deploy_push called with {dry_run=}, {force=}, {workspace_path=}")
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path)
+        ws = _create_workspace(workspace_path)
 
         if dry_run:
             result = ws.push(dry_run=True)
@@ -159,6 +187,7 @@ def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str 
                     "would_push_count": len(result.pushed),
                     "would_skip_count": len(result.skipped),
                     "workspace_path": str(ws.path),
+                    "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
                 }
             )
 
@@ -173,11 +202,18 @@ def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str 
                 "skipped_count": len(result.skipped),
                 "failed_count": len(result.failed),
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_push")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
@@ -209,9 +245,10 @@ def deploy_copy_org(
     logger.info(
         f"deploy_copy_org called with {source_org_id=}, {target_org_id=}, {target_api_base=}, {workspace_path=}"
     )
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path)
+        ws = _create_workspace(workspace_path)
 
         result = ws.copy_org(
             source_org_id=source_org_id,
@@ -228,11 +265,18 @@ def deploy_copy_org(
                 "skipped_count": len(result.skipped),
                 "failed_count": len(result.failed),
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_copy_org")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
@@ -264,9 +308,10 @@ def deploy_copy_workspace(
     logger.info(
         f"deploy_copy_workspace called with {source_workspace_id=}, {target_org_id=}, {target_api_base=}, {workspace_path=}"
     )
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path)
+        ws = _create_workspace(workspace_path)
 
         result = ws.copy_workspace(
             source_workspace_id=source_workspace_id,
@@ -283,16 +328,25 @@ def deploy_copy_workspace(
                 "skipped_count": len(result.skipped),
                 "failed_count": len(result.failed),
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_copy_workspace")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
 def deploy_compare_workspaces(
-    source_workspace_path: str, target_workspace_path: str, id_mapping_path: str | None = None
+    source_workspace_path: str,
+    target_workspace_path: str,
+    id_mapping_path: str | None = None,
 ) -> str:
     """Compare two local workspaces to see differences between source and target.
 
@@ -316,9 +370,10 @@ def deploy_compare_workspaces(
     logger.info(
         f"deploy_compare_workspaces called with {source_workspace_path=}, {target_workspace_path=}, {id_mapping_path=}"
     )
+    start_time = time.perf_counter()
 
     try:
-        api_base, token = get_workspace_credentials()
+        api_base, token = _get_workspace_credentials()
 
         source_ws = Workspace(Path(source_workspace_path), api_base=api_base, token=token)
         target_ws = Workspace(Path(target_workspace_path), api_base=api_base, token=token)
@@ -340,11 +395,18 @@ def deploy_compare_workspaces(
                 "total_different": result.total_different,
                 "source_only_count": len(result.source_only),
                 "target_only_count": len(result.target_only),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_compare_workspaces")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 @beta_tool
@@ -372,12 +434,16 @@ def deploy_to_org(
         JSON with deploy summary including counts of created, updated, skipped, and failed objects.
     """
     logger.info(f"deploy_to_org called with {target_org_id=}, {target_api_base=}, {dry_run=}, {workspace_path=}")
+    start_time = time.perf_counter()
 
     try:
-        ws = create_workspace(workspace_path)
+        ws = _create_workspace(workspace_path)
 
         result = ws.deploy(
-            target_org_id=target_org_id, target_api_base=target_api_base, target_token=target_token, dry_run=dry_run
+            target_org_id=target_org_id,
+            target_api_base=target_api_base,
+            target_token=target_token,
+            dry_run=dry_run,
         )
 
         return json.dumps(
@@ -390,11 +456,18 @@ def deploy_to_org(
                 "skipped_count": len(result.skipped),
                 "failed_count": len(result.failed),
                 "workspace_path": str(ws.path),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
             }
         )
     except Exception as e:
         logger.exception("Error in deploy_to_org")
-        return json.dumps({"status": "error", "error": str(e)})
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+            }
+        )
 
 
 DEPLOY_TOOLS: list[BetaTool[..., str]] = [
@@ -409,8 +482,31 @@ DEPLOY_TOOLS: list[BetaTool[..., str]] = [
 
 
 def get_deploy_tools() -> list[dict[str, object]]:
+    """Get all deployment tools in Anthropic format."""
     return [tool.to_dict() for tool in DEPLOY_TOOLS]
 
 
 def get_deploy_tool_names() -> set[str]:
+    """Get the names of all deployment tools."""
     return {tool.name for tool in DEPLOY_TOOLS}
+
+
+def execute_deploy_tool(name: str, arguments: dict[str, object]) -> str:
+    """Execute a deployment tool by name.
+
+    Args:
+        name: The name of the tool to execute.
+        arguments: The arguments to pass to the tool.
+
+    Returns:
+        The result of the tool execution as a string.
+
+    Raises:
+        ValueError: If the tool name is not recognized.
+    """
+    for tool in DEPLOY_TOOLS:
+        if tool.name == name:
+            result: str = tool(**arguments)
+            return result
+
+    raise ValueError(f"Unknown deploy tool: {name}")
