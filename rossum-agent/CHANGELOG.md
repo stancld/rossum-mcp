@@ -10,8 +10,18 @@ All notable changes to this project will be documented in this file.
 - Added skills system for dynamic skill loading from markdown files
 - Added `hook-debugging` skill for systematic hook debugging workflow
 - Added `rossum-deployment` skill for workspace deployment workflows
-- Added deployment-related internal tools: `pull_workspace`, `compare_workspaces`, `copy_workspace`, `get_id_mapping`
+- Added deployment-related internal tools: `pull_workspace`, `compare_workspaces`, `copy_workspace`, `get_id_mapping` [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added `list_local_files` and `clean_schema_dict` internal tools
+- Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
+
+### Changed
+- Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
+- Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Display workspace diffs in a concise way [#73](https://github.com/stancld/rossum-mcp/pull/73)
+
+### Fixed
+- Fixed displaying generated files in Streamlit UI [#73](https://github.com/stancld/rossum-mcp/pull/73)
 
 
 ## [0.2.7] - 2025-12-16
