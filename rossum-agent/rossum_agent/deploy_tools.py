@@ -85,6 +85,7 @@ def deploy_pull(
     Returns:
         JSON with pull summary including counts of pulled objects.
     """
+    logger.info(f"deploy_pull called with {org_id=}, {workspace_path=}, {api_base_url=}")
     start_time = time.perf_counter()
 
     try:
@@ -125,6 +126,7 @@ def deploy_diff(workspace_path: str | None = None) -> str:
     Returns:
         JSON with diff summary showing unchanged, modified, and conflicting objects.
     """
+    logger.info(f"deploy_diff called with {workspace_path=}")
     start_time = time.perf_counter()
 
     try:
@@ -169,6 +171,7 @@ def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str 
     Returns:
         JSON with push summary including counts of pushed, skipped, and failed objects.
     """
+    logger.info(f"deploy_push called with {dry_run=}, {force=}, {workspace_path=}")
     start_time = time.perf_counter()
 
     try:
@@ -239,6 +242,9 @@ def deploy_copy_org(
     Returns:
         JSON with copy summary including counts of created, skipped, and failed objects.
     """
+    logger.info(
+        f"deploy_copy_org called with {source_org_id=}, {target_org_id=}, {target_api_base=}, {workspace_path=}"
+    )
     start_time = time.perf_counter()
 
     try:
@@ -299,6 +305,9 @@ def deploy_copy_workspace(
     Returns:
         JSON with copy summary including counts of created, skipped, and failed objects.
     """
+    logger.info(
+        f"deploy_copy_workspace called with {source_workspace_id=}, {target_org_id=}, {target_api_base=}, {workspace_path=}"
+    )
     start_time = time.perf_counter()
 
     try:
@@ -358,6 +367,9 @@ def deploy_compare_workspaces(
         JSON with comparison summary showing identical, different, source-only,
         and target-only objects with field-level diffs.
     """
+    logger.info(
+        f"deploy_compare_workspaces called with {source_workspace_path=}, {target_workspace_path=}, {id_mapping_path=}"
+    )
     start_time = time.perf_counter()
 
     try:
@@ -421,6 +433,7 @@ def deploy_to_org(
     Returns:
         JSON with deploy summary including counts of created, updated, skipped, and failed objects.
     """
+    logger.info(f"deploy_to_org called with {target_org_id=}, {target_api_base=}, {dry_run=}, {workspace_path=}")
     start_time = time.perf_counter()
 
     try:
