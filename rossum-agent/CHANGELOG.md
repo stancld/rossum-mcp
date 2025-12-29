@@ -15,7 +15,6 @@ All notable changes to this project will be documented in this file.
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
 
 ### Changed
-- Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills
 - Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
 - Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-mcp/pull/73)

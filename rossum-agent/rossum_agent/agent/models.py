@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from rossum_agent.tools import SubAgentProgress
+    from rossum_agent.internal_tools import SubAgentProgress
 
 
 @dataclass

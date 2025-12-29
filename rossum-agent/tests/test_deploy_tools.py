@@ -1,5 +1,3 @@
-"""Tests for rossum_agent.tools.deploy module."""
-
 from __future__ import annotations
 
 import json
@@ -7,20 +5,20 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.tools import DEPLOY_TOOLS, execute_tool, set_output_dir
-from rossum_agent.tools.deploy import (
-    create_workspace,
-    deploy_compare_workspaces,
+from rossum_agent.deploy_tools import (
+    _create_workspace,
+    _get_workspace_credentials,
     deploy_copy_org,
     deploy_copy_workspace,
     deploy_diff,
     deploy_pull,
     deploy_push,
     deploy_to_org,
+    execute_deploy_tool,
     get_deploy_tool_names,
     get_deploy_tools,
-    get_workspace_credentials,
 )
+from rossum_agent.internal_tools import set_output_dir
 from rossum_deploy.models import (
     CopyResult,
     DeployResult,
@@ -69,12 +67,6 @@ class TestDeployToolsRegistration:
         tool_names = [t["name"] for t in tools]
         assert "deploy_copy_workspace" in tool_names
 
-    def test_deploy_compare_workspaces_is_registered(self):
-        """Test that deploy_compare_workspaces is in deploy tools."""
-        tools = get_deploy_tools()
-        tool_names = [t["name"] for t in tools]
-        assert "deploy_compare_workspaces" in tool_names
-
     def test_deploy_to_org_is_registered(self):
         """Test that deploy_to_org is in deploy tools."""
         tools = get_deploy_tools()
@@ -89,7 +81,6 @@ class TestDeployToolsRegistration:
         assert "deploy_push" in names
         assert "deploy_copy_org" in names
         assert "deploy_copy_workspace" in names
-        assert "deploy_compare_workspaces" in names
         assert "deploy_to_org" in names
 
 
@@ -150,18 +141,6 @@ class TestDeployToolsSchema:
         assert "source_workspace_id" in schema["required"]
         assert "target_org_id" in schema["required"]
 
-    def test_deploy_compare_workspaces_schema(self):
-        """Test deploy_compare_workspaces has correct input schema."""
-        tools = get_deploy_tools()
-        tool = next(t for t in tools if t["name"] == "deploy_compare_workspaces")
-        schema = tool["input_schema"]
-        assert schema["type"] == "object"
-        assert "source_workspace_path" in schema["properties"]
-        assert "target_workspace_path" in schema["properties"]
-        assert "id_mapping_path" in schema["properties"]
-        assert "source_workspace_path" in schema["required"]
-        assert "target_workspace_path" in schema["required"]
-
     def test_deploy_to_org_schema(self):
         """Test deploy_to_org has correct input schema."""
         tools = get_deploy_tools()
@@ -193,7 +172,7 @@ class TestDeployPull:
         mock_workspace.pull.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_pull(org_id=12345, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -201,6 +180,7 @@ class TestDeployPull:
         assert result["pulled_count"] == 2
         assert result["skipped_count"] == 0
         assert result["workspace_path"] == str(tmp_path)
+        assert "elapsed_ms" in result
         assert "summary" in result
         mock_workspace.pull.assert_called_once_with(org_id=12345)
 
@@ -211,7 +191,7 @@ class TestDeployPull:
         mock_workspace.pull.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace) as mock_create:
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace) as mock_create:
             deploy_pull(
                 org_id=123,
                 workspace_path=str(tmp_path),
@@ -228,7 +208,7 @@ class TestDeployPull:
     def test_pull_handles_error(self, tmp_path: Path):
         """Test pull error handling."""
         with patch(
-            "rossum_agent.tools.deploy.create_workspace",
+            "rossum_agent.deploy_tools._create_workspace",
             side_effect=Exception("API connection failed"),
         ):
             result_json = deploy_pull(org_id=123, workspace_path=str(tmp_path))
@@ -236,6 +216,7 @@ class TestDeployPull:
         result = json.loads(result_json)
         assert result["status"] == "error"
         assert "API connection failed" in result["error"]
+        assert "elapsed_ms" in result
 
 
 class TestDeployDiff:
@@ -259,7 +240,7 @@ class TestDeployDiff:
         mock_workspace.diff.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_diff(workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -279,7 +260,7 @@ class TestDeployDiff:
         mock_workspace.diff.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_diff(workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -289,7 +270,7 @@ class TestDeployDiff:
     def test_diff_handles_error(self, tmp_path: Path):
         """Test diff error handling."""
         with patch(
-            "rossum_agent.tools.deploy.create_workspace",
+            "rossum_agent.deploy_tools._create_workspace",
             side_effect=Exception("Workspace not initialized"),
         ):
             result_json = deploy_diff(workspace_path=str(tmp_path))
@@ -314,7 +295,7 @@ class TestDeployPush:
         mock_workspace.push.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_push(workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -333,7 +314,7 @@ class TestDeployPush:
         mock_workspace.push.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_push(dry_run=True, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -349,7 +330,7 @@ class TestDeployPush:
         mock_workspace.push.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             deploy_push(force=True, workspace_path=str(tmp_path))
 
         mock_workspace.push.assert_called_once_with(force=True)
@@ -366,7 +347,7 @@ class TestDeployPush:
         mock_workspace.push.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_push(workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -380,7 +361,7 @@ class TestDeployPush:
         mock_workspace.push.side_effect = Exception("Conflict detected")
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_push(workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -403,7 +384,7 @@ class TestDeployCopyOrg:
         mock_workspace.copy_org.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_copy_org(source_org_id=100, target_org_id=200, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -422,7 +403,7 @@ class TestDeployCopyOrg:
         mock_workspace.copy_org.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             deploy_copy_org(
                 source_org_id=100,
                 target_org_id=200,
@@ -444,7 +425,7 @@ class TestDeployCopyOrg:
         mock_workspace.copy_org.side_effect = Exception("Target org not accessible")
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_copy_org(source_org_id=100, target_org_id=200, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -467,7 +448,7 @@ class TestDeployCopyWorkspace:
         mock_workspace.copy_workspace.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_copy_workspace(
                 source_workspace_id=10, target_org_id=200, workspace_path=str(tmp_path)
             )
@@ -486,7 +467,7 @@ class TestDeployCopyWorkspace:
         mock_workspace.copy_workspace.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             deploy_copy_workspace(
                 source_workspace_id=10,
                 target_org_id=200,
@@ -508,7 +489,7 @@ class TestDeployCopyWorkspace:
         mock_workspace.copy_workspace.side_effect = Exception("Workspace not found")
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_copy_workspace(
                 source_workspace_id=999, target_org_id=200, workspace_path=str(tmp_path)
             )
@@ -516,92 +497,6 @@ class TestDeployCopyWorkspace:
         result = json.loads(result_json)
         assert result["status"] == "error"
         assert "Workspace not found" in result["error"]
-
-
-class TestDeployCompareWorkspaces:
-    """Test deploy_compare_workspaces function."""
-
-    def test_successful_compare(self, tmp_path: Path):
-        """Test successful workspace comparison."""
-        source_path = tmp_path / "source"
-        target_path = tmp_path / "target"
-        source_path.mkdir()
-        target_path.mkdir()
-
-        mock_result = MagicMock()
-        mock_result.summary.return_value = "Comparison summary"
-        mock_result.source_workspace_id = 1
-        mock_result.target_workspace_id = 2
-        mock_result.total_identical = 5
-        mock_result.total_different = 2
-        mock_result.source_only = [(ObjectType.HOOK, 1, "Hook1")]
-        mock_result.target_only = []
-
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", return_value=("https://api.test", "token")):
-            with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
-                mock_source_ws = MagicMock()
-                mock_source_ws.compare_workspaces.return_value = mock_result
-                mock_ws_class.return_value = mock_source_ws
-
-                result_json = deploy_compare_workspaces(
-                    source_workspace_path=str(source_path),
-                    target_workspace_path=str(target_path),
-                )
-
-        result = json.loads(result_json)
-        assert result["status"] == "success"
-        assert result["total_identical"] == 5
-        assert result["total_different"] == 2
-        assert result["source_only_count"] == 1
-        assert result["target_only_count"] == 0
-
-    def test_compare_with_id_mapping(self, tmp_path: Path):
-        """Test comparison with ID mapping file."""
-        source_path = tmp_path / "source"
-        target_path = tmp_path / "target"
-        source_path.mkdir()
-        target_path.mkdir()
-
-        mapping_file = tmp_path / "mapping.json"
-        mapping_file.write_text('{"mapping": {}}')
-
-        mock_result = MagicMock()
-        mock_result.summary.return_value = "Summary"
-        mock_result.source_workspace_id = 1
-        mock_result.target_workspace_id = 2
-        mock_result.total_identical = 0
-        mock_result.total_different = 0
-        mock_result.source_only = []
-        mock_result.target_only = []
-
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", return_value=("https://api.test", "token")):
-            with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
-                with patch("rossum_agent.tools.deploy.IdMapping.model_validate") as mock_validate:
-                    mock_source_ws = MagicMock()
-                    mock_source_ws.compare_workspaces.return_value = mock_result
-                    mock_ws_class.return_value = mock_source_ws
-                    mock_validate.return_value = MagicMock()
-
-                    result_json = deploy_compare_workspaces(
-                        source_workspace_path=str(source_path),
-                        target_workspace_path=str(target_path),
-                        id_mapping_path=str(mapping_file),
-                    )
-
-        result = json.loads(result_json)
-        assert result["status"] == "success"
-
-    def test_compare_handles_error(self, tmp_path: Path):
-        """Test compare error handling."""
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", side_effect=Exception("Creds error")):
-            result_json = deploy_compare_workspaces(
-                source_workspace_path=str(tmp_path),
-                target_workspace_path=str(tmp_path),
-            )
-
-        result = json.loads(result_json)
-        assert result["status"] == "error"
-        assert "Creds error" in result["error"]
 
 
 class TestDeployToOrg:
@@ -620,7 +515,7 @@ class TestDeployToOrg:
         mock_workspace.deploy.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_to_org(target_org_id=200, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -647,7 +542,7 @@ class TestDeployToOrg:
         mock_workspace.deploy.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_to_org(target_org_id=200, dry_run=True, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -664,7 +559,7 @@ class TestDeployToOrg:
         mock_workspace.deploy.return_value = mock_result
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             deploy_to_org(
                 target_org_id=200,
                 target_api_base="https://sandbox.api.rossum.ai/v1",
@@ -685,7 +580,7 @@ class TestDeployToOrg:
         mock_workspace.deploy.side_effect = Exception("ID mapping not found")
         mock_workspace.path = tmp_path
 
-        with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
+        with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
             result_json = deploy_to_org(target_org_id=200, workspace_path=str(tmp_path))
 
         result = json.loads(result_json)
@@ -694,10 +589,10 @@ class TestDeployToOrg:
 
 
 class TestExecuteDeployTool:
-    """Test execute_tool integration for deploy tools."""
+    """Test execute_deploy_tool integration for deploy tools."""
 
     def test_execute_deploy_pull(self, tmp_path: Path):
-        """Test execute_tool with deploy_pull."""
+        """Test execute_deploy_tool with deploy_pull."""
         mock_result = PullResult(pulled=[], skipped=[])
         mock_workspace = MagicMock()
         mock_workspace.pull.return_value = mock_result
@@ -705,8 +600,8 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool("deploy_pull", {"org_id": 123}, DEPLOY_TOOLS)
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool("deploy_pull", {"org_id": 123})
 
             result = json.loads(result_json)
             assert result["status"] == "success"
@@ -714,7 +609,7 @@ class TestExecuteDeployTool:
             set_output_dir(None)
 
     def test_execute_deploy_diff(self, tmp_path: Path):
-        """Test execute_tool with deploy_diff."""
+        """Test execute_deploy_tool with deploy_diff."""
         mock_result = DiffResult()
         mock_workspace = MagicMock()
         mock_workspace.diff.return_value = mock_result
@@ -722,8 +617,8 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool("deploy_diff", {}, DEPLOY_TOOLS)
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool("deploy_diff", {})
 
             result = json.loads(result_json)
             assert result["status"] == "success"
@@ -731,7 +626,7 @@ class TestExecuteDeployTool:
             set_output_dir(None)
 
     def test_execute_deploy_push(self, tmp_path: Path):
-        """Test execute_tool with deploy_push."""
+        """Test execute_deploy_tool with deploy_push."""
         mock_result = PushResult(pushed=[], skipped=[], failed=[])
         mock_workspace = MagicMock()
         mock_workspace.push.return_value = mock_result
@@ -739,8 +634,8 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool("deploy_push", {"dry_run": True}, DEPLOY_TOOLS)
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool("deploy_push", {"dry_run": True})
 
             result = json.loads(result_json)
             assert result["status"] == "success"
@@ -749,7 +644,7 @@ class TestExecuteDeployTool:
             set_output_dir(None)
 
     def test_execute_deploy_copy_org(self, tmp_path: Path):
-        """Test execute_tool with deploy_copy_org."""
+        """Test execute_deploy_tool with deploy_copy_org."""
         mock_result = CopyResult(created=[], skipped=[], failed=[])
         mock_workspace = MagicMock()
         mock_workspace.copy_org.return_value = mock_result
@@ -757,10 +652,8 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool(
-                    "deploy_copy_org", {"source_org_id": 100, "target_org_id": 200}, DEPLOY_TOOLS
-                )
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool("deploy_copy_org", {"source_org_id": 100, "target_org_id": 200})
 
             result = json.loads(result_json)
             assert result["status"] == "success"
@@ -768,7 +661,7 @@ class TestExecuteDeployTool:
             set_output_dir(None)
 
     def test_execute_deploy_copy_workspace(self, tmp_path: Path):
-        """Test execute_tool with deploy_copy_workspace."""
+        """Test execute_deploy_tool with deploy_copy_workspace."""
         mock_result = CopyResult(created=[], skipped=[], failed=[])
         mock_workspace = MagicMock()
         mock_workspace.copy_workspace.return_value = mock_result
@@ -776,9 +669,9 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool(
-                    "deploy_copy_workspace", {"source_workspace_id": 10, "target_org_id": 200}, DEPLOY_TOOLS
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool(
+                    "deploy_copy_workspace", {"source_workspace_id": 10, "target_org_id": 200}
                 )
 
             result = json.loads(result_json)
@@ -787,7 +680,7 @@ class TestExecuteDeployTool:
             set_output_dir(None)
 
     def test_execute_deploy_to_org(self, tmp_path: Path):
-        """Test execute_tool with deploy_to_org."""
+        """Test execute_deploy_tool with deploy_to_org."""
         mock_result = DeployResult(created=[], updated=[], skipped=[], failed=[])
         mock_workspace = MagicMock()
         mock_workspace.deploy.return_value = mock_result
@@ -795,8 +688,8 @@ class TestExecuteDeployTool:
 
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.create_workspace", return_value=mock_workspace):
-                result_json = execute_tool("deploy_to_org", {"target_org_id": 200}, DEPLOY_TOOLS)
+            with patch("rossum_agent.deploy_tools._create_workspace", return_value=mock_workspace):
+                result_json = execute_deploy_tool("deploy_to_org", {"target_org_id": 200})
 
             result = json.loads(result_json)
             assert result["status"] == "success"
@@ -805,24 +698,24 @@ class TestExecuteDeployTool:
 
     def test_execute_deploy_tool_unknown_name(self):
         """Test that unknown tool name raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown tool"):
-            execute_tool("nonexistent_tool", {}, DEPLOY_TOOLS)
+        with pytest.raises(ValueError, match="Unknown deploy tool"):
+            execute_deploy_tool("nonexistent_tool", {})
 
 
 class TestCreateWorkspaceHelper:
-    """Test create_workspace helper function."""
+    """Test _create_workspace helper function."""
 
     def test_uses_default_path_when_none(self, tmp_path: Path):
         """Test that default path is used when workspace_path is None."""
         set_output_dir(tmp_path)
         try:
-            with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
+            with patch("rossum_agent.deploy_tools.Workspace") as mock_ws_class:
                 mock_ws_class.return_value = MagicMock()
                 with patch.dict(
                     "os.environ",
                     {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"},
                 ):
-                    create_workspace(None)
+                    _create_workspace(None)
 
                 call_args = mock_ws_class.call_args
                 path_arg = call_args[0][0]
@@ -834,13 +727,13 @@ class TestCreateWorkspaceHelper:
         """Test that custom path is used when provided."""
         custom_path = tmp_path / "custom-config"
 
-        with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
+        with patch("rossum_agent.deploy_tools.Workspace") as mock_ws_class:
             mock_ws_class.return_value = MagicMock()
             with patch.dict(
                 "os.environ",
                 {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"},
             ):
-                create_workspace(str(custom_path))
+                _create_workspace(str(custom_path))
 
             call_args = mock_ws_class.call_args
             path_arg = call_args[0][0]
@@ -848,13 +741,13 @@ class TestCreateWorkspaceHelper:
 
     def test_overrides_credentials_when_provided(self, tmp_path: Path):
         """Test that provided credentials override env vars."""
-        with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
+        with patch("rossum_agent.deploy_tools.Workspace") as mock_ws_class:
             mock_ws_class.return_value = MagicMock()
             with patch.dict(
                 "os.environ",
                 {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "env_token"},
             ):
-                create_workspace(str(tmp_path), api_base_url="https://sandbox.api.rossum.ai/v1", token="custom_token")
+                _create_workspace(str(tmp_path), api_base_url="https://sandbox.api.rossum.ai/v1", token="custom_token")
 
             call_kwargs = mock_ws_class.call_args[1]
             assert call_kwargs["api_base"] == "https://sandbox.api.rossum.ai/v1"
@@ -862,7 +755,7 @@ class TestCreateWorkspaceHelper:
 
 
 class TestGetWorkspaceCredentials:
-    """Test get_workspace_credentials helper function."""
+    """Test _get_workspace_credentials helper function."""
 
     def test_returns_env_credentials(self):
         """Test that env vars are returned when set."""
@@ -870,7 +763,7 @@ class TestGetWorkspaceCredentials:
             "os.environ",
             {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"},
         ):
-            api_base, token = get_workspace_credentials()
+            api_base, token = _get_workspace_credentials()
 
         assert api_base == "https://api.rossum.ai/v1"
         assert token == "test_token"
@@ -879,10 +772,10 @@ class TestGetWorkspaceCredentials:
         """Test that error is raised when env vars are missing."""
         with patch.dict("os.environ", {}, clear=True):
             with pytest.raises(ValueError, match="ROSSUM_API_BASE_URL"):
-                get_workspace_credentials()
+                _get_workspace_credentials()
 
     def test_raises_when_token_missing(self):
         """Test that error is raised when token is missing."""
         with patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1"}, clear=True):
             with pytest.raises(ValueError, match="ROSSUM_API_TOKEN"):
-                get_workspace_credentials()
+                _get_workspace_credentials()

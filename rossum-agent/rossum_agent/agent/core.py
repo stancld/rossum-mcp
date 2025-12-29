@@ -31,19 +31,16 @@ from anthropic.types import (
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
-from rossum_agent.rossum_mcp_integration import MCPConnection, mcp_tools_to_anthropic_format
-from rossum_agent.tools import (
-    DEPLOY_TOOLS,
-    INTERNAL_TOOLS,
+from rossum_agent.deploy_tools import execute_deploy_tool, get_deploy_tool_names, get_deploy_tools
+from rossum_agent.internal_tools import (
     SubAgentProgress,
-    execute_tool,
-    get_deploy_tool_names,
-    get_deploy_tools,
+    execute_internal_tool,
     get_internal_tool_names,
     get_internal_tools,
     set_mcp_connection,
     set_progress_callback,
 )
+from rossum_agent.mcp_tools import MCPConnection, mcp_tools_to_anthropic_format
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -365,7 +362,7 @@ class RossumAgent:
                 set_progress_callback(progress_callback)
 
                 loop = asyncio.get_event_loop()
-                future = loop.run_in_executor(None, execute_tool, tool_call.name, tool_call.arguments, INTERNAL_TOOLS)
+                future = loop.run_in_executor(None, execute_internal_tool, tool_call.name, tool_call.arguments)
 
                 while not future.done():
                     try:
@@ -387,7 +384,7 @@ class RossumAgent:
                 set_progress_callback(None)
             elif tool_call.name in get_deploy_tool_names():
                 loop = asyncio.get_event_loop()
-                future = loop.run_in_executor(None, execute_tool, tool_call.name, tool_call.arguments, DEPLOY_TOOLS)
+                future = loop.run_in_executor(None, execute_deploy_tool, tool_call.name, tool_call.arguments)
                 result = await future
                 content = str(result)
             else:

@@ -16,9 +16,7 @@ from rossum_agent.api.models.schemas import (
     SubAgentProgressEvent,
     SubAgentTextEvent,
 )
-from rossum_agent.prompts import get_system_prompt
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
-from rossum_agent.tools import (
+from rossum_agent.internal_tools import (
     SubAgentProgress,
     SubAgentText,
     set_mcp_connection,
@@ -26,6 +24,8 @@ from rossum_agent.tools import (
     set_progress_callback,
     set_text_callback,
 )
+from rossum_agent.mcp_tools import connect_mcp_server
+from rossum_agent.prompts import get_system_prompt
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 from rossum_agent.utils import create_session_output_dir, set_session_output_dir
 
