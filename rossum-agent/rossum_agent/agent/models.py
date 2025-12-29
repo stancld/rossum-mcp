@@ -21,6 +21,15 @@ class ToolCall:
     name: str
     arguments: dict[str, Any]
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {"id": self.id, "name": self.name, "arguments": self.arguments}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ToolCall:
+        """Deserialize from dictionary."""
+        return cls(id=data["id"], name=data["name"], arguments=data.get("arguments", {}))
+
 
 @dataclass
 class ToolResult:
@@ -30,6 +39,25 @@ class ToolResult:
     name: str
     content: str
     is_error: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {
+            "tool_call_id": self.tool_call_id,
+            "name": self.name,
+            "content": self.content,
+            "is_error": self.is_error,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ToolResult:
+        """Deserialize from dictionary."""
+        return cls(
+            tool_call_id=data["tool_call_id"],
+            name=data["name"],
+            content=data.get("content", ""),
+            is_error=data.get("is_error", False),
+        )
 
 
 @dataclass

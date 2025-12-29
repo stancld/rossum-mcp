@@ -9,12 +9,13 @@ This module implements the memory storage system following the smolagents patter
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from rossum_agent.agent.models import ToolCall, ToolResult
 
 if TYPE_CHECKING:
     from anthropic.types import MessageParam
 
-    from rossum_agent.agent.models import ToolCall, ToolResult
     from rossum_agent.agent.types import UserContent
 
 
@@ -77,6 +78,30 @@ class MemoryStep:
 
         return messages
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {
+            "type": "memory_step",
+            "step_number": self.step_number,
+            "text": self.text,
+            "tool_calls": [tc.to_dict() for tc in self.tool_calls],
+            "tool_results": [tr.to_dict() for tr in self.tool_results],
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MemoryStep:
+        """Deserialize from dictionary."""
+        return cls(
+            step_number=data.get("step_number", 0),
+            text=data.get("text"),
+            tool_calls=[ToolCall.from_dict(tc) for tc in data.get("tool_calls", [])],
+            tool_results=[ToolResult.from_dict(tr) for tr in data.get("tool_results", [])],
+            input_tokens=data.get("input_tokens", 0),
+            output_tokens=data.get("output_tokens", 0),
+        )
+
 
 @dataclass
 class TaskStep:
@@ -89,6 +114,15 @@ class TaskStep:
 
     def to_messages(self) -> list[MessageParam]:
         return [{"role": "user", "content": self.task}]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage."""
+        return {"type": "task_step", "task": self.task}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TaskStep:
+        """Deserialize from dictionary."""
+        return cls(task=data["task"])
 
 
 @dataclass
@@ -125,3 +159,19 @@ class AgentMemory:
             messages.extend(step_messages)
 
         return messages
+
+    def to_dict(self) -> list[dict[str, Any]]:
+        """Serialize all steps to a list of dictionaries for storage."""
+        return [step.to_dict() for step in self.steps]
+
+    @classmethod
+    def from_dict(cls, data: list[dict[str, Any]]) -> AgentMemory:
+        """Deserialize from a list of step dictionaries."""
+        memory = cls()
+        for step_data in data:
+            step_type = step_data.get("type")
+            if step_type == "task_step":
+                memory.steps.append(TaskStep.from_dict(step_data))
+            elif step_type == "memory_step":
+                memory.steps.append(MemoryStep.from_dict(step_data))
+        return memory
