@@ -161,6 +161,7 @@ grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
 ## Code Style
 - **YAGNI**: Don't add functionality until it's actually needed. Remove unused code, endpoints, and features proactively.
 - **Avoid unnecessary configurability**: We're a product, not a framework. Prefer sensible defaults over configuration options. Only add configuration when there's a clear, demonstrated need.
+- **No underscore prefix for exported functions**: Functions that are imported elsewhere in the codebase must NOT have a `_` prefix. Use `_` prefix only for truly private functions that are not exported or tested directly.
 - **Python version**: 3.12+ syntax required
 - **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`). Avoid using `Any` type annotation as much as possible - use specific types instead
 - **Imports**: Use `from pathlib import Path`, standard library first. Do NOT add try/except blocks for missing imports - assume all dependencies are installed

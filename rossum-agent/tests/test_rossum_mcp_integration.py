@@ -6,7 +6,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from rossum_agent.mcp_tools import (
+from rossum_agent.rossum_mcp_integration import (
     MCPConnection,
     connect_mcp_server,
     create_mcp_transport,
@@ -272,7 +272,7 @@ class TestConnectMCPServer:
         mock_tools = [MagicMock(name="tool1")]
         mock_client_instance.list_tools.return_value = mock_tools
 
-        with patch("rossum_agent.mcp_tools.Client") as mock_client_class:
+        with patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class:
             mock_client_class.return_value = mock_client_instance
             mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
             mock_client_instance.__aexit__ = AsyncMock(return_value=None)
@@ -293,8 +293,8 @@ class TestConnectMCPServer:
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
 
         with (
-            patch("rossum_agent.mcp_tools.Client") as mock_client_class,
-            patch("rossum_agent.mcp_tools.create_mcp_transport") as mock_create_transport,
+            patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class,
+            patch("rossum_agent.rossum_mcp_integration.create_mcp_transport") as mock_create_transport,
         ):
             mock_transport = MagicMock()
             mock_create_transport.return_value = mock_transport

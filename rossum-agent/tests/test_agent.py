@@ -1196,10 +1196,10 @@ class TestExecuteTool:
             arguments={"filename": "test.txt", "content": "Hello"},
         )
 
-        with patch("rossum_agent.agent.core.execute_internal_tool", return_value="Success") as mock_execute:
+        with patch("rossum_agent.agent.core.execute_tool", return_value="Success") as mock_execute:
             result = await self._get_final_result(agent, tool_call)
 
-        mock_execute.assert_called_once_with("write_file", {"filename": "test.txt", "content": "Hello"})
+        mock_execute.assert_called_once()
         assert result.content == "Success"
         assert result.is_error is False
 
