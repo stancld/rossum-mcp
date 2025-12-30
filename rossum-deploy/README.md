@@ -17,7 +17,7 @@ Minimalistic pull/diff/push deployment for Rossum configurations.
 | **GIT Integration** | ✅ (tracks local changes) | ✅ (tracks staged/unstaged changes) |
 | **Subdirectories** | ❌ | ✅ (dev/uat/prod structure) |
 | **Secrets Management** | ❌ | ✅ (git-ignored secrets) |
-| **LLM Documentation** | ❌ | ✅ (docommando) |
+| **LLM Documentation** | ✅ (via rossum-agent) | ✅ (docommando) |
 | **Dependencies** | Minimal (pydantic, rossum-api) | Full (click, rich, questionary, etc.) |
 | **API** | Python-first | CLI-first |
 
