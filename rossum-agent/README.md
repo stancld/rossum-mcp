@@ -16,17 +16,20 @@ AI agent for Rossum document processing. Built with Anthropic Claude and designe
 ### Agent Capabilities
 - **Rossum Integration**: Connect to Rossum MCP server for document processing
 - **File Output**: Write reports, documentation, and analysis results to files
-- **Claude Code Execution**: Leverage Claude's native code execution for data analysis, plotting, and complex computations
-- **Image Input Support**: Attach images (PNG, JPEG, GIF, WebP) to messages for visual context and analysis
+- **Knowledge Base Search**: Search the Rossum Knowledge Base with AI-powered analysis
+- **Hook Debugging**: Debug Python function hooks with sandboxed execution and Opus sub-agent
+- **Deployment Tools**: Pull, push, diff, and copy Rossum configurations across environments
+- **Multi-Environment Support**: Spawn MCP connections to different Rossum environments
+- **Skills System**: Load domain-specific skills for specialized workflows
 
 ### User Interfaces
-- **CLI**: Command-line interface for interactive agent conversations
-- **Streamlit UI**: Web-based interface for a more visual experience
+- **Streamlit UI**: Web-based interface for interactive agent conversations
+- **REST API**: FastAPI-based API for programmatic access and custom integrations
 
 ## Prerequisites
 
-- Python 3.10 or higher
-- Rossum MCP server (optional, for document processing features)
+- Python 3.12 or higher
+- AWS credentials configured (for Bedrock access to Claude models)
 - Rossum account with API credentials (if using Rossum features)
 
 ## Installation
@@ -35,62 +38,89 @@ AI agent for Rossum document processing. Built with Anthropic Claude and designe
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
-cd rossum-mcp/rossum_agent
+cd rossum-mcp/rossum-agent
 uv sync
 ```
 
 ### Install with extras
 
 ```bash
-uv sync --extra all  # All extras (streamlit, docs, tests)
+uv sync --extra all        # All extras (api, streamlit, docs, tests)
+uv sync --extra api        # REST API (FastAPI, Redis, etc.)
 uv sync --extra streamlit  # Streamlit UI only
-uv sync --extra docs  # Documentation only
-uv sync --extra tests  # Testing only
+uv sync --extra docs       # Documentation only
+uv sync --extra tests      # Testing only
 ```
 
 ### Set up environment variables
 
-If using Rossum features:
 ```bash
+# Required for AWS Bedrock
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="eu-central-1"
+
+# Required for Rossum features
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+
+# Optional: Custom model
+export LLM_MODEL_ID="bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
+# Optional: Redis for chat persistence (API mode)
+export REDIS_HOST="localhost"
+export REDIS_PORT="6379"
 ```
 
 ## Usage
 
-### Running the Agent (CLI)
+### Running the Streamlit UI
 
-Start the interactive agent using:
 ```bash
 rossum-agent
 ```
 
 Or run directly:
 ```bash
-python -m rossum_agent.main
+streamlit run rossum_agent/streamlit_app/app.py
 ```
 
-### Running the Streamlit UI
+### Running the REST API
 
-If you installed with the streamlit extra:
 ```bash
-streamlit run rossum_agent/app.py
+rossum-agent-api
+```
+
+With options:
+```bash
+rossum-agent-api --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Using in Python Scripts
 
 ```python
-import os
+import asyncio
 from rossum_agent.agent import create_agent
+from rossum_agent.rossum_mcp_integration import create_mcp_connection
 
-# Set Bedrock model (optional, uses default if not set)
-os.environ["LLM_MODEL_ID"] = "bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+async def main():
+    # Create MCP connection to Rossum
+    mcp_connection = await create_mcp_connection()
 
-# Create an agent (requires AWS credentials configured)
-agent = create_agent()
+    # Create the agent
+    agent = await create_agent(
+        mcp_connection=mcp_connection,
+        system_prompt="You are a helpful Rossum assistant."
+    )
 
-# Use the agent
-result = agent.run("Analyze the hooks on queue 12345 and explain their execution order")
+    # Run the agent
+    async for step in agent.run("List all queues in my organization"):
+        if step.thinking:
+            print(step.thinking)
+        if step.final_answer:
+            print(step.final_answer)
+
+asyncio.run(main())
 ```
 
 ## Available Tools
@@ -98,85 +128,144 @@ result = agent.run("Analyze the hooks on queue 12345 and explain their execution
 ### File System Tools
 
 #### write_file
-Write text or markdown content to a file. Use this to save documentation, reports, diagrams, or any text output.
+Write text or markdown content to a file. Use this to save documentation, reports, or analysis results.
 
 **Parameters:**
-- `filename` (string): The name of the file to create (e.g., 'report.md', 'hooks.txt')
-- `content` (string): The text content to write to the file
+- `filename` (string): The name of the file to create (e.g., 'report.md', 'analysis.json')
+- `content` (string): The content to write to the file
 
 ### Knowledge Base Tools
 
 #### search_knowledge_base
-Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
+Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations. Results are analyzed by Claude Opus for relevance.
 
 **Parameters:**
-- `query` (string, required): Search query. Be specific - include extension names, error messages, or feature names. Examples: 'document splitting extension', 'duplicate handling configuration', 'webhook timeout error'.
-- `user_query` (string, optional): The original user question for context. Pass the user's full question here so Opus can tailor the analysis to address their specific needs.
-
-**Returns:** JSON with search results containing title, URL, and analyzed content from the knowledge base.
-
-**Use cases:**
-- Finding documentation about Rossum extensions
-- Troubleshooting error messages
-- Understanding hook configurations and behaviors
+- `query` (string, required): Search query. Be specific - include extension names, error messages, or feature names.
+- `user_query` (string, optional): The original user question for context.
 
 ### Hook Analysis Tools
 
 #### evaluate_python_hook
-Execute Rossum function hook Python code against test annotation/schema data for debugging. This tool runs hook code in a restricted sandbox to verify logic without making actual API calls.
-
-**Parameters:**
-- `code` (string, required): Full Python source containing a `rossum_hook_request_handler(payload)` function
-- `annotation_json` (string, required): JSON string of the annotation object (get from `get_annotation` MCP tool)
-- `schema_json` (string, optional): JSON string of the schema object (get from `get_schema` MCP tool)
-
-**Returns:** JSON with structure:
-```json
-{
-  "status": "success" | "error" | "invalid_input",
-  "result": "<return value from handler>",
-  "stdout": "<captured print statements>",
-  "stderr": "<captured stderr>",
-  "exception": {"type": "...", "message": "...", "traceback": "..."} | null,
-  "elapsed_ms": 5.123
-}
-```
-
-**Limitations:**
-- No imports allowed (sandboxed environment)
-- No file I/O (`open()` is blocked)
-- Limited builtins (safe subset for data manipulation)
-
-#### debug_hook
-**Expert-level hook debugging with Claude Opus sub-agent.** This tool combines code execution with deep reasoning from Claude Opus 4 to provide comprehensive debugging analysis.
-
-**How it works:**
-1. Executes the hook code against test data (using `evaluate_python_hook`)
-2. Sends code, data, and execution results to Claude Opus 4 for analysis
-3. Returns expert debugging insights, root cause analysis, and fix suggestions
+Execute Rossum function hook Python code against test annotation/schema data in a sandboxed environment.
 
 **Parameters:**
 - `code` (string, required): Full Python source containing a `rossum_hook_request_handler(payload)` function
 - `annotation_json` (string, required): JSON string of the annotation object
 - `schema_json` (string, optional): JSON string of the schema object
 
-**Returns:** JSON with structure:
-```json
-{
-  "execution": {
-    "status": "success" | "error",
-    "result": "<return value>",
-    "exception": {...} | null
-  },
-  "analysis": "<Opus expert analysis with debugging insights and fixes>",
-  "elapsed_ms": 2500.0
-}
-```
+**Sandbox Environment:**
+- Available modules: `collections`, `datetime`, `decimal`, `functools`, `itertools`, `json`, `math`, `re`, `string`
+- No imports or external I/O allowed
 
-**Use cases:**
-- Complex hook logic that's failing with unclear errors
-- Understanding what a hook does and how to fix it
-- Getting best practice recommendations for hook code
+#### debug_hook
+Expert-level hook debugging with Claude Opus sub-agent. This is the primary tool for debugging Python function hooks.
+
+**Parameters:**
+- `hook_id` (string, required): The hook ID to debug
+- `annotation_id` (string, required): The annotation ID to use for testing
+- `schema_id` (string, optional): Schema ID if schema context is needed
+
+The tool fetches hook code and annotation data, executes the hook, and uses Opus to analyze errors and suggest fixes.
+
+### Deployment Tools
+
+#### deploy_pull
+Pull Rossum configuration objects from an organization to local files.
+
+**Parameters:**
+- `org_id` (int, required): Organization ID to pull from
+- `workspace_path` (string, optional): Path to workspace directory
+- `api_base_url` (string, optional): API base URL for target environment
+- `token` (string, optional): API token for target environment
+
+#### deploy_diff
+Compare local workspace files with remote Rossum configuration.
+
+**Parameters:**
+- `workspace_path` (string, optional): Path to workspace directory
+
+#### deploy_push
+Push local changes to Rossum.
+
+**Parameters:**
+- `dry_run` (bool, optional): Only show what would be pushed
+- `force` (bool, optional): Push even if there are conflicts
+- `workspace_path` (string, optional): Path to workspace directory
+
+#### deploy_copy_org
+Copy all objects from source organization to target organization.
+
+**Parameters:**
+- `source_org_id` (int, required): Source organization ID
+- `target_org_id` (int, required): Target organization ID
+- `target_api_base` (string, optional): Target API base URL
+- `target_token` (string, optional): Target API token
+- `workspace_path` (string, optional): Path to workspace directory
+
+#### deploy_copy_workspace
+Copy a single workspace and all its objects to target organization.
+
+**Parameters:**
+- `source_workspace_id` (int, required): Source workspace ID
+- `target_org_id` (int, required): Target organization ID
+- `target_api_base` (string, optional): Target API base URL
+- `target_token` (string, optional): Target API token
+- `workspace_path` (string, optional): Path to workspace directory
+
+#### deploy_compare_workspaces
+Compare two local workspaces to see differences between source and target.
+
+**Parameters:**
+- `source_workspace_path` (string, required): Path to source workspace
+- `target_workspace_path` (string, required): Path to target workspace
+- `id_mapping_path` (string, optional): Path to ID mapping JSON from copy operations
+
+#### deploy_to_org
+Deploy local configuration changes to a target organization.
+
+**Parameters:**
+- `target_org_id` (int, required): Target organization ID
+- `target_api_base` (string, optional): Target API base URL
+- `target_token` (string, optional): Target API token
+- `dry_run` (bool, optional): Only show what would be deployed
+- `workspace_path` (string, optional): Path to workspace directory
+
+### Multi-Environment Tools
+
+#### spawn_mcp_connection
+Spawn a new MCP connection to a different Rossum environment.
+
+**Parameters:**
+- `connection_id` (string, required): Unique identifier for this connection
+- `api_token` (string, required): API token for the target environment
+- `api_base_url` (string, required): API base URL for the target environment
+- `mcp_mode` (string, optional): "read-only" or "read-write" (default)
+
+#### call_on_connection
+Call a tool on a spawned MCP connection.
+
+**Parameters:**
+- `connection_id` (string, required): The spawned connection identifier
+- `tool_name` (string, required): Name of the MCP tool to call
+- `arguments` (string, required): JSON string of arguments
+
+#### close_connection
+Close a spawned MCP connection.
+
+**Parameters:**
+- `connection_id` (string, required): The connection to close
+
+### Skills Tools
+
+#### load_skill
+Load a specialized skill that provides domain-specific instructions and workflows.
+
+**Parameters:**
+- `name` (string, required): The skill slug (e.g., "rossum-deployment", "hook-debugging")
+
+**Available Skills:**
+- `rossum-deployment`: Deployment workflow instructions
+- `hook-debugging`: Hook debugging best practices
 
 ### Rossum MCP Tools
 
@@ -188,67 +277,74 @@ When configured with the Rossum MCP server, the agent can use all MCP tools incl
 
 See the [MCP Server README](../rossum-mcp/README.md) for the complete list of available MCP tools.
 
-## Real-World Use Case
+## Testing Framework
 
-Imagine you have 30 invoices to process for a board meeting in 10 minutes. With Rossum Agent, you can:
+The package includes a regression testing framework for agent behavior:
 
-1. Upload all 30 invoices in bulk to Rossum
-2. Wait for automatic AI extraction
-3. Aggregate data across all documents
-4. Generate analysis and reports
+```python
+from rossum_agent.testing import (
+    RegressionTestCase,
+    SuccessCriteria,
+    TokenBudget,
+    ToolExpectation,
+    ToolMatchMode,
+    run_regression_test,
+)
 
-All with a simple conversational prompt. See the [main repository](https://github.com/stancld/rossum-mcp) for complete examples.
+test_case = RegressionTestCase(
+    name="list_queues",
+    prompt="List all queues",
+    success_criteria=SuccessCriteria(
+        required_tools=[
+            ToolExpectation(name="list_queues", match_mode=ToolMatchMode.EXACT)
+        ]
+    ),
+    token_budget=TokenBudget(max_input=50000, max_output=10000),
+)
 
-## Example Commands
-
-Once the agent is running, you can say things like:
-
-- "Upload all invoices from /path/to/invoices to Rossum queue 12345"
-- "Analyze the hooks on queue 12345 and explain their execution order"
-- "List all annotations in queue 12345 and summarize their status"
-- "Create a report documenting the schema for queue 12345"
-
-## Configuration
-
-The agent uses a configuration file at `rossum_agent/assets/agent_config.yaml`. You can customize:
-
-- Model settings
-- Tool availability
-- System prompts and instructions
-- Memory settings
+result = await run_regression_test(agent, test_case)
+```
 
 ## Architecture
 
 ```
-┌─────────────┐
-│    User     │
-│  Interface  │
-│ (CLI/Web)   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│ Rossum Agent    │
-│ (Claude)        │
-├─────────────────┤
-│ • Write File    │
-│ • MCP Tools     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│  Rossum MCP     │─────▶│  Rossum API  │
-│    Server       │      └──────────────┘
-└─────────────────┘
+┌─────────────────────┐
+│    User Interface   │
+│  (Streamlit / API)  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   Rossum Agent      │
+│   (Claude Bedrock)  │
+├─────────────────────┤
+│ • Internal Tools    │
+│ • Deploy Tools      │
+│ • Spawn MCP Tools   │
+│ • Skills System     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐      ┌──────────────┐
+│   Rossum MCP        │─────▶│  Rossum API  │
+│     Server          │      └──────────────┘
+└─────────────────────┘
 ```
 
-## Error Handling
+## REST API Endpoints
 
-The agent provides clear error messages for:
-- File not found errors
-- Invalid data formats
-- API connection issues
-- Tool execution failures
+The API provides the following endpoints:
+
+- `GET /api/v1/health` - Health check
+- `GET /api/v1/chats` - List all chats
+- `POST /api/v1/chats` - Create a new chat
+- `GET /api/v1/chats/{chat_id}` - Get chat details
+- `DELETE /api/v1/chats/{chat_id}` - Delete a chat
+- `POST /api/v1/chats/{chat_id}/messages` - Send a message (SSE streaming)
+- `GET /api/v1/chats/{chat_id}/files` - List files in a chat
+- `GET /api/v1/chats/{chat_id}/files/{filename}` - Download a file
+
+API documentation is available at `/api/docs` (Swagger UI) and `/api/redoc` (ReDoc).
 
 ## License
 
