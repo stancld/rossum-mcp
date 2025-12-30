@@ -7,15 +7,16 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- Added skills system for dynamic skill loading from markdown files
-- Added `hook-debugging` skill for systematic hook debugging workflow
-- Added `rossum-deployment` skill for workspace deployment workflows
+- Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
+- Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Added `hook-debugging` skill for systematic hook debugging workflow [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Added `rossum-deployment` skill for workspace deployment workflows [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added deployment-related internal tools: `pull_workspace`, `compare_workspaces`, `copy_workspace`, `get_id_mapping` [#73](https://github.com/stancld/rossum-mcp/pull/73)
-- Added `list_local_files` and `clean_schema_dict` internal tools
+- Added `list_local_files` and `clean_schema_dict` internal tools [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
 
 ### Changed
-- Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills
+- Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills [#78](https://github.com/stancld/rossum-mcp/pull/78)
 - Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
 - Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-mcp/pull/73)
@@ -23,7 +24,7 @@ All notable changes to this project will be documented in this file.
 - Improved result analyzing UX for sub-agent responses [#85](https://github.com/stancld/rossum-mcp/pull/85)
 
 ### Removed
-- Removed test front-end from rossum-agent API as it doesn't fit the repo scope
+- Removed test front-end from rossum-agent API as it doesn't fit the repo scope [#83](https://github.com/stancld/rossum-mcp/pull/83)
 
 ### Fixed
 - Fixed displaying generated files in Streamlit UI [#73](https://github.com/stancld/rossum-mcp/pull/73)

@@ -32,6 +32,11 @@ from anthropic.types import (
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
+from rossum_agent.agent.request_classifier import (
+    RequestScope,
+    classify_request,
+    generate_rejection_response,
+)
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.rossum_mcp_integration import MCPConnection, mcp_tools_to_anthropic_format
 from rossum_agent.tools import (
@@ -412,6 +417,39 @@ class RossumAgent:
             logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
             yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
+    def _extract_text_from_prompt(self, prompt: UserContent) -> str:
+        """Extract text content from a user prompt for classification."""
+        if isinstance(prompt, str):
+            return prompt
+        text_parts: list[str] = []
+        for block in prompt:
+            if block.get("type") == "text":
+                text = block.get("text")
+                if isinstance(text, str):
+                    text_parts.append(text)
+        return " ".join(text_parts)
+
+    def _check_request_scope(self, prompt: UserContent) -> AgentStep | None:
+        """Check if request is in scope, return rejection step if out of scope."""
+        text = self._extract_text_from_prompt(prompt)
+        result = classify_request(self.client, text)
+        self._total_input_tokens += result.input_tokens
+        self._total_output_tokens += result.output_tokens
+        if result.scope == RequestScope.OUT_OF_SCOPE:
+            rejection = generate_rejection_response(self.client, text)
+            total_input = result.input_tokens + rejection.input_tokens
+            total_output = result.output_tokens + rejection.output_tokens
+            self._total_input_tokens += rejection.input_tokens
+            self._total_output_tokens += rejection.output_tokens
+            return AgentStep(
+                step_number=1,
+                final_answer=rejection.response,
+                is_final=True,
+                input_tokens=total_input,
+                output_tokens=total_output,
+            )
+        return None
+
     async def run(self, prompt: UserContent) -> AsyncIterator[AgentStep]:
         """Run the agent with the given prompt, yielding steps.
 
@@ -421,6 +459,10 @@ class RossumAgent:
 
         Rate limiting is handled with exponential backoff and jitter.
         """
+        if rejection := self._check_request_scope(prompt):
+            yield rejection
+            return
+
         set_mcp_connection(self.mcp_connection, asyncio.get_event_loop())
         self.memory.add_task(prompt)
 

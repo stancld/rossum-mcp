@@ -23,6 +23,51 @@ from regression_tests.framework.models import (
 
 REGRESSION_TEST_CASES: list[RegressionTestCase] = [
     RegressionTestCase(
+        name="out_of_scope_data_analytics_request",
+        description="Agent refuses out-of-scope data analytics requests",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url="https://elis.develop.r8.lol/documents?filtering=%7B%22items%22%3A%5B%7B%22field%22%3A%22queue%22%2C%22value%22%3A%5B%223960192%22%5D%2C%22operator%22%3A%22isAnyOf%22%7D%5D%2C%22logicOperator%22%3A%22and%22%7D&level=queue&page=1&page_size=100",
+        prompt=(
+            "# Generate data insight\n\n"
+            "1. Retrieve all annotations in 'to_review' state from the queue\n"
+            "2. For each document:\n"
+            "    - Extract all line items\n"
+            "    - Create a dictionary mapping {item_description: item_amount_total}\n"
+            "    - If multiple line items share the same description, sum their amounts\n"
+            "3. Aggregate across all documents: sum amounts for each unique description\n"
+            "4. Generate bar plot and store it under revenue.png"
+        ),
+        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        token_budget=TokenBudget(min_total_tokens=500, max_total_tokens=2000),  # very short, stuck in classifier
+        success_criteria=SuccessCriteria(
+            require_final_answer=True,
+            require_subagent=False,
+            forbid_error=True,
+            forbid_tool_errors=True,
+            required_keywords=[],
+            max_steps=1,
+            file_expectation=FileExpectation(),
+        ),
+    ),
+    RegressionTestCase(
+        name="out_of_scope_markdown_creation",
+        description="Agent refuses generic markdown creation",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt="Create a markdown saying Hello Rossumer.",
+        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        token_budget=TokenBudget(min_total_tokens=500, max_total_tokens=2000),
+        success_criteria=SuccessCriteria(
+            require_final_answer=True,
+            require_subagent=False,
+            forbid_error=True,
+            forbid_tool_errors=True,
+            required_keywords=[],
+            max_steps=1,
+            file_expectation=FileExpectation(),
+        ),
+    ),
+    RegressionTestCase(
         name="agent_introduction",
         description="Rossum agent can introduce itself",
         api_base_url="https://api.elis.develop.r8.lol/v1",
@@ -38,40 +83,6 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             required_keywords=["hook", "queue", "debug", "Rossum platform specialist"],
             max_steps=1,
             file_expectation=FileExpectation(),
-        ),
-    ),
-    RegressionTestCase(
-        name="create_markdown_hello_rossumer_no_context",
-        description="Agent won't overthink a simple markdown creation task without URL context",
-        api_base_url="https://api.elis.develop.r8.lol/v1",
-        rossum_url=None,
-        prompt="Create a markdown saying Hello Rossumer.",
-        tool_expectation=ToolExpectation(expected_tools=["write_file"], mode="exact_sequence"),
-        token_budget=TokenBudget(min_total_tokens=15000, max_total_tokens=40000),
-        success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
-            max_steps=2,
-            file_expectation=FileExpectation(expected_files=["*.md"]),
-        ),
-    ),
-    RegressionTestCase(
-        name="create_markdown_hello_rossumer_with_context",
-        description="Agent won't overthink a simple markdown creation task with URL context",
-        api_base_url="https://api.elis.develop.r8.lol/v1",
-        rossum_url="https://elis.develop.r8.lol/documents?filtering=%7B%22items%22%3A%5B%7B%22field%22%3A%22queue%22%2C%22value%22%3A%5B%223960192%22%5D%2C%22operator%22%3A%22isAnyOf%22%7D%5D%2C%22logicOperator%22%3A%22and%22%7D&level=queue&page=1&page_size=100",
-        prompt="Create a markdown saying Hello Rossumer.",
-        tool_expectation=ToolExpectation(expected_tools=["write_file"], mode="exact_sequence"),
-        token_budget=TokenBudget(min_total_tokens=15000, max_total_tokens=40000),
-        success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
-            max_steps=2,
-            file_expectation=FileExpectation(expected_files=["*.md"]),
         ),
     ),
     RegressionTestCase(
