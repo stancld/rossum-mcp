@@ -23,6 +23,24 @@ from regression_tests.framework.models import (
 
 REGRESSION_TEST_CASES: list[RegressionTestCase] = [
     RegressionTestCase(
+        name="agent_introduction",
+        description="Rossum agent can introduce itself",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt="Hey, what can you do?",
+        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        token_budget=TokenBudget(min_total_tokens=15000, max_total_tokens=22000),
+        success_criteria=SuccessCriteria(
+            require_final_answer=True,
+            require_subagent=False,
+            forbid_error=True,
+            forbid_tool_errors=True,
+            required_keywords=["hook", "queue", "debug", "Rossum platform specialist"],
+            max_steps=1,
+            file_expectation=FileExpectation(),
+        ),
+    ),
+    RegressionTestCase(
         name="create_markdown_hello_rossumer_no_context",
         description="Agent won't overthink a simple markdown creation task without URL context",
         api_base_url="https://api.elis.develop.r8.lol/v1",
