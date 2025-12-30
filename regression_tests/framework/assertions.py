@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -138,6 +139,11 @@ def assert_success(run: RegressionRun, criteria: SuccessCriteria, output_dir: Pa
         criteria.custom_check(steps)
 
 
+def _matches_pattern(filename: str, pattern: str) -> bool:
+    """Check if filename matches pattern (supports wildcards like *.md)."""
+    return fnmatch.fnmatch(filename, pattern)
+
+
 def assert_files_created(expectation: FileExpectation, output_dir: Path | None = None) -> None:
     if output_dir is None:
         output_dir = Path("outputs")
@@ -145,15 +151,21 @@ def assert_files_created(expectation: FileExpectation, output_dir: Path | None =
     if not expectation.expected_files:
         return
 
-    expected_paths = [output_dir / f for f in expectation.expected_files]
-
-    if expectation.check_exists:
-        missing = [str(f) for f in expected_paths if not f.exists()]
-        if missing:
-            raise AssertionError(f"Expected files not found: {missing}")
-
     actual_files = list(output_dir.rglob("*")) if output_dir.exists() else []
     actual_files = [f for f in actual_files if f.is_file()]
+    actual_filenames = [f.name for f in actual_files]
+
+    if expectation.check_exists:
+        unmatched_patterns = []
+        for pattern in expectation.expected_files:
+            matched = any(_matches_pattern(name, pattern) for name in actual_filenames)
+            if not matched:
+                unmatched_patterns.append(pattern)
+        if unmatched_patterns:
+            raise AssertionError(
+                f"Expected file patterns not matched: {unmatched_patterns}. Actual files: {actual_filenames}"
+            )
+
     if len(actual_files) != len(expectation.expected_files):
         raise AssertionError(
             f"Expected exactly {len(expectation.expected_files)} files, "

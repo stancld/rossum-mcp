@@ -64,7 +64,8 @@ class FileExpectation:
     """Expected file outputs from a test.
 
     Attributes:
-        expected_files: List of file paths that should be created/modified.
+        expected_files: List of file patterns that should be created/modified.
+            Supports glob wildcards (e.g., "*.md", "report_*.txt").
             Paths are relative to the outputs/ directory. Asserts exact count match.
         check_exists: If True, verify files exist after test.
         check_content: Optional dict mapping file path to expected content substring.
