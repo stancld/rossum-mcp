@@ -17,7 +17,7 @@ from regression_tests.framework.models import (
     ToolExpectation,
     ToolMatchMode,
 )
-from regression_tests.framework.runner import run_agent_and_collect, run_regression_test
+from regression_tests.framework.runner import run_regression_test
 
 __all__ = [
     "FileExpectation",
@@ -31,6 +31,5 @@ __all__ = [
     "assert_success",
     "assert_tokens_within_budget",
     "assert_tools_match",
-    "run_agent_and_collect",
     "run_regression_test",
 ]

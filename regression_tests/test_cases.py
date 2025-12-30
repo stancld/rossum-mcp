@@ -48,4 +48,36 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             file_expectation=FileExpectation(),  # no files are expected to be generated
         ),
     ),
+    RegressionTestCase(
+        name="analyze_broken_document_splitting",
+        description="Analyze broken document splitting extension based on invoice ID field",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt=(
+            "Please, investigate the errors with document splitting extension based on extracted invoice ID field on the queue 4014559.\n\n"
+            "Give me one-paragraph executive summary for roasting the account manager - store it in `roast.md`."
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=[
+                "get_queue",
+                "list_hooks",
+                "get_queue_schema",
+                "list_hook_logs",
+                "list_annotations",
+                "get_hook",
+                "search_knowledge_base",
+                "write_file",
+            ],
+            mode="subset",
+        ),
+        token_budget=TokenBudget(min_total_tokens=120000, max_total_tokens=200000),
+        success_criteria=SuccessCriteria(
+            require_final_answer=True,
+            forbid_error=True,
+            forbid_tool_errors=True,
+            required_keywords=["splitting", "invoice"],
+            max_steps=6,
+            file_expectation=FileExpectation(expected_files=["roast.md"]),
+        ),
+    ),
 ]

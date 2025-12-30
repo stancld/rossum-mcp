@@ -12,6 +12,8 @@ import json
 import logging
 import queue
 import random
+from contextvars import copy_context
+from functools import partial
 from typing import TYPE_CHECKING
 
 from anthropic import APIError, APITimeoutError, RateLimitError
@@ -243,7 +245,8 @@ class RossumAgent:
                 event_queue.put(item)
             event_queue.put(None)
 
-        producer_task = asyncio.get_event_loop().run_in_executor(None, producer)
+        ctx = copy_context()
+        producer_task = asyncio.get_event_loop().run_in_executor(None, partial(ctx.run, producer))
 
         while True:
             item = await asyncio.to_thread(event_queue.get)
@@ -365,7 +368,10 @@ class RossumAgent:
                 set_progress_callback(progress_callback)
 
                 loop = asyncio.get_event_loop()
-                future = loop.run_in_executor(None, execute_tool, tool_call.name, tool_call.arguments, INTERNAL_TOOLS)
+                ctx = copy_context()
+                future = loop.run_in_executor(
+                    None, partial(ctx.run, execute_tool, tool_call.name, tool_call.arguments, INTERNAL_TOOLS)
+                )
 
                 while not future.done():
                     try:
@@ -387,7 +393,10 @@ class RossumAgent:
                 set_progress_callback(None)
             elif tool_call.name in get_deploy_tool_names():
                 loop = asyncio.get_event_loop()
-                future = loop.run_in_executor(None, execute_tool, tool_call.name, tool_call.arguments, DEPLOY_TOOLS)
+                ctx = copy_context()
+                future = loop.run_in_executor(
+                    None, partial(ctx.run, execute_tool, tool_call.name, tool_call.arguments, DEPLOY_TOOLS)
+                )
                 result = await future
                 content = str(result)
             else:

@@ -65,16 +65,14 @@ class FileExpectation:
 
     Attributes:
         expected_files: List of file paths that should be created/modified.
+            Paths are relative to the outputs/ directory. Asserts exact count match.
         check_exists: If True, verify files exist after test.
         check_content: Optional dict mapping file path to expected content substring.
-        output_dir: Directory to check for unexpected files. If set, any file in this
-            directory not in expected_files will cause an assertion failure.
     """
 
     expected_files: Sequence[str] = field(default_factory=list)
     check_exists: bool = True
     check_content: dict[str, str] | None = None
-    output_dir: str | None = None
 
 
 @dataclass
