@@ -42,6 +42,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 ### User Management
 - **get_user**: Retrieve user details by ID
 - **list_users**: List users with optional filtering by username, email, etc.
+- **list_user_roles**: List all user roles (permission groups) in the organization
 
 ### Engine Management
 - **get_engine**: Retrieve engine details by ID
@@ -55,6 +56,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
+- **update_hook**: Update existing hook properties (name, queues, config, events, settings)
 - **list_hook_templates**: List available hook templates from Rossum Store
 - **create_hook_from_template**: Create a hook from a Rossum Store template
 - **list_hook_logs**: List hook execution logs for debugging and monitoring
@@ -124,7 +126,7 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Schemas:** `get_schema`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
 - **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
-- **Users:** `get_user`, `list_users`
+- **Users:** `get_user`, `list_users`, `list_user_roles`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
 - **Document Relations:** `get_document_relation`, `list_document_relations`
@@ -760,6 +762,49 @@ create_hook(
 )
 ```
 
+#### update_hook
+
+Updates an existing hook. Use this to modify hook properties like name, queues, config, events, or settings. Only provide the fields you want to change - other fields will remain unchanged.
+
+**Parameters:**
+- `hook_id` (integer, required): The ID of the hook to update
+- `name` (string, optional): New hook name
+- `queues` (array, optional): New list of queue URLs
+- `events` (array, optional): New list of events that trigger the hook
+- `config` (object, optional): New hook configuration
+- `settings` (object, optional): New hook settings
+- `active` (boolean, optional): Enable or disable the hook
+
+**Returns:**
+```json
+{
+  "id": 12345,
+  "name": "Updated Hook Name",
+  "url": "https://elis.rossum.ai/api/v1/hooks/12345",
+  "active": true,
+  "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+  "events": ["annotation_content.initialize", "annotation_content.confirm"],
+  "config": {"runtime": "python3.12", "function": "..."},
+  "settings": {"updated_key": "updated_value"}
+}
+```
+
+**Example usage:**
+```python
+# Update hook name and add a new event
+update_hook(
+    hook_id=12345,
+    name="Renamed Hook",
+    events=["annotation_content.initialize", "annotation_content.confirm"]
+)
+
+# Disable a hook
+update_hook(hook_id=12345, active=False)
+
+# Update hook settings
+update_hook(hook_id=12345, settings={"new_setting": "value"})
+```
+
 #### list_hook_templates
 
 Lists available hook templates from Rossum Store. Hook templates provide pre-built extension configurations (e.g., data validation, field mapping, notifications) that can be used to quickly create hooks instead of writing code from scratch.
@@ -1028,7 +1073,7 @@ Lists users in the organization. Use this to find a user's URL when you need it 
 - `first_name` (string, optional): Filter by first name
 - `last_name` (string, optional): Filter by last name
 - `is_active` (boolean, optional): Filter by active status
-- `first_n` (integer, optional): Limit the number of results returned
+- `is_organization_group_admin` (boolean, optional): Filter by organization group admin role. Use `false` to exclude admin users (e.g., when finding users for `token_owner`)
 
 **Returns:**
 ```json
@@ -1053,6 +1098,40 @@ users = list_users(username="john.doe@example.com")
 if users:
     user_url = users[0].url
     # Use user_url in create_hook_from_template
+
+# Find non-admin users suitable for token_owner
+non_admin_users = list_users(is_organization_group_admin=False)
+```
+
+#### list_user_roles
+
+Lists all user roles (groups of permissions) in the organization. Useful for understanding what roles are available and identifying users with specific permissions.
+
+**Parameters:**
+None
+
+**Returns:**
+```json
+[
+  {
+    "id": 12345,
+    "url": "https://elis.rossum.ai/api/v1/groups/12345",
+    "name": "admin",
+    "organization": "https://elis.rossum.ai/api/v1/organizations/100"
+  },
+  {
+    "id": 12346,
+    "url": "https://elis.rossum.ai/api/v1/groups/12346",
+    "name": "annotator",
+    "organization": "https://elis.rossum.ai/api/v1/organizations/100"
+  }
+]
+```
+
+**Example usage:**
+```python
+# List all available roles
+roles = list_user_roles()
 ```
 
 ### Rules Management

@@ -286,7 +286,7 @@ The agent includes file writing tools and Rossum integration via MCP. See [examp
 
 ## MCP Tools
 
-The MCP server provides 32 tools organized into seven categories:
+The MCP server provides 39 tools organized into categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -312,11 +312,12 @@ The MCP server provides 32 tools organized into seven categories:
 </details>
 
 <details>
-<summary><strong>Schema Management (3 tools)</strong></summary>
+<summary><strong>Schema Management (4 tools)</strong></summary>
 
 - `get_schema` - Retrieve schema details
 - `create_schema` - Create new schemas
 - `update_schema` - Configure field-level thresholds
+- `patch_schema` - Add, update, or remove individual schema nodes
 
 </details>
 
@@ -333,11 +334,15 @@ The MCP server provides 32 tools organized into seven categories:
 </details>
 
 <details>
-<summary><strong>Automation Management (5 tools)</strong></summary>
+<summary><strong>Extensions & Rules (9 tools)</strong></summary>
 
 - `get_hook` - Get hook/extension details
 - `list_hooks` - List webhooks and extensions
 - `create_hook` - Create new hooks/extensions
+- `update_hook` - Update existing hook properties
+- `list_hook_templates` - List available hook templates from Rossum Store
+- `create_hook_from_template` - Create hook from a template
+- `list_hook_logs` - List hook execution logs for debugging
 - `get_rule` - Get business rule details
 - `list_rules` - List validation rules
 
@@ -349,6 +354,15 @@ The MCP server provides 32 tools organized into seven categories:
 - `get_workspace` - Retrieve workspace details
 - `list_workspaces` - List all workspaces with filtering
 - `create_workspace` - Create new workspaces
+
+</details>
+
+<details>
+<summary><strong>User Management (3 tools)</strong></summary>
+
+- `get_user` - Retrieve user details by ID
+- `list_users` - List users with optional filtering
+- `list_user_roles` - List all user roles (permission groups)
 
 </details>
 
