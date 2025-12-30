@@ -13,6 +13,7 @@ from rossum_agent.agent.models import AgentConfig
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.prompts import get_system_prompt
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
+from rossum_agent.tools.core import set_output_dir
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 
 if TYPE_CHECKING:
@@ -43,16 +44,10 @@ def _get_token_for_test(test_name: str, env_tokens: dict[str, str]) -> str | Non
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add command-line options for regression tests."""
     parser.addoption(
-        "--api-token",
-        action="store",
-        default=None,
-        help="Rossum API token (overrides all other sources)",
+        "--api-token", action="store", default=None, help="Rossum API token (overrides all other sources)"
     )
     parser.addoption(
-        "--show-answer",
-        action="store_true",
-        default=False,
-        help="Show the full final answer in test output",
+        "--show-answer", action="store_true", default=False, help="Show the full final answer in test output"
     )
 
 
@@ -79,11 +74,15 @@ def show_answer(request: pytest.FixtureRequest) -> bool:
     return request.config.getoption("--show-answer")
 
 
-def get_token_for_case(
-    case: RegressionTestCase,
-    env_tokens: dict[str, str],
-    api_token_override: str | None,
-) -> str:
+@pytest.fixture
+def temp_output_dir(tmp_path: Path) -> Path:
+    """Create a fresh temp directory for agent outputs per test."""
+    output_dir = tmp_path / "outputs"
+    output_dir.mkdir()
+    return output_dir
+
+
+def get_token_for_case(case: RegressionTestCase, env_tokens: dict[str, str], api_token_override: str | None) -> str:
     """Resolve API token for a test case.
 
     Priority: --api-token flag > .env TEST_NAME_API_TOKEN > .env DEFAULT_API_TOKEN > case.api_token
@@ -91,8 +90,7 @@ def get_token_for_case(
     if api_token_override:
         return api_token_override
 
-    env_token = _get_token_for_test(case.name, env_tokens)
-    if env_token:
+    if env_token := _get_token_for_test(case.name, env_tokens):
         return env_token
 
     if case.api_token:
@@ -106,8 +104,7 @@ def get_token_for_case(
 
 @pytest.fixture
 def create_live_agent(
-    env_tokens: dict[str, str],
-    api_token_override: str | None,
+    env_tokens: dict[str, str], api_token_override: str | None, temp_output_dir: Path
 ) -> Callable[[RegressionTestCase], AsyncIterator[RossumAgent]]:
     """Factory fixture to create a live RossumAgent for a test case.
 
@@ -122,18 +119,12 @@ def create_live_agent(
     async def _create_agent(case: RegressionTestCase) -> AsyncIterator[RossumAgent]:
         token = get_token_for_case(case, env_tokens, api_token_override)
 
-        config = AgentConfig(
-            max_tokens=128000,
-            max_steps=50,
-            temperature=0.0,
-            request_delay=3.0,
-        )
+        config = AgentConfig(max_tokens=128000, max_steps=50, temperature=0.0, request_delay=3.0)
 
         async with connect_mcp_server(
-            rossum_api_token=token,
-            rossum_api_base_url=case.api_base_url,
-            mcp_mode="read-write",
+            rossum_api_token=token, rossum_api_base_url=case.api_base_url, mcp_mode="read-write"
         ) as mcp_connection:
+            set_output_dir(temp_output_dir)
             client = create_bedrock_client()
             system_prompt = get_system_prompt()
 
@@ -144,11 +135,12 @@ def create_live_agent(
                     system_prompt = system_prompt + "\n\n---\n" + context_section
 
             agent = RossumAgent(
-                client=client,
-                mcp_connection=mcp_connection,
-                system_prompt=system_prompt,
-                config=config,
+                client=client, mcp_connection=mcp_connection, system_prompt=system_prompt, config=config
             )
-            yield agent
+
+            try:
+                yield agent
+            finally:
+                set_output_dir(None)
 
     return _create_agent

@@ -87,7 +87,7 @@ def assert_tokens_within_budget(run: RegressionRun, budget: TokenBudget) -> None
                 )
 
 
-def assert_success(run: RegressionRun, criteria: SuccessCriteria) -> None:
+def assert_success(run: RegressionRun, criteria: SuccessCriteria, output_dir: Path | None = None) -> None:
     """Assert that the agent run meets success criteria.
 
     Raises:
@@ -132,38 +132,42 @@ def assert_success(run: RegressionRun, criteria: SuccessCriteria) -> None:
         assert success, f"Mermaid validation failed: {message}"
 
     if criteria.file_expectation.expected_files:
-        assert_files_created(criteria.file_expectation)
+        assert_files_created(criteria.file_expectation, output_dir)
 
     if criteria.custom_check:
         criteria.custom_check(steps)
 
 
-def assert_files_created(expectation: FileExpectation) -> None:
+def assert_files_created(expectation: FileExpectation, output_dir: Path | None = None) -> None:
+    if output_dir is None:
+        output_dir = Path("outputs")
+
     if not expectation.expected_files:
         return
 
+    expected_paths = [output_dir / f for f in expectation.expected_files]
+
     if expectation.check_exists:
-        missing = [f for f in expectation.expected_files if not Path(f).exists()]
+        missing = [str(f) for f in expected_paths if not f.exists()]
         if missing:
             raise AssertionError(f"Expected files not found: {missing}")
 
-    if expectation.output_dir:
-        output_path = Path(expectation.output_dir)
-        if output_path.exists():
-            expected_set = {str(Path(f).resolve()) for f in expectation.expected_files}
-            actual_files = [f for f in output_path.rglob("*") if f.is_file()]
-            unexpected = [str(f) for f in actual_files if str(f.resolve()) not in expected_set]
-            if unexpected:
-                raise AssertionError(f"Unexpected files created: {unexpected}")
+    actual_files = list(output_dir.rglob("*")) if output_dir.exists() else []
+    actual_files = [f for f in actual_files if f.is_file()]
+    if len(actual_files) != len(expectation.expected_files):
+        raise AssertionError(
+            f"Expected exactly {len(expectation.expected_files)} files, "
+            f"found {len(actual_files)}: {[str(f) for f in actual_files]}"
+        )
 
     if expectation.check_content:
         for filepath, expected_content in expectation.check_content.items():
-            path = Path(filepath)
+            path = output_dir / filepath
             if not path.exists():
-                raise AssertionError(f"File not found for content check: {filepath}")
+                raise AssertionError(f"File not found for content check: {path}")
             actual_content = path.read_text()
             if expected_content not in actual_content:
                 raise AssertionError(
-                    f"Expected content '{expected_content}' not found in {filepath}. "
+                    f"Expected content '{expected_content}' not found in {path}. "
                     f"Actual content: {actual_content[:500]}..."
                 )
