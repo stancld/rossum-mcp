@@ -193,29 +193,3 @@ class TestSanitizeFilename:
 
         long_name = "a" * 500 + ".txt"
         assert len(_sanitize_filename(long_name)) == 255
-
-
-class TestTestClientEndpoint:
-    """Tests for /test-client endpoint."""
-
-    def test_test_client_serves_index(self, client, mock_chat_service, mock_file_service, mock_agent_service):
-        """Test that /test-client serves the index.html."""
-        response = client.get("/test-client")
-
-        assert response.status_code == 200
-        assert "text/html" in response.headers["content-type"]
-        assert "Rossum Agent" in response.text
-
-    def test_test_client_static_css(self, client, mock_chat_service, mock_file_service, mock_agent_service):
-        """Test that static CSS is accessible."""
-        response = client.get("/test-client/styles.css")
-
-        assert response.status_code == 200
-        assert "text/css" in response.headers["content-type"]
-
-    def test_test_client_static_js(self, client, mock_chat_service, mock_file_service, mock_agent_service):
-        """Test that static JS is accessible."""
-        response = client.get("/test-client/app.js")
-
-        assert response.status_code == 200
-        assert "javascript" in response.headers["content-type"]

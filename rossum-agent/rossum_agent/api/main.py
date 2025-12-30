@@ -5,12 +5,10 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -115,25 +113,6 @@ app.include_router(chats.router, prefix="/api/v1")
 app.include_router(messages.router, prefix="/api/v1")
 app.include_router(files.router, prefix="/api/v1")
 
-STATIC_DIR = Path(__file__).parent / "static"
-ASSETS_DIR = Path(__file__).parent.parent / "assets"
-
-
-def mount_test_frontend() -> None:
-    """Mount the test frontend static files."""
-    if not STATIC_DIR.exists():
-        raise RuntimeError(f"Static directory not found: {STATIC_DIR}")
-
-    @app.get("/test-client")
-    async def test_client_index() -> FileResponse:
-        """Serve the test client HTML page."""
-        return FileResponse(STATIC_DIR / "index.html")
-
-    app.mount("/test-client", StaticFiles(directory=STATIC_DIR), name="test-client-static")
-
-    if ASSETS_DIR.exists():
-        app.mount("/test-client/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-
 
 @app.on_event("startup")
 async def startup_event() -> None:
@@ -163,16 +142,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
-    parser.add_argument(
-        "--with-test-frontend",
-        action="store_true",
-        help="Enable the test frontend at /test-client (for testing only, requires installation from GitHub source)",
-    )
 
     args = parser.parse_args()
-
-    if args.with_test_frontend:
-        mount_test_frontend()
 
     try:
         import uvicorn  # noqa: PLC0415
