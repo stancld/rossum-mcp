@@ -58,3 +58,6 @@ include = ["rossum_mcp*"]
 
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
+
+[tool.coverage.run]
+omit = ["rossum_mcp/server.py"]

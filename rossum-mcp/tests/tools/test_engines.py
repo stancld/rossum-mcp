@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.engine import Engine, EngineField
+from rossum_mcp.tools import base
+from rossum_mcp.tools.engines import register_engine_tools
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
@@ -82,8 +85,6 @@ class TestGetEngine:
     @pytest.mark.asyncio
     async def test_get_engine_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful engine retrieval."""
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_engine = create_mock_engine(id=123, name="Custom Engine", type="extractor")
@@ -105,8 +106,6 @@ class TestListEngines:
     @pytest.mark.asyncio
     async def test_list_engines_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful engines listing."""
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_engine1 = create_mock_engine(id=1, name="Engine 1")
@@ -126,8 +125,6 @@ class TestListEngines:
     @pytest.mark.asyncio
     async def test_list_engines_with_filters(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test engines listing with filters."""
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_engine = create_mock_engine(id=1, type="extractor")
@@ -143,6 +140,42 @@ class TestListEngines:
         assert len(result) == 1
         mock_client.list_engines.assert_called_once_with(type="extractor")
 
+    @pytest.mark.asyncio
+    async def test_list_engines_with_id_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test engines listing with id filter."""
+        register_engine_tools(mock_mcp, mock_client)
+
+        mock_engine = create_mock_engine(id=42, type="extractor")
+
+        async def async_iter():
+            yield mock_engine
+
+        mock_client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_engines = mock_mcp._tools["list_engines"]
+        result = await list_engines(id=42)
+
+        assert len(result) == 1
+        mock_client.list_engines.assert_called_once_with(id=42)
+
+    @pytest.mark.asyncio
+    async def test_list_engines_with_agenda_id_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test engines listing with agenda_id filter."""
+        register_engine_tools(mock_mcp, mock_client)
+
+        mock_engine = create_mock_engine(id=1, agenda_id="my-agenda")
+
+        async def async_iter():
+            yield mock_engine
+
+        mock_client.list_engines = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_engines = mock_mcp._tools["list_engines"]
+        result = await list_engines(agenda_id="my-agenda")
+
+        assert len(result) == 1
+        mock_client.list_engines.assert_called_once_with(agenda_id="my-agenda")
+
 
 @pytest.mark.unit
 class TestUpdateEngine:
@@ -154,15 +187,7 @@ class TestUpdateEngine:
     ) -> None:
         """Test successful engine update."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_engine = create_mock_engine(id=123, name="Updated Engine")
@@ -182,15 +207,7 @@ class TestUpdateEngine:
     ) -> None:
         """Test update_engine is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         update_engine = mock_mcp._tools["update_engine"]
@@ -210,15 +227,7 @@ class TestCreateEngine:
         """Test successful engine creation."""
         monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_engine = create_mock_engine(id=200, name="New Engine", type="extractor")
@@ -237,15 +246,7 @@ class TestCreateEngine:
     ) -> None:
         """Test create_engine with invalid engine type."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         create_engine = mock_mcp._tools["create_engine"]
@@ -261,15 +262,7 @@ class TestCreateEngine:
     ) -> None:
         """Test create_engine is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         create_engine = mock_mcp._tools["create_engine"]
@@ -289,15 +282,7 @@ class TestCreateEngineField:
         """Test successful engine field creation."""
         monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_field = create_mock_engine_field(id=500, label="Invoice Number")
@@ -322,15 +307,7 @@ class TestCreateEngineField:
     ) -> None:
         """Test create_engine_field fails with empty schema_ids."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         create_engine_field = mock_mcp._tools["create_engine_field"]
@@ -352,15 +329,7 @@ class TestCreateEngineField:
     ) -> None:
         """Test create_engine_field fails with invalid field type."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         create_engine_field = mock_mcp._tools["create_engine_field"]
@@ -376,6 +345,56 @@ class TestCreateEngineField:
 
         assert "Invalid field_type" in str(exc_info.value)
 
+    @pytest.mark.asyncio
+    async def test_create_engine_field_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test create_engine_field is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        register_engine_tools(mock_mcp, mock_client)
+
+        create_engine_field = mock_mcp._tools["create_engine_field"]
+        result = await create_engine_field(
+            engine_id=123,
+            name="field",
+            label="Field",
+            field_type="string",
+            schema_ids=[1],
+        )
+
+        assert result["error"] == "create_engine_field is not available in read-only mode"
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_with_optional_params(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test engine field creation with subtype and pre_trained_field_id."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_engine_tools(mock_mcp, mock_client)
+
+        mock_field = create_mock_engine_field(id=500, subtype="iban", pre_trained_field_id="iban_field")
+        mock_client._http_client.create.return_value = {"id": 500}
+        mock_client._deserializer.return_value = mock_field
+
+        create_engine_field = mock_mcp._tools["create_engine_field"]
+        result = await create_engine_field(
+            engine_id=123,
+            name="bank_account",
+            label="Bank Account",
+            field_type="string",
+            schema_ids=[1],
+            subtype="iban",
+            pre_trained_field_id="iban_field",
+        )
+
+        assert result.id == 500
+        create_call = mock_client._http_client.create.call_args
+        assert create_call[0][1]["subtype"] == "iban"
+        assert create_call[0][1]["pre_trained_field_id"] == "iban_field"
+
 
 @pytest.mark.unit
 class TestGetEngineFields:
@@ -384,8 +403,6 @@ class TestGetEngineFields:
     @pytest.mark.asyncio
     async def test_get_engine_fields_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful engine fields retrieval."""
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         mock_field1 = create_mock_engine_field(id=1, label="Field 1")
@@ -406,8 +423,6 @@ class TestGetEngineFields:
     @pytest.mark.asyncio
     async def test_get_engine_fields_all(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test retrieving all engine fields without filter."""
-        from rossum_mcp.tools.engines import register_engine_tools
-
         register_engine_tools(mock_mcp, mock_client)
 
         async def async_iter():

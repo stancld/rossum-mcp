@@ -342,6 +342,31 @@ class TestPatchSchema:
         assert result["error"] == "Invalid operation 'invalid'. Must be 'add', 'update', or 'remove'."
 
     @pytest.mark.asyncio
+    async def test_patch_schema_unexpected_content_format(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test patch_schema when schema content is not a list."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_client._http_client.request_json.return_value = {"content": "not_a_list"}
+
+        patch_schema = mock_mcp._tools["patch_schema"]
+        result = await patch_schema(
+            schema_id=50,
+            operation="add",
+            node_id="new_field",
+            parent_id="section1",
+            node_data={"label": "New Field"},
+        )
+
+        assert result["error"] == "Unexpected schema content format"
+        mock_client._http_client.update.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_patch_schema_read_only_mode(
         self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
     ) -> None:
@@ -540,6 +565,197 @@ class TestApplySchemaPatch:
 
         assert content[0]["children"][0]["label"] == "Original"
 
+    def test_add_node_at_position(self) -> None:
+        """Test adding a node at a specific position."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                    {"id": "field3", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field2",
+            node_data={"label": "Field 2", "category": "datapoint"},
+            parent_id="section1",
+            position=1,
+        )
+
+        assert len(result[0]["children"]) == 3
+        assert result[0]["children"][0]["id"] == "field1"
+        assert result[0]["children"][1]["id"] == "field2"
+        assert result[0]["children"][2]["id"] == "field3"
+
+    def test_update_section_directly(self) -> None:
+        """Test updating a section node directly (not a child)."""
+        content = [
+            {
+                "id": "section1",
+                "label": "Original Section",
+                "category": "section",
+                "children": [],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="update",
+            node_id="section1",
+            node_data={"label": "Updated Section"},
+        )
+
+        assert result[0]["id"] == "section1"
+        assert result[0]["label"] == "Updated Section"
+
+    def test_remove_section_raises_error(self) -> None:
+        """Test that attempting to remove a section raises ValueError."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [{"id": "field1", "category": "datapoint"}],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Cannot remove a section"):
+            apply_schema_patch(
+                content=content,
+                operation="remove",
+                node_id="section1",
+            )
+
+    def test_remove_tuple_from_multivalue_raises_error(self) -> None:
+        """Test that attempting to remove a tuple from multivalue raises ValueError."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "line_item_tuple",
+                            "category": "tuple",
+                            "children": [{"id": "description", "category": "datapoint"}],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        with pytest.raises(ValueError, match=r"Cannot remove tuple .* from multivalue"):
+            apply_schema_patch(
+                content=content,
+                operation="remove",
+                node_id="line_item_tuple",
+            )
+
+    def test_find_node_in_multivalue_dict_children(self) -> None:
+        """Test operations on nodes inside multivalue with dict children."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "line_item_tuple",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "description", "label": "Description", "category": "datapoint"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="update",
+            node_id="description",
+            node_data={"label": "Updated Description"},
+        )
+
+        tuple_children = result[0]["children"][0]["children"]["children"]
+        assert tuple_children[0]["label"] == "Updated Description"
+
+    def test_find_parent_with_dict_children(self) -> None:
+        """Test _find_parent_children_list when parent node has dict children (multivalue case)."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "line_item_tuple",
+                            "category": "tuple",
+                            "children": [],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="new_column",
+            node_data={"label": "New Column", "category": "datapoint"},
+            parent_id="line_item_tuple",
+        )
+
+        tuple_children = result[0]["children"][0]["children"]["children"]
+        assert len(tuple_children) == 1
+        assert tuple_children[0]["id"] == "new_column"
+
+    def test_unknown_operation_passthrough(self) -> None:
+        """Test that unknown operation returns content unchanged."""
+        content = [{"id": "section1", "category": "section", "children": []}]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="unknown",  # type: ignore[arg-type]
+            node_id="any_node",
+        )
+
+        assert result == content
+
+    def test_add_to_parent_without_children(self) -> None:
+        """Test adding to a parent node that doesn't have children yet."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "empty_tuple", "category": "tuple"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="new_field",
+            node_data={"label": "New Field", "category": "datapoint"},
+            parent_id="empty_tuple",
+        )
+
+        assert len(result[0]["children"][0]["children"]) == 1
+        assert result[0]["children"][0]["children"][0]["id"] == "new_field"
+
 
 @pytest.mark.unit
 class TestSchemaDataclasses:
@@ -626,6 +842,49 @@ class TestSchemaDataclasses:
         assert result == {"label": "Updated Label", "score_threshold": 0.9}
         assert "type" not in result
         assert "hidden" not in result
+
+    def test_schema_tuple_with_hidden_true(self) -> None:
+        """Test SchemaTuple with hidden=True includes hidden field in output."""
+        tuple_node = SchemaTuple(
+            id="hidden_tuple",
+            label="Hidden Tuple",
+            children=[SchemaDatapoint(label="Field", type="string")],
+            hidden=True,
+        )
+        result = tuple_node.to_dict()
+
+        assert result["id"] == "hidden_tuple"
+        assert result["hidden"] is True
+        assert result["category"] == "tuple"
+
+    def test_schema_multivalue_all_optional_fields(self) -> None:
+        """Test SchemaMultivalue with all optional fields set."""
+        multivalue = SchemaMultivalue(
+            label="Line Items",
+            children=SchemaDatapoint(label="Item", type="string"),
+            id="line_items_mv",
+            rir_field_names=["line_items"],
+            min_occurrences=1,
+            max_occurrences=10,
+            hidden=True,
+        )
+        result = multivalue.to_dict()
+
+        assert result["id"] == "line_items_mv"
+        assert result["rir_field_names"] == ["line_items"]
+        assert result["min_occurrences"] == 1
+        assert result["max_occurrences"] == 10
+        assert result["hidden"] is True
+        assert result["category"] == "multivalue"
+
+    def test_schema_node_update_with_stretch(self) -> None:
+        """Test SchemaNodeUpdate with stretch field."""
+        update = SchemaNodeUpdate(label="Column", width=100, stretch=True)
+        result = update.to_dict()
+
+        assert result["label"] == "Column"
+        assert result["width"] == 100
+        assert result["stretch"] is True
 
     @pytest.mark.asyncio
     async def test_patch_schema_with_dataclass(

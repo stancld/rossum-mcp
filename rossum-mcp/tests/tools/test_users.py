@@ -192,6 +192,87 @@ class TestListUsers:
         assert len(result) == 1
         mock_client.list_users.assert_called_once_with(first_name="John", last_name="Doe")
 
+    @pytest.mark.asyncio
+    async def test_list_users_filter_is_organization_group_admin_true(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test users listing filtered to only organization_group_admin users."""
+        register_user_tools(mock_mcp, mock_client)
+
+        org_admin_group_url = "https://api.test.rossum.ai/v1/groups/99"
+        admin_user = create_mock_user(id=1, username="admin@example.com", groups=[org_admin_group_url])
+        regular_user = create_mock_user(id=2, username="regular@example.com", groups=[])
+
+        async def users_iter():
+            for user in [admin_user, regular_user]:
+                yield user
+
+        async def roles_iter():
+            yield Group(id=99, url=org_admin_group_url, name="organization_group_admin")
+
+        mock_client.list_users = Mock(side_effect=lambda **kwargs: users_iter())
+        mock_client.list_user_roles = Mock(return_value=roles_iter())
+
+        list_users = mock_mcp._tools["list_users"]
+        result = await list_users(is_organization_group_admin=True)
+
+        assert len(result) == 1
+        assert result[0].id == 1
+        assert result[0].username == "admin@example.com"
+
+    @pytest.mark.asyncio
+    async def test_list_users_filter_is_organization_group_admin_false(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test users listing filtered to exclude organization_group_admin users."""
+        register_user_tools(mock_mcp, mock_client)
+
+        org_admin_group_url = "https://api.test.rossum.ai/v1/groups/99"
+        admin_user = create_mock_user(id=1, username="admin@example.com", groups=[org_admin_group_url])
+        regular_user = create_mock_user(id=2, username="regular@example.com", groups=[])
+
+        async def users_iter():
+            for user in [admin_user, regular_user]:
+                yield user
+
+        async def roles_iter():
+            yield Group(id=99, url=org_admin_group_url, name="organization_group_admin")
+
+        mock_client.list_users = Mock(side_effect=lambda **kwargs: users_iter())
+        mock_client.list_user_roles = Mock(return_value=roles_iter())
+
+        list_users = mock_mcp._tools["list_users"]
+        result = await list_users(is_organization_group_admin=False)
+
+        assert len(result) == 1
+        assert result[0].id == 2
+        assert result[0].username == "regular@example.com"
+
+    @pytest.mark.asyncio
+    async def test_list_users_filter_is_organization_group_admin_no_admins(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test users listing when no organization_group_admin role exists."""
+        register_user_tools(mock_mcp, mock_client)
+
+        mock_user = create_mock_user(
+            id=1, username="user@example.com", groups=["https://api.test.rossum.ai/v1/groups/1"]
+        )
+
+        async def users_iter():
+            yield mock_user
+
+        async def roles_iter():
+            yield Group(id=1, url="https://api.test.rossum.ai/v1/groups/1", name="annotator")
+
+        mock_client.list_users = Mock(side_effect=lambda **kwargs: users_iter())
+        mock_client.list_user_roles = Mock(return_value=roles_iter())
+
+        list_users = mock_mcp._tools["list_users"]
+        result = await list_users(is_organization_group_admin=True)
+
+        assert len(result) == 0
+
 
 @pytest.mark.unit
 class TestListUserRoles:

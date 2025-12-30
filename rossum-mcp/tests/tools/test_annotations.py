@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from rossum_api.models.annotation import Annotation
+from rossum_mcp.tools import base
+from rossum_mcp.tools.annotations import register_annotation_tools
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -107,15 +110,7 @@ class TestUploadDocument:
     ) -> None:
         """Test successful document upload."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         test_file = tmp_path / "test.pdf"
@@ -140,15 +135,7 @@ class TestUploadDocument:
     ) -> None:
         """Test upload fails when file doesn't exist."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         upload_document = mock_mcp._tools["upload_document"]
@@ -164,15 +151,7 @@ class TestUploadDocument:
     ) -> None:
         """Test upload_document is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         test_file = tmp_path / "test.pdf"
@@ -184,6 +163,71 @@ class TestUploadDocument:
         assert result["error"] == "upload_document is not available in read-only mode"
         mock_client.upload_document.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_upload_document_key_error(
+        self, mock_mcp: Mock, mock_client: AsyncMock, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test upload fails when API response is missing expected key."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_annotation_tools(mock_mcp, mock_client)
+
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        mock_client.upload_document.side_effect = KeyError("task")
+
+        upload_document = mock_mcp._tools["upload_document"]
+
+        with pytest.raises(ValueError) as exc_info:
+            await upload_document(file_path=str(test_file), queue_id=100)
+
+        assert "API response missing expected key" in str(exc_info.value)
+        assert "queue_id (100)" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_upload_document_index_error(
+        self, mock_mcp: Mock, mock_client: AsyncMock, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test upload fails when API returns empty list."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_annotation_tools(mock_mcp, mock_client)
+
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        mock_client.upload_document.return_value = []
+
+        upload_document = mock_mcp._tools["upload_document"]
+
+        with pytest.raises(ValueError) as exc_info:
+            await upload_document(file_path=str(test_file), queue_id=100)
+
+        assert "no tasks were created" in str(exc_info.value)
+        assert "queue_id (100)" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_upload_document_generic_exception(
+        self, mock_mcp: Mock, mock_client: AsyncMock, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test upload fails with generic exception."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_annotation_tools(mock_mcp, mock_client)
+
+        test_file = tmp_path / "test.pdf"
+        test_file.write_text("test content")
+
+        mock_client.upload_document.side_effect = RuntimeError("Connection timeout")
+
+        upload_document = mock_mcp._tools["upload_document"]
+
+        with pytest.raises(ValueError) as exc_info:
+            await upload_document(file_path=str(test_file), queue_id=100)
+
+        assert "Document upload failed: RuntimeError: Connection timeout" in str(exc_info.value)
+
 
 @pytest.mark.unit
 class TestGetAnnotation:
@@ -192,8 +236,6 @@ class TestGetAnnotation:
     @pytest.mark.asyncio
     async def test_get_annotation_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful annotation retrieval."""
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         mock_annotation = create_mock_annotation(id=67890, status="confirmed")
@@ -209,8 +251,6 @@ class TestGetAnnotation:
     @pytest.mark.asyncio
     async def test_get_annotation_no_sideloads(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test annotation retrieval without sideloads."""
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         mock_annotation = create_mock_annotation(id=67890, status="to_review")
@@ -230,8 +270,6 @@ class TestListAnnotations:
     @pytest.mark.asyncio
     async def test_list_annotations_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful annotations listing."""
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         mock_ann1 = create_mock_annotation(id=1, status="confirmed")
@@ -253,8 +291,6 @@ class TestListAnnotations:
     @pytest.mark.asyncio
     async def test_list_annotations_no_status_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test annotations listing without status filter."""
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         async def async_iter():
@@ -280,15 +316,7 @@ class TestStartAnnotation:
     ) -> None:
         """Test successful annotation start."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         start_annotation = mock_mcp._tools["start_annotation"]
@@ -304,15 +332,7 @@ class TestStartAnnotation:
     ) -> None:
         """Test start_annotation is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         start_annotation = mock_mcp._tools["start_annotation"]
@@ -332,15 +352,7 @@ class TestBulkUpdateAnnotationFields:
     ) -> None:
         """Test successful bulk update of annotation fields."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         operations = [
@@ -362,15 +374,7 @@ class TestBulkUpdateAnnotationFields:
     ) -> None:
         """Test bulk_update_annotation_fields is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         bulk_update = mock_mcp._tools["bulk_update_annotation_fields"]
@@ -390,15 +394,7 @@ class TestConfirmAnnotation:
     ) -> None:
         """Test successful annotation confirmation."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         confirm_annotation = mock_mcp._tools["confirm_annotation"]
@@ -414,15 +410,7 @@ class TestConfirmAnnotation:
     ) -> None:
         """Test confirm_annotation is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.annotations import register_annotation_tools
-
         register_annotation_tools(mock_mcp, mock_client)
 
         confirm_annotation = mock_mcp._tools["confirm_annotation"]
