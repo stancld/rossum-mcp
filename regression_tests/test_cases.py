@@ -34,6 +34,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=75000),
         success_criteria=SuccessCriteria(
             require_final_answer=True,
+            require_subagent=False,
             forbid_error=True,
             forbid_tool_errors=True,
             required_keywords=["document_type", "classification", "training", "workflow"],
@@ -73,6 +74,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         token_budget=TokenBudget(min_total_tokens=120000, max_total_tokens=200000),
         success_criteria=SuccessCriteria(
             require_final_answer=True,
+            require_subagent=True,
             forbid_error=True,
             forbid_tool_errors=True,
             required_keywords=["splitting", "invoice"],

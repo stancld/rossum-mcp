@@ -83,10 +83,7 @@ def _evaluate_criteria(
         answer_lower = (final_answer or "").lower()
         missing = [kw for kw in criteria.required_keywords if kw.lower() not in answer_lower]
         all_passed &= _check(
-            f"Required keywords ({len(criteria.required_keywords)})",
-            not missing,
-            f"Missing: {missing}",
-            failures,
+            f"Required keywords ({len(criteria.required_keywords)})", not missing, f"Missing: {missing}", failures
         )
 
     if criteria.max_steps is not None:
@@ -96,6 +93,12 @@ def _evaluate_criteria(
             f"Got {run.step_count}",
             failures,
         )
+
+    used_subagent = any(s.sub_agent_progress is not None for s in run.steps)
+    if criteria.require_subagent:
+        all_passed &= _check("Sub-agent used", used_subagent, "No sub-agent detected", failures)
+    else:
+        all_passed &= _check("Sub-agent not used", not used_subagent, "Sub-agent detected", failures)
 
     all_passed &= _evaluate_mermaid(final_answer or "", criteria.mermaid_expectation, failures)
 

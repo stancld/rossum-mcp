@@ -85,6 +85,7 @@ class SuccessCriteria:
         forbid_tool_errors: Fail if any ToolResult has is_error=True.
         required_keywords: Keywords that must appear in the final answer.
         max_steps: Maximum number of steps allowed.
+        require_subagent: Require that an Opus sub-agent was used during execution.
         mermaid_expectation: Expected mermaid diagram content.
         file_expectation: Expected file outputs.
         custom_check: Optional callable for domain-specific assertions.
@@ -96,6 +97,7 @@ class SuccessCriteria:
     forbid_tool_errors: bool = True
     required_keywords: Sequence[str] = field(default_factory=list)
     max_steps: int | None = None
+    require_subagent: bool = False
     mermaid_expectation: MermaidExpectation = field(default_factory=MermaidExpectation)
     file_expectation: FileExpectation = field(default_factory=FileExpectation)
     custom_check: Callable[[list[AgentStep]], None] | None = None
