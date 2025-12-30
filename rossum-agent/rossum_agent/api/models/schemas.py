@@ -135,7 +135,7 @@ class SubAgentProgressEvent(BaseModel):
     max_iterations: int
     current_tool: str | None = None
     tool_calls: list[str] = Field(default_factory=list)
-    status: Literal["thinking", "running_tool", "completed", "running"] = "running"
+    status: Literal["thinking", "searching", "analyzing", "running_tool", "completed", "running"] = "running"
 
 
 class SubAgentTextEvent(BaseModel):

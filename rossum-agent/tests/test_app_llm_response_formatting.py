@@ -394,3 +394,99 @@ class TestChatResponse:
 
         assert "<details>" in chat_response.completed_steps_markdown[0]
         assert "<summary>" in chat_response.completed_steps_markdown[0]
+
+
+class TestFormatSubAgentProgress:
+    """Test _format_sub_agent_progress method."""
+
+    @pytest.fixture
+    def mock_placeholder(self):
+        """Create a mock Streamlit placeholder."""
+        placeholder = Mock()
+        placeholder.markdown = Mock()
+        return placeholder
+
+    @pytest.fixture
+    def chat_response(self, mock_placeholder):
+        """Create a ChatResponse instance for testing."""
+        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder)
+
+    def _make_progress(
+        self,
+        tool_name: str = "search_knowledge_base",
+        iteration: int = 0,
+        max_iterations: int = 0,
+        status: str = "running",
+        current_tool: str | None = None,
+        tool_calls: list | None = None,
+    ):
+        """Create a mock progress object."""
+        progress = Mock()
+        progress.tool_name = tool_name
+        progress.iteration = iteration
+        progress.max_iterations = max_iterations
+        progress.status = status
+        progress.current_tool = current_tool
+        progress.tool_calls = tool_calls or []
+        return progress
+
+    def test_format_thinking_status(self, chat_response):
+        """Test formatting of thinking status."""
+        progress = self._make_progress(status="thinking")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "⏳ _Thinking..._" in result
+        assert "Sub-agent (search_knowledge_base)" in result
+
+    def test_format_searching_status(self, chat_response):
+        """Test formatting of searching status."""
+        progress = self._make_progress(status="searching")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "🔍 _Searching Knowledge Base..._" in result
+        assert "Sub-agent (search_knowledge_base)" in result
+
+    def test_format_analyzing_status(self, chat_response):
+        """Test formatting of analyzing status."""
+        progress = self._make_progress(status="analyzing")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "🧠 _Analyzing results..._" in result
+        assert "Sub-agent (search_knowledge_base)" in result
+
+    def test_format_running_tool_status(self, chat_response):
+        """Test formatting of running_tool status."""
+        progress = self._make_progress(
+            tool_name="debug_hook",
+            status="running_tool",
+            current_tool="list_hooks",
+            tool_calls=["list_hooks", "get_hook"],
+        )
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "🔧 Running: `list_hooks`" in result
+        assert "`list_hooks`" in result
+        assert "`get_hook`" in result
+
+    def test_format_completed_status(self, chat_response):
+        """Test formatting of completed status."""
+        progress = self._make_progress(status="completed")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "✅ _Completed_" in result
+
+    def test_format_with_iterations(self, chat_response):
+        """Test formatting with iteration count."""
+        progress = self._make_progress(tool_name="debug_hook", iteration=3, max_iterations=15, status="thinking")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "Iteration 3/15" in result
+        assert "Sub-agent (debug_hook)" in result
+
+    def test_format_without_iterations(self, chat_response):
+        """Test formatting without iteration count (max_iterations=0)."""
+        progress = self._make_progress(max_iterations=0, status="searching")
+        result = chat_response._format_sub_agent_progress(progress)
+
+        assert "Iteration" not in result
+        assert "Sub-agent (search_knowledge_base)" in result

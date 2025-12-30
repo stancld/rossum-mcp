@@ -200,6 +200,10 @@ class ChatResponse:
 
         if status == "thinking":
             lines.append("> ⏳ _Thinking..._")
+        elif status == "searching":
+            lines.append("> 🔍 _Searching Knowledge Base..._")
+        elif status == "analyzing":
+            lines.append("> 🧠 _Analyzing results..._")
         elif status == "running_tool" and current_tool:
             lines.append(f"> 🔧 Running: `{current_tool}`")
             if tool_calls:

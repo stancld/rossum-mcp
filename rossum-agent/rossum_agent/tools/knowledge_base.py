@@ -59,7 +59,7 @@ def _call_opus_for_web_search_analysis(query: str, search_results: str, user_que
     """Call Opus model to analyze web search results."""
     try:
         report_progress(
-            SubAgentProgress(tool_name="search_knowledge_base", iteration=0, max_iterations=0, status="thinking")
+            SubAgentProgress(tool_name="search_knowledge_base", iteration=0, max_iterations=0, status="analyzing")
         )
 
         client = create_bedrock_client()
@@ -147,6 +147,10 @@ def _search_knowledge_base(query: str) -> list[dict[str, str]]:
     Raises:
         WebSearchError: If search fails completely.
     """
+    report_progress(
+        SubAgentProgress(tool_name="search_knowledge_base", iteration=0, max_iterations=0, status="searching")
+    )
+
     site_query = f"site:{_KNOWLEDGE_BASE_DOMAIN} {query}"
     logger.info(f"Searching knowledge base: {site_query}")
 

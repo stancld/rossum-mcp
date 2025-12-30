@@ -88,6 +88,28 @@ class TestFetchWebpageContent:
 class TestSearchKnowledgeBase:
     """Test _search_knowledge_base function."""
 
+    def test_reports_searching_progress(self):
+        """Test that searching status is reported before search starts."""
+        mock_ddgs_instance = MagicMock()
+        mock_ddgs_instance.text.return_value = []
+        mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
+        mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
+
+        progress_calls: list = []
+
+        def capture_progress(progress):
+            progress_calls.append(progress)
+
+        with (
+            patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance),
+            patch("rossum_agent.tools.knowledge_base.report_progress", side_effect=capture_progress),
+        ):
+            _search_knowledge_base("test query")
+
+            assert len(progress_calls) == 1
+            assert progress_calls[0].tool_name == "search_knowledge_base"
+            assert progress_calls[0].status == "searching"
+
     def test_no_results_found(self):
         """Test search with no results found."""
         mock_ddgs_instance = MagicMock()
@@ -157,6 +179,35 @@ class TestSearchKnowledgeBase:
 
             assert len(result) == 2
             assert mock_fetch.call_count == 2
+
+
+class TestCallOpusForWebSearchAnalysis:
+    """Test _call_opus_for_web_search_analysis function."""
+
+    def test_reports_analyzing_progress(self):
+        """Test that analyzing status is reported before Opus analysis starts."""
+        from rossum_agent.tools.knowledge_base import _call_opus_for_web_search_analysis
+
+        progress_calls: list = []
+
+        def capture_progress(progress):
+            progress_calls.append(progress)
+
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="Analysis result")]
+
+        with (
+            patch("rossum_agent.tools.knowledge_base.create_bedrock_client") as mock_client,
+            patch("rossum_agent.tools.knowledge_base.report_progress", side_effect=capture_progress),
+            patch("rossum_agent.tools.knowledge_base.report_text"),
+        ):
+            mock_client.return_value.messages.create.return_value = mock_response
+            _call_opus_for_web_search_analysis("test query", "search results")
+
+            assert len(progress_calls) == 2
+            assert progress_calls[0].tool_name == "search_knowledge_base"
+            assert progress_calls[0].status == "analyzing"
+            assert progress_calls[1].status == "completed"
 
 
 class TestSearchAndAnalyzeKnowledgeBase:
