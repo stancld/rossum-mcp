@@ -403,9 +403,14 @@ pip install -e rossum-mcp[all] -e rossum-agent[all]
 # Run tests
 pytest
 
+# Run regression tests (validates agent behavior)
+pytest regression_tests/ -v -s
+
 # Lint and type check
 pre-commit run --all-files
 ```
+
+See [regression_tests/README.md](regression_tests/README.md) for the agent quality evaluation framework.
 
 ## 📄 License
 
