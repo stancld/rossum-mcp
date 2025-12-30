@@ -9,6 +9,7 @@
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
+
 [![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
 [![Snyk Security](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
