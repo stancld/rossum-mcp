@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import importlib
+import logging
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from rossum_api import APIClientError
+from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
+from rossum_mcp.tools import base
+from rossum_mcp.tools.queues import register_queue_tools
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
@@ -114,8 +119,6 @@ class TestGetQueue:
     @pytest.mark.asyncio
     async def test_get_queue_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful queue retrieval."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, name="Production Queue")
@@ -138,8 +141,6 @@ class TestGetQueueSchema:
     @pytest.mark.asyncio
     async def test_get_queue_schema_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful queue schema retrieval."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, schema="https://api.test.rossum.ai/v1/schemas/50")
@@ -159,8 +160,6 @@ class TestGetQueueSchema:
     @pytest.mark.asyncio
     async def test_get_queue_schema_with_trailing_slash(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test queue schema retrieval handles trailing slash in URL."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, schema="https://api.test.rossum.ai/v1/schemas/50/")
@@ -182,8 +181,6 @@ class TestGetQueueEngine:
     @pytest.mark.asyncio
     async def test_get_queue_engine_from_engine_field(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test queue engine retrieval from engine field."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(
@@ -207,8 +204,6 @@ class TestGetQueueEngine:
     @pytest.mark.asyncio
     async def test_get_queue_engine_from_dedicated_engine(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test queue engine retrieval prefers dedicated_engine."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(
@@ -231,8 +226,6 @@ class TestGetQueueEngine:
     @pytest.mark.asyncio
     async def test_get_queue_engine_no_engine_assigned(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test queue engine retrieval when no engine is assigned."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(
@@ -252,8 +245,6 @@ class TestGetQueueEngine:
     @pytest.mark.asyncio
     async def test_get_queue_engine_engine_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test queue engine retrieval when engine returns 404."""
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(
@@ -276,6 +267,59 @@ class TestGetQueueEngine:
         assert "Engine not found" in result["message"]
         assert "engines/999" in result["message"]
 
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_from_generic_engine(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue engine retrieval from generic_engine field."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(
+            id=100,
+            engine="https://api.test.rossum.ai/v1/engines/10",
+            dedicated_engine=None,
+            generic_engine="https://api.test.rossum.ai/v1/engines/30",
+        )
+        mock_engine = create_mock_engine(id=30, name="Generic Engine")
+
+        mock_client.retrieve_queue.return_value = mock_queue
+        mock_client.retrieve_engine.return_value = mock_engine
+
+        get_queue_engine = mock_mcp._tools["get_queue_engine"]
+        result = await get_queue_engine(queue_id=100)
+
+        assert result.id == 30
+        assert result.name == "Generic Engine"
+        mock_client.retrieve_engine.assert_called_once_with(30)
+
+    @pytest.mark.asyncio
+    async def test_get_queue_engine_dict_engine(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue engine retrieval when engine_url is a dict (uses deserialize_default)."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        engine_dict = {
+            "id": 42,
+            "url": "https://api.test.rossum.ai/v1/engines/42",
+            "name": "Inline Engine",
+            "type": "extractor",
+        }
+        mock_queue = create_mock_queue(
+            id=100,
+            engine=engine_dict,
+            dedicated_engine=None,
+            generic_engine=None,
+        )
+        mock_engine = create_mock_engine(id=42, name="Inline Engine")
+
+        mock_client.retrieve_queue.return_value = mock_queue
+
+        with patch("rossum_mcp.tools.queues.deserialize_default", return_value=mock_engine) as mock_deserialize:
+            get_queue_engine = mock_mcp._tools["get_queue_engine"]
+            result = await get_queue_engine(queue_id=100)
+
+            mock_deserialize.assert_called_once_with(Resource.Engine, engine_dict)
+            assert result.id == 42
+            assert result.name == "Inline Engine"
+            mock_client.retrieve_engine.assert_not_called()
+
 
 @pytest.mark.unit
 class TestCreateQueue:
@@ -288,15 +332,7 @@ class TestCreateQueue:
         """Test successful queue creation."""
         monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(
@@ -324,15 +360,7 @@ class TestCreateQueue:
     ) -> None:
         """Test create_queue is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         create_queue = mock_mcp._tools["create_queue"]
@@ -340,6 +368,88 @@ class TestCreateQueue:
 
         assert result["error"] == "create_queue is not available in read-only mode"
         mock_client.create_new_queue.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_create_queue_with_inbox_id(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test create_queue with inbox_id parameter."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=200, name="New Queue")
+        mock_client.create_new_queue.return_value = mock_queue
+
+        create_queue = mock_mcp._tools["create_queue"]
+        await create_queue(name="New Queue", workspace_id=1, schema_id=10, inbox_id=5)
+
+        call_args = mock_client.create_new_queue.call_args[0][0]
+        assert call_args["inbox"] == "https://api.test.rossum.ai/v1/inboxes/5"
+
+    @pytest.mark.asyncio
+    async def test_create_queue_with_connector_id(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test create_queue with connector_id parameter."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=200, name="New Queue")
+        mock_client.create_new_queue.return_value = mock_queue
+
+        create_queue = mock_mcp._tools["create_queue"]
+        await create_queue(name="New Queue", workspace_id=1, schema_id=10, connector_id=7)
+
+        call_args = mock_client.create_new_queue.call_args[0][0]
+        assert call_args["connector"] == "https://api.test.rossum.ai/v1/connectors/7"
+
+    @pytest.mark.asyncio
+    async def test_create_queue_with_splitting_screen_flag_success(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test create_queue with splitting_screen_feature_flag when env vars are set."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        monkeypatch.setenv("SPLITTING_SCREEN_FLAG_NAME", "enable_splitting")
+        monkeypatch.setenv("SPLITTING_SCREEN_FLAG_VALUE", "true")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=200, name="New Queue")
+        mock_client.create_new_queue.return_value = mock_queue
+
+        create_queue = mock_mcp._tools["create_queue"]
+        await create_queue(name="New Queue", workspace_id=1, schema_id=10, splitting_screen_feature_flag=True)
+
+        call_args = mock_client.create_new_queue.call_args[0][0]
+        assert call_args["settings"] == {"enable_splitting": "true"}
+
+    @pytest.mark.asyncio
+    async def test_create_queue_with_splitting_screen_flag_missing_env(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test create_queue with splitting_screen_feature_flag when env vars are missing."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        monkeypatch.delenv("SPLITTING_SCREEN_FLAG_NAME", raising=False)
+        monkeypatch.delenv("SPLITTING_SCREEN_FLAG_VALUE", raising=False)
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=200, name="New Queue")
+        mock_client.create_new_queue.return_value = mock_queue
+
+        create_queue = mock_mcp._tools["create_queue"]
+        with caplog.at_level(logging.ERROR):
+            await create_queue(name="New Queue", workspace_id=1, schema_id=10, splitting_screen_feature_flag=True)
+
+        call_args = mock_client.create_new_queue.call_args[0][0]
+        assert "settings" not in call_args
+        assert "Splitting screen failed to update" in caplog.text
 
 
 @pytest.mark.unit
@@ -352,16 +462,7 @@ class TestUpdateQueue:
     ) -> None:
         """Test successful queue update."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_api.domain_logic.resources import Resource
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, name="Updated Queue")
@@ -381,15 +482,7 @@ class TestUpdateQueue:
     ) -> None:
         """Test update_queue is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
-
-        import importlib
-
-        from rossum_mcp.tools import base
-
         importlib.reload(base)
-
-        from rossum_mcp.tools.queues import register_queue_tools
-
         register_queue_tools(mock_mcp, mock_client)
 
         update_queue = mock_mcp._tools["update_queue"]
