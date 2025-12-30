@@ -217,8 +217,8 @@ redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
 git clone https://github.com/stancld/rossum-mcp.git
 cd rossum-mcp
 
-# Install both packages with all features
-uv sync --extra all --no-install-project
+# Install all packages with all features
+uv sync --all-extras
 
 # Set up environment variables
 export ROSSUM_API_TOKEN="your-api-token"
@@ -230,7 +230,7 @@ rossum-agent                                    # CLI interface
 uv run streamlit run rossum_agent/app.py        # Web UI
 ```
 
-For individual package installation, see [rossum_mcp/README.md](rossum_mcp/README.md) and [rossum_agent/README.md](rossum_agent/README.md).
+For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md), [rossum-agent/README.md](rossum-agent/README.md), and [rossum-deploy/README.md](rossum-deploy/README.md).
 
 ---
 
