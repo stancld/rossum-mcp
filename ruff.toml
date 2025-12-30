@@ -67,15 +67,11 @@ ignore = [
 
 [lint.flake8-import-conventions.aliases]
 "datetime" = "dt"
-"datasets" = "hf_datasets"
 "numpy" = "np"
-"onnxruntime" = "ort"
 "pandas" = "pd"
-"sqlalchemy" = "sa"
 
 [lint.flake8-import-conventions.extend-aliases]
 # modules
-"matplotlib.pyplot" = "plt"
 "numpy.typing" = "npt"
 
 [lint.flake8-unused-arguments]

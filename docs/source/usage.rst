@@ -45,21 +45,23 @@ For read-only access , use ``"ROSSUM_MCP_MODE": "read-only"`` to restrict access
 Running the AI Agent
 --------------------
 
-The ``rossum_agent`` package provides CLI and web interfaces:
+The ``rossum_agent`` package provides Streamlit web UI and REST API interfaces:
 
 .. code-block:: bash
 
-   # CLI interface
-   rossum-agent
-
    # Streamlit web UI
-   streamlit run rossum-agent/rossum_agent/app.py
+   rossum-agent
+   # or directly:
+   streamlit run rossum-agent/rossum_agent/streamlit_app/app.py
+
+   # REST API
+   rossum-agent-api
 
    # Or run with Docker Compose
    docker-compose up rossum-agent
 
-The agent includes file system tools, plotting capabilities, and Rossum integration.
-See the :doc:`examples` section for complete workflows.
+The agent includes file output, knowledge base search, hook debugging, deployment tools,
+and multi-environment MCP connections. See the :doc:`examples` section for complete workflows.
 
 Using Rossum Deploy
 -------------------
@@ -1594,368 +1596,321 @@ Lists all document relations with optional filters. Document relations introduce
    # List document relations containing a specific document
    document_relations = list_document_relations(documents=200)
 
-   Agent Tools
-   -----------
+Agent Tools
+-----------
 
-   The ``rossum_agent`` package provides additional tools beyond the MCP server.
+The ``rossum_agent`` package provides additional tools beyond the MCP server.
 
-   Knowledge Base Tools
-   ^^^^^^^^^^^^^^^^^^^^
+File System Tools
+^^^^^^^^^^^^^^^^^
 
-   search_knowledge_base
-   """"""""""""""""""""""
+write_file
+""""""""""
 
-   Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
+Write content to a file in the agent's output directory.
 
-   Use this tool to find information about Rossum features, troubleshoot errors,
-   and understand extension configurations. The search is performed against
-   https://knowledge-base.rossum.ai/docs.
+Use this tool to save analysis results, export data, or create reports.
+Files are saved to a session-specific directory that can be shared with the user.
 
-   **Parameters:**
+**Parameters:**
 
-   - ``query`` (string, required): Search query. Be specific - include extension names, error messages,
-     or feature names. Examples: 'document splitting extension', 'duplicate handling configuration',
-     'webhook timeout error'.
-   - ``user_query`` (string, optional): The original user question for context. Pass the user's full
-     question here so Opus can tailor the analysis to address their specific needs.
+- ``filename`` (string, required): The name of the file to write (e.g., 'report.md', 'analysis.json')
+- ``content`` (string, required): The content to write to the file
 
-   **Returns:**
+**Returns:**
 
-   JSON string with structure:
-
-   .. code-block:: json
-
-      {
-        "status": "success",
-        "query": "document splitting",
-        "analysis": "## Document Splitting Extension\n\nThe document splitting extension...",
-        "source_urls": ["https://knowledge-base.rossum.ai/docs/..."]
-      }
-
-   **Use cases:**
-
-   - Finding documentation about Rossum extensions
-   - Troubleshooting error messages
-   - Understanding hook configurations and behaviors
-
-   **Example usage:**
-
-   .. code-block:: python
-
-      # Search for document splitting documentation
-      result = search_knowledge_base(
-          query="document splitting extension",
-          user_query="How do I configure document splitting for my queue?"
-      )
-      print(result)
-
-   Hook Analysis Tools
-   ^^^^^^^^^^^^^^^^^^^
-
-   analyze_hook_dependencies
-   """"""""""""""""""""""""""
-
-   Analyze hook dependencies from a list of hooks and generate a dependency tree.
-
-   This tool helps understand the workflow and execution order of hooks in a Rossum queue
-   by analyzing their trigger events, types, and relationships.
-
-   **Parameters:**
-
-   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool.
-   Expected format: ``{"count": N, "results": [{"id": ..., "name": ..., "events": [...], ...}]}``
-
-   **Returns:**
-
-   JSON string containing dependency analysis with:
-
-   - ``execution_phases``: Hooks grouped by trigger event
-   - ``dependency_tree``: Visual tree representation
-   - ``hook_details``: Detailed information about each hook
-   - ``workflow_summary``: Overall workflow description
-
-   .. code-block:: json
+.. code-block:: json
 
    {
-    "total_hooks": 5,
-    "active_hooks": 4,
-    "execution_phases": [
-      {
-        "event": "annotation_content.initialize",
-        "description": "Initial setup when annotation is first created",
-        "hooks": [
-          {
-            "id": 12345,
-            "name": "Data Enrichment",
-            "type": "function",
-            "queues": [...],
-            "config": {...}
-          }
-        ]
-      }
-    ],
-    "dependency_tree": "...",
-    "workflow_summary": "...",
-    "hook_details": [...]
+     "status": "success",
+     "message": "Successfully wrote 1234 characters to report.md",
+     "path": "/path/to/outputs/report.md"
    }
 
-   **Example usage:**
+Knowledge Base Tools
+^^^^^^^^^^^^^^^^^^^^
 
-   .. code-block:: python
+search_knowledge_base
+"""""""""""""""""""""
 
-   # First get hooks from MCP server
-   hooks_data = mcp.list_hooks(queue_id=12345)
+Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations.
 
-   # Analyze dependencies
-   analysis = analyze_hook_dependencies(hooks_data)
-   print(analysis)
+Use this tool to find information about Rossum features, troubleshoot errors,
+and understand extension configurations. The search is performed against
+https://knowledge-base.rossum.ai/docs and results are analyzed by Claude Opus.
 
-   visualize_hook_tree
-   """""""""""""""""""
+**Parameters:**
 
-   Generate a visual tree diagram of hook execution flow.
+- ``query`` (string, required): Search query. Be specific - include extension names, error messages,
+  or feature names. Examples: 'document splitting extension', 'duplicate handling configuration',
+  'webhook timeout error'.
+- ``user_query`` (string, optional): The original user question for context. Pass the user's full
+  question here so Opus can tailor the analysis to address their specific needs.
 
-   Creates an easy-to-read tree visualization showing how hooks are triggered
-   throughout the document lifecycle in a Rossum queue.
+**Returns:**
 
-   **Parameters:**
+JSON string with structure:
 
-   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool
-   - ``output_format`` (string, optional): Format for the tree visualization. Options:
+.. code-block:: json
 
-   - ``"ascii"``: Simple ASCII art tree (default)
-   - ``"markdown"``: Markdown-formatted tree with indentation
-   - ``"mermaid"``: Mermaid diagram syntax for rendering
+   {
+     "status": "success",
+     "query": "document splitting",
+     "analysis": "## Document Splitting Extension\n\nThe document splitting extension...",
+     "source_urls": ["https://knowledge-base.rossum.ai/docs/..."]
+   }
 
-   **Returns:**
+Hook Debugging Tools
+^^^^^^^^^^^^^^^^^^^^
 
-   String containing the tree visualization in the requested format.
+evaluate_python_hook
+""""""""""""""""""""
 
-   **Example ASCII output:**
+Execute Rossum function hook Python code against test annotation/schema data for debugging.
 
-   .. code-block:: text
+This tool runs the provided code in a restricted sandbox, looks for a function named
+``rossum_hook_request_handler``, and calls it with a payload containing the annotation
+and optional schema data. Use this to verify hook logic without making actual API calls.
 
-   Document Lifecycle Flow:
+**IMPORTANT**: This is for debugging only. No imports or external I/O are allowed.
 
-   ├── [annotation_content.initialize] Initial setup when annotation is first created
-   │   ├── [function] Data Enrichment (ID: 12345)
-   │   └── [webhook] External Validation (ID: 12346)
-   └── [annotation_content.confirm] User confirms the annotation
-      └── [function] Final Check (ID: 12347)
+**Parameters:**
 
-   **Example usage:**
+- ``code`` (string, required): Full Python source containing a function:
+  ``def rossum_hook_request_handler(payload): ...``
+  The function receives a dict with 'annotation' and optionally 'schema' keys.
+- ``annotation_json`` (string, required): JSON string of the annotation object as seen in hook payload["annotation"].
+  Get this from the ``get_annotation`` MCP tool.
+- ``schema_json`` (string, optional): JSON string of the schema object as seen in payload["schema"].
+  Get this from the ``get_schema`` MCP tool.
 
-   .. code-block:: python
+**Returns:**
 
-   hooks_data = mcp.list_hooks(queue_id=12345)
+.. code-block:: json
 
-   # ASCII tree
-   tree = visualize_hook_tree(hooks_data, output_format="ascii")
-   print(tree)
+   {
+     "status": "success",
+     "result": {"status": "ok", "document_id": 12345},
+     "stdout": "Debug: Processing annotation\nDocument ID: 12345\n",
+     "stderr": "",
+     "exception": null,
+     "elapsed_ms": 5.123
+   }
 
-   # Markdown tree
-   md_tree = visualize_hook_tree(hooks_data, output_format="markdown")
+**Sandbox Environment:**
 
-   # Mermaid diagram
-   mermaid = visualize_hook_tree(hooks_data, output_format="mermaid")
+- Available modules: ``collections``, ``datetime``, ``decimal``, ``functools``, ``itertools``, ``json``, ``math``, ``re``, ``string``
+- No imports or external I/O allowed
+- Limited builtins (safe subset for data manipulation)
 
-   explain_hook_execution_order
-   """""""""""""""""""""""""""""
+debug_hook
+""""""""""
 
-   Explain the execution order and timing of hooks in plain language.
+Debug a Rossum hook using an Opus sub-agent for expert analysis. This is the PRIMARY tool
+for debugging Python function hooks.
 
-   Provides a narrative explanation of when and why each hook executes,
-   helping users understand the automation workflow.
+Simply pass the hook ID and annotation ID, and the Opus sub-agent will:
 
-   **Parameters:**
+1. Fetch hook code and annotation data via MCP tools
+2. Execute and analyze errors with Claude Opus for deep reasoning
+3. Iteratively fix and verify the code works
+4. Return detailed analysis with working code
 
-   - ``hooks_json`` (string, required): JSON string containing hooks data from ``list_hooks`` MCP tool
+**Parameters:**
 
-   **Returns:**
+- ``hook_id`` (string, required): The hook ID (from get_hook or hook URL). The sub-agent will fetch the code.
+- ``annotation_id`` (string, required): The annotation ID to use for testing. The sub-agent will fetch the data.
+- ``schema_id`` (string, optional): Optional schema ID if schema context is needed.
 
-   Plain text explanation of hook execution flow and dependencies.
+**Returns:**
 
-   **Example output:**
+.. code-block:: json
 
-   .. code-block:: text
+   {
+     "hook_id": "12345",
+     "annotation_id": "67890",
+     "analysis": "## What the hook does\n\nThis hook validates...\n\n## Issues Found\n\n1. KeyError...\n\n## Fixed Code\n\n```python\n...\n```",
+     "elapsed_ms": 2500.0
+   }
 
-   HOOK EXECUTION FLOW EXPLANATION
-   ==================================================
+**Features:**
 
-   This queue has 4 active hooks configured across 3 different trigger events.
+- **Opus-powered analysis**: Uses Claude Opus 4 for deep reasoning about hook behavior
+- **Automatic data fetching**: Fetches hook code and annotation data automatically
+- **Iterative debugging**: Continues fixing until the code works
+- **Fix suggestions**: Provides corrected code snippets you can use directly
 
-   Here's how the hooks execute throughout the document lifecycle:
+**Example usage:**
 
-   1. ANNOTATION_CONTENT.INITIALIZE
-     When: Initial setup when annotation is first created
-     Hooks triggered (2):
-     - Data Enrichment (Python function)
-     - External Validation (Webhook call)
+.. code-block:: python
 
-   2. ANNOTATION_CONTENT.CONFIRM
-     When: User confirms the annotation
-     Hooks triggered (1):
-     - Final Check (Python function)
+   # Simply pass the IDs - the sub-agent fetches everything
+   result = debug_hook(hook_id="12345", annotation_id="67890")
+   print(result["analysis"])
 
-   WORKFLOW INSIGHTS
-   --------------------------------------------------
+Multi-Environment Tools
+^^^^^^^^^^^^^^^^^^^^^^^
 
-   • Initial automation: 2 hook(s) run when documents first arrive to set up data
-   • Pre-export processing: 1 hook(s) run final checks before export
+spawn_mcp_connection
+""""""""""""""""""""
 
-   **Example usage:**
+Spawn a new MCP connection to a different Rossum environment.
 
-   .. code-block:: python
+Use this when you need to make changes to a different Rossum environment than the one
+the agent was initialized with. For example, when deploying changes from source to target.
 
-   hooks_data = mcp.list_hooks(queue_id=12345)
-   explanation = explain_hook_execution_order(hooks_data)
-   print(explanation)
+**Parameters:**
 
-   evaluate_python_hook
-   """"""""""""""""""""
+- ``connection_id`` (string, required): A unique identifier for this connection (e.g., 'target', 'sandbox')
+- ``api_token`` (string, required): API token for the target environment
+- ``api_base_url`` (string, required): API base URL for the target environment
+- ``mcp_mode`` (string, optional): "read-only" or "read-write" (default: "read-write")
 
-   Execute Rossum function hook Python code against test annotation/schema data for debugging.
+**Returns:**
 
-   This tool runs the provided code in a restricted sandbox, looks for a function named
-   ``rossum_hook_request_handler``, and calls it with a payload containing the annotation
-   and optional schema data. Use this to verify hook logic without making actual API calls.
+Success message with list of available tools on the spawned connection.
 
-   **IMPORTANT**: This is for debugging only. No imports or external I/O are allowed.
+call_on_connection
+""""""""""""""""""
 
-   **Parameters:**
+Call a tool on a spawned MCP connection.
 
-   - ``code`` (string, required): Full Python source containing a function:
-     ``def rossum_hook_request_handler(payload): ...``
-     The function receives a dict with 'annotation' and optionally 'schema' keys.
-   - ``annotation_json`` (string, required): JSON string of the annotation object as seen in hook payload["annotation"].
-     Get this from the ``get_annotation`` MCP tool.
-   - ``schema_json`` (string, optional): JSON string of the schema object as seen in payload["schema"].
-     Get this from the ``get_schema`` MCP tool.
+Use this to execute MCP tools on a connection that was previously spawned with ``spawn_mcp_connection``.
 
-   **Returns:**
+**Parameters:**
 
-   JSON string with structure:
+- ``connection_id`` (string, required): The identifier of the spawned connection
+- ``tool_name`` (string, required): The name of the MCP tool to call
+- ``arguments`` (string, required): JSON string of arguments to pass to the tool
 
-   .. code-block:: json
+**Returns:**
 
-      {
-        "status": "success",
-        "result": {"status": "ok", "document_id": 12345},
-        "stdout": "Debug: Processing annotation\nDocument ID: 12345\n",
-        "stderr": "",
-        "exception": null,
-        "elapsed_ms": 5.123
-      }
+The result of the tool call as a JSON string.
 
-   For errors:
+close_connection
+""""""""""""""""
 
-   .. code-block:: json
+Close a spawned MCP connection.
 
-      {
-        "status": "error",
-        "result": null,
-        "stdout": "",
-        "stderr": "",
-        "exception": {
-          "type": "KeyError",
-          "message": "'missing_field'",
-          "traceback": "Traceback (most recent call last):..."
-        },
-        "elapsed_ms": 2.5
-      }
+**Parameters:**
 
-   **Limitations:**
+- ``connection_id`` (string, required): The connection to close
 
-   - No imports allowed (sandboxed environment)
-   - No file I/O (``open()`` is blocked)
-   - Limited builtins (safe subset for data manipulation)
+**Returns:**
 
-   **Example usage:**
+Success or error message.
 
-   .. code-block:: python
+Skills Tools
+^^^^^^^^^^^^
 
-      # Get annotation data from MCP
-      annotation = mcp.get_annotation(annotation_id=12345, sideloads=["content"])
+load_skill
+""""""""""
 
-      # Hook code to test
-      hook_code = '''
-      def rossum_hook_request_handler(payload):
-          annotation = payload["annotation"]
-          content = annotation.get("content", [])
-          total = 0
-          for field in content:
-              if field.get("schema_id") == "amount_total":
-                  total = float(field.get("value", 0))
-          return {"total_amount": total}
-      '''
+Load a specialized skill that provides domain-specific instructions and workflows.
 
-      # Test the hook
-      result = evaluate_python_hook(
-          code=hook_code,
-          annotation_json=json.dumps(annotation)
-      )
-      print(result)
+Use this tool when you recognize that a task matches one of the available skills.
+The skill will provide detailed instructions, workflows, and context for the task.
 
-   debug_hook
-   """"""""""
+**Parameters:**
 
-   Debug a Rossum hook using an Opus sub-agent for expert analysis.
+- ``name`` (string, required): The name of the skill to load (e.g., "rossum-deployment", "hook-debugging")
 
-   This tool combines code execution with deep reasoning from Claude Opus 4 to:
-   1. Execute the hook code against test data (using ``evaluate_python_hook``)
-   2. Analyze the code and execution results with Opus
-   3. Provide detailed debugging insights and fix suggestions
+**Returns:**
 
-   Use this for complex hook debugging where you need expert-level analysis.
+.. code-block:: json
 
-   **Parameters:**
+   {
+     "status": "success",
+     "skill_name": "rossum-deployment",
+     "instructions": "## Rossum Deployment Workflow\n\n..."
+   }
 
-   - ``code`` (string, required): Full Python source containing a ``rossum_hook_request_handler(payload)`` function.
-   - ``annotation_json`` (string, required): JSON string of the annotation object from ``get_annotation`` MCP tool.
-   - ``schema_json`` (string, optional): JSON string of the schema from ``get_schema`` MCP tool.
+Agent Deployment Tools
+^^^^^^^^^^^^^^^^^^^^^^
 
-   **Returns:**
+The agent includes deployment tools that wrap the ``rossum_deploy`` package for use within agent conversations.
 
-   JSON string with structure:
+deploy_pull
+"""""""""""
 
-   .. code-block:: json
+Pull Rossum configuration objects from an organization to local files.
 
-      {
-        "execution": {
-          "status": "success",
-          "result": {"status": "ok"},
-          "stdout": "",
-          "stderr": "",
-          "exception": null,
-          "elapsed_ms": 5.0
-        },
-        "analysis": "## What the hook does\n\nThis hook validates...\n\n## Issues Found\n\n1. KeyError...",
-        "elapsed_ms": 2500.0
-      }
+**Parameters:**
 
-   **Features:**
+- ``org_id`` (int, required): Organization ID to pull from
+- ``workspace_path`` (string, optional): Path to workspace directory
+- ``api_base_url`` (string, optional): API base URL for target environment
+- ``token`` (string, optional): API token for target environment
 
-   - **Opus-powered analysis**: Uses Claude Opus 4 for deep reasoning about hook behavior
-   - **Root cause analysis**: Explains why errors occur, not just what the error is
-   - **Fix suggestions**: Provides corrected code snippets you can use directly
-   - **Best practices**: Recommends improvements to hook structure and patterns
+deploy_diff
+"""""""""""
 
-   **Example usage:**
+Compare local workspace files with remote Rossum configuration.
 
-   .. code-block:: python
+**Parameters:**
 
-      # Get annotation and hook code
-      annotation = mcp.get_annotation(annotation_id=12345, sideloads=["content"])
-      hook = mcp.get_hook(hook_id=67890)
+- ``workspace_path`` (string, optional): Path to workspace directory
 
-      # Debug the hook with Opus analysis
-      result = debug_hook(
-          code=hook["config"]["code"],
-          annotation_json=json.dumps(annotation)
-      )
+deploy_push
+"""""""""""
 
-      # The result contains both execution details and expert analysis
-      print(result["analysis"])
+Push local changes to Rossum.
+
+**Parameters:**
+
+- ``dry_run`` (bool, optional): Only show what would be pushed
+- ``force`` (bool, optional): Push even if there are conflicts
+- ``workspace_path`` (string, optional): Path to workspace directory
+
+deploy_copy_org
+"""""""""""""""
+
+Copy all objects from source organization to target organization.
+
+**Parameters:**
+
+- ``source_org_id`` (int, required): Source organization ID
+- ``target_org_id`` (int, required): Target organization ID
+- ``target_api_base`` (string, optional): Target API base URL
+- ``target_token`` (string, optional): Target API token
+- ``workspace_path`` (string, optional): Path to workspace directory
+
+deploy_copy_workspace
+"""""""""""""""""""""
+
+Copy a single workspace and all its objects to target organization.
+
+**Parameters:**
+
+- ``source_workspace_id`` (int, required): Source workspace ID
+- ``target_org_id`` (int, required): Target organization ID
+- ``target_api_base`` (string, optional): Target API base URL
+- ``target_token`` (string, optional): Target API token
+- ``workspace_path`` (string, optional): Path to workspace directory
+
+deploy_compare_workspaces
+"""""""""""""""""""""""""
+
+Compare two local workspaces to see differences between source and target.
+
+**Parameters:**
+
+- ``source_workspace_path`` (string, required): Path to source workspace
+- ``target_workspace_path`` (string, required): Path to target workspace
+- ``id_mapping_path`` (string, optional): Path to ID mapping JSON from copy operations
+
+deploy_to_org
+"""""""""""""
+
+Deploy local configuration changes to a target organization.
+
+**Parameters:**
+
+- ``target_org_id`` (int, required): Target organization ID
+- ``target_api_base`` (string, optional): Target API base URL
+- ``target_token`` (string, optional): Target API token
+- ``dry_run`` (bool, optional): Only show what would be deployed
+- ``workspace_path`` (string, optional): Path to workspace directory
 
 Deployment Tools
 ----------------

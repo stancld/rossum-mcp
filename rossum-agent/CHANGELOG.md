@@ -20,6 +20,10 @@ All notable changes to this project will be documented in this file.
 - Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
 - Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Display workspace diffs in a concise way [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Improved result analyzing UX for sub-agent responses [#85](https://github.com/stancld/rossum-mcp/pull/85)
+
+### Removed
+- Removed test front-end from rossum-agent API as it doesn't fit the repo scope
 
 ### Fixed
 - Fixed displaying generated files in Streamlit UI [#73](https://github.com/stancld/rossum-mcp/pull/73)

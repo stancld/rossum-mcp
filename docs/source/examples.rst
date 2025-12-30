@@ -85,39 +85,7 @@ Automatically analyze and document all hooks/extensions configured on a queue:
 
 This example shows how the agent can analyze existing automation to help teams understand their configured workflows.
 
-Example 3: Bulk Processing & Visualization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Process multiple invoices and generate revenue analysis charts through a single conversational prompt:
-
-.. code-block:: text
-
-   1. Upload all invoices from `/path/to/examples/data` folder to Rossum queue 3901094
-      - Do not include documents from `knowledge` folder
-   2. Once you send all annotations, wait for a few seconds
-   3. Then, start checking annotation status. Once all are imported, return a list of all annotations_urls
-   4. Fetch the schema for the target queue
-   5. Identify the schema field IDs for:
-      - Line item description field
-      - Line item total amount field
-   6. Retrieve all annotations in 'to_review' state from queue 3901094
-   7. For each document:
-      - Extract all line items
-      - Create a dictionary mapping {item_description: item_amount_total}
-      - If multiple line items share the same description, sum their amounts
-      - Print result for each document
-   8. Aggregate across all documents: sum amounts for each unique description
-   9. Return the final dictionary: {description: total_amount_across_all_docs}
-   10. Using the retrieved data, generate bar plot displaying revenue by services.
-       Sort it in descending order. Store it interactive `revenue.html`.
-
-**Result:** Automatically processes 30 invoices and generates an interactive visualization showing
-revenue breakdown by service category.
-
-See the `complete example <https://github.com/stancld/rossum-mcp/blob/master/examples/PROMPT.md>`_
-for the full prompt and results.
-
-Example 4: Queue Setup with Knowledge Warmup
+Example 3: Queue Setup with Knowledge Warmup
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Create a new queue, warm it up with training documents, and test automation performance:

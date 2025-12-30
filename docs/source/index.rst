@@ -117,12 +117,13 @@ The ``rossum_deploy`` package provides configuration deployment:
 The ``rossum_agent`` package provides additional capabilities:
 
 * Knowledge Base search for Rossum documentation with Opus-powered analysis
-* Hook analysis tools for understanding workflow dependencies and execution flow
 * Hook debugging tools with sandboxed code execution and Opus sub-agent analysis
-* Native Claude code execution for file operations, plotting, and data analysis
-* Image input support for attaching images (PNG, JPEG, GIF, WebP) to messages
-* Integration with AI agent frameworks (Anthropic Claude)
-* CLI and Streamlit web interfaces
+* Deployment tools for pull/push/diff of Rossum configurations across environments
+* Multi-environment support with spawnable MCP connections
+* Skills system for domain-specific workflows (deployment, hook debugging)
+* File output for saving reports, documentation, and analysis results
+* Integration with AI agent frameworks (Anthropic Claude via AWS Bedrock)
+* Streamlit web UI and REST API interfaces
 * See the :doc:`examples` section for complete workflows
 
 **Deployment Tools**
