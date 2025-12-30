@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from rossum_agent.api.main import app, mount_test_frontend
+from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import FileInfo
 from rossum_agent.api.routes import chats, files, health, messages
 
@@ -39,7 +39,6 @@ def client(mock_chat_service, mock_file_service, mock_agent_service):
     files.set_chat_service_getter(lambda: mock_chat_service)
     files.set_file_service_getter(lambda: mock_file_service)
 
-    mount_test_frontend()
     with TestClient(app) as client:
         yield client
 
