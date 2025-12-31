@@ -92,3 +92,13 @@ class TestGetFile:
             assert result is not None
             _, mime_type = result
             assert mime_type == expected_mime, f"Failed for {filename}"
+
+
+class TestStorageProperty:
+    """Tests for FileService.storage property."""
+
+    def test_storage_property_returns_storage(self, file_service, mock_storage):
+        """Test that storage property returns the RedisStorage instance."""
+        result = file_service.storage
+
+        assert result is mock_storage

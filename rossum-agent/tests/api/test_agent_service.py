@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent.memory import AgentMemory, MemoryStep, TaskStep
 from rossum_agent.agent.models import AgentStep, ToolCall, ToolResult
-from rossum_agent.api.models.schemas import ImageContent, StepEvent
-from rossum_agent.api.services.agent_service import AgentService, convert_step_to_event
+from rossum_agent.api.models.schemas import ImageContent, StepEvent, SubAgentProgressEvent, SubAgentTextEvent
+from rossum_agent.api.services.agent_service import (
+    AgentService,
+    convert_step_to_event,
+    convert_sub_agent_progress_to_event,
+)
+from rossum_agent.tools import SubAgentProgress, SubAgentText
 
 
 class TestConvertStepToEvent:
@@ -792,3 +798,233 @@ class TestAgentServiceRestoreConversationHistoryWithImages:
         second_call = mock_agent.add_user_message.call_args_list[1][0][0]
         assert isinstance(second_call, list)
         assert len(second_call) == 2
+
+
+class TestConvertSubAgentProgressToEvent:
+    """Tests for convert_sub_agent_progress_to_event function."""
+
+    def test_convert_sub_agent_progress(self):
+        """Test converting SubAgentProgress to SubAgentProgressEvent."""
+        progress = SubAgentProgress(
+            tool_name="analyze_hook",
+            iteration=2,
+            max_iterations=5,
+            current_tool="read_file",
+            tool_calls=["grep", "read_file", "write_file"],
+            status="running",
+        )
+
+        event = convert_sub_agent_progress_to_event(progress)
+
+        assert isinstance(event, SubAgentProgressEvent)
+        assert event.tool_name == "analyze_hook"
+        assert event.iteration == 2
+        assert event.max_iterations == 5
+        assert event.current_tool == "read_file"
+        assert event.tool_calls == ["grep", "read_file", "write_file"]
+        assert event.status == "running"
+
+
+class TestAgentServiceSubAgentCallbacks:
+    """Tests for sub-agent callback handling."""
+
+    def test_on_sub_agent_progress_with_queue(self):
+        """Test _on_sub_agent_progress puts event on queue."""
+        service = AgentService()
+        service._sub_agent_queue = asyncio.Queue(maxsize=100)
+
+        progress = SubAgentProgress(
+            tool_name="test_tool",
+            iteration=1,
+            max_iterations=3,
+            current_tool="grep",
+            tool_calls=["grep", "read_file"],
+            status="running",
+        )
+
+        service._on_sub_agent_progress(progress)
+
+        assert service._sub_agent_queue.qsize() == 1
+        event = service._sub_agent_queue.get_nowait()
+        assert isinstance(event, SubAgentProgressEvent)
+        assert event.tool_name == "test_tool"
+
+    def test_on_sub_agent_progress_without_queue(self):
+        """Test _on_sub_agent_progress does nothing when queue is None."""
+        service = AgentService()
+        service._sub_agent_queue = None
+
+        progress = SubAgentProgress(
+            tool_name="test_tool",
+            iteration=1,
+            max_iterations=3,
+            current_tool="grep",
+            tool_calls=["grep"],
+            status="running",
+        )
+
+        service._on_sub_agent_progress(progress)
+
+    def test_on_sub_agent_progress_queue_full(self, caplog):
+        """Test _on_sub_agent_progress logs warning when queue is full."""
+        service = AgentService()
+        service._sub_agent_queue = asyncio.Queue(maxsize=1)
+
+        service._sub_agent_queue.put_nowait(
+            SubAgentProgressEvent(
+                tool_name="existing", iteration=1, max_iterations=1, tool_calls=["tool"], status="running"
+            )
+        )
+
+        progress = SubAgentProgress(
+            tool_name="new_tool",
+            iteration=1,
+            max_iterations=3,
+            current_tool="grep",
+            tool_calls=["grep"],
+            status="running",
+        )
+
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            service._on_sub_agent_progress(progress)
+
+        assert "queue full" in caplog.text.lower()
+
+    def test_on_sub_agent_text_with_queue(self):
+        """Test _on_sub_agent_text puts event on queue."""
+        service = AgentService()
+        service._sub_agent_queue = asyncio.Queue(maxsize=100)
+
+        text = SubAgentText(tool_name="analyze_hook", text="Analyzing...", is_final=False)
+
+        service._on_sub_agent_text(text)
+
+        assert service._sub_agent_queue.qsize() == 1
+        event = service._sub_agent_queue.get_nowait()
+        assert isinstance(event, SubAgentTextEvent)
+        assert event.tool_name == "analyze_hook"
+        assert event.text == "Analyzing..."
+        assert event.is_final is False
+
+    def test_on_sub_agent_text_without_queue(self):
+        """Test _on_sub_agent_text does nothing when queue is None."""
+        service = AgentService()
+        service._sub_agent_queue = None
+
+        text = SubAgentText(tool_name="test_tool", text="Hello", is_final=True)
+
+        service._on_sub_agent_text(text)
+
+    def test_on_sub_agent_text_queue_full(self, caplog):
+        """Test _on_sub_agent_text logs warning when queue is full."""
+        service = AgentService()
+        service._sub_agent_queue = asyncio.Queue(maxsize=1)
+
+        service._sub_agent_queue.put_nowait(SubAgentTextEvent(tool_name="existing", text="x", is_final=False))
+
+        text = SubAgentText(tool_name="new_tool", text="Hello", is_final=True)
+
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            service._on_sub_agent_text(text)
+
+        assert "queue full" in caplog.text.lower()
+
+
+class TestAgentServiceRunAgentWithImages:
+    """Tests for run_agent with images parameter."""
+
+    @pytest.mark.asyncio
+    async def test_run_agent_logs_image_count(self, tmp_path, caplog):
+        """Test that run_agent logs the number of images."""
+        import logging
+
+        service = AgentService()
+
+        mock_mcp_connection = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent._total_input_tokens = 0
+        mock_agent._total_output_tokens = 0
+
+        async def mock_run(prompt):
+            yield AgentStep(step_number=1, final_answer="Done", is_final=True)
+
+        mock_agent.run = mock_run
+
+        images = [
+            ImageContent(media_type="image/png", data="aW1hZ2Ux"),
+            ImageContent(media_type="image/jpeg", data="aW1hZ2Uy"),
+        ]
+
+        with (
+            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir"),
+            caplog.at_level(logging.INFO),
+        ):
+            mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
+            mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_create_agent.return_value = mock_agent
+
+            async for _ in service.run_agent(
+                prompt="Test",
+                conversation_history=[],
+                rossum_api_token="token",
+                rossum_api_base_url="https://api.rossum.ai",
+                images=images,
+            ):
+                pass
+
+        assert "2 images" in caplog.text
+
+
+class TestAgentServiceUrlContext:
+    """Tests for URL context handling in run_agent."""
+
+    @pytest.mark.asyncio
+    async def test_run_agent_with_url_context(self, tmp_path):
+        """Test that run_agent appends URL context to system prompt."""
+        service = AgentService()
+
+        mock_mcp_connection = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent._total_input_tokens = 0
+        mock_agent._total_output_tokens = 0
+
+        async def mock_run(prompt):
+            yield AgentStep(step_number=1, final_answer="Done", is_final=True)
+
+        mock_agent.run = mock_run
+
+        with (
+            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.set_session_output_dir"),
+            patch("rossum_agent.api.services.agent_service.get_system_prompt", return_value="Base prompt"),
+            patch("rossum_agent.api.services.agent_service.extract_url_context") as mock_extract,
+            patch("rossum_agent.api.services.agent_service.format_context_for_prompt", return_value="URL context"),
+        ):
+            mock_url_context = MagicMock()
+            mock_url_context.is_empty.return_value = False
+            mock_extract.return_value = mock_url_context
+
+            mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
+            mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_create_agent.return_value = mock_agent
+
+            async for _ in service.run_agent(
+                prompt="Test",
+                conversation_history=[],
+                rossum_api_token="token",
+                rossum_api_base_url="https://api.rossum.ai",
+                rossum_url="https://elis.rossum.ai/annotations/123",
+            ):
+                pass
+
+            call_kwargs = mock_create_agent.call_args
+            assert "URL context" in call_kwargs.kwargs["system_prompt"]

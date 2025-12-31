@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -238,8 +239,59 @@ class TestGetValidatedCredentials:
             assert creds.api_url == "https://elis.develop.r8.lol/api/v1"
 
 
+class TestGetValidatedCredentialsEdgeCases:
+    """Additional edge case tests for get_validated_credentials."""
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_response_returns_502(self):
+        """Test that invalid JSON response returns 502."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = json.JSONDecodeError("Invalid", "doc", 0)
+        mock_response.text = "not valid json"
+
+        with patch("rossum_agent.api.dependencies.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get = AsyncMock(return_value=mock_response)
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            with pytest.raises(HTTPException) as exc_info:
+                await get_validated_credentials(x_rossum_token="token", x_rossum_api_url="https://api.rossum.ai")
+
+            assert exc_info.value.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_api_url_with_trailing_slash_and_v1(self):
+        """Test that API URL with trailing slash and /v1 is normalized correctly."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": 123}
+
+        with patch("rossum_agent.api.dependencies.httpx.AsyncClient") as mock_client:
+            mock_async_client = AsyncMock()
+            mock_async_client.get = AsyncMock(return_value=mock_response)
+            mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
+            mock_async_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.return_value = mock_async_client
+
+            await get_validated_credentials(x_rossum_token="test_token", x_rossum_api_url="https://us.rossum.app/v1/")
+
+            mock_async_client.get.assert_called_once()
+            call_args = mock_async_client.get.call_args
+            assert "/v1/v1/auth" not in call_args[0][0]
+
+
 class TestValidateRossumApiUrl:
     """Tests for validate_rossum_api_url SSRF prevention."""
+
+    def test_invalid_url_format_raises(self):
+        """Test that invalid URL format raises HTTPException."""
+        with pytest.raises(HTTPException) as exc_info:
+            validate_rossum_api_url("not a valid url ://malformed")
+
+        assert exc_info.value.status_code == 400
 
     def test_allows_elis_rossum_ai(self):
         """Test that elis.rossum.ai is allowed."""

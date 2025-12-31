@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,18 +18,10 @@ from rossum_agent.api.models.schemas import (
     StreamDoneEvent,
 )
 from rossum_agent.api.routes import chats, files, health, messages
+from rossum_agent.api.routes.chats import get_chat_service_dep as chats_get_chat_service_dep
+from rossum_agent.api.routes.health import get_chat_service_dep as health_get_chat_service_dep
 
-
-@pytest.fixture
-def mock_chat_service():
-    """Create a mock ChatService."""
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_agent_service():
-    """Create a mock AgentService."""
-    return MagicMock()
+from .conftest import create_mock_httpx_client
 
 
 @pytest.fixture
@@ -43,12 +35,6 @@ def client(mock_chat_service, mock_agent_service):
 
     with TestClient(app) as client:
         yield client
-
-
-@pytest.fixture
-def valid_headers():
-    """Valid authentication headers."""
-    return {"X-Rossum-Token": "test_token", "X-Rossum-Api-Url": "https://api.rossum.ai"}
 
 
 class TestHealthEndpoint:
@@ -84,15 +70,7 @@ class TestCreateChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_create_chat_success(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test creating a chat successfully."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         now = datetime.now(UTC)
         mock_chat_service.create_chat.return_value = ChatResponse(chat_id="chat_123", created_at=now)
@@ -107,15 +85,7 @@ class TestCreateChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_create_chat_always_uses_read_write_mode(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test creating a chat always uses read-write mode regardless of request."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         now = datetime.now(UTC)
         mock_chat_service.create_chat.return_value = ChatResponse(chat_id="chat_123", created_at=now)
@@ -142,14 +112,7 @@ class TestCreateChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_create_chat_invalid_token(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test creating a chat with invalid token."""
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client(status_code=401)
 
         response = client.post("/api/v1/chats", headers=valid_headers, json={})
 
@@ -163,16 +126,7 @@ class TestListChatsEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_chats_empty(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test listing chats when empty."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.list_chats.return_value = ChatListResponse(chats=[], total=0, limit=50, offset=0)
 
         response = client.get("/api/v1/chats", headers=valid_headers)
@@ -185,15 +139,7 @@ class TestListChatsEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_chats_with_results(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test listing chats with results."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.list_chats.return_value = ChatListResponse(
             chats=[
@@ -214,16 +160,7 @@ class TestListChatsEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_chats_pagination(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test listing chats with pagination params."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.list_chats.return_value = ChatListResponse(chats=[], total=0, limit=10, offset=5)
 
         response = client.get("/api/v1/chats?limit=10&offset=5", headers=valid_headers)
@@ -241,15 +178,7 @@ class TestGetChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_get_chat_success(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test getting a chat successfully."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         now = datetime.now(UTC)
         mock_chat_service.get_chat.return_value = ChatDetail(
@@ -266,16 +195,7 @@ class TestGetChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_get_chat_not_found(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test getting a non-existent chat."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.get_chat.return_value = None
 
         response = client.get("/api/v1/chats/chat_nonexistent", headers=valid_headers)
@@ -290,15 +210,7 @@ class TestDeleteChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_delete_chat_success(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test deleting a chat successfully."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_chat_service.delete_chat.return_value = True
@@ -312,16 +224,7 @@ class TestDeleteChatEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_delete_chat_not_found(self, mock_httpx, client, mock_chat_service, valid_headers):
         """Test deleting a non-existent chat."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.chat_exists.return_value = False
 
         response = client.delete("/api/v1/chats/chat_nonexistent", headers=valid_headers)
@@ -337,16 +240,7 @@ class TestSendMessageEndpoint:
         self, mock_httpx, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Test sending message to non-existent chat."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.chat_exists.return_value = False
 
         response = client.post(
@@ -360,16 +254,7 @@ class TestSendMessageEndpoint:
         self, mock_httpx, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Test sending message with empty content."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
-
+        mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.chat_exists.return_value = True
 
         response = client.post("/api/v1/chats/chat_123/messages", headers=valid_headers, json={"content": ""})
@@ -381,15 +266,7 @@ class TestSendMessageEndpoint:
         self, mock_httpx, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Test that send message returns streaming response."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": 12345}
-
-        mock_async_client = AsyncMock()
-        mock_async_client.get = AsyncMock(return_value=mock_response)
-        mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-        mock_async_client.__aexit__ = AsyncMock(return_value=None)
-        mock_httpx.return_value = mock_async_client
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_chat_service.get_messages.return_value = []
@@ -439,3 +316,21 @@ class TestOpenAPIDocumentation:
         response = client.get("/api/redoc")
 
         assert response.status_code == 200
+
+
+class TestServiceGetterDeps:
+    """Tests for service getter dependency functions.
+
+    Note: The autouse fixture reset_route_service_getters handles resetting
+    the service getter state before and after each test.
+    """
+
+    def test_chats_get_chat_service_dep_raises_when_not_configured(self):
+        """Test that chats get_chat_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="Chat service getter not configured"):
+            chats_get_chat_service_dep()
+
+    def test_health_get_chat_service_dep_raises_when_not_configured(self):
+        """Test that health get_chat_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="Chat service getter not configured"):
+            health_get_chat_service_dep()

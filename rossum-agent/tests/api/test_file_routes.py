@@ -2,31 +2,20 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import FileInfo
 from rossum_agent.api.routes import chats, files, health, messages
+from rossum_agent.api.routes.files import (
+    _sanitize_filename,
+    get_chat_service_dep,
+    get_file_service_dep,
+)
 
-
-@pytest.fixture
-def mock_chat_service():
-    """Create a mock ChatService."""
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_file_service():
-    """Create a mock FileService."""
-    return MagicMock()
-
-
-@pytest.fixture
-def mock_agent_service():
-    """Create a mock AgentService."""
-    return MagicMock()
+from .conftest import create_mock_httpx_client
 
 
 @pytest.fixture
@@ -43,32 +32,13 @@ def client(mock_chat_service, mock_file_service, mock_agent_service):
         yield client
 
 
-@pytest.fixture
-def valid_headers():
-    """Valid authentication headers."""
-    return {"X-Rossum-Token": "test_token", "X-Rossum-Api-Url": "https://api.rossum.ai"}
-
-
-def mock_httpx_success():
-    """Helper to create mocked httpx client for successful auth."""
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"id": 12345}
-
-    mock_async_client = AsyncMock()
-    mock_async_client.get = AsyncMock(return_value=mock_response)
-    mock_async_client.__aenter__ = AsyncMock(return_value=mock_async_client)
-    mock_async_client.__aexit__ = AsyncMock(return_value=None)
-    return mock_async_client
-
-
 class TestListFilesEndpoint:
     """Tests for GET /api/v1/chats/{chat_id}/files endpoint."""
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_files_success(self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers):
         """Test listing files successfully."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_file_service.list_files.return_value = [
@@ -88,7 +58,7 @@ class TestListFilesEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_files_empty(self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers):
         """Test listing files when chat has no files."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_file_service.list_files.return_value = []
@@ -103,7 +73,7 @@ class TestListFilesEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_files_chat_not_found(self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers):
         """Test listing files for non-existent chat."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = False
 
@@ -119,7 +89,7 @@ class TestDownloadFileEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_download_file_success(self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers):
         """Test downloading a file successfully."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_file_service.get_file.return_value = (b"<html>content</html>", "text/html")
@@ -134,7 +104,7 @@ class TestDownloadFileEndpoint:
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_download_file_not_found(self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers):
         """Test downloading a non-existent file."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = True
         mock_file_service.get_file.return_value = None
@@ -149,7 +119,7 @@ class TestDownloadFileEndpoint:
         self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers
     ):
         """Test downloading a file from non-existent chat."""
-        mock_httpx.return_value = mock_httpx_success()
+        mock_httpx.return_value = create_mock_httpx_client()
 
         mock_chat_service.chat_exists.return_value = False
 
@@ -164,31 +134,58 @@ class TestSanitizeFilename:
 
     def test_sanitize_removes_path_traversal(self):
         """Test that path traversal sequences are stripped."""
-        from rossum_agent.api.routes.files import _sanitize_filename
-
         assert _sanitize_filename("../../../etc/passwd") == "passwd"
         assert _sanitize_filename("..\\..\\secret.txt") == "secret.txt"
         assert _sanitize_filename("/etc/passwd") == "passwd"
 
     def test_sanitize_removes_control_characters(self):
         """Test that control characters are removed to prevent header injection."""
-        from rossum_agent.api.routes.files import _sanitize_filename
-
         assert _sanitize_filename("file\r\nInjected: header") == "fileInjected: header"
         assert _sanitize_filename("file\x00name.txt") == "filename.txt"
         assert _sanitize_filename('file"name.txt') == "filename.txt"
 
     def test_sanitize_empty_filename(self):
         """Test that sanitization handles edge cases."""
-        from rossum_agent.api.routes.files import _sanitize_filename
-
         assert _sanitize_filename("..") == ""
         assert _sanitize_filename(".") == ""
         assert _sanitize_filename("") == ""
 
     def test_sanitize_long_filename(self):
         """Test that filenames are truncated to prevent DoS."""
-        from rossum_agent.api.routes.files import _sanitize_filename
-
         long_name = "a" * 500 + ".txt"
         assert len(_sanitize_filename(long_name)) == 255
+
+
+class TestServiceGetterDeps:
+    """Tests for service getter dependency functions.
+
+    Note: The autouse fixture reset_route_service_getters handles resetting
+    the service getter state before and after each test.
+    """
+
+    def test_get_chat_service_dep_raises_when_not_configured(self):
+        """Test that get_chat_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="Chat service getter not configured"):
+            get_chat_service_dep()
+
+    def test_get_file_service_dep_raises_when_not_configured(self):
+        """Test that get_file_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="File service getter not configured"):
+            get_file_service_dep()
+
+
+class TestDownloadFileInvalidFilename:
+    """Tests for invalid filename handling."""
+
+    @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
+    def test_download_file_invalid_filename_empty_after_sanitize(
+        self, mock_httpx, client, mock_chat_service, mock_file_service, valid_headers
+    ):
+        """Test downloading a file that sanitizes to empty string returns 400."""
+        mock_httpx.return_value = create_mock_httpx_client()
+        mock_chat_service.chat_exists.return_value = True
+
+        response = client.get("/api/v1/chats/chat_123/files/%00%00", headers=valid_headers)
+
+        assert response.status_code == 400
+        assert "Invalid filename" in response.json()["detail"]

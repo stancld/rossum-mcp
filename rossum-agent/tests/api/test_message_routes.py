@@ -6,6 +6,97 @@ from unittest.mock import MagicMock
 
 import pytest
 from rossum_agent.api.models.schemas import FileCreatedEvent, StepEvent, StreamDoneEvent
+from rossum_agent.api.routes.messages import (
+    _format_sse_event,
+    _yield_file_events,
+    get_agent_service_dep,
+    get_chat_service_dep,
+    set_agent_service_getter,
+    set_chat_service_getter,
+)
+
+
+class TestServiceGetterDeps:
+    """Tests for service getter dependency functions.
+
+    Note: The autouse fixture reset_route_service_getters handles resetting
+    the service getter state before and after each test.
+    """
+
+    def test_get_chat_service_dep_raises_when_not_configured(self):
+        """Test that get_chat_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="Chat service getter not configured"):
+            get_chat_service_dep()
+
+    def test_get_agent_service_dep_raises_when_not_configured(self):
+        """Test that get_agent_service_dep raises RuntimeError when not configured."""
+        with pytest.raises(RuntimeError, match="Agent service getter not configured"):
+            get_agent_service_dep()
+
+    def test_set_chat_service_getter(self):
+        """Test setting chat service getter."""
+        mock_service = MagicMock()
+        set_chat_service_getter(lambda: mock_service)
+        result = get_chat_service_dep()
+        assert result is mock_service
+
+    def test_set_agent_service_getter(self):
+        """Test setting agent service getter."""
+        mock_service = MagicMock()
+        set_agent_service_getter(lambda: mock_service)
+        result = get_agent_service_dep()
+        assert result is mock_service
+
+
+class TestFormatSSEEvent:
+    """Tests for _format_sse_event function."""
+
+    def test_format_sse_event(self):
+        """Test SSE event formatting."""
+        result = _format_sse_event("step", '{"type": "thinking"}')
+        assert result == 'event: step\ndata: {"type": "thinking"}\n\n'
+
+    def test_format_sse_event_done(self):
+        """Test SSE event formatting for done event."""
+        result = _format_sse_event("done", '{"total_steps": 5}')
+        assert result == 'event: done\ndata: {"total_steps": 5}\n\n'
+
+
+class TestYieldFileEvents:
+    """Tests for _yield_file_events function."""
+
+    def test_yield_file_events_with_files(self, tmp_path):
+        """Test yielding file events when files exist."""
+        (tmp_path / "output.png").write_bytes(b"image data")
+        (tmp_path / "data.csv").write_text("col1,col2\n1,2")
+
+        events = list(_yield_file_events(tmp_path, "chat_123"))
+
+        assert len(events) == 2
+        assert all("event: file_created" in event for event in events)
+        assert any("output.png" in event for event in events)
+        assert any("data.csv" in event for event in events)
+
+    def test_yield_file_events_with_none_output_dir(self):
+        """Test yielding file events when output_dir is None."""
+        events = list(_yield_file_events(None, "chat_123"))
+        assert events == []
+
+    def test_yield_file_events_with_nonexistent_dir(self, tmp_path):
+        """Test yielding file events when directory doesn't exist."""
+        nonexistent = tmp_path / "nonexistent"
+        events = list(_yield_file_events(nonexistent, "chat_123"))
+        assert events == []
+
+    def test_yield_file_events_skips_directories(self, tmp_path):
+        """Test that directories are skipped."""
+        (tmp_path / "file.txt").write_text("content")
+        (tmp_path / "subdir").mkdir()
+
+        events = list(_yield_file_events(tmp_path, "chat_123"))
+
+        assert len(events) == 1
+        assert "file.txt" in events[0]
 
 
 class TestEventGeneratorOrder:
