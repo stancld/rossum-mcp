@@ -109,7 +109,23 @@ def _evaluate_criteria(
     else:
         print("  - File expectation: (none expected)")
 
+    all_passed &= _evaluate_custom_checks(run.steps, criteria.custom_checks, failures)
+
     return all_passed, failures
+
+
+def _evaluate_custom_checks(steps: list, custom_checks, failures: list[str] | None = None) -> bool:
+    """Evaluate all custom checks. Returns True if all pass."""
+    if not custom_checks:
+        return True
+
+    all_passed = True
+    for check in custom_checks:
+        passed, reasoning = check.check_fn(steps)
+        all_passed &= _check(f"Custom: {check.name}", passed, reasoning, failures)
+        if passed:
+            print(f"    LLM reasoning: {reasoning}")
+    return all_passed
 
 
 def _evaluate_mermaid(final_answer: str, mermaid_exp, failures: list[str] | None = None) -> bool:

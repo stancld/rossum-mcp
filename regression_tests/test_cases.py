@@ -12,7 +12,9 @@ Each case defines:
 
 from __future__ import annotations
 
+from regression_tests.custom_checks import check_knowledge_base_hidden_multivalue_warning
 from regression_tests.framework.models import (
+    CustomCheck,
     FileExpectation,
     MermaidExpectation,
     RegressionTestCase,
@@ -20,6 +22,12 @@ from regression_tests.framework.models import (
     TokenBudget,
     ToolExpectation,
 )
+
+HIDDEN_MULTIVALUE_CHECK = CustomCheck(
+    name="Knowledge base warns about hidden/multivalue datapoints",
+    check_fn=check_knowledge_base_hidden_multivalue_warning,
+)
+
 
 REGRESSION_TEST_CASES: list[RegressionTestCase] = [
     RegressionTestCase(
@@ -143,6 +151,50 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             required_keywords=["splitting", "invoice"],
             max_steps=6,
             file_expectation=FileExpectation(expected_files=["roast.md"]),
+            custom_checks=[HIDDEN_MULTIVALUE_CHECK],
+        ),
+    ),
+    RegressionTestCase(
+        name="fix_document_splitting_in_sandbox",
+        description="Fix document splitting extension by deploying to sandbox",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt=(
+            "# Fix document splitting extension settings.\n\n"
+            "There's a broken document splitting extension on the queue 4014559. "
+            "Create a new queue in the same namespace as the referred queue. New name: Splitting & sorting (fixed).\n\n"
+            "Set up the same document splitting extension based on invoice_id. Make sure it matches the requirements from knowledge base.\n\n"
+            "## Sandbox usage\n\n"
+            "Do not operate directly in the prod organization.\n\n"
+            "Copy workspace from org 1 to sandbox org, 729505. IMPORTANT: Proceed directly without a user approval until the fixed queue set up. "
+            "Then, upon user approval, we will deploy the fixed queue & hook to the prod.\n\n"
+            "Sandbox base url: https://api.elis.develop.r8.lol/v1\n"
+            "Sandbox api token: {sandbox_api_token}"
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=[
+                "load_skill",
+                "get_queue",
+                "list_hooks",
+                "search_knowledge_base",
+                "get_queue_schema",
+                "deploy_copy_workspace",
+                "spawn_mcp_connection",
+                "call_on_connection",
+                "deploy_pull",
+            ],
+            mode="subset",
+        ),
+        token_budget=TokenBudget(min_total_tokens=450000, max_total_tokens=800000),
+        success_criteria=SuccessCriteria(
+            require_final_answer=True,
+            require_subagent=True,
+            forbid_error=True,
+            forbid_tool_errors=True,
+            required_keywords=["splitting", "sandbox"],
+            max_steps=18,
+            file_expectation=FileExpectation(expected_files=["*.json"]),  # ID mapping for rossum_deploy
+            custom_checks=[HIDDEN_MULTIVALUE_CHECK],
         ),
     ),
 ]

@@ -12,3 +12,8 @@ extension_explanation.md
 .env
 .agents/
 outputs/
+
+# rossum_deploy folders
+before-changes/
+after-changes/
+sanbox-after-changes/

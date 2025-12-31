@@ -8,7 +8,12 @@ if TYPE_CHECKING:
 
     from rossum_agent.agent.models import AgentStep
 
-ToolMatchMode = Literal["exact_sequence", "subset", "subsequence"]
+    type Passed = bool
+    type Reasoning = str
+    type CustomCheckResult = tuple[Passed, Reasoning]
+    type CustomCheckFn = Callable[[list[AgentStep]], CustomCheckResult]
+
+type ToolMatchMode = Literal["exact_sequence", "subset", "subsequence"]
 
 
 @dataclass
@@ -77,6 +82,19 @@ class FileExpectation:
 
 
 @dataclass
+class CustomCheck:
+    """Custom check for semantic validation of agent steps.
+
+    Attributes:
+        name: Short name for the check (displayed in test output).
+        check_fn: Callable that takes agent steps and returns (passed, reasoning).
+    """
+
+    name: str
+    check_fn: CustomCheckFn
+
+
+@dataclass
 class SuccessCriteria:
     """High-level success conditions for a task.
 
@@ -89,8 +107,7 @@ class SuccessCriteria:
         require_subagent: Require that an Opus sub-agent was used during execution.
         mermaid_expectation: Expected mermaid diagram content.
         file_expectation: Expected file outputs.
-        custom_check: Optional callable for domain-specific assertions.
-            Should raise AssertionError on failure.
+        custom_checks: List of custom checks to run against agent steps.
     """
 
     require_final_answer: bool = True
@@ -101,7 +118,7 @@ class SuccessCriteria:
     require_subagent: bool = False
     mermaid_expectation: MermaidExpectation = field(default_factory=MermaidExpectation)
     file_expectation: FileExpectation = field(default_factory=FileExpectation)
-    custom_check: Callable[[list[AgentStep]], None] | None = None
+    custom_checks: Sequence[CustomCheck] = field(default_factory=list)
 
 
 @dataclass
@@ -111,9 +128,11 @@ class RegressionTestCase:
     Attributes:
         name: Unique identifier for this test case.
         api_base_url: Rossum API base URL.
-        prompt: The prompt to send to the agent.
+        prompt: The prompt to send to the agent. Use {sandbox_api_token} placeholder
+            to inject sandbox token into prompt.
         api_token: Rossum API token (optional, can be provided via ROSSUM_API_TOKEN env var).
         rossum_url: Optional Rossum app URL for context extraction (e.g., queue/document URL).
+        sandbox_api_token: Optional sandbox API token for cross-org operations.
         tool_expectation: Expected tool usage.
         token_budget: Token usage constraints.
         success_criteria: Success/failure conditions.
@@ -125,6 +144,7 @@ class RegressionTestCase:
     prompt: str
     api_token: str | None = None
     rossum_url: str | None = None
+    sandbox_api_token: str | None = None
     tool_expectation: ToolExpectation = field(default_factory=ToolExpectation)
     token_budget: TokenBudget = field(default_factory=TokenBudget)
     success_criteria: SuccessCriteria = field(default_factory=SuccessCriteria)
