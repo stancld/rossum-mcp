@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+-
+
+
 ## [0.3.4] - 2025-12-31
 - Added `get_user` tool for retrieving a single user by ID [#75](https://github.com/stancld/rossum-mcp/pull/75)
 - Added `list_users` tool for user management and finding users for hook token owner configuration [#75](https://github.com/stancld/rossum-mcp/pull/75)
