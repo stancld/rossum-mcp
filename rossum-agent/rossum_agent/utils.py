@@ -82,24 +82,6 @@ def get_generated_files_with_metadata(output_dir: Path | None = None) -> dict[st
     return {str(f.resolve()): f.stat().st_mtime for f in output_dir.rglob("*") if f.is_file()}
 
 
-def clear_generated_files(output_dir: Path | None = None) -> None:
-    """Delete all files in the outputs directory.
-
-    Args:
-        output_dir: Optional explicit output directory. If not provided,
-                   uses the session context output directory.
-    """
-    if output_dir is None:
-        output_dir = get_session_output_dir()
-
-    if not output_dir.exists():
-        return
-
-    for file_path in output_dir.iterdir():
-        if file_path.is_file():
-            file_path.unlink()
-
-
 def cleanup_session_output_dir(output_dir: Path) -> None:
     """Remove the entire session output directory.
 

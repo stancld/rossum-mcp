@@ -7,7 +7,6 @@ import tempfile
 from pathlib import Path
 
 from rossum_agent.utils import (
-    clear_generated_files,
     generate_chat_id,
     get_generated_files,
     get_session_output_dir,
@@ -87,40 +86,6 @@ class TestGetGeneratedFiles:
 
         assert len(result) == 1
         assert "session_file.txt" in result[0]
-
-
-class TestClearGeneratedFiles:
-    """Test clear_generated_files function."""
-
-    def test_does_nothing_when_output_dir_not_exists(self):
-        """Test that it safely handles non-existent directory."""
-        temp_dir = Path(tempfile.mkdtemp()) / "nonexistent"
-
-        clear_generated_files(temp_dir)
-
-        assert not temp_dir.exists()
-
-    def test_deletes_all_files_in_output_directory(self, tmp_path):
-        """Test that it deletes all files but not subdirectories."""
-        output_dir = tmp_path / "outputs"
-        output_dir.mkdir()
-
-        file1 = output_dir / "file1.txt"
-        file2 = output_dir / "file2.md"
-        file1.write_text("content1")
-        file2.write_text("content2")
-
-        subdir = output_dir / "subdir"
-        subdir.mkdir()
-        (subdir / "nested.txt").write_text("nested content")
-
-        clear_generated_files(output_dir)
-
-        assert not file1.exists()
-        assert not file2.exists()
-
-        assert subdir.exists()
-        assert (subdir / "nested.txt").exists()
 
 
 class TestSessionOutputDir:
