@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
+[![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/main/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-mcp)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
