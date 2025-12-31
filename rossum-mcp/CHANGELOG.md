@@ -4,11 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
-- Added `list_users` tool for user management and finding users for hook token owner configuration
-- Added `list_hook_templates` tool for listing available hook templates from Rossum Store
-- Added `create_hook_from_template` tool for creating hooks from pre-built templates
-- Added `patch_schema` tool for adding, updating, or removing individual schema nodes without replacing entire content
+## [0.3.4] - 2025-12-31
+- Added `get_user` tool for retrieving a single user by ID [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `list_users` tool for user management and finding users for hook token owner configuration [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `list_user_roles` tool for listing all user roles (groups of permissions) in the organization [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `list_hook_templates` tool for listing available hook templates from Rossum Store [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `create_hook_from_template` tool for creating hooks from pre-built templates [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `update_hook` tool for modifying existing hook properties [#75](https://github.com/stancld/rossum-mcp/pull/75)
+- Added `patch_schema` tool for adding, updating, or removing individual schema nodes without replacing entire content [#75](https://github.com/stancld/rossum-mcp/pull/75)
 
 
 ## [0.3.3] - 2025-12-16
