@@ -1251,3 +1251,537 @@ class TestExecuteTool:
 
         assert len(result.content) < 30000
         assert "truncated" in result.content.lower()
+
+    @pytest.mark.asyncio
+    async def test_executes_deploy_tool(self):
+        """Test that deploy tools are executed locally."""
+        agent = self._create_agent()
+
+        tool_call = ToolCall(
+            id="tc_1",
+            name="deploy_hook",
+            arguments={"hook_id": "123"},
+        )
+
+        with patch("rossum_agent.agent.core.execute_tool", return_value="Deploy Success") as mock_execute:
+            with patch("rossum_agent.agent.core.get_deploy_tool_names", return_value=["deploy_hook"]):
+                result = await self._get_final_result(agent, tool_call)
+
+        mock_execute.assert_called_once()
+        assert result.content == "Deploy Success"
+        assert result.is_error is False
+
+
+class TestSerializeToolResult:
+    """Test RossumAgent._serialize_tool_result method."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent with mocked dependencies."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_serialize_none_result(self):
+        """Test that None result returns success message."""
+        agent = self._create_agent()
+        result = agent._serialize_tool_result(None)
+        assert result == "Tool executed successfully (no output)"
+
+    def test_serialize_dataclass(self):
+        """Test that dataclass is serialized to JSON."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class TestData:
+            name: str
+            value: int
+
+        agent = self._create_agent()
+        data = TestData(name="test", value=42)
+        result = agent._serialize_tool_result(data)
+
+        assert '"name": "test"' in result
+        assert '"value": 42' in result
+
+    def test_serialize_list_of_dataclasses(self):
+        """Test that list of dataclasses is serialized to JSON."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class Item:
+            id: int
+
+        agent = self._create_agent()
+        items = [Item(id=1), Item(id=2)]
+        result = agent._serialize_tool_result(items)
+
+        assert '"id": 1' in result
+        assert '"id": 2' in result
+
+    def test_serialize_pydantic_model(self):
+        """Test that pydantic model is serialized to JSON."""
+        from pydantic import BaseModel
+
+        class TestModel(BaseModel):
+            field: str
+
+        agent = self._create_agent()
+        model = TestModel(field="value")
+        result = agent._serialize_tool_result(model)
+
+        assert '"field": "value"' in result
+
+    def test_serialize_list_of_pydantic_models(self):
+        """Test that list of pydantic models is serialized to JSON."""
+        from pydantic import BaseModel
+
+        class TestModel(BaseModel):
+            id: int
+
+        agent = self._create_agent()
+        models = [TestModel(id=1), TestModel(id=2)]
+        result = agent._serialize_tool_result(models)
+
+        assert '"id": 1' in result
+        assert '"id": 2' in result
+
+    def test_serialize_dict(self):
+        """Test that dict is serialized to JSON."""
+        agent = self._create_agent()
+        result = agent._serialize_tool_result({"key": "value"})
+
+        assert '"key": "value"' in result
+
+    def test_serialize_list(self):
+        """Test that list is serialized to JSON."""
+        agent = self._create_agent()
+        result = agent._serialize_tool_result([1, 2, 3])
+
+        assert "[" in result
+        assert "1" in result
+
+    def test_serialize_string(self):
+        """Test that string is returned as-is."""
+        agent = self._create_agent()
+        result = agent._serialize_tool_result("plain text")
+
+        assert result == "plain text"
+
+    def test_serialize_number(self):
+        """Test that number is converted to string."""
+        agent = self._create_agent()
+        result = agent._serialize_tool_result(42)
+
+        assert result == "42"
+
+
+class TestExtractTextFromPrompt:
+    """Test RossumAgent._extract_text_from_prompt method."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent with mocked dependencies."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_extracts_from_string(self):
+        """Test extraction from simple string prompt."""
+        agent = self._create_agent()
+        result = agent._extract_text_from_prompt("Hello world")
+        assert result == "Hello world"
+
+    def test_extracts_from_list_with_text_blocks(self):
+        """Test extraction from list of content blocks."""
+        agent = self._create_agent()
+        prompt = [
+            {"type": "text", "text": "First part"},
+            {"type": "text", "text": "Second part"},
+        ]
+        result = agent._extract_text_from_prompt(prompt)
+        assert result == "First part Second part"
+
+    def test_ignores_non_text_blocks(self):
+        """Test that non-text blocks are ignored."""
+        agent = self._create_agent()
+        prompt = [
+            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "abc"}},
+            {"type": "text", "text": "Analyze this"},
+        ]
+        result = agent._extract_text_from_prompt(prompt)
+        assert result == "Analyze this"
+
+    def test_handles_missing_text_field(self):
+        """Test handling of blocks with missing text field."""
+        agent = self._create_agent()
+        prompt = [{"type": "text"}, {"type": "text", "text": "Valid"}]
+        result = agent._extract_text_from_prompt(prompt)
+        assert result == "Valid"
+
+
+class TestCheckRequestScope:
+    """Test RossumAgent._check_request_scope method."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent with mocked dependencies."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_returns_none_for_in_scope_request(self):
+        """Test that in-scope requests return None (proceed)."""
+        agent = self._create_agent()
+
+        with patch("rossum_agent.agent.core.classify_request") as mock_classify:
+            from rossum_agent.agent.request_classifier import ClassificationResult, RequestScope
+
+            mock_classify.return_value = ClassificationResult(
+                scope=RequestScope.IN_SCOPE, raw_response="IN_SCOPE", input_tokens=10, output_tokens=5
+            )
+
+            result = agent._check_request_scope("List queues")
+
+        assert result is None
+        assert agent._total_input_tokens == 10
+        assert agent._total_output_tokens == 5
+
+    def test_returns_rejection_step_for_out_of_scope_request(self):
+        """Test that out-of-scope requests return rejection step."""
+        agent = self._create_agent()
+
+        with (
+            patch("rossum_agent.agent.core.classify_request") as mock_classify,
+            patch("rossum_agent.agent.core.generate_rejection_response") as mock_rejection,
+        ):
+            from rossum_agent.agent.request_classifier import (
+                ClassificationResult,
+                RejectionResult,
+                RequestScope,
+            )
+
+            mock_classify.return_value = ClassificationResult(
+                scope=RequestScope.OUT_OF_SCOPE, raw_response="OUT_OF_SCOPE", input_tokens=10, output_tokens=5
+            )
+            mock_rejection.return_value = RejectionResult(
+                response="I can help with Rossum tasks.", input_tokens=20, output_tokens=15
+            )
+
+            result = agent._check_request_scope("What's the weather?")
+
+        assert result is not None
+        assert result.is_final is True
+        assert result.final_answer == "I can help with Rossum tasks."
+        assert result.input_tokens == 30  # 10 + 20
+        assert result.output_tokens == 20  # 5 + 15
+
+
+class TestAgentRunRequestDelay:
+    """Test RossumAgent.run() request delay behavior."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent with request delay."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        mock_mcp_connection.get_tools.return_value = []
+        config = AgentConfig(max_steps=3, request_delay=1.0)
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_request_delay_between_steps(self):
+        """Test that request delay is applied between steps (not on first step)."""
+        agent = self._create_agent()
+
+        call_count = [0]
+        sleep_calls = []
+
+        async def mock_stream_response(step_num):
+            call_count[0] += 1
+            if call_count[0] < 3:
+                yield AgentStep(
+                    step_number=step_num,
+                    tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
+                    tool_results=[ToolResult(tool_call_id="tc1", name="tool", content="result")],
+                    is_final=False,
+                    is_streaming=False,
+                )
+            else:
+                yield AgentStep(step_number=step_num, final_answer="Done", is_final=True, is_streaming=False)
+
+        async def capture_sleep(duration):
+            sleep_calls.append(duration)
+            # Don't actually sleep in tests
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.asyncio.sleep", side_effect=capture_sleep),
+        ):
+            steps = []
+            async for step in agent.run("Test prompt"):
+                steps.append(step)
+
+        # Should have delays for step 2 and 3 (not step 1)
+        assert len(sleep_calls) == 2
+        assert all(d == 1.0 for d in sleep_calls)
+
+
+class TestAgentRunOutOfScope:
+    """Test RossumAgent.run() out-of-scope handling."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_run_yields_rejection_for_out_of_scope(self):
+        """Test that run() yields rejection and returns for out-of-scope requests."""
+        agent = self._create_agent()
+
+        rejection_step = AgentStep(
+            step_number=1, final_answer="I focus on Rossum tasks.", is_final=True, input_tokens=30, output_tokens=20
+        )
+
+        with patch.object(agent, "_check_request_scope", return_value=rejection_step):
+            steps = []
+            async for step in agent.run("What's the weather?"):
+                steps.append(step)
+
+        assert len(steps) == 1
+        assert steps[0].is_final is True
+        assert steps[0].final_answer == "I focus on Rossum tasks."
+
+
+class TestAgentAddAssistantMessage:
+    """Test RossumAgent.add_assistant_message method."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_adds_memory_step_with_text(self):
+        """Test that add_assistant_message adds a MemoryStep with text."""
+        agent = self._create_agent()
+        agent.add_assistant_message("Hello, I'm here to help!")
+
+        assert len(agent.memory.steps) == 1
+        assert isinstance(agent.memory.steps[0], MemoryStep)
+        assert agent.memory.steps[0].text == "Hello, I'm here to help!"
+        assert agent.memory.steps[0].step_number == 0
+
+
+class TestAgentGetTools:
+    """Test RossumAgent._get_tools caching behavior."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        mock_mcp_connection.get_tools.return_value = []
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_caches_tools_after_first_call(self):
+        """Test that tools are cached and MCP is only called once."""
+        agent = self._create_agent()
+        agent.mcp_connection.get_tools.return_value = [MagicMock(name="tool1", description="test", inputSchema={})]
+
+        # Call twice
+        await agent._get_tools()
+        await agent._get_tools()
+
+        # MCP should only be called once
+        agent.mcp_connection.get_tools.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_includes_additional_tools(self):
+        """Test that additional tools are included in the tools list."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        mock_mcp_connection.get_tools.return_value = []
+        additional = [{"name": "custom_tool", "description": "custom", "input_schema": {}}]
+
+        agent = RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test",
+            additional_tools=additional,
+        )
+
+        tools = await agent._get_tools()
+
+        # Should include additional tools
+        assert any(t.get("name") == "custom_tool" for t in tools if isinstance(t, dict))
+
+
+class TestCreateAgentFactory:
+    """Test create_agent factory function."""
+
+    @pytest.mark.asyncio
+    async def test_creates_agent_with_default_config(self):
+        """Test that create_agent creates an agent with proper setup."""
+        from rossum_agent.agent.core import create_agent
+
+        mock_mcp = AsyncMock()
+
+        with patch("rossum_agent.agent.core.create_bedrock_client") as mock_create_client:
+            mock_create_client.return_value = MagicMock()
+
+            agent = await create_agent(
+                mcp_connection=mock_mcp,
+                system_prompt="Test system prompt",
+            )
+
+        assert isinstance(agent, RossumAgent)
+        assert agent.system_prompt == "Test system prompt"
+        mock_create_client.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_creates_agent_with_custom_config(self):
+        """Test that create_agent respects custom config."""
+        from rossum_agent.agent.core import create_agent
+
+        mock_mcp = AsyncMock()
+        config = AgentConfig(max_steps=10, temperature=0.5)
+
+        with patch("rossum_agent.agent.core.create_bedrock_client") as mock_create_client:
+            mock_create_client.return_value = MagicMock()
+
+            agent = await create_agent(
+                mcp_connection=mock_mcp,
+                system_prompt="Test",
+                config=config,
+            )
+
+        assert agent.config.max_steps == 10
+        assert agent.config.temperature == 0.5
+
+
+class TestProcessStreamEvent:
+    """Test RossumAgent._process_stream_event method directly."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_content_block_start_event_for_tool_use(self):
+        """Test processing ContentBlockStartEvent for tool use."""
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {}
+        tool_calls: list[ToolCall] = []
+
+        tool_block = ToolUseBlock(type="tool_use", id="tool_123", name="test_tool", input={})
+        event = RawContentBlockStartEvent(type="content_block_start", index=0, content_block=tool_block)
+
+        result = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert result is None
+        assert 0 in pending_tools
+        assert pending_tools[0]["name"] == "test_tool"
+        assert pending_tools[0]["id"] == "tool_123"
+
+    def test_content_block_delta_event_for_text(self):
+        """Test processing ContentBlockDeltaEvent for text."""
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {}
+        tool_calls: list[ToolCall] = []
+
+        event = RawContentBlockDeltaEvent(
+            type="content_block_delta", index=0, delta=TextDelta(type="text_delta", text="Hello world")
+        )
+
+        result = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert result == "Hello world"
+
+    def test_content_block_delta_event_for_json(self):
+        """Test processing ContentBlockDeltaEvent for JSON input."""
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {0: {"name": "tool", "id": "t1", "json": ""}}
+        tool_calls: list[ToolCall] = []
+
+        event = RawContentBlockDeltaEvent(
+            type="content_block_delta", index=0, delta=InputJSONDelta(type="input_json_delta", partial_json='{"key":')
+        )
+
+        result = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert result is None
+        assert pending_tools[0]["json"] == '{"key":'
+
+    def test_content_block_stop_event_with_empty_json(self):
+        """Test processing ContentBlockStopEvent with empty JSON."""
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {0: {"name": "tool", "id": "t1", "json": ""}}
+        tool_calls: list[ToolCall] = []
+
+        event = ContentBlockStopEvent(type="content_block_stop", index=0)
+
+        result = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert result is None
+        assert len(tool_calls) == 1
+        assert tool_calls[0].arguments == {}
+
+    def test_unhandled_event_returns_none(self):
+        """Test that unhandled events return None."""
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {}
+        tool_calls: list[ToolCall] = []
+
+        # Using a MagicMock for an unhandled event type
+        event = MagicMock()
+
+        result = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert result is None

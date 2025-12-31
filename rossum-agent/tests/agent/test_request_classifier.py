@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 from rossum_agent.agent.request_classifier import (
     CLASSIFIER_MODEL_ID,
     RequestScope,
-    _fallback_response,
     classify_request,
     generate_rejection_response,
     is_in_scope,
@@ -151,13 +150,8 @@ class TestGenerateRejectionResponse:
 
         result = generate_rejection_response(mock_client, "Some request")
 
-        assert result.response == _fallback_response()
         assert result.input_tokens == 0
         assert result.output_tokens == 0
-
-    def test_fallback_mentions_capabilities(self) -> None:
-        """Test that fallback response mentions what the assistant can do."""
-        fallback = _fallback_response()
-        assert "hooks" in fallback.lower()
-        assert "rossum" in fallback.lower()
-        assert "queue" in fallback.lower()
+        assert "rossum" in result.response.lower()
+        assert "hooks" in result.response.lower()
+        assert "queue" in result.response.lower()
