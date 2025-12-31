@@ -15,6 +15,12 @@
 
 AI agent for Rossum document processing. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
 
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
+
+> [!WARNING]
+> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+
 ## Features
 
 ### Agent Capabilities

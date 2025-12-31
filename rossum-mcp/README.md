@@ -17,6 +17,12 @@
 
 A Model Context Protocol (MCP) server that provides tools for uploading documents and retrieving annotations using the Rossum API. Built with Python and the official [rossum-api](https://github.com/rossumai/rossum-api).
 
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
+
+> [!WARNING]
+> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+
 ## Features
 
 ### Document Processing

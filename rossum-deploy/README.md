@@ -18,6 +18,12 @@ Minimalistic pull/diff/push deployment for Rossum configurations.
 > **Note**: This is a lightweight alternative to the [deployment-manager](https://github.com/rossumai/deployment-manager) (PRD2) tool.
 > We aim to provide a simple, dependency-light solution for the [rossum-agent](../rossum-agent/) that covers core deployment workflows.
 
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
+
+> [!WARNING]
+> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+
 ## Comparison with deployment-manager
 
 | Feature | rossum-deploy | deployment-manager (PRD2) |
