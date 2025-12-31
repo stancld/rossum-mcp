@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
-if TYPE_CHECKING:
-    import pytest
-
+import pytest
 from rossum_agent.tools.core import (
     SubAgentProgress,
     SubAgentText,
@@ -24,11 +21,21 @@ from rossum_agent.tools.core import (
     set_progress_callback,
     set_text_callback,
 )
-from rossum_agent.tools.spawn_mcp import (
-    SpawnedConnection,
-    get_spawned_connections,
-    get_spawned_connections_lock,
-)
+from rossum_agent.tools.spawn_mcp import SpawnedConnection, get_spawned_connections, get_spawned_connections_lock
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def _reset_core_state() -> Iterator[None]:
+    """Reset core module state between tests to avoid leakage."""
+    yield  # type: ignore[misc]
+    set_output_dir(None)
+    set_progress_callback(None)
+    set_text_callback(None)
+    set_mcp_connection(None, None)  # type: ignore[arg-type]
 
 
 class TestSubAgentProgress:
@@ -127,7 +134,6 @@ class TestCallbacks:
         report_progress(progress)
 
         callback.assert_called_once_with(progress)
-        set_progress_callback(None)
 
     def test_report_progress_no_callback_no_error(self) -> None:
         set_progress_callback(None)
@@ -142,7 +148,6 @@ class TestCallbacks:
         report_text(text)
 
         callback.assert_called_once_with(text)
-        set_text_callback(None)
 
     def test_report_text_no_callback_no_error(self) -> None:
         set_text_callback(None)
@@ -160,17 +165,82 @@ class TestOutputDirectory:
         set_output_dir(custom_dir)
         assert get_output_dir() == custom_dir
 
-        set_output_dir(None)
-
     def test_get_output_dir_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         set_output_dir(None)
         monkeypatch.chdir(tmp_path)
 
         result = get_output_dir()
-        assert result == Path("./outputs")
+        assert result.resolve() == (tmp_path / "outputs").resolve()
         assert result.exists()
 
+    def test_get_output_dir_fallback_creates_directory(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that get_output_dir creates the fallback directory if it doesn't exist."""
         set_output_dir(None)
+        test_dir = tmp_path / "new_workdir"
+        test_dir.mkdir()
+        monkeypatch.chdir(test_dir)
+
+        outputs_dir = test_dir / "outputs"
+        assert not outputs_dir.exists()
+
+        result = get_output_dir()
+        assert result.resolve() == outputs_dir.resolve()
+        assert outputs_dir.exists()
+
+
+class TestContextVarIsolation:
+    """Tests for context variable thread isolation."""
+
+    def test_context_vars_isolated_between_threads(self, tmp_path: Path) -> None:
+        """Test that context variables are isolated between threads."""
+        results: dict[str, Path | None] = {}
+        custom_dir = tmp_path / "thread_test"
+        custom_dir.mkdir()
+
+        def thread_func(thread_id: str) -> None:
+            results[thread_id] = get_output_dir() if thread_id == "thread2" else None
+            if thread_id == "thread1":
+                set_output_dir(custom_dir)
+                results[thread_id] = get_output_dir()
+
+        set_output_dir(None)
+
+        t1 = threading.Thread(target=thread_func, args=("thread1",))
+        t2 = threading.Thread(target=thread_func, args=("thread2",))
+
+        t1.start()
+        t1.join()
+        t2.start()
+        t2.join()
+
+        assert results["thread1"] == custom_dir
+        assert results["thread2"] != custom_dir
+
+    def test_callbacks_isolated_between_threads(self) -> None:
+        """Test that callbacks set in one thread don't affect another."""
+        callback1 = MagicMock()
+
+        def thread1_func() -> None:
+            set_progress_callback(callback1)
+            progress = SubAgentProgress(tool_name="t1", iteration=1, max_iterations=5)
+            report_progress(progress)
+
+        def thread2_func() -> None:
+            progress = SubAgentProgress(tool_name="t2", iteration=1, max_iterations=5)
+            report_progress(progress)
+
+        set_progress_callback(None)
+
+        t1 = threading.Thread(target=thread1_func)
+        t2 = threading.Thread(target=thread2_func)
+
+        t1.start()
+        t1.join()
+        t2.start()
+        t2.join()
+
+        callback1.assert_called_once()
+        assert callback1.call_args[0][0].tool_name == "t1"
 
 
 class TestMCPConnection:
