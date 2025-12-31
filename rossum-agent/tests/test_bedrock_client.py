@@ -6,12 +6,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.bedrock_client import (
-    DEFAULT_MODEL_ID,
-    create_bedrock_client,
-    create_bedrock_client_from_sts_credentials,
-    get_model_id,
-)
+from rossum_agent.bedrock_client import DEFAULT_MODEL_ID, create_bedrock_client, get_model_id
 
 
 class TestCreateBedrockClient:
@@ -160,66 +155,6 @@ class TestCreateBedrockClient:
                 profile_name=None,
                 region_name="us-east-1",
             )
-
-
-class TestCreateBedrockClientFromStsCredentials:
-    """Test create_bedrock_client_from_sts_credentials function."""
-
-    def test_creates_client_from_sts_credentials(self):
-        """Test creating client from STS assumed role credentials."""
-        sts_credentials = {
-            "AccessKeyId": "ASIAIOSFODNN7EXAMPLE",
-            "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY",
-            "SessionToken": "FwoGZXIvYXdzEBYaDNYC4FeH...",
-        }
-
-        with patch("rossum_agent.bedrock_client.AnthropicBedrock") as mock_anthropic:
-            create_bedrock_client_from_sts_credentials(
-                credentials=sts_credentials,
-                aws_region="eu-west-1",
-            )
-
-            mock_anthropic.assert_called_once_with(
-                aws_access_key="ASIAIOSFODNN7EXAMPLE",
-                aws_secret_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY",
-                aws_session_token="FwoGZXIvYXdzEBYaDNYC4FeH...",
-                aws_region="eu-west-1",
-                max_retries=5,
-            )
-
-    def test_passes_none_region_when_not_provided(self):
-        """Test that aws_region is None when not explicitly provided."""
-        sts_credentials = {
-            "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-            "SecretAccessKey": "secret",
-        }
-
-        with patch("rossum_agent.bedrock_client.AnthropicBedrock") as mock_anthropic:
-            create_bedrock_client_from_sts_credentials(credentials=sts_credentials)
-
-            mock_anthropic.assert_called_once_with(
-                aws_access_key="AKIAIOSFODNN7EXAMPLE",
-                aws_secret_key="secret",
-                aws_session_token=None,
-                aws_region=None,
-                max_retries=5,
-            )
-
-    def test_handles_missing_session_token(self):
-        """Test that missing SessionToken is handled gracefully."""
-        sts_credentials = {
-            "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-            "SecretAccessKey": "secret",
-        }
-
-        with patch("rossum_agent.bedrock_client.AnthropicBedrock") as mock_anthropic:
-            create_bedrock_client_from_sts_credentials(
-                credentials=sts_credentials,
-                aws_region="us-east-1",
-            )
-
-            call_kwargs = mock_anthropic.call_args[1]
-            assert call_kwargs["aws_session_token"] is None
 
 
 class TestGetModelId:

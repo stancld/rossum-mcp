@@ -3,19 +3,9 @@
 from __future__ import annotations
 
 import os
-from typing import TypedDict
 
 import boto3
 from anthropic import AnthropicBedrock
-
-
-class STSCredentials(TypedDict, total=False):
-    """TypedDict representing STS credentials from assume_role response."""
-
-    AccessKeyId: str
-    SecretAccessKey: str
-    SessionToken: str
-
 
 DEFAULT_MODEL_ID = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
@@ -59,32 +49,6 @@ def create_bedrock_client(
         aws_secret_key=frozen_credentials.secret_key,
         aws_session_token=frozen_credentials.token,
         aws_region=session.region_name or region,
-        max_retries=5,
-    )
-
-
-def create_bedrock_client_from_sts_credentials(
-    credentials: STSCredentials, aws_region: str | None = None
-) -> AnthropicBedrock:
-    """Create AnthropicBedrock client from STS assumed role credentials.
-
-    This is useful when assuming a role via STS and passing the temporary
-    credentials directly.
-
-    Args:
-        credentials: STS credentials dictionary containing AccessKeyId, SecretAccessKey,
-            and SessionToken.
-        aws_region: AWS region for Bedrock service. Defaults to AWS_REGION
-
-    Returns:
-        Configured AnthropicBedrock client ready for API calls.
-
-    """
-    return AnthropicBedrock(
-        aws_access_key=credentials["AccessKeyId"],
-        aws_secret_key=credentials["SecretAccessKey"],
-        aws_session_token=credentials.get("SessionToken"),
-        aws_region=aws_region,
         max_retries=5,
     )
 
