@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from regression_tests.framework.assertions import (
     assert_files_created,
-    assert_success,
     assert_tokens_within_budget,
     assert_tools_match,
 )
@@ -28,7 +27,6 @@ __all__ = [
     "ToolExpectation",
     "ToolMatchMode",
     "assert_files_created",
-    "assert_success",
     "assert_tokens_within_budget",
     "assert_tools_match",
     "run_regression_test",

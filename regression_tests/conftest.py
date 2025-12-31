@@ -148,8 +148,8 @@ def create_live_agent(
     async def _create_agent(case: RegressionTestCase) -> AsyncIterator[tuple[RossumAgent, str]]:
         token = get_token_for_case(case, env_tokens, api_token_override)
         sandbox_token = get_sandbox_token_for_case(case, env_tokens, sandbox_api_token_override)
-        if sandbox_token:
-            case.prompt = case.prompt.format(sandbox_api_token=sandbox_token)
+        if sandbox_token and "{sandbox_api_token}" in case.prompt:
+            case.prompt = case.prompt.replace("{sandbox_api_token}", sandbox_token)
         elif "{sandbox_api_token}" in case.prompt:
             raise ValueError(
                 f"Test '{case.name}' uses {{sandbox_api_token}} placeholder but no sandbox token provided. "

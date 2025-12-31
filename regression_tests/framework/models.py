@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     type CustomCheckResult = tuple[Passed, Reasoning]
     type CustomCheckFn = Callable[[list[AgentStep]], CustomCheckResult]
 
-type ToolMatchMode = Literal["exact_sequence", "subset", "subsequence"]
+type ToolMatchMode = Literal["exact_sequence", "subset"]
 
 
 @dataclass
@@ -23,15 +23,12 @@ class ToolExpectation:
     Attributes:
         expected_tools: List of tool names expected to be called.
         mode: How to match tool calls:
-            - "exact_sequence": must match exactly (order + multiplicity)
+            - "exact_sequence": must match exactly in order
             - "subset": all expected must appear in actual (order not enforced)
-            - "subsequence": expected must appear as ordered subsequence in actual
-        allow_extras: Allow extra tools beyond expected (only for exact_sequence).
     """
 
     expected_tools: Sequence[str] = field(default_factory=list)
     mode: ToolMatchMode = "subset"
-    allow_extras: bool = True
 
 
 @dataclass
@@ -42,11 +39,7 @@ class TokenBudget:
     """
 
     min_total_tokens: int | None = None
-    max_input_tokens: int | None = None
-    max_output_tokens: int | None = None
     max_total_tokens: int | None = None
-    max_input_tokens_per_step: int | None = None
-    max_output_tokens_per_step: int | None = None
 
 
 @dataclass
@@ -72,13 +65,9 @@ class FileExpectation:
         expected_files: List of file patterns that should be created/modified.
             Supports glob wildcards (e.g., "*.md", "report_*.txt").
             Paths are relative to the outputs/ directory. Asserts exact count match.
-        check_exists: If True, verify files exist after test.
-        check_content: Optional dict mapping file path to expected content substring.
     """
 
     expected_files: Sequence[str] = field(default_factory=list)
-    check_exists: bool = True
-    check_content: dict[str, str] | None = None
 
 
 @dataclass

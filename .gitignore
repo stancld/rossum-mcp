@@ -16,4 +16,5 @@ outputs/
 # rossum_deploy folders
 before-changes/
 after-changes/
-sanbox-after-changes/
+sandbox-after-changes/
+production-baseline/
