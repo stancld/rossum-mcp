@@ -421,6 +421,155 @@ list_rules
      # List enabled rules for a specific schema
      enabled_schema_rules = await server.list_rules(schema_id=12345, enabled=True)
 
+update_hook
+^^^^^^^^^^^
+
+**MCP Tool:**
+  ``update_hook(hook_id: int, name: str | None, queues: list[str] | None, events: list[str] | None, config: dict | None, settings: dict | None, active: bool | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.update_part_hook(hook_id, hook_data)``
+
+**API Endpoint:**
+  ``PATCH /v1/hooks/{hook_id}``
+
+**Request Body:**
+  Partial JSON object with only the fields to update.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Updates an existing hook's properties. Only provided fields are updated; others remain
+  unchanged. Commonly used to modify hook name, attached queues, events, config, or active status.
+
+list_hook_templates
+^^^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_hook_templates()``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.request_paginated("hook_templates")``
+
+**API Endpoint:**
+  ``GET /v1/hook_templates``
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Lists all available hook templates from Rossum Store. Hook templates provide pre-built
+  extension configurations that can be used to quickly create hooks with standard functionality.
+
+create_hook_from_template
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``create_hook_from_template(name: str, hook_template_id: int, queues: list[str], events: list[str] | None, token_owner: str | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient._http_client.request_json("POST", "hooks/create", json=hook_data)``
+
+**API Endpoint:**
+  ``POST /v1/hooks/create``
+
+**Request Body:**
+  JSON object with hook name, template URL, queues, optional events, and optional token_owner.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Creates a hook from a Rossum Store template. If the template has ``use_token_owner=True``,
+  a valid token_owner user URL must be provided. Organization group admin users cannot be
+  used as token owners.
+
+patch_schema
+^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``patch_schema(schema_id: int, operation: str, node_id: str, node_data: dict | None, parent_id: str | None, position: int | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.update_schema(schema_id, data)`` (with modified content)
+
+**API Endpoint:**
+  ``PATCH /v1/schemas/{schema_id}``
+
+**Request Body:**
+  JSON object with modified schema content array.
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Patches a schema by adding, updating, or removing individual nodes without replacing the
+  entire content. Operations: "add" (requires parent_id, node_data), "update" (requires node_data),
+  "remove" (only node_id needed).
+
+get_user
+^^^^^^^^
+
+**MCP Tool:**
+  ``get_user(user_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.retrieve_user(user_id)``
+
+**API Endpoint:**
+  ``GET /v1/users/{user_id}``
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Retrieves a single user by ID. Use ``list_users`` first to find users by username or email.
+
+list_users
+^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_users(username: str | None, email: str | None, first_name: str | None, last_name: str | None, is_active: bool | None, is_organization_group_admin: bool | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.list_users(**filters)``
+
+**API Endpoint:**
+  ``GET /v1/users``
+
+**Query Parameters:**
+  - ``username``: Filter by username
+  - ``email``: Filter by email
+  - ``first_name``: Filter by first name
+  - ``last_name``: Filter by last name
+  - ``is_active``: Filter by active status
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Lists users with optional filtering. The ``is_organization_group_admin`` filter is applied
+  client-side by checking user groups against organization_group_admin role URLs.
+
+list_user_roles
+^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_user_roles()``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.list_user_roles()``
+
+**API Endpoint:**
+  ``GET /v1/groups``
+
+**SDK Documentation:**
+  https://github.com/rossumai/rossum-sdk
+
+**Implementation:**
+  Lists all user roles (groups of permissions) in the organization.
+
 Async Wrapper Pattern
 ----------------------
 
