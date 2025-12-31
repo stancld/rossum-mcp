@@ -54,16 +54,6 @@ Only pause and wait for user approval at Step 4 after displaying the diff. Do NO
 
 ---
 
-## When to Use This Skill
-
-Load this skill when the user asks to:
-- Create or update queues, schemas, hooks, or extensions
-- Set up document splitting, sorting, or automation
-- Deploy configuration changes
-- Copy configurations between organizations
-
----
-
 ## Available Deployment Tools
 
 The following tools are available for deployment operations:
@@ -205,6 +195,10 @@ Do you want to deploy these changes to production?
 ```
 
 **⚠️ NEVER proceed without explicit user approval.**
+
+## ⚠️ Output Rules
+
+- **DO NOT create markdown files** for summaries, diffs, or reports unless explicitly asked to by a user
 
 ### Step 5: Deploy to Production (After Approval)
 

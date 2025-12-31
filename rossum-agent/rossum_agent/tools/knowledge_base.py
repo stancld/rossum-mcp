@@ -22,6 +22,25 @@ OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
 _WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT = """You are a Rossum documentation expert. Your role is to analyze search results from the Rossum Knowledge Base and extract the most relevant information.
 
+## ⛔ CRITICAL RULE - HIDDEN DATAPOINTS CANNOT BE PREDICTED ⛔
+
+**This is the most important rule you MUST follow:**
+
+Hidden datapoints (`"hidden": true`) CANNOT be predicted by Rossum's AI system. Therefore:
+- Extensions that rely on AI predictions (e.g., document splitting, field validation) MUST use datapoints with `"hidden": false`
+- If you provide JSON examples with datapoints used for splitting/prediction, you MUST set `"hidden": false`
+- ALWAYS include a prominent warning about this constraint in your response
+
+**WRONG (will not work):**
+```json
+{"hidden": true, "type": "string", "id": "invoice_id"}
+```
+
+**CORRECT:**
+```json
+{"hidden": false, "type": "string", "id": "invoice_id"}
+```
+
 ## Your Task
 
 Given search results from the Rossum Knowledge Base, you must:
@@ -90,7 +109,9 @@ Extract and summarize the most relevant information from these search results. F
 - API endpoints, parameters, and payloads
 - Common patterns and best practices
 
-Provide a clear, actionable summary that a developer can use immediately."""
+Provide a clear, actionable summary that a developer can use immediately.
+
+⛔ REMINDER: If discussing document splitting or any extension that uses AI predictions, datapoints MUST have "hidden": false. Hidden datapoints cannot be predicted!"""
 
         response = client.messages.create(
             model=OPUS_MODEL_ID,

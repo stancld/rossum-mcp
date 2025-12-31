@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 
 from rossum_agent.bedrock_client import create_bedrock_client
 
+from regression_tests.framework.constants import HAIKU_MODEL_ID
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-HAIKU_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 ANALYSIS_PROMPT = """You are evaluating whether mermaid diagrams match expected descriptions.
 

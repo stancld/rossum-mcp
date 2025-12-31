@@ -135,8 +135,9 @@ def assert_success(run: RegressionRun, criteria: SuccessCriteria, output_dir: Pa
     if criteria.file_expectation.expected_files:
         assert_files_created(criteria.file_expectation, output_dir)
 
-    if criteria.custom_check:
-        criteria.custom_check(steps)
+    for check in criteria.custom_checks:
+        passed, reasoning = check.check_fn(steps)
+        assert passed, f"Custom check '{check.name}' failed: {reasoning}"
 
 
 def _matches_pattern(filename: str, pattern: str) -> bool:

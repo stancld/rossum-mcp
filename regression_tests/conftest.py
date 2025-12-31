@@ -31,20 +31,23 @@ def _load_env_tokens() -> dict[str, str]:
     return {}
 
 
-def _get_token_for_test(test_name: str, env_tokens: dict[str, str]) -> str | None:
+def _get_token_for_test(test_name: str, env_tokens: dict[str, str], suffix: str = "API_TOKEN") -> str | None:
     """Get API token for a specific test from .env file.
 
-    Looks for: TEST_NAME_API_TOKEN (uppercase, underscores)
-    Falls back to: DEFAULT_API_TOKEN
+    Looks for: TEST_NAME_{suffix} (uppercase, underscores)
+    Falls back to: DEFAULT_{suffix}
     """
-    key = f"{test_name.upper().replace('-', '_')}_API_TOKEN"
-    return env_tokens.get(key) or env_tokens.get("DEFAULT_API_TOKEN")
+    key = f"{test_name.upper().replace('-', '_')}_{suffix}"
+    return env_tokens.get(key) or env_tokens.get(f"DEFAULT_{suffix}")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add command-line options for regression tests."""
     parser.addoption(
         "--api-token", action="store", default=None, help="Rossum API token (overrides all other sources)"
+    )
+    parser.addoption(
+        "--sandbox-api-token", action="store", default=None, help="Sandbox API token for cross-org operations"
     )
     parser.addoption(
         "--show-answer", action="store_true", default=False, help="Show the full final answer in test output"
@@ -66,6 +69,12 @@ def env_tokens() -> dict[str, str]:
 def api_token_override(request: pytest.FixtureRequest) -> str | None:
     """Get API token from command line (highest priority)."""
     return request.config.getoption("--api-token")
+
+
+@pytest.fixture(scope="session")
+def sandbox_api_token_override(request: pytest.FixtureRequest) -> str | None:
+    """Get sandbox API token from command line (highest priority)."""
+    return request.config.getoption("--sandbox-api-token")
 
 
 @pytest.fixture(scope="session")
@@ -102,22 +111,50 @@ def get_token_for_case(case: RegressionTestCase, env_tokens: dict[str, str], api
     )
 
 
+def get_sandbox_token_for_case(
+    case: RegressionTestCase, env_tokens: dict[str, str], sandbox_override: str | None
+) -> str | None:
+    """Resolve sandbox API token for a test case.
+
+    Priority: --sandbox-api-token flag > .env TEST_NAME_SANDBOX_API_TOKEN > .env DEFAULT_SANDBOX_API_TOKEN > case.sandbox_api_token
+    """
+    if sandbox_override:
+        return sandbox_override
+
+    if env_token := _get_token_for_test(case.name, env_tokens, suffix="SANDBOX_API_TOKEN"):
+        return env_token
+
+    return case.sandbox_api_token
+
+
 @pytest.fixture
 def create_live_agent(
-    env_tokens: dict[str, str], api_token_override: str | None, temp_output_dir: Path
-) -> Callable[[RegressionTestCase], AsyncIterator[RossumAgent]]:
+    env_tokens: dict[str, str],
+    api_token_override: str | None,
+    sandbox_api_token_override: str | None,
+    temp_output_dir: Path,
+) -> Callable[[RegressionTestCase], AsyncIterator[tuple[RossumAgent, str]]]:
     """Factory fixture to create a live RossumAgent for a test case.
 
     Usage:
-        async with create_live_agent(case) as agent:
-            # run tests with agent
+        async with create_live_agent(case) as (agent, prompt):
+            # run tests with agent using the formatted prompt
 
     Token priority: --api-token flag > .env TEST_NAME_API_TOKEN > .env DEFAULT_API_TOKEN > case.api_token
+    Sandbox token priority: --sandbox-api-token flag > .env TEST_NAME_SANDBOX_API_TOKEN > .env DEFAULT_SANDBOX_API_TOKEN > case.sandbox_api_token
     """
 
     @asynccontextmanager
-    async def _create_agent(case: RegressionTestCase) -> AsyncIterator[RossumAgent]:
+    async def _create_agent(case: RegressionTestCase) -> AsyncIterator[tuple[RossumAgent, str]]:
         token = get_token_for_case(case, env_tokens, api_token_override)
+        sandbox_token = get_sandbox_token_for_case(case, env_tokens, sandbox_api_token_override)
+        if sandbox_token:
+            case.prompt = case.prompt.format(sandbox_api_token=sandbox_token)
+        elif "{sandbox_api_token}" in case.prompt:
+            raise ValueError(
+                f"Test '{case.name}' uses {{sandbox_api_token}} placeholder but no sandbox token provided. "
+                "Use --sandbox-api-token flag or set DEFAULT_SANDBOX_API_TOKEN in .env"
+            )
 
         config = AgentConfig(max_tokens=128000, max_steps=50, temperature=0.0, request_delay=3.0)
 
