@@ -29,5 +29,11 @@ tests = [
 where = ["."]
 include = ["rossum_deploy*"]
 
+[tool.pytest.ini_options]
+markers = [
+    "unit: marks tests as unit tests",
+]
+testpaths = ["tests"]
+
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
