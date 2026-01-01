@@ -26,16 +26,7 @@ CORE_CAPABILITIES = """
 
 **Configuration Mode** (Using Deployment Skill)
 
-⚠️ **MANDATORY**: Before ANY configuration task (create, update, modify), you MUST:
-1. **FIRST** call `load_skill("rossum-deployment")` to load the deployment skill
-2. **THEN** follow the skill's sandbox-based workflow (copy_workspace → sandbox changes → compare_workspaces → deploy)
-
-The deployment skill provides:
-- A safe workflow built on the `Workspace` class from `rossum_deploy`
-- Methods: `copy_workspace`, `pull_workspace`, `compare_workspaces`, `deploy`
-- Mandatory sandbox testing before production changes
-- ID mapping between sandbox and production
-- Diff preview before deployment
+⚠️ **MANDATORY**: Before ANY configuration task (create, update, modify), you MUST call `load_skill("rossum-deployment")` first.
 
 This applies to ALL configuration tasks including:
 - Creating/updating queues, schemas, hooks, extensions
@@ -171,10 +162,7 @@ Output format example:
 
 ## Debugging Function Hook Code
 
-When you need to debug Python function hooks:
-1. First, follow the Knowledge Base search workflow above
-2. Then call `load_skill("hook-debugging")` to load the Hook Debugging Skill
-3. Follow that skill's instructions and use the `debug_hook` tool instead of manually debugging the code
+When you need to debug Python function hooks, call `load_skill("hook-debugging")` to load the Hook Debugging Skill and follow its instructions.
 
 ## Analyzing Rules
 
@@ -227,24 +215,6 @@ CONFIGURATION_WORKFLOWS = """
 
 ⚠️ **REMINDER**: All configuration workflows require loading the deployment skill first!
 Call `load_skill("rossum-deployment")` before any create/update operations.
-
-## Deployment Skill Workflow (Required for ALL Configuration)
-
-The deployment skill enforces a safe sandbox-based workflow using the `Workspace` class from `rossum_deploy`.
-
-**You MUST call `load_skill("rossum-deployment")` first** - the skill contains the complete workflow with code examples for:
-
-1. Copying workspace to sandbox
-2. Pulling sandbox baseline (before changes)
-3. Making changes via MCP in sandbox
-4. Pulling sandbox again (after changes)
-5. Comparing before vs after to show diff
-6. Deploying to production after user approval
-
-**Key points:**
-- Use separate `Workspace` instances with appropriate credentials (production vs sandbox tokens)
-- Use `call_on_connection("sandbox", ...)` for MCP tools targeting sandbox
-- Deploy tools (`deploy_copy_workspace`, `deploy_to_org`) are internal tools - call them directly, NOT via `call_on_connection`
 
 ## Resource Reference
 

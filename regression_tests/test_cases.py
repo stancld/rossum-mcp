@@ -181,7 +181,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "deploy_copy_workspace",
                 "spawn_mcp_connection",
                 "call_on_connection",
-                "deploy_pull",
+                "deploy_pull_workspace",
             ],
             mode="subset",
         ),

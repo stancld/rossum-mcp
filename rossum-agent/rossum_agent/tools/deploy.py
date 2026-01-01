@@ -95,6 +95,47 @@ def deploy_pull(
 
 
 @beta_tool
+def deploy_pull_workspace(
+    workspace_id: int, workspace_path: str | None = None, api_base_url: str | None = None, token: str | None = None
+) -> str:
+    """Pull a single workspace and its related objects from Rossum to local files.
+
+    More efficient than deploy_pull when you only need one workspace.
+    Downloads the workspace, its queues, schemas, hooks, inboxes, and other related objects.
+
+    Args:
+        workspace_id: The workspace ID to pull.
+        workspace_path: Optional path to the workspace directory.
+            Defaults to './rossum-config' in the session output directory.
+        api_base_url: Optional API base URL for the target environment.
+            Use this when pulling from sandbox/different environment.
+        token: Optional API token for the target environment.
+            Use this when pulling from sandbox/different environment.
+
+    Returns:
+        JSON with pull summary including counts of pulled objects.
+    """
+    logger.info(f"deploy_pull_workspace called with {workspace_id=}, {workspace_path=}, {api_base_url=}")
+
+    try:
+        ws = create_workspace(workspace_path, api_base_url=api_base_url, token=token)
+        result = ws.pull_workspace(workspace_id=workspace_id)
+
+        return json.dumps(
+            {
+                "status": "success",
+                "summary": result.summary(),
+                "pulled_count": len(result.pulled),
+                "skipped_count": len(result.skipped),
+                "workspace_path": str(ws.path),
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in deploy_pull_workspace")
+        return json.dumps({"status": "error", "error": str(e)})
+
+
+@beta_tool
 def deploy_diff(workspace_path: str | None = None) -> str:
     """Compare local workspace files with remote Rossum configuration.
 
@@ -399,6 +440,7 @@ def deploy_to_org(
 
 DEPLOY_TOOLS: list[BetaTool[..., str]] = [
     deploy_pull,
+    deploy_pull_workspace,
     deploy_diff,
     deploy_push,
     deploy_copy_org,

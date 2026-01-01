@@ -7,6 +7,7 @@ The prompt is adapted for use with Anthropic's native tool use API.
 
 from __future__ import annotations
 
+from rossum_agent.agent.skills import format_skills_summary_for_prompt
 from rossum_agent.prompts.base_prompt import ROSSUM_EXPERT_INTRO, get_shared_prompt_sections
 
 TOOL_USE_INTRO = """
@@ -22,12 +23,6 @@ When using tools:
 3. Analyze the results
 4. Provide clear, actionable responses"""
 
-SYSTEM_PROMPT = f"""{ROSSUM_EXPERT_INTRO}
-{TOOL_USE_INTRO}
-
----
-{get_shared_prompt_sections()}"""
-
 
 def get_system_prompt() -> str:
     """Get the system prompt for the RossumAgent.
@@ -35,4 +30,14 @@ def get_system_prompt() -> str:
     Returns:
         The system prompt string defining agent behavior.
     """
-    return SYSTEM_PROMPT
+    base_prompt = f"""{ROSSUM_EXPERT_INTRO}
+{TOOL_USE_INTRO}
+
+---
+{get_shared_prompt_sections()}"""
+
+    skills_section = format_skills_summary_for_prompt()
+    if skills_section:
+        base_prompt += f"\n\n---\n{skills_section}"
+
+    return base_prompt
