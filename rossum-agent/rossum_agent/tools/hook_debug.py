@@ -530,7 +530,7 @@ Steps:
                                 )
                                 logger.info(f"debug_hook sub-agent [iter {iteration + 1}/{max_iterations}]: {log_msg}")
                             except Exception:
-                                pass
+                                logger.debug("Failed to parse tool result for logging")
                         tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
                     except Exception as e:
                         logger.warning(f"Tool {tool_name} failed: {e}")

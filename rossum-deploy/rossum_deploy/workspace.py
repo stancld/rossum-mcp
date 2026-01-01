@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -642,8 +643,11 @@ class Workspace:
         - "??" = untracked file (excluded)
         """
         try:
+            git_executable = shutil.which("git")
+            if not git_executable:
+                return False
             result = subprocess.run(
-                ["git", "status", "-s", "--", str(file_path.resolve())],
+                [git_executable, "status", "-s", "--", str(file_path.resolve())],
                 cwd=file_path.parent,
                 capture_output=True,
                 text=True,
