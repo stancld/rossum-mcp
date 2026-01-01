@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import subprocess
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -73,14 +74,16 @@ class TestExtractTextFromContent:
 class TestGetCommitSha:
     """Test get_commit_sha function."""
 
+    @patch("rossum_agent.redis_storage.shutil.which", return_value="/usr/bin/git")
     @patch("rossum_agent.redis_storage.subprocess.run")
-    def test_get_commit_sha_success(self, mock_run):
+    def test_get_commit_sha_success(self, mock_run, mock_which):
         """Test successful git commit SHA retrieval."""
         mock_run.return_value = MagicMock(returncode=0, stdout="abc1234\n")
         result = get_commit_sha()
         assert result == "abc1234"
+        mock_which.assert_called_once_with("git")
         mock_run.assert_called_once_with(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["/usr/bin/git", "rev-parse", "--short", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -208,9 +211,10 @@ class TestChatData:
         """Test custom values."""
         messages = [{"role": "user", "content": "Hello"}]
         metadata = ChatMetadata(commit_sha="abc")
-        data = ChatData(messages=messages, output_dir="/tmp/output", metadata=metadata)
+        output_dir = str(Path(tempfile.gettempdir()) / "output")
+        data = ChatData(messages=messages, output_dir=output_dir, metadata=metadata)
         assert data.messages == messages
-        assert data.output_dir == "/tmp/output"
+        assert data.output_dir == output_dir
         assert data.metadata.commit_sha == "abc"
 
 
@@ -343,12 +347,21 @@ class TestRedisStorage:
     @patch("rossum_agent.redis_storage.redis.Redis")
     def test_load_chat_success(self, mock_redis):
         """Test successful chat load."""
+        output_dir = str(Path(tempfile.gettempdir()) / "output")
         mock_client = MagicMock()
-        mock_client.get.return_value = (
-            b'{"messages": [{"role": "user", "content": "Hello"}], "output_dir": "/tmp/output", '
-            b'"metadata": {"commit_sha": "abc123", "total_input_tokens": 100, "total_output_tokens": 50, '
-            b'"total_tool_calls": 3, "total_steps": 2}}'
-        )
+        mock_client.get.return_value = json.dumps(
+            {
+                "messages": [{"role": "user", "content": "Hello"}],
+                "output_dir": output_dir,
+                "metadata": {
+                    "commit_sha": "abc123",
+                    "total_input_tokens": 100,
+                    "total_output_tokens": 50,
+                    "total_tool_calls": 3,
+                    "total_steps": 2,
+                },
+            }
+        ).encode()
         mock_redis.return_value = mock_client
 
         storage = RedisStorage()
@@ -358,7 +371,7 @@ class TestRedisStorage:
         assert len(chat_data.messages) == 1
         assert chat_data.messages[0]["role"] == "user"
         assert chat_data.messages[0]["content"] == "Hello"
-        assert chat_data.output_dir == "/tmp/output"
+        assert chat_data.output_dir == output_dir
         assert chat_data.metadata.commit_sha == "abc123"
         assert chat_data.metadata.total_input_tokens == 100
         assert chat_data.metadata.total_output_tokens == 50

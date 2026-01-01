@@ -7,6 +7,7 @@ import datetime as dt
 import json
 import logging
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -46,8 +47,11 @@ def get_commit_sha() -> str | None:
         Short commit SHA or None if not in a git repository.
     """
     try:
+        git_executable = shutil.which("git")
+        if not git_executable:
+            return None
         result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            [git_executable, "rev-parse", "--short", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -56,7 +60,7 @@ def get_commit_sha() -> str | None:
         if result.returncode == 0:
             return result.stdout.strip()
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
-        pass
+        logger.debug("Failed to get git commit SHA")
     return None
 
 

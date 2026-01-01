@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from rossum_agent.api.services.chat_service import ChatService
@@ -159,10 +161,11 @@ class TestChatServiceGetChat:
 
     def test_get_chat_success(self):
         """Test get_chat with existing chat."""
+        output_dir = str(Path(tempfile.gettempdir()) / "output")
         mock_storage = MagicMock()
         mock_storage.load_chat.return_value = ChatData(
             messages=[{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}],
-            output_dir="/tmp/output",
+            output_dir=output_dir,
             metadata=ChatMetadata(),
         )
         mock_storage.list_files.return_value = [
@@ -267,10 +270,11 @@ class TestChatServiceGetMessages:
 
     def test_get_messages_success(self):
         """Test get_messages returns raw messages."""
+        output_dir = str(Path(tempfile.gettempdir()) / "output")
         mock_storage = MagicMock()
         messages = [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi!"}]
         mock_storage.load_chat.return_value = ChatData(
-            messages=messages, output_dir="/tmp/output", metadata=ChatMetadata()
+            messages=messages, output_dir=output_dir, metadata=ChatMetadata()
         )
 
         service = ChatService(redis_storage=mock_storage)
@@ -298,11 +302,10 @@ class TestChatServiceSaveMessages:
         """Test save_messages with output directory."""
         mock_storage = MagicMock()
         mock_storage.save_chat.return_value = True
-        from pathlib import Path
 
         service = ChatService(redis_storage=mock_storage)
         messages = [{"role": "user", "content": "Hello"}]
-        output_dir = Path("/tmp/output")
+        output_dir = Path(tempfile.gettempdir()) / "output"
         result = service.save_messages(
             user_id="user_123", chat_id="chat_123", messages=messages, output_dir=output_dir
         )

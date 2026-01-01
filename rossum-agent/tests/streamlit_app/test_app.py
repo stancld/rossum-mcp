@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -312,7 +314,7 @@ class TestMainFunction:
             mock_redis.return_value = mock_redis_instance
 
             mock_gen_chat.return_value = "chat-test-123"
-            mock_create_dir.return_value = "/tmp/test_output"
+            mock_create_dir.return_value = str(Path(tempfile.gettempdir()) / "test_output")
             mock_get_files.return_value = []
             mock_get_meta.return_value = {}
             mock_detect_user.return_value = "test-user"
