@@ -10,6 +10,7 @@ from rossum_agent.agent.skills import (
     Skill,
     SkillRegistry,
     format_skills_for_prompt,
+    format_skills_summary_for_prompt,
     get_skill,
     get_skill_content,
     get_skill_registry,
@@ -124,7 +125,7 @@ class TestFormatSkillsForPrompt:
 
         result = format_skills_for_prompt(skills)
 
-        assert "Available Skills" in result
+        assert "Loaded Skills" in result
         assert "Content A" in result
         assert "Content B" in result
         assert "=" in result
@@ -132,6 +133,34 @@ class TestFormatSkillsForPrompt:
     def test_returns_empty_string_for_no_skills(self):
         """Test that empty list returns empty string."""
         result = format_skills_for_prompt([])
+        assert result == ""
+
+
+class TestFormatSkillsSummaryForPrompt:
+    """Test format_skills_summary_for_prompt function."""
+
+    def test_formats_summary_with_skill_slugs(self):
+        """Test that summary includes skill slugs and first paragraph."""
+        skills = [
+            Skill(
+                name="Skill A",
+                content="# Skill A\n\nThis is the first para.\n\nSecond para.",
+                file_path=Path("skill-a.md"),
+            ),
+            Skill(name="Skill B", content="# Skill B\n\nAnother first para.", file_path=Path("skill-b.md")),
+        ]
+
+        result = format_skills_summary_for_prompt(skills)
+
+        assert "Available Skills" in result
+        assert "skill-a" in result
+        assert "skill-b" in result
+        assert "load_skill" in result
+        assert "Second para" not in result
+
+    def test_returns_empty_string_for_no_skills(self):
+        """Test that empty list returns empty string."""
+        result = format_skills_summary_for_prompt([])
         assert result == ""
 
 

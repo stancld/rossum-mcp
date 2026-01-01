@@ -113,7 +113,28 @@ def get_all_skills() -> list[Skill]:
     return get_skill_registry().get_all_skills()
 
 
+def format_skills_summary_for_prompt(skills: list[Skill] | None = None) -> str:
+    """Format a brief summary of available skills for the system prompt.
+
+    Only includes skill name and first paragraph (description), not full content.
+    Full content is injected when load_skill is called.
+    """
+    if skills is None:
+        skills = get_all_skills()
+
+    if not skills:
+        return ""
+
+    lines = ["## Available Skills", "", 'Call `load_skill("<skill-slug>")` to load full instructions.', ""]
+    for skill in skills:
+        first_para = skill.content.split("\n\n")[0].strip()
+        lines.append(f"- **{skill.slug}**: {first_para}")
+
+    return "\n".join(lines)
+
+
 def format_skills_for_prompt(skills: list[Skill] | None = None) -> str:
+    """Format full skill content for injection after load_skill is called."""
     if skills is None:
         skills = get_all_skills()
 
@@ -124,7 +145,7 @@ def format_skills_for_prompt(skills: list[Skill] | None = None) -> str:
     for skill in skills:
         sections.append(f"\n{'=' * 60}\n{skill.content}\n{'=' * 60}")
 
-    return "\n\n## Available Skills\n" + "\n".join(sections)
+    return "\n\n## Loaded Skills\n" + "\n".join(sections)
 
 
 def get_skill_content(slug: str) -> str | None:

@@ -61,6 +61,7 @@ The following tools are available for deployment operations:
 | Tool | Description |
 |------|-------------|
 | `deploy_pull` | Pull configuration from an organization to local files |
+| `deploy_pull_workspace` | Pull a single workspace to local files (more efficient) |
 | `deploy_diff` | Compare local files with remote configuration |
 | `deploy_push` | Push local changes to remote |
 | `deploy_copy_org` | Copy entire organization to target org |
@@ -134,8 +135,8 @@ Use `deploy_compare_workspaces` to see field-level diffs between sandbox state B
 
 ```python
 # Pull sandbox workspace BEFORE making changes (right after deploy_copy_workspace)
-deploy_pull(
-    workspace_id=<target_workspace_id>,  # Use ID from deploy_copy_workspace output
+deploy_pull_workspace(
+    workspace_id=<target_workspace_id>,  # Use workspace ID from deploy_copy_workspace output
     workspace_path="./before-changes",
     api_base_url="https://api.elis.rossum.ai/v1",
     token="<sandbox_token>"
@@ -144,7 +145,7 @@ deploy_pull(
 # ... make changes in sandbox via call_on_connection() ...
 
 # Pull sandbox workspace AFTER making changes
-deploy_pull(
+deploy_pull_workspace(
     workspace_id=<target_workspace_id>,  # Same workspace ID
     workspace_path="./after-changes",
     api_base_url="https://api.elis.rossum.ai/v1",
@@ -228,11 +229,20 @@ deploy_to_org(
 
 ### deploy_pull
 
-Pull Rossum configuration objects to local files. **Use `workspace_id` (not `org_id`) for before/after comparisons.**
+Pull Rossum configuration objects from an entire organization to local files.
 
 **Parameters:**
-- `workspace_id` (recommended): The workspace ID to pull - use this for comparing workspaces
-- `org_id` (alternative): The organization ID to pull from - pulls ALL workspaces (overkill for comparisons)
+- `org_id` (required): The organization ID to pull from
+- `workspace_path` (optional): Path to workspace directory
+- `api_base_url` (optional): API base URL for target environment
+- `token` (optional): API token for target environment
+
+### deploy_pull_workspace
+
+Pull a single workspace and its related objects to local files. **Preferred over deploy_pull** when you only need one workspace (more efficient).
+
+**Parameters:**
+- `workspace_id` (required): The workspace ID to pull
 - `workspace_path` (optional): Path to workspace directory
 - `api_base_url` (optional): API base URL for target environment
 - `token` (optional): API token for target environment
@@ -294,12 +304,12 @@ Compare two local workspaces to see differences between source and target. Use t
 deploy_copy_workspace(source_workspace_id=1787227, target_org_id=729505, ...)
 
 # 2. Pull sandbox workspace BEFORE making changes
-deploy_pull(workspace_id=<target_workspace_id>, workspace_path="./before-changes", token="<sandbox_token>")
+deploy_pull_workspace(workspace_id=<target_workspace_id>, workspace_path="./before-changes", token="<sandbox_token>")
 
 # 3. Make changes in sandbox via call_on_connection()...
 
 # 4. Pull sandbox workspace AFTER changes
-deploy_pull(workspace_id=<target_workspace_id>, workspace_path="./after-changes", token="<sandbox_token>")
+deploy_pull_workspace(workspace_id=<target_workspace_id>, workspace_path="./after-changes", token="<sandbox_token>")
 
 # 5. Compare before vs after states
 deploy_compare_workspaces(
