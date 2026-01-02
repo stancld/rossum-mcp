@@ -764,58 +764,64 @@ class Workspace:
           that is the direct child of a multivalue
         """
         cleaned: dict[str, Any] = {}
-
-        # Fields only valid for children of a multivalue's tuple
         multivalue_tuple_only_fields = {"width", "stretch", "can_collapse", "width_chars"}
-
         is_multivalue = node.get("category") == "multivalue"
         is_tuple = node.get("category") == "tuple"
 
         for key, value in node.items():
-            # Skip null values - API rejects them
             if value is None:
                 continue
-
-            # Skip multivalue-tuple-only fields when not in that context
             if key in multivalue_tuple_only_fields and not parent_is_multivalue_tuple:
                 continue
 
-            # Handle children - can be a list or a single object (for multivalue tuple)
             if key == "children":
-                if isinstance(value, dict):
-                    # Single child object (e.g., tuple inside multivalue)
-                    # If current node is multivalue and child is tuple, the tuple's
-                    # children will get the multivalue-tuple context
-                    child_is_tuple = value.get("category") == "tuple"
-                    # Pass True if this is a multivalue with a tuple child
-                    next_parent_is_mv_tuple = is_multivalue and child_is_tuple
-                    cleaned[key] = self._clean_schema_node(value, next_parent_is_mv_tuple)
-                elif isinstance(value, list):
-                    cleaned_children = []
-                    for child in value:
-                        if isinstance(child, dict):
-                            child_is_tuple = child.get("category") == "tuple"
-                            # If we're a multivalue and child is a tuple, that tuple's
-                            # children get the multivalue-tuple context
-                            # If we're a tuple that's inside a multivalue (is_tuple and parent_is_multivalue_tuple),
-                            # our children ARE the multivalue-tuple children
-                            if is_tuple and parent_is_multivalue_tuple:
-                                # We ARE the tuple inside a multivalue, our children get True
-                                cleaned_children.append(self._clean_schema_node(child, True))
-                            elif is_multivalue and child_is_tuple:
-                                # We're multivalue and child is tuple, tuple's children get True
-                                cleaned_children.append(self._clean_schema_node(child, True))
-                            else:
-                                cleaned_children.append(self._clean_schema_node(child, False))
-                        else:
-                            cleaned_children.append(child)
-                    cleaned[key] = cleaned_children
-                else:
-                    cleaned[key] = value
+                cleaned[key] = self._clean_children(value, is_multivalue, is_tuple, parent_is_multivalue_tuple)
             else:
                 cleaned[key] = value
 
         return cleaned
+
+    def _clean_children(
+        self, value: Any, is_multivalue: bool, is_tuple: bool, parent_is_multivalue_tuple: bool
+    ) -> Any:
+        """Clean children field which can be a dict, list, or other value."""
+        if isinstance(value, dict):
+            return self._clean_single_child(value, is_multivalue)
+        if isinstance(value, list):
+            return self._clean_child_list(value, is_multivalue, is_tuple, parent_is_multivalue_tuple)
+        return value
+
+    def _clean_single_child(self, child: dict[str, Any], is_multivalue: bool) -> dict[str, Any]:
+        """Clean a single child dict (e.g., tuple inside multivalue)."""
+        child_is_tuple = child.get("category") == "tuple"
+        next_parent_is_mv_tuple = is_multivalue and child_is_tuple
+        return self._clean_schema_node(child, next_parent_is_mv_tuple)
+
+    def _clean_child_list(
+        self, children: list[Any], is_multivalue: bool, is_tuple: bool, parent_is_multivalue_tuple: bool
+    ) -> list[Any]:
+        """Clean a list of children."""
+        cleaned_children = []
+        for child in children:
+            if isinstance(child, dict):
+                next_context = self._determine_child_context(
+                    child, is_multivalue, is_tuple, parent_is_multivalue_tuple
+                )
+                cleaned_children.append(self._clean_schema_node(child, next_context))
+            else:
+                cleaned_children.append(child)
+        return cleaned_children
+
+    def _determine_child_context(
+        self, child: dict[str, Any], is_multivalue: bool, is_tuple: bool, parent_is_multivalue_tuple: bool
+    ) -> bool:
+        """Determine if child should have multivalue-tuple context."""
+        if is_tuple and parent_is_multivalue_tuple:
+            return True
+        child_is_tuple = child.get("category") == "tuple"
+        if is_multivalue and child_is_tuple:
+            return True
+        return False
 
     def _find_object_path(self, obj_type: ObjectType, obj_id: int) -> Path | None:
         for path in self._list_local_objects(obj_type):
