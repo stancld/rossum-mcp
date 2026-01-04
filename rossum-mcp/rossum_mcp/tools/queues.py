@@ -22,55 +22,123 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901
+async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
+    logger.debug(f"Retrieving queue: queue_id={queue_id}")
+    queue: Queue = await client.retrieve_queue(queue_id)
+    return queue
+
+
+async def _get_queue_schema(client: AsyncRossumAPIClient, queue_id: int) -> Schema:
+    logger.debug(f"Retrieving queue schema: queue_id={queue_id}")
+    queue: Queue = await client.retrieve_queue(queue_id)
+    schema_url = queue.schema
+    schema_id = int(schema_url.rstrip("/").split("/")[-1])
+    schema: Schema = await client.retrieve_schema(schema_id)
+    return schema
+
+
+async def _get_queue_engine(client: AsyncRossumAPIClient, queue_id: int) -> Engine | dict:
+    logger.debug(f"Retrieving queue engine: queue_id={queue_id}")
+    queue: Queue = await client.retrieve_queue(queue_id)
+
+    engine_url = None
+    if queue.dedicated_engine:
+        engine_url = queue.dedicated_engine
+    elif queue.generic_engine:
+        engine_url = queue.generic_engine
+    elif queue.engine:
+        engine_url = queue.engine
+
+    if not engine_url:
+        return {"message": "No engine assigned to this queue"}
+
+    try:
+        if isinstance(engine_url, str):
+            engine_id = int(engine_url.rstrip("/").split("/")[-1])
+            engine: Engine = await client.retrieve_engine(engine_id)
+        else:
+            engine = deserialize_default(Resource.Engine, engine_url)
+    except APIClientError as e:
+        if e.status_code == 404:
+            return {"message": f"Engine not found (engine URL: {engine_url})"}
+        raise
+
+    return engine
+
+
+async def _create_queue(
+    client: AsyncRossumAPIClient,
+    name: str,
+    workspace_id: int,
+    schema_id: int,
+    engine_id: int | None = None,
+    inbox_id: int | None = None,
+    connector_id: int | None = None,
+    locale: str = "en_GB",
+    automation_enabled: bool = False,
+    automation_level: str = "never",
+    training_enabled: bool = True,
+    splitting_screen_feature_flag: bool = False,
+) -> Queue | dict:
+    if not is_read_write_mode():
+        return {"error": "create_queue is not available in read-only mode"}
+
+    logger.debug(
+        f"Creating queue: name={name}, workspace_id={workspace_id}, schema_id={schema_id}, engine_id={engine_id}"
+    )
+
+    queue_data: dict = {
+        "name": name,
+        "workspace": build_resource_url("workspaces", workspace_id),
+        "schema": build_resource_url("schemas", schema_id),
+        "locale": locale,
+        "automation_enabled": automation_enabled,
+        "automation_level": automation_level,
+        "training_enabled": training_enabled,
+    }
+
+    if engine_id is not None:
+        queue_data["engine"] = build_resource_url("engines", engine_id)
+    if inbox_id is not None:
+        queue_data["inbox"] = build_resource_url("inboxes", inbox_id)
+    if connector_id is not None:
+        queue_data["connector"] = build_resource_url("connectors", connector_id)
+    if splitting_screen_feature_flag:
+        if os.environ.get("SPLITTING_SCREEN_FLAG_NAME") and os.environ.get("SPLITTING_SCREEN_FLAG_VALUE"):
+            queue_data["settings"] = {
+                os.environ["SPLITTING_SCREEN_FLAG_NAME"]: os.environ["SPLITTING_SCREEN_FLAG_VALUE"]
+            }
+        else:
+            logger.error("Splitting screen failed to update")
+
+    queue: Queue = await client.create_new_queue(queue_data)
+    return queue
+
+
+async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data: dict) -> Queue | dict:
+    if not is_read_write_mode():
+        return {"error": "update_queue is not available in read-only mode"}
+
+    logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
+    updated_queue_data = await client._http_client.update(Resource.Queue, queue_id, queue_data)
+    updated_queue: Queue = client._deserializer(Resource.Queue, updated_queue_data)
+    return updated_queue
+
+
+def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register queue-related tools with the FastMCP server."""
 
     @mcp.tool(description="Retrieve queue details.")
     async def get_queue(queue_id: int) -> Queue:
-        """Retrieve queue details."""
-        logger.debug(f"Retrieving queue: queue_id={queue_id}")
-        queue: Queue = await client.retrieve_queue(queue_id)
-        return queue
+        return await _get_queue(client, queue_id)
 
     @mcp.tool(description="Retrieve queue schema.")
     async def get_queue_schema(queue_id: int) -> Schema:
-        """Retrieve complete schema for a queue."""
-        logger.debug(f"Retrieving queue schema: queue_id={queue_id}")
-        queue: Queue = await client.retrieve_queue(queue_id)
-        schema_url = queue.schema
-        schema_id = int(schema_url.rstrip("/").split("/")[-1])
-        schema: Schema = await client.retrieve_schema(schema_id)
-        return schema
+        return await _get_queue_schema(client, queue_id)
 
     @mcp.tool(description="Retrieve queue engine. Returns None if no engine assigned.")
     async def get_queue_engine(queue_id: int) -> Engine | dict:
-        """Retrieve complete engine information for a queue."""
-        logger.debug(f"Retrieving queue engine: queue_id={queue_id}")
-        queue: Queue = await client.retrieve_queue(queue_id)
-
-        engine_url = None
-        if queue.dedicated_engine:
-            engine_url = queue.dedicated_engine
-        elif queue.generic_engine:
-            engine_url = queue.generic_engine
-        elif queue.engine:
-            engine_url = queue.engine
-
-        if not engine_url:
-            return {"message": "No engine assigned to this queue"}
-
-        try:
-            if isinstance(engine_url, str):
-                engine_id = int(engine_url.rstrip("/").split("/")[-1])
-                engine: Engine = await client.retrieve_engine(engine_id)
-            else:
-                engine = deserialize_default(Resource.Engine, engine_url)
-        except APIClientError as e:
-            if e.status_code == 404:
-                return {"message": f"Engine not found (engine URL: {engine_url})"}
-            raise
-
-        return engine
+        return await _get_queue_engine(client, queue_id)
 
     @mcp.tool(description="Create a queue.")
     async def create_queue(
@@ -86,48 +154,21 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  #
         training_enabled: bool = True,
         splitting_screen_feature_flag: bool = False,
     ) -> Queue | dict:
-        """Create a new queue with schema and optional engine assignment."""
-        if not is_read_write_mode():
-            return {"error": "create_queue is not available in read-only mode"}
-
-        logger.debug(
-            f"Creating queue: name={name}, workspace_id={workspace_id}, schema_id={schema_id}, engine_id={engine_id}"
+        return await _create_queue(
+            client,
+            name,
+            workspace_id,
+            schema_id,
+            engine_id,
+            inbox_id,
+            connector_id,
+            locale,
+            automation_enabled,
+            automation_level,
+            training_enabled,
+            splitting_screen_feature_flag,
         )
-
-        queue_data: dict = {
-            "name": name,
-            "workspace": build_resource_url("workspaces", workspace_id),
-            "schema": build_resource_url("schemas", schema_id),
-            "locale": locale,
-            "automation_enabled": automation_enabled,
-            "automation_level": automation_level,
-            "training_enabled": training_enabled,
-        }
-
-        if engine_id is not None:
-            queue_data["engine"] = build_resource_url("engines", engine_id)
-        if inbox_id is not None:
-            queue_data["inbox"] = build_resource_url("inboxes", inbox_id)
-        if connector_id is not None:
-            queue_data["connector"] = build_resource_url("connectors", connector_id)
-        if splitting_screen_feature_flag:
-            if os.environ.get("SPLITTING_SCREEN_FLAG_NAME") and os.environ.get("SPLITTING_SCREEN_FLAG_VALUE"):
-                queue_data["settings"] = {
-                    os.environ["SPLITTING_SCREEN_FLAG_NAME"]: os.environ["SPLITTING_SCREEN_FLAG_VALUE"]
-                }
-            else:
-                logger.error("Splitting screen failed to update")
-
-        queue: Queue = await client.create_new_queue(queue_data)
-        return queue
 
     @mcp.tool(description="Update queue settings.")
     async def update_queue(queue_id: int, queue_data: dict) -> Queue | dict:
-        """Update an existing queue with new settings."""
-        if not is_read_write_mode():
-            return {"error": "update_queue is not available in read-only mode"}
-
-        logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
-        updated_queue_data = await client._http_client.update(Resource.Queue, queue_id, queue_data)
-        updated_queue: Queue = client._deserializer(Resource.Queue, updated_queue_data)
-        return updated_queue
+        return await _update_queue(client, queue_id, queue_data)
