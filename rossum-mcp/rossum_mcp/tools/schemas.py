@@ -1,3 +1,5 @@
+"""Schema tools for Rossum MCP Server."""
+
 from __future__ import annotations
 
 import copy
@@ -162,9 +164,7 @@ def _find_node_in_children(
                 if result[0] is not None:
                     return result
             elif isinstance(nested_children, dict):
-                # Multivalue has a single dict child (tuple), not a list
                 if nested_children.get("id") == node_id:
-                    # Return the parent node so caller can modify child["children"] directly
                     return nested_children, 0, None, child
                 if "children" in nested_children:
                     result = _find_node_in_children(nested_children["children"], node_id, nested_children)
@@ -252,10 +252,8 @@ def _apply_remove_operation(content: list[dict], node_id: str) -> list[dict]:
         node, idx, parent_list, parent_node = _find_node_in_children(section_children, node_id)
         if node is not None and idx is not None:
             if parent_list is not None:
-                # Node is in a regular list of children
                 parent_list.pop(idx)
             elif parent_node is not None:
-                # Node is multivalue's single dict child - cannot remove tuple from multivalue
                 raise ValueError(f"Cannot remove tuple '{node_id}' from multivalue - remove the multivalue instead")
             return content
 
@@ -270,19 +268,7 @@ def apply_schema_patch(
     parent_id: str | None = None,
     position: int | None = None,
 ) -> list[dict]:
-    """Apply a patch operation to schema content.
-
-    Args:
-        content: The schema content (list of sections)
-        operation: One of "add", "update", "remove"
-        node_id: ID of the node to operate on
-        node_data: Data for add/update operations
-        parent_id: Parent node ID for add operation (section ID or multivalue/tuple ID)
-        position: Optional position for add operation (appends if not specified)
-
-    Returns:
-        Modified content
-    """
+    """Apply a patch operation to schema content."""
     content = copy.deepcopy(content)
 
     if operation == "add":
@@ -295,36 +281,88 @@ def apply_schema_patch(
     return content
 
 
+async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
+    schema: Schema = await client.retrieve_schema(schema_id)
+    return schema
+
+
+async def _update_schema(client: AsyncRossumAPIClient, schema_id: int, schema_data: dict) -> Schema | dict:
+    if not is_read_write_mode():
+        return {"error": "update_schema is not available in read-only mode"}
+
+    logger.debug(f"Updating schema: schema_id={schema_id}")
+    await client._http_client.update(Resource.Schema, schema_id, schema_data)
+    updated_schema: Schema = await client.retrieve_schema(schema_id)
+    return updated_schema
+
+
+async def _create_schema(client: AsyncRossumAPIClient, name: str, content: list[dict]) -> Schema | dict:
+    if not is_read_write_mode():
+        return {"error": "create_schema is not available in read-only mode"}
+
+    logger.debug(f"Creating schema: name={name}")
+    schema_data = {"name": name, "content": content}
+    schema: Schema = await client.create_new_schema(schema_data)
+    return schema
+
+
+async def _patch_schema(
+    client: AsyncRossumAPIClient,
+    schema_id: int,
+    operation: PatchOperation,
+    node_id: str,
+    node_data: SchemaNode | SchemaNodeUpdate | None = None,
+    parent_id: str | None = None,
+    position: int | None = None,
+) -> Schema | dict:
+    if not is_read_write_mode():
+        return {"error": "patch_schema is not available in read-only mode"}
+
+    if operation not in ("add", "update", "remove"):
+        return {"error": f"Invalid operation '{operation}'. Must be 'add', 'update', or 'remove'."}
+
+    logger.debug(f"Patching schema: schema_id={schema_id}, operation={operation}, node_id={node_id}")
+
+    node_data_dict: dict | None = None
+    if node_data is not None:
+        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)  # type: ignore[call-overload]
+
+    current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
+    content_list = current_schema.get("content", [])
+    if not isinstance(content_list, list):
+        return {"error": "Unexpected schema content format"}
+
+    try:
+        patched_content = apply_schema_patch(
+            content=content_list,
+            operation=operation,
+            node_id=node_id,
+            node_data=node_data_dict,
+            parent_id=parent_id,
+            position=position,
+        )
+    except ValueError as e:
+        return {"error": str(e)}
+
+    await client._http_client.update(Resource.Schema, schema_id, {"content": patched_content})
+    updated_schema: Schema = await client.retrieve_schema(schema_id)
+    return updated_schema
+
+
 def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register schema-related tools with the FastMCP server."""
 
     @mcp.tool(description="Retrieve schema details.")
     async def get_schema(schema_id: int) -> Schema:
-        """Retrieve schema details."""
-        schema: Schema = await client.retrieve_schema(schema_id)
-        return schema
+        return await _get_schema(client, schema_id)
 
     @mcp.tool(description="Update schema, typically for field-level thresholds.")
     async def update_schema(schema_id: int, schema_data: dict) -> Schema | dict:
-        """Update an existing schema."""
-        if not is_read_write_mode():
-            return {"error": "update_schema is not available in read-only mode"}
-
-        logger.debug(f"Updating schema: schema_id={schema_id}")
-        await client._http_client.update(Resource.Schema, schema_id, schema_data)
-        updated_schema: Schema = await client.retrieve_schema(schema_id)
-        return updated_schema
+        return await _update_schema(client, schema_id, schema_data)
 
     @mcp.tool(description="Create a schema. Must have ≥1 section with children (datapoints).")
     async def create_schema(name: str, content: list[dict]) -> Schema | dict:
-        """Create a new schema."""
-        if not is_read_write_mode():
-            return {"error": "create_schema is not available in read-only mode"}
-
-        logger.debug(f"Creating schema: name={name}")
-        schema_data = {"name": name, "content": content}
-        schema: Schema = await client.create_new_schema(schema_data)
-        return schema
+        return await _create_schema(client, name, content)
 
     @mcp.tool(
         description="""Patch schema nodes (add/update/remove fields in a schema).
@@ -350,35 +388,4 @@ Important: Datapoints inside a tuple MUST have an "id" field. Section-level data
         parent_id: str | None = None,
         position: int | None = None,
     ) -> Schema | dict:
-        if not is_read_write_mode():
-            return {"error": "patch_schema is not available in read-only mode"}
-
-        if operation not in ("add", "update", "remove"):
-            return {"error": f"Invalid operation '{operation}'. Must be 'add', 'update', or 'remove'."}
-
-        logger.debug(f"Patching schema: schema_id={schema_id}, operation={operation}, node_id={node_id}")
-
-        node_data_dict: dict | None = None
-        if node_data is not None:
-            node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)  # type: ignore[call-overload]
-
-        current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
-        content_list = current_schema.get("content", [])
-        if not isinstance(content_list, list):
-            return {"error": "Unexpected schema content format"}
-
-        try:
-            patched_content = apply_schema_patch(
-                content=content_list,
-                operation=operation,  # type: ignore[arg-type]
-                node_id=node_id,
-                node_data=node_data_dict,
-                parent_id=parent_id,
-                position=position,
-            )
-        except ValueError as e:
-            return {"error": str(e)}
-
-        await client._http_client.update(Resource.Schema, schema_id, {"content": patched_content})
-        updated_schema: Schema = await client.retrieve_schema(schema_id)
-        return updated_schema
+        return await _patch_schema(client, schema_id, operation, node_id, node_data, parent_id, position)
