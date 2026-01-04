@@ -130,19 +130,3 @@ def classify_request(client: AnthropicBedrock, message: str) -> ClassificationRe
     except Exception as e:
         logger.warning(f"Classification failed, defaulting to IN_SCOPE: {e}")
         return ClassificationResult(scope=RequestScope.IN_SCOPE, raw_response=f"error: {e}")
-
-
-def is_in_scope(client: AnthropicBedrock, message: str) -> bool:
-    """Check if a request is in scope.
-
-    Convenience function that returns a simple boolean.
-
-    Args:
-        client: Anthropic Bedrock client.
-        message: The user's message to classify.
-
-    Returns:
-        True if the request is in scope, False otherwise.
-    """
-    result = classify_request(client, message)
-    return result.scope == RequestScope.IN_SCOPE

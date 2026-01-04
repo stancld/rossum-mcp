@@ -9,7 +9,6 @@ from rossum_agent.agent.request_classifier import (
     RequestScope,
     classify_request,
     generate_rejection_response,
-    is_in_scope,
 )
 
 
@@ -100,28 +99,6 @@ class TestClassifyRequest:
         message_content = call_kwargs["messages"][0]["content"]
         assert "Debug my hook" in message_content
         assert "IN_SCOPE or OUT_OF_SCOPE" in message_content
-
-
-class TestIsInScope:
-    """Test the is_in_scope convenience function."""
-
-    def test_returns_true_for_in_scope(self) -> None:
-        """Test that is_in_scope returns True for in-scope requests."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="IN_SCOPE")]
-        mock_client.messages.create.return_value = mock_response
-
-        assert is_in_scope(mock_client, "List queues") is True
-
-    def test_returns_false_for_out_of_scope(self) -> None:
-        """Test that is_in_scope returns False for out-of-scope requests."""
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="OUT_OF_SCOPE")]
-        mock_client.messages.create.return_value = mock_response
-
-        assert is_in_scope(mock_client, "Calculate my revenue") is False
 
 
 class TestGenerateRejectionResponse:
