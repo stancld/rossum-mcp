@@ -109,18 +109,6 @@ async def connect_mcp_server(
         yield MCPConnection(client=client)
 
 
-def mcp_tool_to_anthropic_format(mcp_tool: MCPTool) -> dict[str, object]:
-    """Convert a single MCP tool to Anthropic tool format.
-
-    Args:
-        mcp_tool: An MCP tool object.
-
-    Returns:
-        Tool definition dict in Anthropic format.
-    """
-    return {"name": mcp_tool.name, "description": mcp_tool.description or "", "input_schema": mcp_tool.inputSchema}
-
-
 def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[dict[str, object]]:
     """Convert MCP tools to Anthropic tool format.
 
@@ -135,4 +123,7 @@ def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[dict[str, ob
     Returns:
         List of tool dicts suitable for the tools parameter in messages.create().
     """
-    return [mcp_tool_to_anthropic_format(tool) for tool in mcp_tools]
+    return [
+        {"name": mcp_tool.name, "description": mcp_tool.description or "", "input_schema": mcp_tool.inputSchema}
+        for mcp_tool in mcp_tools
+    ]

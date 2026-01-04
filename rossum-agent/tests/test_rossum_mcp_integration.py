@@ -10,7 +10,6 @@ from rossum_agent.rossum_mcp_integration import (
     MCPConnection,
     connect_mcp_server,
     create_mcp_transport,
-    mcp_tool_to_anthropic_format,
     mcp_tools_to_anthropic_format,
 )
 
@@ -55,59 +54,6 @@ class TestCreateMCPTransport:
             )
 
             assert transport.env["CUSTOM_VAR"] == "custom_value"
-
-
-class TestMCPToolToAnthropicFormat:
-    """Test mcp_tool_to_anthropic_format function."""
-
-    def test_converts_tool_with_all_fields(self):
-        """Test converting a tool with all fields populated."""
-        mock_tool = MagicMock()
-        mock_tool.name = "list_queues"
-        mock_tool.description = "List all queues in the workspace"
-        mock_tool.inputSchema = {
-            "type": "object",
-            "properties": {
-                "workspace_url": {"type": "string", "description": "URL of the workspace"},
-            },
-            "required": ["workspace_url"],
-        }
-
-        result = mcp_tool_to_anthropic_format(mock_tool)
-
-        assert result == {
-            "name": "list_queues",
-            "description": "List all queues in the workspace",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "workspace_url": {"type": "string", "description": "URL of the workspace"},
-                },
-                "required": ["workspace_url"],
-            },
-        }
-
-    def test_handles_empty_description(self):
-        """Test converting a tool with no description."""
-        mock_tool = MagicMock()
-        mock_tool.name = "simple_tool"
-        mock_tool.description = None
-        mock_tool.inputSchema = {"type": "object", "properties": {}}
-
-        result = mcp_tool_to_anthropic_format(mock_tool)
-
-        assert result["description"] == ""
-
-    def test_handles_minimal_input_schema(self):
-        """Test converting a tool with minimal inputSchema."""
-        mock_tool = MagicMock()
-        mock_tool.name = "minimal_schema_tool"
-        mock_tool.description = "A tool with minimal schema"
-        mock_tool.inputSchema = {"type": "object", "properties": {}}
-
-        result = mcp_tool_to_anthropic_format(mock_tool)
-
-        assert result["input_schema"] == {"type": "object", "properties": {}}
 
 
 class TestMCPToolsToAnthropicFormat:
