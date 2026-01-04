@@ -15,7 +15,7 @@ from fastapi import Header, HTTPException, status
 logger = logging.getLogger(__name__)
 
 ALLOWED_ROSSUM_HOST_PATTERN = re.compile(
-    r"^(elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|elis\.develop\.r8\.lol)$"
+    r"^(elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|(elis|api\.elis)\.develop\.r8\.lol)$"
 )
 
 
