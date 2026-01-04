@@ -149,18 +149,17 @@ class TestAgentConfig:
         config = AgentConfig()
         assert config.max_tokens == 128000
         assert config.max_steps == 50
-        assert config.temperature == 0.0
+        assert config.temperature == 1.0  # Required for extended thinking
 
     def test_custom_values(self):
         """Test custom configuration values."""
         config = AgentConfig(
             max_tokens=4096,
             max_steps=10,
-            temperature=0.5,
         )
         assert config.max_tokens == 4096
         assert config.max_steps == 10
-        assert config.temperature == 0.5
+        assert config.temperature == 1.0  # Must be 1.0 for extended thinking
 
 
 class TestAgentStep:
@@ -841,14 +840,38 @@ class TestStreamModelResponse:
 
     @pytest.mark.asyncio
     async def test_text_with_tool_call(self):
-        """Test streaming with both text and tool call."""
+        """Test streaming with both thinking and text blocks plus tool call.
+
+        With extended thinking, thinking blocks contain model reasoning,
+        text blocks contain the response text, and both are separate.
+        """
+        from anthropic.types import ThinkingBlock, ThinkingDelta
+
         agent = self._create_agent()
         agent.memory.add_task("Help me")
         agent.mcp_connection.call_tool.return_value = "result"
 
-        text_delta = RawContentBlockDeltaEvent(
+        thinking_block = ThinkingBlock(type="thinking", thinking="", signature="sig")
+        thinking_start = RawContentBlockStartEvent(
+            type="content_block_start",
+            index=0,
+            content_block=thinking_block,
+        )
+
+        thinking_delta_event = RawContentBlockDeltaEvent(
             type="content_block_delta",
             index=0,
+            delta=ThinkingDelta(type="thinking_delta", thinking="Let me analyze this..."),
+        )
+
+        thinking_stop = ContentBlockStopEvent(
+            type="content_block_stop",
+            index=0,
+        )
+
+        text_delta = RawContentBlockDeltaEvent(
+            type="content_block_delta",
+            index=1,
             delta=TextDelta(type="text_delta", text="Let me check that for you."),
         )
 
@@ -861,23 +884,26 @@ class TestStreamModelResponse:
 
         tool_start = RawContentBlockStartEvent(
             type="content_block_start",
-            index=1,
+            index=2,
             content_block=tool_block,
         )
 
         tool_delta = RawContentBlockDeltaEvent(
             type="content_block_delta",
-            index=1,
+            index=2,
             delta=InputJSONDelta(type="input_json_delta", partial_json="{}"),
         )
 
         tool_stop = ContentBlockStopEvent(
             type="content_block_stop",
-            index=1,
+            index=2,
         )
 
         final_message = self._create_final_message()
-        mock_stream = self._create_mock_stream([text_delta, tool_start, tool_delta, tool_stop], final_message)
+        mock_stream = self._create_mock_stream(
+            [thinking_start, thinking_delta_event, thinking_stop, text_delta, tool_start, tool_delta, tool_stop],
+            final_message,
+        )
 
         with patch.object(agent.client.messages, "stream", return_value=mock_stream):
             steps = []
@@ -885,7 +911,7 @@ class TestStreamModelResponse:
                 steps.append(step)
 
         final_step = steps[-1]
-        assert final_step.thinking == "Let me check that for you."
+        assert final_step.thinking == "Let me analyze this..."
         assert len(final_step.tool_calls) == 1
 
 
@@ -1684,7 +1710,7 @@ class TestCreateAgentFactory:
         from rossum_agent.agent.core import create_agent
 
         mock_mcp = AsyncMock()
-        config = AgentConfig(max_steps=10, temperature=0.5)
+        config = AgentConfig(max_steps=10)
 
         with patch("rossum_agent.agent.core.create_bedrock_client") as mock_create_client:
             mock_create_client.return_value = MagicMock()
@@ -1696,7 +1722,7 @@ class TestCreateAgentFactory:
             )
 
         assert agent.config.max_steps == 10
-        assert agent.config.temperature == 0.5
+        assert agent.config.temperature == 1.0  # Must be 1.0 for extended thinking
 
 
 class TestProcessStreamEvent:
@@ -1723,9 +1749,9 @@ class TestProcessStreamEvent:
         tool_block = ToolUseBlock(type="tool_use", id="tool_123", name="test_tool", input={})
         event = RawContentBlockStartEvent(type="content_block_start", index=0, content_block=tool_block)
 
-        result = agent._process_stream_event(event, pending_tools, tool_calls)
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
 
-        assert result is None
+        assert delta is None
         assert 0 in pending_tools
         assert pending_tools[0]["name"] == "test_tool"
         assert pending_tools[0]["id"] == "tool_123"
@@ -1740,9 +1766,11 @@ class TestProcessStreamEvent:
             type="content_block_delta", index=0, delta=TextDelta(type="text_delta", text="Hello world")
         )
 
-        result = agent._process_stream_event(event, pending_tools, tool_calls)
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
 
-        assert result == "Hello world"
+        assert delta is not None
+        assert delta.kind == "text"
+        assert delta.content == "Hello world"
 
     def test_content_block_delta_event_for_json(self):
         """Test processing ContentBlockDeltaEvent for JSON input."""
@@ -1754,9 +1782,9 @@ class TestProcessStreamEvent:
             type="content_block_delta", index=0, delta=InputJSONDelta(type="input_json_delta", partial_json='{"key":')
         )
 
-        result = agent._process_stream_event(event, pending_tools, tool_calls)
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
 
-        assert result is None
+        assert delta is None
         assert pending_tools[0]["json"] == '{"key":'
 
     def test_content_block_stop_event_with_empty_json(self):
@@ -1767,9 +1795,9 @@ class TestProcessStreamEvent:
 
         event = ContentBlockStopEvent(type="content_block_stop", index=0)
 
-        result = agent._process_stream_event(event, pending_tools, tool_calls)
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
 
-        assert result is None
+        assert delta is None
         assert len(tool_calls) == 1
         assert tool_calls[0].arguments == {}
 
@@ -1779,9 +1807,124 @@ class TestProcessStreamEvent:
         pending_tools: dict[int, dict[str, str]] = {}
         tool_calls: list[ToolCall] = []
 
-        # Using a MagicMock for an unhandled event type
         event = MagicMock()
 
-        result = agent._process_stream_event(event, pending_tools, tool_calls)
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
 
+        assert delta is None
+
+    def test_content_block_start_event_for_thinking(self):
+        """Test processing ContentBlockStartEvent for thinking block returns None."""
+        from anthropic.types import ThinkingBlock
+
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {}
+        tool_calls: list[ToolCall] = []
+
+        thinking_block = ThinkingBlock(type="thinking", thinking="", signature="sig")
+        event = RawContentBlockStartEvent(type="content_block_start", index=0, content_block=thinking_block)
+
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert delta is None
+
+    def test_content_block_delta_event_for_thinking(self):
+        """Test processing ContentBlockDeltaEvent for thinking delta."""
+        from anthropic.types import ThinkingDelta
+
+        agent = self._create_agent()
+        pending_tools: dict[int, dict[str, str]] = {}
+        tool_calls: list[ToolCall] = []
+
+        event = RawContentBlockDeltaEvent(
+            type="content_block_delta", index=0, delta=ThinkingDelta(type="thinking_delta", thinking="Let me think...")
+        )
+
+        delta = agent._process_stream_event(event, pending_tools, tool_calls)
+
+        assert delta is not None
+        assert delta.kind == "thinking"
+        assert delta.content == "Let me think..."
+
+
+class TestStreamState:
+    """Test _StreamState class."""
+
+    def test_flush_buffer_returns_none_when_empty(self):
+        """Test that flush_buffer returns None when buffer is empty."""
+        from rossum_agent.agent.core import _StreamState
+        from rossum_agent.agent.models import StepType
+
+        state = _StreamState()
+        result = state.flush_buffer(step_num=1, step_type=StepType.FINAL_ANSWER)
         assert result is None
+
+    def test_flush_buffer_returns_step_with_content(self):
+        """Test that flush_buffer returns AgentStep with accumulated content."""
+        from rossum_agent.agent.core import _StreamState
+        from rossum_agent.agent.models import StepType
+
+        state = _StreamState()
+        state.text_buffer = ["Hello", " ", "world"]
+        state.thinking_text = "I'm thinking"
+
+        result = state.flush_buffer(step_num=2, step_type=StepType.INTERMEDIATE)
+
+        assert result is not None
+        assert result.step_number == 2
+        assert result.text_delta == "Hello world"
+        assert result.accumulated_text == "Hello world"
+        assert result.thinking == "I'm thinking"
+        assert result.step_type == StepType.INTERMEDIATE
+        assert result.is_streaming is True
+
+    def test_flush_buffer_clears_buffer(self):
+        """Test that flush_buffer clears the text_buffer."""
+        from rossum_agent.agent.core import _StreamState
+        from rossum_agent.agent.models import StepType
+
+        state = _StreamState()
+        state.text_buffer = ["some", "text"]
+
+        state.flush_buffer(step_num=1, step_type=StepType.FINAL_ANSWER)
+
+        assert state.text_buffer == []
+
+    def test_flush_buffer_accumulates_response_text(self):
+        """Test that flush_buffer accumulates into response_text."""
+        from rossum_agent.agent.core import _StreamState
+        from rossum_agent.agent.models import StepType
+
+        state = _StreamState()
+        state.response_text = "Previous "
+        state.text_buffer = ["new text"]
+
+        result = state.flush_buffer(step_num=1, step_type=StepType.FINAL_ANSWER)
+
+        assert state.response_text == "Previous new text"
+        assert result.accumulated_text == "Previous new text"
+
+    def test_flush_buffer_with_empty_thinking(self):
+        """Test that thinking is None when thinking_text is empty."""
+        from rossum_agent.agent.core import _StreamState
+        from rossum_agent.agent.models import StepType
+
+        state = _StreamState()
+        state.text_buffer = ["text"]
+        state.thinking_text = ""
+
+        result = state.flush_buffer(step_num=1, step_type=StepType.FINAL_ANSWER)
+
+        assert result.thinking is None
+
+    def test_stream_state_initial_values(self):
+        """Test _StreamState has correct initial values."""
+        from rossum_agent.agent.core import _StreamState
+
+        state = _StreamState()
+        assert state.thinking_text == ""
+        assert state.response_text == ""
+        assert state.final_message is None
+        assert state.text_buffer == []
+        assert state.tool_calls == []
+        assert state.pending_tools == {}

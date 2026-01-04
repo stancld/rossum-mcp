@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable  # noqa: TC003 - Required at runtime for service getter type hints
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -67,6 +68,33 @@ def get_agent_service_dep() -> AgentService:
 def _format_sse_event(event_type: str, data: str) -> str:
     """Format an SSE event string."""
     return f"event: {event_type}\ndata: {data}\n\n"
+
+
+type AgentEvent = StreamDoneEvent | SubAgentProgressEvent | SubAgentTextEvent | StepEvent
+
+
+@dataclass
+class ProcessedEvent:
+    """Result of processing an agent event."""
+
+    sse_event: str | None = None
+    done_event: StreamDoneEvent | None = None
+    final_response_update: str | None = None
+
+
+def _process_agent_event(event: AgentEvent) -> ProcessedEvent:
+    """Process a single agent event and return structured result."""
+    if isinstance(event, StreamDoneEvent):
+        return ProcessedEvent(done_event=event)
+    if isinstance(event, SubAgentProgressEvent):
+        return ProcessedEvent(sse_event=_format_sse_event("sub_agent_progress", event.model_dump_json()))
+    if isinstance(event, SubAgentTextEvent):
+        return ProcessedEvent(sse_event=_format_sse_event("sub_agent_text", event.model_dump_json()))
+    sse = _format_sse_event("step", event.model_dump_json())
+    if event.type == "text" and event.is_streaming:
+        return ProcessedEvent(sse_event=sse, final_response_update=event.content)
+    final_response = event.content if event.type == "final_answer" and event.content else None
+    return ProcessedEvent(sse_event=sse, final_response_update=final_response)
 
 
 def _yield_file_events(output_dir: Path | None, chat_id: str) -> Iterator[str]:
@@ -142,16 +170,13 @@ async def send_message(
                 rossum_api_base_url=credentials.api_url,
                 rossum_url=message.rossum_url,
             ):
-                if isinstance(event, StreamDoneEvent):
-                    done_event = event
-                elif isinstance(event, SubAgentProgressEvent):
-                    yield _format_sse_event("sub_agent_progress", event.model_dump_json())
-                elif isinstance(event, SubAgentTextEvent):
-                    yield _format_sse_event("sub_agent_text", event.model_dump_json())
-                elif isinstance(event, StepEvent):
-                    if event.type == "final_answer" and event.content:
-                        final_response = event.content
-                    yield _format_sse_event("step", event.model_dump_json())
+                result = _process_agent_event(event)
+                if result.done_event:
+                    done_event = result.done_event
+                if result.final_response_update:
+                    final_response = result.final_response_update
+                if result.sse_event:
+                    yield result.sse_event
 
         except Exception as e:
             logger.error(f"Error during agent execution: {e}", exc_info=True)
@@ -166,8 +191,8 @@ async def send_message(
             user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir
         )
 
-        for sse_event in _yield_file_events(agent_service.output_dir, chat_id):
-            yield sse_event
+        for file_event in _yield_file_events(agent_service.output_dir, chat_id):
+            yield file_event
 
         if done_event:
             yield _format_sse_event("done", done_event.model_dump_json())
