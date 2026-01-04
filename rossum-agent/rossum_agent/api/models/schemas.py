@@ -112,9 +112,15 @@ class MessageRequest(BaseModel):
 
 
 class StepEvent(BaseModel):
-    """Event emitted during agent execution via SSE."""
+    """Event emitted during agent execution via SSE.
 
-    type: Literal["thinking", "tool_start", "tool_result", "final_answer", "error"]
+    Extended thinking mode separates the model's internal reasoning from its final response:
+    - "thinking": Model's chain-of-thought reasoning (from thinking blocks)
+    - "intermediate": Model's response text before tool calls
+    - "final_answer": Final response when no more tool calls needed
+    """
+
+    type: Literal["thinking", "intermediate", "tool_start", "tool_result", "final_answer", "error"]
     step_number: int
     content: str | None = None
     tool_name: str | None = None

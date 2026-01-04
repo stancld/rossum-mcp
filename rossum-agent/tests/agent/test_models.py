@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
-from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
+import pytest
+from rossum_agent.agent.models import (
+    AgentConfig,
+    AgentStep,
+    StepType,
+    StreamDelta,
+    ThinkingBlockData,
+    ToolCall,
+    ToolResult,
+    truncate_content,
+)
 
 
 class TestTruncateContent:
@@ -122,17 +132,17 @@ class TestAgentConfig:
         config = AgentConfig()
         assert config.max_tokens == 128000
         assert config.max_steps == 50
-        assert config.temperature == 0.0
+        assert config.temperature == 1.0  # Required for extended thinking
 
     def test_request_delay_default(self):
         config = AgentConfig()
         assert config.request_delay == 3.0
 
     def test_custom_values(self):
-        config = AgentConfig(max_tokens=4096, max_steps=10, temperature=0.5, request_delay=1.0)
+        config = AgentConfig(max_tokens=4096, max_steps=10, request_delay=1.0)
         assert config.max_tokens == 4096
         assert config.max_steps == 10
-        assert config.temperature == 0.5
+        assert config.temperature == 1.0  # Must be 1.0 for extended thinking
         assert config.request_delay == 1.0
 
 
@@ -181,3 +191,83 @@ class TestAgentStep:
         step = AgentStep(step_number=1, current_tool="search", tool_progress=(2, 5))
         assert step.current_tool == "search"
         assert step.tool_progress == (2, 5)
+
+    def test_with_step_type(self):
+        step = AgentStep(step_number=1, step_type=StepType.THINKING)
+        assert step.step_type == StepType.THINKING
+
+    def test_with_text_delta_and_accumulated(self):
+        step = AgentStep(step_number=1, text_delta="new text", accumulated_text="all text so far")
+        assert step.text_delta == "new text"
+        assert step.accumulated_text == "all text so far"
+
+
+class TestStepType:
+    """Test StepType enum."""
+
+    def test_thinking_value(self):
+        assert StepType.THINKING.value == "thinking"
+
+    def test_intermediate_value(self):
+        assert StepType.INTERMEDIATE.value == "intermediate"
+
+    def test_final_answer_value(self):
+        assert StepType.FINAL_ANSWER.value == "final_answer"
+
+
+class TestStreamDelta:
+    """Test StreamDelta dataclass."""
+
+    def test_thinking_delta(self):
+        delta = StreamDelta(kind="thinking", content="Let me analyze...")
+        assert delta.kind == "thinking"
+        assert delta.content == "Let me analyze..."
+
+    def test_text_delta(self):
+        delta = StreamDelta(kind="text", content="Here is my answer")
+        assert delta.kind == "text"
+        assert delta.content == "Here is my answer"
+
+
+class TestThinkingBlockData:
+    """Test ThinkingBlockData dataclass."""
+
+    def test_creation(self):
+        block = ThinkingBlockData(thinking="I need to analyze this", signature="sig123")
+        assert block.thinking == "I need to analyze this"
+        assert block.signature == "sig123"
+
+    def test_to_dict(self):
+        block = ThinkingBlockData(thinking="analysis", signature="abc")
+        result = block.to_dict()
+        assert result == {"type": "thinking", "thinking": "analysis", "signature": "abc"}
+
+    def test_to_api_format(self):
+        block = ThinkingBlockData(thinking="analysis", signature="abc")
+        result = block.to_api_format()
+        assert result == {"type": "thinking", "thinking": "analysis", "signature": "abc"}
+
+    def test_from_dict(self):
+        data = {"thinking": "my thoughts", "signature": "xyz"}
+        block = ThinkingBlockData.from_dict(data)
+        assert block.thinking == "my thoughts"
+        assert block.signature == "xyz"
+
+    def test_roundtrip(self):
+        original = ThinkingBlockData(thinking="deep thoughts", signature="sig456")
+        serialized = original.to_dict()
+        restored = ThinkingBlockData.from_dict(serialized)
+        assert restored.thinking == original.thinking
+        assert restored.signature == original.signature
+
+
+class TestAgentConfigValidation:
+    """Test AgentConfig validation."""
+
+    def test_temperature_must_be_one(self):
+        with pytest.raises(ValueError, match=r"temperature must be 1\.0"):
+            AgentConfig(temperature=0.5)
+
+    def test_default_thinking_budget(self):
+        config = AgentConfig()
+        assert config.thinking_budget_tokens == 10000
