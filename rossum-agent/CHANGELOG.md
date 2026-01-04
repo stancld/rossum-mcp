@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
 - Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added `hook-debugging` skill for systematic hook debugging workflow [#73](https://github.com/stancld/rossum-mcp/pull/73)
@@ -16,6 +17,8 @@ All notable changes to this project will be documented in this file.
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
 
 ### Changed
+- Separated model's chain-of-thought reasoning (thinking blocks) from response text (text blocks) in stream processing [#92](https://github.com/stancld/rossum-mcp/pull/92)
+- Updated Streamlit UI to display thinking blocks with "🧠 **Thinking:**" label [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills [#78](https://github.com/stancld/rossum-mcp/pull/78)
 - Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)

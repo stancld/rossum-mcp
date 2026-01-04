@@ -7,7 +7,17 @@ for representing tool calls, results, and agent steps.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Literal
+
+
+class StepType(Enum):
+    """Type of streaming step for distinguishing UI rendering."""
+
+    THINKING = "thinking"
+    INTERMEDIATE = "intermediate"
+    FINAL_ANSWER = "final_answer"
+
 
 if TYPE_CHECKING:
     from rossum_agent.tools import SubAgentProgress
@@ -61,6 +71,38 @@ class ToolResult:
 
 
 @dataclass
+class StreamDelta:
+    """A tagged delta from stream processing - either thinking or text."""
+
+    kind: Literal["thinking", "text"]
+    content: str
+
+
+@dataclass
+class ThinkingBlockData:
+    """Represents a thinking block from extended thinking.
+
+    Must be preserved and passed back to the API when continuing tool use conversations.
+    """
+
+    thinking: str
+    signature: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to dictionary for storage and API message format."""
+        return {"type": "thinking", "thinking": self.thinking, "signature": self.signature}
+
+    def to_api_format(self) -> dict[str, object]:
+        """Convert to API message format (alias for to_dict)."""
+        return self.to_dict()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ThinkingBlockData:
+        """Deserialize from dictionary."""
+        return cls(thinking=data["thinking"], signature=data["signature"])
+
+
+@dataclass
 class AgentStep:
     """Represents a single step in the agent's execution (for yielding to caller).
 
@@ -81,6 +123,9 @@ class AgentStep:
     current_tool: str | None = None
     tool_progress: tuple[int, int] | None = None
     sub_agent_progress: SubAgentProgress | None = None
+    text_delta: str | None = None
+    accumulated_text: str | None = None
+    step_type: StepType | None = None
 
     def has_tool_calls(self) -> bool:
         """Check if this step contains tool calls."""
@@ -93,8 +138,14 @@ class AgentConfig:
 
     max_tokens: int = 128000
     max_steps: int = 50
-    temperature: float = 0.0
+    temperature: float = 1.0  # Required for extended thinking
     request_delay: float = 3.0  # Delay in seconds between API calls to avoid rate limiting
+    thinking_budget_tokens: int = 10000  # Budget for extended thinking (min 1024)
+
+    def __post_init__(self) -> None:
+        if self.temperature != 1.0:
+            msg = "temperature must be 1.0 when extended thinking is enabled"
+            raise ValueError(msg)
 
 
 MAX_TOOL_OUTPUT_LENGTH = 20000

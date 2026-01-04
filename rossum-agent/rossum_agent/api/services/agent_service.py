@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.memory import AgentMemory
-from rossum_agent.agent.models import AgentConfig, AgentStep
+from rossum_agent.agent.models import AgentConfig, AgentStep, StepType
 from rossum_agent.api.models.schemas import (
     ImageContent,
     StepEvent,
@@ -60,39 +60,53 @@ def convert_sub_agent_progress_to_event(progress: SubAgentProgress) -> SubAgentP
 def convert_step_to_event(step: AgentStep) -> StepEvent:
     """Convert an AgentStep to a StepEvent for SSE streaming.
 
-    Args:
-        step: The AgentStep from the agent.
+    Extended thinking mode produces three distinct content types:
+    - "thinking": Model's chain-of-thought reasoning (from thinking blocks)
+    - "intermediate": Model's response text before tool calls
+    - "final_answer": Model's final response (no more tool calls)
 
-    Returns:
-        StepEvent suitable for SSE transmission.
+    Per Claude's extended thinking API, thinking blocks contain internal reasoning
+    while text blocks contain the actual response. Both are streamed separately.
     """
+    event: StepEvent
+
     if step.error:
-        return StepEvent(type="error", step_number=step.step_number, content=step.error, is_final=True)
-
-    if step.is_final and step.final_answer:
-        return StepEvent(type="final_answer", step_number=step.step_number, content=step.final_answer, is_final=True)
-
-    if step.current_tool and step.tool_progress:
-        return StepEvent(
+        event = StepEvent(type="error", step_number=step.step_number, content=step.error, is_final=True)
+    elif step.is_final and step.final_answer:
+        event = StepEvent(type="final_answer", step_number=step.step_number, content=step.final_answer, is_final=True)
+    elif step.step_type == StepType.INTERMEDIATE and step.accumulated_text is not None:
+        event = StepEvent(
+            type="intermediate", step_number=step.step_number, content=step.accumulated_text, is_streaming=True
+        )
+    elif step.step_type == StepType.FINAL_ANSWER and step.accumulated_text is not None:
+        event = StepEvent(
+            type="final_answer", step_number=step.step_number, content=step.accumulated_text, is_streaming=True
+        )
+    elif step.current_tool and step.tool_progress:
+        event = StepEvent(
             type="tool_start",
             step_number=step.step_number,
             tool_name=step.current_tool,
             tool_progress=step.tool_progress,
         )
-
-    if step.tool_results and not step.is_streaming:
+    elif step.tool_results and not step.is_streaming:
         last_result = step.tool_results[-1]
-        return StepEvent(
+        event = StepEvent(
             type="tool_result",
             step_number=step.step_number,
             tool_name=last_result.name,
             result=last_result.content,
             is_error=last_result.is_error,
         )
+    elif step.step_type == StepType.THINKING or step.thinking is not None:
+        event = StepEvent(
+            type="thinking", step_number=step.step_number, content=step.thinking, is_streaming=step.is_streaming
+        )
+    else:
+        event = StepEvent(type="thinking", step_number=step.step_number, content=None, is_streaming=step.is_streaming)
 
-    return StepEvent(
-        type="thinking", step_number=step.step_number, content=step.thinking, is_streaming=step.is_streaming
-    )
+    logger.info(f"StepEvent: type={event.type}, step={event.step_number}, is_streaming={event.is_streaming}")
+    return event
 
 
 class AgentService:
@@ -346,7 +360,8 @@ class AgentService:
                     lean_history.append(step_dict)
                 elif step_dict.get("type") == "memory_step":
                     text = step_dict.get("text")
-                    if text:
+                    thinking_blocks = step_dict.get("thinking_blocks", [])
+                    if text or thinking_blocks:
                         lean_history.append(
                             {
                                 "type": "memory_step",
@@ -354,6 +369,7 @@ class AgentService:
                                 "text": text,
                                 "tool_calls": [],
                                 "tool_results": [],
+                                "thinking_blocks": thinking_blocks,
                             }
                         )
             return lean_history

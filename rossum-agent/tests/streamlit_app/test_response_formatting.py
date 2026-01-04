@@ -164,7 +164,7 @@ class TestChatResponseStreamingSteps:
         assert "I'm analyzing the data..." in chat_response.current_step_markdown
         mock_placeholder.markdown.assert_called()
         call_args = mock_placeholder.markdown.call_args[0][0]
-        assert "⏳ _Thinking..._" in call_args
+        assert "⏳ _Processing..._" in call_args
 
     def test_process_streaming_step_with_tool_progress(self, chat_response, mock_placeholder):
         """Test processing streaming step with tool progress."""
@@ -352,8 +352,8 @@ class TestChatResponseStreamingSteps:
         assert "Result (get_queue):** Queue found" in completed_md
         assert "<details>" not in completed_md
 
-    def test_thinking_shown_only_with_tool_calls(self, chat_response, mock_placeholder):
-        """Test that thinking is shown in completed step only when tool calls present."""
+    def test_thinking_always_shown(self, chat_response, mock_placeholder):
+        """Test that thinking is always displayed regardless of tool calls."""
         step_with_tools = AgentStep(
             step_number=1,
             thinking="I will search for queues",
@@ -369,8 +369,8 @@ class TestChatResponseStreamingSteps:
         chat_response.process_step(step_with_tools)
         chat_response.process_step(step_without_tools)
 
-        assert "💭" in chat_response.completed_steps_markdown[0]
-        assert "💭" not in chat_response.completed_steps_markdown[1]
+        assert "🧠 **Thinking:**" in chat_response.completed_steps_markdown[0]
+        assert "🧠 **Thinking:**" in chat_response.completed_steps_markdown[1]
 
 
 class TestChatResponseRenderDisplay:
