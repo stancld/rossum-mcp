@@ -27,6 +27,8 @@ Key concepts:
   (INTERMEDIATE vs FINAL_ANSWER) before streaming to client
 - After initial flush, text tokens stream immediately
 - Tool execution yields progress updates for UI responsiveness
+- In a single step, a thinking block is always followed by an intermediate block
+  (tool calls or text response)
 """
 
 from __future__ import annotations
@@ -89,6 +91,7 @@ from rossum_agent.tools import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
+    from typing import Literal
 
     from anthropic import AnthropicBedrock
 
@@ -154,6 +157,10 @@ class _StreamState:
             accumulated_text=self.response_text,
             step_type=step_type,
         )
+
+    @property
+    def contains_thinking(self) -> bool:
+        return self.thinking_text != ""
 
 
 class RossumAgent:
@@ -328,7 +335,9 @@ class RossumAgent:
             if isinstance(block, ThinkingBlock)
         ]
 
-    def _handle_text_delta(self, step_num: int, content: str, state: _StreamState) -> AgentStep | None:
+    def _handle_text_delta(
+        self, step_num: int, content: str, delta_kind: Literal["thinking", "text"], state: _StreamState
+    ) -> AgentStep | None:
         """Handle a text delta, buffering or flushing as appropriate."""
         if state.first_text_token_time is None:
             state.first_text_token_time = time.monotonic()
@@ -339,7 +348,10 @@ class RossumAgent:
         state.text_buffer.append(content)
 
         if state.initial_buffer_flushed:
-            return state.flush_buffer(step_num, state.get_step_type())
+            step_type = (
+                StepType.INTERMEDIATE if state.contains_thinking and delta_kind == "text" else state.get_step_type()
+            )
+            return state.flush_buffer(step_num, step_type)
         if state.pending_tools or state.tool_calls:
             state.initial_buffer_flushed = True
             return state.flush_buffer(step_num, StepType.INTERMEDIATE)
@@ -400,10 +412,12 @@ class RossumAgent:
                     is_streaming=True,
                     step_type=StepType.THINKING,
                 )
+                if state.first_text_token_time is None:
+                    state.first_text_token_time = time.monotonic()
                 continue
 
             # Yield #4: Text delta - immediate flush after initial buffer period or when tool calls detected
-            if step := self._handle_text_delta(step_num, delta.content, state):
+            if step := self._handle_text_delta(step_num, delta.content, delta.kind, state):
                 yield step
 
     async def _stream_model_response(self, step_num: int) -> AsyncIterator[AgentStep]:

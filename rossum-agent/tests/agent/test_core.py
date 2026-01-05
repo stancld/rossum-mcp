@@ -1982,6 +1982,47 @@ class TestStreamState:
 
         assert state.get_step_type() == StepType.FINAL_ANSWER
 
+    def test_contains_thinking_returns_true_when_has_thinking(self):
+        """Test contains_thinking returns True when thinking_text is non-empty."""
+        state = _StreamState()
+        state.thinking_text = "Let me analyze this..."
+
+        assert state.contains_thinking is True
+
+    def test_contains_thinking_returns_false_when_empty(self):
+        """Test contains_thinking returns False when thinking_text is empty."""
+        state = _StreamState()
+        state.thinking_text = ""
+
+        assert state.contains_thinking is False
+
+    def test_thinking_block_followed_by_intermediate_step(self):
+        """Test that a step with thinking always has content (tool calls or text).
+
+        This verifies the architectural invariant: in a single step, a thinking block
+        is always followed by an intermediate block (tool calls or text response).
+        """
+        state = _StreamState()
+        state.thinking_text = "Analyzing the request..."
+        state.text_buffer = ["Here is my response"]
+
+        result = state.flush_buffer(step_num=1, step_type=StepType.INTERMEDIATE)
+
+        assert result is not None
+        assert result.thinking == "Analyzing the request..."
+        assert result.text_delta == "Here is my response"
+        assert result.step_type == StepType.INTERMEDIATE
+
+    def test_thinking_block_followed_by_tool_calls(self):
+        """Test that thinking can be followed by tool calls in intermediate step."""
+        state = _StreamState()
+        state.thinking_text = "I need to use a tool..."
+        state.tool_calls = [MagicMock()]
+        state.pending_tools = {}
+
+        assert state.contains_thinking is True
+        assert state.get_step_type() == StepType.INTERMEDIATE
+
 
 class TestRossumAgentProperties:
     """Tests for RossumAgent properties and basic methods."""
