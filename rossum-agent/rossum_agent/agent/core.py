@@ -387,10 +387,8 @@ class RossumAgent:
                 continue
 
             if item is None:
-                logger.debug(f"Stream ended, text_buffer={len(state.text_buffer)} chars, flushing as FINAL_ANSWER")
-                # Yield #2: Stream ended - flush any remaining buffered text as final answer
-                if step := state.flush_buffer(step_num, StepType.FINAL_ANSWER):
-                    logger.debug(f"Flushed step with step_type={step.step_type}")
+                # Yield #2: Stream ended - flush any remaining buffered text
+                if step := state.flush_buffer(step_num, state.get_step_type()):
                     yield step
                 break
 

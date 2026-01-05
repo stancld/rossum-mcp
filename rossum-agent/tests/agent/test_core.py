@@ -2023,6 +2023,26 @@ class TestStreamState:
         assert state.contains_thinking is True
         assert state.get_step_type() == StepType.INTERMEDIATE
 
+    def test_get_step_type_with_text_and_tool_calls_returns_intermediate(self):
+        """Test get_step_type returns INTERMEDIATE when both text and tool calls exist.
+
+        Regression test: When the model produces both text AND tool calls in the same
+        response, the step type should be INTERMEDIATE (not FINAL_ANSWER). This ensures
+        the stream-end flush correctly classifies the step based on actual state.
+        """
+        state = _StreamState()
+        state.text_buffer = ["Some response text"]
+        state.response_text = "Previous text"
+        state.tool_calls = [MagicMock()]
+
+        assert state.get_step_type() == StepType.INTERMEDIATE
+
+        result = state.flush_buffer(step_num=2, step_type=state.get_step_type())
+
+        assert result is not None
+        assert result.step_type == StepType.INTERMEDIATE
+        assert result.text_delta == "Some response text"
+
 
 class TestRossumAgentProperties:
     """Tests for RossumAgent properties and basic methods."""
