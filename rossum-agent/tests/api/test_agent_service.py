@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent.memory import AgentMemory, MemoryStep, TaskStep
-from rossum_agent.agent.models import AgentStep, ToolCall, ToolResult
+from rossum_agent.agent.models import AgentStep, StepType, ThinkingBlockData, ToolCall, ToolResult
 from rossum_agent.api.models.schemas import ImageContent, StepEvent, SubAgentProgressEvent, SubAgentTextEvent
 from rossum_agent.api.services.agent_service import (
     AgentService,
@@ -110,6 +110,59 @@ class TestConvertStepToEvent:
 
         assert event.type == "thinking"
         assert event.is_streaming is False
+
+    def test_convert_intermediate_text_step(self):
+        """Test converting intermediate text step with accumulated_text."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.INTERMEDIATE,
+            accumulated_text="Here is some intermediate text",
+            is_streaming=True,
+        )
+        event = convert_step_to_event(step)
+
+        assert event.type == "intermediate"
+        assert event.step_number == 1
+        assert event.content == "Here is some intermediate text"
+        assert event.is_streaming is True
+
+    def test_convert_final_answer_streaming_text_step(self):
+        """Test converting final answer streaming text step with accumulated_text."""
+        step = AgentStep(
+            step_number=2,
+            step_type=StepType.FINAL_ANSWER,
+            accumulated_text="Final response text",
+            is_streaming=True,
+        )
+        event = convert_step_to_event(step)
+
+        assert event.type == "final_answer"
+        assert event.step_number == 2
+        assert event.content == "Final response text"
+        assert event.is_streaming is True
+
+    def test_convert_thinking_step_with_step_type(self):
+        """Test converting step with StepType.THINKING."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.THINKING,
+            thinking="Deep reasoning here",
+            is_streaming=True,
+        )
+        event = convert_step_to_event(step)
+
+        assert event.type == "thinking"
+        assert event.content == "Deep reasoning here"
+        assert event.is_streaming is True
+
+    def test_convert_fallback_step(self):
+        """Test converting step that falls through to fallback case."""
+        step = AgentStep(step_number=1, is_streaming=True)
+        event = convert_step_to_event(step)
+
+        assert event.type == "thinking"
+        assert event.content is None
+        assert event.is_streaming is True
 
 
 class TestAgentServiceBuildUpdatedHistory:
@@ -421,6 +474,61 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
         assert updated[0] == {"role": "user", "content": "Previous"}
         assert updated[1] == {"role": "user", "content": "New question"}
         assert updated[2] == {"role": "assistant", "content": "Answer"}
+
+    def test_build_history_preserves_thinking_blocks(self):
+        """Test that thinking_blocks are preserved in lean history for extended thinking continuity."""
+        service = AgentService()
+
+        memory = AgentMemory()
+        memory.add_task("Analyze this document")
+        memory.steps.append(
+            MemoryStep(
+                step_number=1,
+                text="Let me analyze...",
+                thinking_blocks=[
+                    ThinkingBlockData(thinking="I need to consider...", signature="sig123"),
+                    ThinkingBlockData(thinking="Also important...", signature="sig456"),
+                ],
+                tool_calls=[ToolCall(id="tc1", name="get_doc", arguments={})],
+                tool_results=[ToolResult(tool_call_id="tc1", name="get_doc", content="doc content")],
+            )
+        )
+        service._last_memory = memory
+
+        updated = service.build_updated_history(existing_history=[], user_prompt="ignored", final_response="ignored")
+
+        assert len(updated) == 2
+        assert updated[1]["type"] == "memory_step"
+        assert updated[1]["text"] == "Let me analyze..."
+        assert updated[1]["tool_calls"] == []
+        assert updated[1]["tool_results"] == []
+        assert len(updated[1]["thinking_blocks"]) == 2
+        assert updated[1]["thinking_blocks"][0]["thinking"] == "I need to consider..."
+        assert updated[1]["thinking_blocks"][0]["signature"] == "sig123"
+
+    def test_build_history_includes_step_with_only_thinking_blocks(self):
+        """Test that memory steps with only thinking_blocks (no text) are preserved."""
+        service = AgentService()
+
+        memory = AgentMemory()
+        memory.add_task("Process request")
+        memory.steps.append(
+            MemoryStep(
+                step_number=1,
+                text=None,
+                thinking_blocks=[ThinkingBlockData(thinking="Internal reasoning", signature="sig789")],
+                tool_calls=[ToolCall(id="tc1", name="tool", arguments={})],
+            )
+        )
+        service._last_memory = memory
+
+        updated = service.build_updated_history(existing_history=[], user_prompt="ignored", final_response="ignored")
+
+        assert len(updated) == 2
+        assert updated[1]["type"] == "memory_step"
+        assert updated[1]["text"] is None
+        assert len(updated[1]["thinking_blocks"]) == 1
+        assert updated[1]["thinking_blocks"][0]["signature"] == "sig789"
 
 
 class TestAgentServiceRunAgent:

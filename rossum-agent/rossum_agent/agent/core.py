@@ -2,6 +2,31 @@
 
 This module provides the main agent loop for interacting with the Rossum platform
 using Claude models via AWS Bedrock and MCP tools.
+
+Streaming Architecture & AgentStep Yield Points
+================================================
+
+The agent streams responses via `_stream_model_response` which yields `AgentStep` objects
+at multiple points to provide real-time updates to the client. The yield flow is:
+
+    _stream_model_response
+        │
+        ├── #5 forwards from _process_stream_events ──┬── #1 Timeout flush (buffer stale after 1.5s)
+        │                                             ├── #2 Stream end flush (final text)
+        │                                             ├── #3 Thinking tokens (chain-of-thought)
+        │                                             └── #4 Text deltas (after initial buffer)
+        │
+        ├── #6 Final answer (no tools, response complete)
+        │
+        └── #7 forwards from _execute_tools_with_progress
+                ├── Tool starting (which tool is about to run)
+                └── Sub-agent progress (from nested agent tools like debug_hook)
+
+Key concepts:
+- Initial text buffering (INITIAL_TEXT_BUFFER_DELAY=1.5s) allows determining step type
+  (INTERMEDIATE vs FINAL_ANSWER) before streaming to client
+- After initial flush, text tokens stream immediately
+- Tool execution yields progress updates for UI responsiveness
 """
 
 from __future__ import annotations
@@ -12,11 +37,13 @@ import json
 import logging
 import queue
 import random
+import time
 from contextvars import copy_context
 from functools import partial
 from typing import TYPE_CHECKING
 
 from anthropic import APIError, APITimeoutError, RateLimitError
+from anthropic._types import Omit
 from anthropic.types import (
     ContentBlockStopEvent,
     InputJSONDelta,
@@ -26,17 +53,25 @@ from anthropic.types import (
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
     TextDelta,
+    ThinkingBlock,
+    ThinkingConfigEnabledParam,
+    ThinkingDelta,
     ToolParam,
     ToolUseBlock,
 )
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
-from rossum_agent.agent.models import AgentConfig, AgentStep, ToolCall, ToolResult, truncate_content
-from rossum_agent.agent.request_classifier import (
-    RequestScope,
-    classify_request,
-    generate_rejection_response,
+from rossum_agent.agent.models import (
+    AgentConfig,
+    AgentStep,
+    StepType,
+    StreamDelta,
+    ThinkingBlockData,
+    ToolCall,
+    ToolResult,
+    truncate_content,
 )
+from rossum_agent.agent.request_classifier import RequestScope, classify_request, generate_rejection_response
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.rossum_mcp_integration import MCPConnection, mcp_tools_to_anthropic_format
 from rossum_agent.tools import (
@@ -65,6 +100,60 @@ logger = logging.getLogger(__name__)
 RATE_LIMIT_MAX_RETRIES = 5
 RATE_LIMIT_BASE_DELAY = 2.0
 RATE_LIMIT_MAX_DELAY = 60.0
+
+# Buffer text tokens for this duration before first flush to allow time to determine
+# whether this is an intermediate step (with tool calls) or final answer text.
+# This delay helps correctly classify the step type before streaming to the client.
+INITIAL_TEXT_BUFFER_DELAY = 1.5
+
+
+@dataclasses.dataclass
+class _StreamState:
+    """Mutable state for streaming model response.
+
+    Attributes:
+        first_text_token_time: Timestamp of when the first text token was received.
+            Used to implement initial buffering delay (see INITIAL_TEXT_BUFFER_DELAY).
+        initial_buffer_flushed: Whether the initial buffer has been flushed after
+            the delay period. Once True, text tokens are streamed immediately.
+    """
+
+    thinking_text: str = ""
+    response_text: str = ""
+    final_message: Message | None = None
+    text_buffer: list[str] = dataclasses.field(default_factory=list)
+    tool_calls: list[ToolCall] = dataclasses.field(default_factory=list)
+    pending_tools: dict[int, dict[str, str]] = dataclasses.field(default_factory=dict)
+    first_text_token_time: float | None = None
+    initial_buffer_flushed: bool = False
+
+    def _should_flush_initial_buffer(self) -> bool:
+        """Check if the initial buffer delay has elapsed and buffer should be flushed."""
+        if self.initial_buffer_flushed:
+            return True
+        if self.first_text_token_time is None:
+            return False
+        return (time.monotonic() - self.first_text_token_time) >= INITIAL_TEXT_BUFFER_DELAY
+
+    def get_step_type(self) -> StepType:
+        """Get the step type based on whether tool calls are pending."""
+        return StepType.INTERMEDIATE if self.pending_tools or self.tool_calls else StepType.FINAL_ANSWER
+
+    def flush_buffer(self, step_num: int, step_type: StepType) -> AgentStep | None:
+        """Flush text buffer and return AgentStep if buffer had content."""
+        if not self.text_buffer:
+            return None
+        buffered_text = "".join(self.text_buffer)
+        self.text_buffer.clear()
+        self.response_text += buffered_text
+        return AgentStep(
+            step_number=step_num,
+            thinking=self.thinking_text or None,
+            is_streaming=True,
+            text_delta=buffered_text,
+            accumulated_text=self.response_text,
+            step_type=step_type,
+        )
 
 
 class RossumAgent:
@@ -176,12 +265,17 @@ class RossumAgent:
         Yields:
             Tuples of (event, None) for each stream event, then (None, final_message) at the end.
         """
+        thinking_config: ThinkingConfigEnabledParam = {
+            "type": "enabled",
+            "budget_tokens": self.config.thinking_budget_tokens,
+        }
         with self.client.messages.stream(
             model=model_id,
             max_tokens=self.config.max_tokens,
             system=self.system_prompt,
             messages=messages,
-            tools=tools,
+            tools=tools if tools else Omit(),
+            thinking=thinking_config,
             temperature=self.config.temperature,
         ) as stream:
             for event in stream:
@@ -189,17 +283,15 @@ class RossumAgent:
             yield (None, stream.get_final_message())
 
     def _process_stream_event(
-        self, event: MessageStreamEvent, pending_tools: dict[int, dict[str, str]], tool_calls: list[ToolCall]
-    ) -> str | None:
+        self,
+        event: MessageStreamEvent,
+        pending_tools: dict[int, dict[str, str]],
+        tool_calls: list[ToolCall],
+    ) -> StreamDelta | None:
         """Process a single stream event.
 
-        Args:
-            event: The stream event to process.
-            pending_tools: Dict tracking in-progress tool use blocks.
-            tool_calls: List to append completed tool calls to.
-
         Returns:
-            Text delta if this event contained text, None otherwise.
+            StreamDelta with kind="thinking" or "text", or None if no delta.
         """
         if isinstance(event, RawContentBlockStartEvent):
             if isinstance(event.content_block, ToolUseBlock):
@@ -210,9 +302,10 @@ class RossumAgent:
                 }
 
         elif isinstance(event, RawContentBlockDeltaEvent):
+            if isinstance(event.delta, ThinkingDelta):
+                return StreamDelta(kind="thinking", content=event.delta.thinking)
             if isinstance(event.delta, TextDelta):
-                text: str = event.delta.text
-                return text
+                return StreamDelta(kind="text", content=event.delta.text)
             if isinstance(event.delta, InputJSONDelta) and event.index in pending_tools:
                 pending_tools[event.index]["json"] += event.delta.partial_json
 
@@ -227,21 +320,106 @@ class RossumAgent:
 
         return None
 
+    def _extract_thinking_blocks(self, message: Message) -> list[ThinkingBlockData]:
+        """Extract thinking blocks from a message for preserving in conversation history."""
+        return [
+            ThinkingBlockData(thinking=block.thinking, signature=block.signature)
+            for block in message.content
+            if isinstance(block, ThinkingBlock)
+        ]
+
+    def _handle_text_delta(self, step_num: int, content: str, state: _StreamState) -> AgentStep | None:
+        """Handle a text delta, buffering or flushing as appropriate."""
+        if state.first_text_token_time is None:
+            state.first_text_token_time = time.monotonic()
+        else:
+            if time.monotonic() - state.first_text_token_time > INITIAL_TEXT_BUFFER_DELAY:
+                state.initial_buffer_flushed = True
+
+        state.text_buffer.append(content)
+
+        if state.initial_buffer_flushed:
+            return state.flush_buffer(step_num, state.get_step_type())
+        if state.pending_tools or state.tool_calls:
+            state.initial_buffer_flushed = True
+            return state.flush_buffer(step_num, StepType.INTERMEDIATE)
+        return None
+
+    async def _process_stream_events(
+        self,
+        step_num: int,
+        event_queue: queue.Queue[tuple[MessageStreamEvent | None, Message | None] | None],
+        state: _StreamState,
+    ) -> AsyncIterator[AgentStep]:
+        """Process stream events and yield AgentSteps.
+
+        Text tokens are buffered for INITIAL_TEXT_BUFFER_DELAY seconds after the first
+        text token is received. This allows time to determine whether the response will
+        include tool calls (intermediate step) or is a final answer, enabling correct
+        step type classification before streaming to the client.
+
+        After the initial buffer is flushed, subsequent text tokens are streamed immediately.
+        """
+        while True:
+            try:
+                item = await asyncio.to_thread(event_queue.get, timeout=INITIAL_TEXT_BUFFER_DELAY)
+            except queue.Empty:
+                # Yield #1: Timeout-based flush of initial text buffer (ensures responsiveness during model pauses)
+                if (
+                    state.text_buffer
+                    and state._should_flush_initial_buffer()
+                    and (step := state.flush_buffer(step_num, state.get_step_type()))
+                ):
+                    state.initial_buffer_flushed = True
+                    yield step
+                continue
+
+            if item is None:
+                logger.debug(f"Stream ended, text_buffer={len(state.text_buffer)} chars, flushing as FINAL_ANSWER")
+                # Yield #2: Stream ended - flush any remaining buffered text as final answer
+                if step := state.flush_buffer(step_num, StepType.FINAL_ANSWER):
+                    logger.debug(f"Flushed step with step_type={step.step_type}")
+                    yield step
+                break
+
+            event, final_msg = item
+            if final_msg is not None:
+                state.final_message = final_msg
+                continue
+
+            delta = self._process_stream_event(event, state.pending_tools, state.tool_calls)
+            if not delta:
+                continue
+
+            if delta.kind == "thinking":
+                state.thinking_text += delta.content
+                # Yield #3: Streaming thinking tokens (extended thinking / chain-of-thought)
+                yield AgentStep(
+                    step_number=step_num,
+                    thinking=state.thinking_text,
+                    is_streaming=True,
+                    step_type=StepType.THINKING,
+                )
+                continue
+
+            # Yield #4: Text delta - immediate flush after initial buffer period or when tool calls detected
+            if step := self._handle_text_delta(step_num, delta.content, state):
+                yield step
+
     async def _stream_model_response(self, step_num: int) -> AsyncIterator[AgentStep]:
         """Stream model response, yielding partial steps as thinking streams in.
+
+        Extended thinking separates the model's internal reasoning (thinking blocks)
+        from its final response (text blocks). This allows distinguishing between
+        the chain-of-thought process and the actual answer.
 
         Yields:
             AgentStep objects - partial steps while streaming, then final step with tool results.
         """
         messages = self.memory.write_to_messages()
-
         tools = await self._get_tools()
         model_id = get_model_id()
-
-        thinking_text = ""
-        tool_calls: list[ToolCall] = []
-        pending_tools: dict[int, dict[str, str]] = {}
-        final_message: Message | None = None
+        state = _StreamState()
 
         event_queue: queue.Queue[tuple[MessageStreamEvent | None, Message | None] | None] = queue.Queue()
 
@@ -253,27 +431,18 @@ class RossumAgent:
         ctx = copy_context()
         producer_task = asyncio.get_event_loop().run_in_executor(None, partial(ctx.run, producer))
 
-        while True:
-            item = await asyncio.to_thread(event_queue.get)
-            if item is None:
-                break
-            event, final_msg = item
-            if final_msg is not None:
-                final_message = final_msg
-                continue
-
-            text_delta = self._process_stream_event(event, pending_tools, tool_calls)
-            if text_delta:
-                thinking_text += text_delta
-                yield AgentStep(step_number=step_num, thinking=thinking_text, is_streaming=True)
+        # Yield #5: Forward all streaming steps from _process_stream_events (yields #1-4)
+        async for step in self._process_stream_events(step_num, event_queue, state):
+            yield step
 
         await producer_task
 
-        if final_message is None:
+        if state.final_message is None:
             raise RuntimeError("Stream ended without final message")
 
-        input_tokens = final_message.usage.input_tokens
-        output_tokens = final_message.usage.output_tokens
+        thinking_blocks = self._extract_thinking_blocks(state.final_message)
+        input_tokens = state.final_message.usage.input_tokens
+        output_tokens = state.final_message.usage.output_tokens
         self._total_input_tokens += input_tokens
         self._total_output_tokens += output_tokens
         logger.info(
@@ -283,28 +452,31 @@ class RossumAgent:
 
         step = AgentStep(
             step_number=step_num,
-            thinking=thinking_text if thinking_text else None,
-            tool_calls=tool_calls,
+            thinking=state.thinking_text if state.thinking_text else None,
+            tool_calls=state.tool_calls,
             is_streaming=False,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            step_type=StepType.FINAL_ANSWER if not state.tool_calls else StepType.INTERMEDIATE,
         )
 
-        if not tool_calls:
-            step.final_answer = thinking_text if thinking_text else None
+        if not state.tool_calls:
+            step.final_answer = state.response_text if state.response_text else None
             step.is_final = True
             memory_step = MemoryStep(
                 step_number=step_num,
-                text=thinking_text if thinking_text else None,
+                text=state.response_text if state.response_text else None,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
             )
             self.memory.add_step(memory_step)
+            # Yield #6: Final answer step (no tool calls, response complete)
             yield step
             return
 
+        # Yield #7: Forward tool execution progress steps from _execute_tools_with_progress
         async for step_or_result in self._execute_tools_with_progress(
-            step_num, thinking_text, tool_calls, step, input_tokens, output_tokens
+            step_num, state.response_text, state.tool_calls, step, input_tokens, output_tokens, thinking_blocks
         ):
             yield step_or_result
 
@@ -316,12 +488,14 @@ class RossumAgent:
         step: AgentStep,
         input_tokens: int,
         output_tokens: int,
+        thinking_blocks: list[ThinkingBlockData] | None = None,
     ) -> AsyncIterator[AgentStep]:
         """Execute tools and yield progress updates."""
         memory_step = MemoryStep(
             step_number=step_num,
             text=thinking_text if thinking_text else None,
             tool_calls=tool_calls,
+            thinking_blocks=thinking_blocks or [],
             input_tokens=input_tokens,
             output_tokens=output_tokens,
         )
@@ -331,6 +505,7 @@ class RossumAgent:
 
         for idx, tool_call in enumerate(tool_calls, 1):
             tool_progress = (idx, total_tools)
+            # Yield: Tool execution starting - shows which tool is about to run
             yield AgentStep(
                 step_number=step_num,
                 thinking=thinking_text if thinking_text else None,
@@ -338,11 +513,13 @@ class RossumAgent:
                 is_streaming=True,
                 current_tool=tool_call.name,
                 tool_progress=tool_progress,
+                step_type=StepType.INTERMEDIATE,
             )
 
             async for progress_or_result in self._execute_tool_with_progress(
                 tool_call, step_num, tool_calls, tool_progress
             ):
+                # Yield: Sub-agent progress updates from tool execution
                 if isinstance(progress_or_result, AgentStep):
                     yield progress_or_result
                 elif isinstance(progress_or_result, ToolResult):
@@ -388,6 +565,7 @@ class RossumAgent:
                             current_tool=tool_call.name,
                             tool_progress=tool_progress,
                             sub_agent_progress=progress,
+                            step_type=StepType.INTERMEDIATE,
                         )
                     except queue.Empty:
                         pass
@@ -447,6 +625,7 @@ class RossumAgent:
                 is_final=True,
                 input_tokens=total_input,
                 output_tokens=total_output,
+                step_type=StepType.FINAL_ANSWER,
             )
         return None
 
@@ -494,6 +673,7 @@ class RossumAgent:
                             step_number=step_num,
                             error=f"Rate limit exceeded after {RATE_LIMIT_MAX_RETRIES} retries. Please try again later.",
                             is_final=True,
+                            step_type=StepType.FINAL_ANSWER,
                         )
                         return
 
@@ -508,19 +688,28 @@ class RossumAgent:
                         step_number=step_num,
                         thinking=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
                         is_streaming=True,
+                        step_type=StepType.INTERMEDIATE,
                     )
                     await asyncio.sleep(wait_time)
 
                 except APITimeoutError as e:
                     logger.warning(f"API timeout at step {step_num}: {e}")
                     yield AgentStep(
-                        step_number=step_num, error=f"Request timed out. Please try again. Details: {e}", is_final=True
+                        step_number=step_num,
+                        error=f"Request timed out. Please try again. Details: {e}",
+                        is_final=True,
+                        step_type=StepType.FINAL_ANSWER,
                     )
                     return
 
                 except APIError as e:
                     logger.error(f"API error at step {step_num}: {e}")
-                    yield AgentStep(step_number=step_num, error=f"API error occurred: {e}", is_final=True)
+                    yield AgentStep(
+                        step_number=step_num,
+                        error=f"API error occurred: {e}",
+                        is_final=True,
+                        step_type=StepType.FINAL_ANSWER,
+                    )
                     return
 
         else:
@@ -528,6 +717,7 @@ class RossumAgent:
                 step_number=self.config.max_steps,
                 error=f"Maximum steps ({self.config.max_steps}) reached without final answer.",
                 is_final=True,
+                step_type=StepType.FINAL_ANSWER,
             )
 
 

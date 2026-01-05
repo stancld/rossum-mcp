@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from rossum_agent.agent.models import ToolCall, ToolResult
+from rossum_agent.agent.models import ThinkingBlockData, ToolCall, ToolResult
 
 if TYPE_CHECKING:
     from anthropic.types import MessageParam
@@ -34,6 +34,7 @@ class MemoryStep:
     text: str | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     tool_results: list[ToolResult] = field(default_factory=list)
+    thinking_blocks: list[ThinkingBlockData] = field(default_factory=list)
     input_tokens: int = 0
     output_tokens: int = 0
 
@@ -50,6 +51,9 @@ class MemoryStep:
 
         if self.tool_calls:
             assistant_content: list[dict[str, object]] = []
+
+            for tb in self.thinking_blocks:
+                assistant_content.append(tb.to_api_format())
 
             if self.text:
                 assistant_content.append({"type": "text", "text": self.text})
@@ -86,6 +90,7 @@ class MemoryStep:
             "text": self.text,
             "tool_calls": [tc.to_dict() for tc in self.tool_calls],
             "tool_results": [tr.to_dict() for tr in self.tool_results],
+            "thinking_blocks": [tb.to_dict() for tb in self.thinking_blocks],
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
         }
@@ -98,6 +103,7 @@ class MemoryStep:
             text=data.get("text"),
             tool_calls=[ToolCall.from_dict(tc) for tc in data.get("tool_calls", [])],
             tool_results=[ToolResult.from_dict(tr) for tr in data.get("tool_results", [])],
+            thinking_blocks=[ThinkingBlockData.from_dict(tb) for tb in data.get("thinking_blocks", [])],
             input_tokens=data.get("input_tokens", 0),
             output_tokens=data.get("output_tokens", 0),
         )

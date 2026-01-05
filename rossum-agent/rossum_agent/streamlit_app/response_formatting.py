@@ -179,11 +179,13 @@ class ChatResponse:
                 progress_text = f"{progress_text}\n\n{sub_agent_text}"
 
             if step.thinking:
-                self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n\n{progress_text}\n"
+                self.current_step_markdown = (
+                    f"#### Step {step.step_number}\n\n🧠 **Thinking:**\n\n{step.thinking}\n\n{progress_text}\n"
+                )
             else:
                 self.current_step_markdown = f"#### Step {step.step_number}\n\n{progress_text}\n"
         elif step.thinking:
-            self.current_step_markdown = f"#### Step {step.step_number}\n\n💭 {step.thinking}\n"
+            self.current_step_markdown = f"#### Step {step.step_number}\n\n🧠 **Thinking:**\n\n{step.thinking}\n"
 
     def _format_sub_agent_progress(self, progress: Any) -> str:
         """Format sub-agent progress for display."""
@@ -218,8 +220,8 @@ class ChatResponse:
         self._current_step_num = step.step_number
         step_md_parts: list[str] = [f"#### Step {step.step_number}\n"]
 
-        if step.thinking and step.has_tool_calls():
-            step_md_parts.append(f"💭 {step.thinking}\n")
+        if step.thinking:
+            step_md_parts.append(f"🧠 **Thinking:**\n\n{step.thinking}\n")
 
         if step.tool_calls:
             tool_names = [tc.name for tc in step.tool_calls]
@@ -254,8 +256,8 @@ class ChatResponse:
 
         display_md = "\n\n".join(all_steps)
 
-        if step.is_streaming:
-            display_md += "\n\n⏳ _Thinking..._"
+        if step.is_streaming and not step.thinking:
+            display_md += "\n\n⏳ _Extended thinking in progress..._"
         elif self.final_answer_text is None and not step.is_final:
             display_md += "\n\n⏳ _Processing..._"
         elif self.final_answer_text is not None:
