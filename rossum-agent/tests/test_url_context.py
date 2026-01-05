@@ -145,6 +145,40 @@ class TestRossumUrlContext:
         context = RossumUrlContext(queue_id=12345)
         assert not context.is_empty()
 
+    def test_is_empty_false_when_document_id_set(self):
+        """Test is_empty returns False when document_id is set."""
+        context = RossumUrlContext(document_id=12345)
+        assert not context.is_empty()
+
+    def test_is_empty_false_when_hook_id_set(self):
+        """Test is_empty returns False when hook_id is set."""
+        context = RossumUrlContext(hook_id=12345)
+        assert not context.is_empty()
+
+    def test_is_empty_false_when_engine_id_set(self):
+        """Test is_empty returns False when engine_id is set."""
+        context = RossumUrlContext(engine_id=12345)
+        assert not context.is_empty()
+
+    def test_to_context_string_with_document_id(self):
+        """Test context string includes document ID."""
+        context = RossumUrlContext(document_id=99999)
+        result = context.to_context_string()
+        assert "Document ID: 99999" in result
+
+    def test_to_context_string_with_engine_id(self):
+        """Test context string includes engine ID."""
+        context = RossumUrlContext(engine_id=88888)
+        result = context.to_context_string()
+        assert "Engine ID: 88888" in result
+
+    def test_to_context_string_with_additional_context(self):
+        """Test context string includes additional context."""
+        context = RossumUrlContext(queue_id=123, additional_context={"view_level": "queue", "custom_key": "value"})
+        result = context.to_context_string()
+        assert "view_level: queue" in result
+        assert "custom_key: value" in result
+
     def test_to_context_string_single_id(self):
         """Test context string with single ID."""
         context = RossumUrlContext(queue_id=12345)

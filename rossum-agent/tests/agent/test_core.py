@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,6 +28,8 @@ from rossum_agent.agent import (
     ToolResult,
     truncate_content,
 )
+from rossum_agent.agent.core import _StreamState
+from rossum_agent.agent.models import StepType
 
 
 class TestTruncateContent:
@@ -1928,3 +1931,103 @@ class TestStreamState:
         assert state.text_buffer == []
         assert state.tool_calls == []
         assert state.pending_tools == {}
+        assert state.first_text_token_time is None
+        assert state.initial_buffer_flushed is False
+
+    def test_should_flush_initial_buffer_when_already_flushed(self):
+        """Test _should_flush_initial_buffer returns True when already flushed."""
+        state = _StreamState()
+        state.initial_buffer_flushed = True
+
+        assert state._should_flush_initial_buffer() is True
+
+    def test_should_flush_initial_buffer_when_no_first_token(self):
+        """Test _should_flush_initial_buffer returns False when no first token time."""
+        state = _StreamState()
+        state.first_text_token_time = None
+
+        assert state._should_flush_initial_buffer() is False
+
+    def test_should_flush_initial_buffer_after_delay(self):
+        """Test _should_flush_initial_buffer returns True after delay elapsed."""
+        state = _StreamState()
+        state.first_text_token_time = time.monotonic() - 2.0
+
+        assert state._should_flush_initial_buffer() is True
+
+    def test_should_flush_initial_buffer_before_delay(self):
+        """Test _should_flush_initial_buffer returns False before delay elapsed."""
+        state = _StreamState()
+        state.first_text_token_time = time.monotonic()
+
+        assert state._should_flush_initial_buffer() is False
+
+    def test_get_step_type_with_pending_tools(self):
+        """Test get_step_type returns INTERMEDIATE when tools pending."""
+        state = _StreamState()
+        state.pending_tools = {0: {"name": "test_tool"}}
+
+        assert state.get_step_type() == StepType.INTERMEDIATE
+
+    def test_get_step_type_with_tool_calls(self):
+        """Test get_step_type returns INTERMEDIATE when tool_calls exist."""
+        state = _StreamState()
+        state.tool_calls = [MagicMock()]
+
+        assert state.get_step_type() == StepType.INTERMEDIATE
+
+    def test_get_step_type_final_answer(self):
+        """Test get_step_type returns FINAL_ANSWER when no tools."""
+        state = _StreamState()
+
+        assert state.get_step_type() == StepType.FINAL_ANSWER
+
+
+class TestRossumAgentProperties:
+    """Tests for RossumAgent properties and basic methods."""
+
+    @pytest.fixture
+    def mock_agent(self):
+        """Create a mock RossumAgent."""
+        with (
+            patch("rossum_agent.agent.core.mcp_tools_to_anthropic_format", return_value=[]),
+            patch("rossum_agent.agent.core.get_internal_tools", return_value=[]),
+            patch("rossum_agent.agent.core.get_deploy_tools", return_value=[]),
+        ):
+            mock_client = MagicMock()
+            mock_mcp = MagicMock()
+            mock_mcp.list_tools.return_value = MagicMock(tools=[])
+
+            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt", config=None)
+            yield agent
+
+    def test_messages_property(self, mock_agent):
+        """Test messages property returns conversation messages."""
+        result = mock_agent.messages
+
+        assert isinstance(result, list)
+
+    def test_reset_clears_state(self, mock_agent):
+        """Test reset clears agent state."""
+        mock_agent._total_input_tokens = 100
+        mock_agent._total_output_tokens = 50
+
+        mock_agent.reset()
+
+        assert mock_agent._total_input_tokens == 0
+        assert mock_agent._total_output_tokens == 0
+
+    def test_add_user_message(self, mock_agent):
+        """Test add_user_message adds message to memory."""
+        mock_agent.add_user_message("Hello, agent!")
+
+        messages = mock_agent.messages
+        assert len(messages) == 1
+
+    def test_add_assistant_message(self, mock_agent):
+        """Test add_assistant_message adds message to memory."""
+        mock_agent.add_user_message("Hello")
+        mock_agent.add_assistant_message("Hi there!")
+
+        messages = mock_agent.messages
+        assert len(messages) == 2

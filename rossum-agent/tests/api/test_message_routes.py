@@ -5,9 +5,17 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from rossum_agent.api.models.schemas import FileCreatedEvent, StepEvent, StreamDoneEvent
+from rossum_agent.api.models.schemas import (
+    FileCreatedEvent,
+    StepEvent,
+    StreamDoneEvent,
+    SubAgentProgressEvent,
+    SubAgentTextEvent,
+)
 from rossum_agent.api.routes.messages import (
+    ProcessedEvent,
     _format_sse_event,
+    _process_agent_event,
     _yield_file_events,
     get_agent_service_dep,
     get_chat_service_dep,
@@ -330,3 +338,105 @@ class TestEventGeneratorOrder:
 
         last_file_created_pos = full_content.rfind("event: file_created")
         assert last_file_created_pos < done_pos, "All file_created events should come before done event"
+
+
+class TestProcessAgentEvent:
+    """Tests for _process_agent_event function."""
+
+    def test_process_stream_done_event(self):
+        """Test processing StreamDoneEvent."""
+        event = StreamDoneEvent(total_steps=5, input_tokens=100, output_tokens=50)
+
+        result = _process_agent_event(event)
+
+        assert isinstance(result, ProcessedEvent)
+        assert result.done_event is event
+        assert result.sse_event is None
+        assert result.final_response_update is None
+
+    def test_process_sub_agent_progress_event(self):
+        """Test processing SubAgentProgressEvent."""
+        event = SubAgentProgressEvent(
+            tool_name="analyze_hook",
+            iteration=2,
+            max_iterations=5,
+            tool_calls=["grep", "read_file"],
+            status="running",
+        )
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "sub_agent_progress" in result.sse_event
+        assert result.done_event is None
+        assert result.final_response_update is None
+
+    def test_process_sub_agent_text_event(self):
+        """Test processing SubAgentTextEvent."""
+        event = SubAgentTextEvent(tool_name="debug_hook", text="Analyzing...", is_final=False)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "sub_agent_text" in result.sse_event
+        assert result.done_event is None
+        assert result.final_response_update is None
+
+    def test_process_step_event_intermediate_streaming(self):
+        """Test processing StepEvent with intermediate type and streaming."""
+        event = StepEvent(type="intermediate", step_number=1, content="Hello", is_streaming=True)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "step" in result.sse_event
+        assert result.final_response_update is None
+
+    def test_process_step_event_final_answer(self):
+        """Test processing StepEvent with final_answer type."""
+        event = StepEvent(type="final_answer", step_number=2, content="Done!", is_final=True)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "step" in result.sse_event
+        assert result.final_response_update == "Done!"
+
+    def test_process_step_event_thinking(self):
+        """Test processing StepEvent with thinking type."""
+        event = StepEvent(type="thinking", step_number=1, content="Let me think...", is_streaming=True)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "step" in result.sse_event
+        assert result.final_response_update is None
+
+    def test_process_step_event_tool_start(self):
+        """Test processing StepEvent with tool_start type."""
+        event = StepEvent(type="tool_start", step_number=1, tool_name="list_annotations", tool_progress=(1, 3))
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "step" in result.sse_event
+        assert result.final_response_update is None
+
+    def test_process_step_event_final_answer_with_none_content(self):
+        """Test processing StepEvent with final_answer type but None content."""
+        event = StepEvent(type="final_answer", step_number=2, content=None, is_final=True)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert result.final_response_update is None
+
+    def test_process_step_event_error(self):
+        """Test processing StepEvent with error type."""
+        event = StepEvent(type="error", step_number=1, content="Something went wrong", is_final=True)
+
+        result = _process_agent_event(event)
+
+        assert result.sse_event is not None
+        assert "step" in result.sse_event
+        assert result.final_response_update is None
