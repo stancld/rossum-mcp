@@ -111,6 +111,19 @@ class TestSkillRegistry:
         skills = registry.get_all_skills()
         assert skills == []
 
+    def test_skills_are_cached(self):
+        """Test that skills are only loaded once until reload."""
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "cached.md"
+            skill_file.write_text("content")
+
+            registry = SkillRegistry(Path(tmpdir))
+            registry.get_all_skills()
+
+            (Path(tmpdir) / "new-file.md").write_text("new")
+
+            assert len(registry.get_all_skills()) == 1
+
 
 class TestFormatSkillsForPrompt:
     """Test format_skills_for_prompt function."""

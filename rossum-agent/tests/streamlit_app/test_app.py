@@ -7,6 +7,54 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from rossum_agent.streamlit_app.app import (
+    BEEP_HTML,
+    LOGO_PATH,
+    _build_agent_prompt,
+    _initialize_chat_id,
+    _initialize_session_defaults,
+    _initialize_user_and_storage,
+    _load_messages_from_redis,
+    _save_response_to_redis,
+    main,
+    run_agent_turn,
+)
+
+
+class MockSessionState:
+    """Mock class for Streamlit session_state that supports both dict and attribute access."""
+
+    def __init__(self):
+        self._data = {}
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    def __getattr__(self, key):
+        if key.startswith("_"):
+            return object.__getattribute__(self, key)
+        try:
+            return self._data[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        if key.startswith("_"):
+            object.__setattr__(self, key, value)
+        else:
+            self._data[key] = value
+
+    def __delitem__(self, key):
+        del self._data[key]
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
 
 
 class TestRunAgentTurn:
@@ -62,8 +110,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_basic(self, mock_dependencies):
         """Test basic run_agent_turn execution."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         on_step = MagicMock()
 
         await run_agent_turn(
@@ -80,8 +126,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_connects_mcp_server(self, mock_dependencies):
         """Test that MCP server is connected with correct parameters."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         await run_agent_turn(
             rossum_api_token="token123",
             rossum_api_base_url="https://api.rossum.ai",
@@ -100,8 +144,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_adds_conversation_history(self, mock_dependencies):
         """Test that conversation history is added to agent."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         conversation_history = [
             {"role": "user", "content": "First message"},
             {"role": "assistant", "content": "First response"},
@@ -124,8 +166,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_with_url_context(self, mock_dependencies):
         """Test that URL context is added to system prompt."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         mock_dependencies["url_context"].is_empty.return_value = False
         mock_dependencies["format_context_for_prompt"].return_value = "URL context info"
 
@@ -145,8 +185,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_without_url_context(self, mock_dependencies):
         """Test that format_context_for_prompt is not called when URL context is empty."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         mock_dependencies["url_context"].is_empty.return_value = True
 
         await run_agent_turn(
@@ -163,8 +201,6 @@ class TestRunAgentTurn:
     @pytest.mark.asyncio
     async def test_run_agent_turn_calls_on_step_for_each_step(self, mock_dependencies):
         """Test that on_step callback is called for each agent step."""
-        from rossum_agent.streamlit_app.app import run_agent_turn
-
         step1 = MagicMock()
         step1.is_final = False
         step2 = MagicMock()
@@ -197,54 +233,383 @@ class TestAppHelpers:
 
     def test_beep_html_contains_audio_tag(self):
         """Test that BEEP_HTML constant contains audio element."""
-        from rossum_agent.streamlit_app.app import BEEP_HTML
-
         assert "<audio" in BEEP_HTML
         assert "autoplay" in BEEP_HTML
         assert "data:audio/wav;base64," in BEEP_HTML
 
     def test_logo_path_exists(self):
         """Test that LOGO_PATH points to existing file."""
-        from rossum_agent.streamlit_app.app import LOGO_PATH
-
         assert LOGO_PATH.exists()
         assert LOGO_PATH.suffix == ".png"
 
 
-class MockSessionState:
-    """Mock class for Streamlit session_state that supports both dict and attribute access."""
+class TestInitializeUserAndStorage:
+    """Test _initialize_user_and_storage function."""
 
-    def __init__(self):
-        self._data = {}
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.context = MagicMock()
+            mock_st.context.headers = {}
+            yield mock_st
 
-    def __contains__(self, key):
-        return key in self._data
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.RedisStorage") as mock_redis,
+            patch("rossum_agent.streamlit_app.app.detect_user_id") as mock_detect,
+            patch("rossum_agent.streamlit_app.app.normalize_user_id") as mock_norm,
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            mock_redis_instance = MagicMock()
+            mock_redis.return_value = mock_redis_instance
+            mock_detect.return_value = "test-user"
+            mock_norm.return_value = "test-user"
+            yield {"st": mock_streamlit, "redis": mock_redis, "detect": mock_detect, "norm": mock_norm}
 
-    def __getitem__(self, key):
-        return self._data[key]
+    def test_initializes_user_id(self, mock_deps):
+        """Test user ID is initialized."""
+        _initialize_user_and_storage()
 
-    def __setitem__(self, key, value):
-        self._data[key] = value
+        assert mock_deps["st"].session_state["user_id"] == "test-user"
 
-    def __getattr__(self, key):
-        if key.startswith("_"):
-            return object.__getattribute__(self, key)
-        try:
-            return self._data[key]
-        except KeyError:
-            raise AttributeError(key)
+    def test_initializes_redis_storage(self, mock_deps):
+        """Test Redis storage is initialized."""
+        _initialize_user_and_storage()
 
-    def __setattr__(self, key, value):
-        if key.startswith("_"):
-            object.__setattr__(self, key, value)
-        else:
-            self._data[key] = value
+        assert "redis_storage" in mock_deps["st"].session_state
 
-    def __delitem__(self, key):
-        del self._data[key]
+    def test_enables_user_isolation_with_jwt_url(self, mock_deps):
+        """Test user isolation is enabled when JWT URL is set."""
+        with patch.dict("os.environ", {"TELEPORT_JWT_JWKS_URL": "https://example.com"}):
+            _initialize_user_and_storage()
 
-    def get(self, key, default=None):
-        return self._data.get(key, default)
+        assert mock_deps["st"].session_state["user_isolation_enabled"] is True
+
+
+class TestInitializeChatId:
+    """Test _initialize_chat_id function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.query_params = {}
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.generate_chat_id") as mock_gen,
+            patch("rossum_agent.streamlit_app.app.is_valid_chat_id") as mock_valid,
+        ):
+            mock_gen.return_value = "chat_20231201120000_abc123def456"
+            mock_valid.return_value = False
+            yield {"st": mock_streamlit, "gen": mock_gen, "valid": mock_valid}
+
+    def test_generates_new_chat_id_when_none_exists(self, mock_deps):
+        """Test new chat ID is generated when none exists."""
+        _initialize_chat_id()
+
+        assert mock_deps["st"].session_state["chat_id"] == "chat_20231201120000_abc123def456"
+        assert mock_deps["st"].query_params["chat_id"] == "chat_20231201120000_abc123def456"
+
+    def test_loads_chat_id_from_url(self, mock_deps):
+        """Test chat ID is loaded from URL when valid."""
+        mock_deps["st"].query_params["chat_id"] = "chat_20231201120000_validchatid1"
+        mock_deps["valid"].return_value = True
+
+        _initialize_chat_id()
+
+        assert mock_deps["st"].session_state["chat_id"] == "chat_20231201120000_validchatid1"
+
+
+class TestInitializeSessionDefaults:
+    """Test _initialize_session_defaults function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.create_session_output_dir") as mock_create,
+            patch("rossum_agent.streamlit_app.app.set_session_output_dir"),
+            patch("rossum_agent.streamlit_app.app.set_output_dir"),
+            patch("rossum_agent.streamlit_app.app.RossumUrlContext") as mock_ctx,
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            mock_create.return_value = Path(tempfile.mkdtemp())
+            mock_ctx.return_value = MagicMock()
+            yield {"st": mock_streamlit, "create": mock_create, "ctx": mock_ctx}
+
+    def test_initializes_output_dir(self, mock_deps):
+        """Test output directory is initialized."""
+        _initialize_session_defaults()
+
+        assert "output_dir" in mock_deps["st"].session_state
+
+    def test_initializes_mcp_mode(self, mock_deps):
+        """Test MCP mode defaults to read-write."""
+        _initialize_session_defaults()
+
+        assert mock_deps["st"].session_state["mcp_mode"] == "read-write"
+
+    def test_initializes_uploaded_images(self, mock_deps):
+        """Test uploaded images list is initialized."""
+        _initialize_session_defaults()
+
+        assert mock_deps["st"].session_state["uploaded_images"] == []
+
+    def test_initializes_uploader_key_counter(self, mock_deps):
+        """Test uploader key counter is initialized."""
+        _initialize_session_defaults()
+
+        assert mock_deps["st"].session_state["uploader_key_counter"] == 0
+
+
+class TestLoadMessagesFromRedis:
+    """Test _load_messages_from_redis function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    def test_skips_when_messages_already_exist(self, mock_streamlit):
+        """Test loading is skipped when messages already exist."""
+        mock_streamlit.session_state["messages"] = [{"role": "user", "content": "Hello"}]
+
+        _load_messages_from_redis()
+
+        assert mock_streamlit.session_state["messages"] == [{"role": "user", "content": "Hello"}]
+
+    def test_initializes_empty_list_when_redis_not_connected(self, mock_streamlit):
+        """Test empty list is initialized when Redis is not connected."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = False
+        mock_streamlit.session_state["redis_storage"] = mock_redis
+
+        _load_messages_from_redis()
+
+        assert mock_streamlit.session_state["messages"] == []
+
+
+class TestBuildAgentPrompt:
+    """Test _build_agent_prompt function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.session_state["uploaded_images"] = []
+            yield mock_st
+
+    def test_returns_string_when_no_images(self, mock_streamlit):
+        """Test string prompt is returned when no images."""
+        result, num_images = _build_agent_prompt("Hello agent", [])
+
+        assert result == "Hello agent"
+        assert num_images == 0
+
+    def test_returns_content_blocks_with_images(self, mock_streamlit):
+        """Test content blocks are returned when images are present."""
+        images = [{"media_type": "image/png", "data": "base64data", "name": "test.png"}]
+
+        result, num_images = _build_agent_prompt("Describe this", images)
+
+        assert isinstance(result, list)
+        assert num_images == 1
+        assert len(result) == 2
+        assert result[0]["type"] == "image"
+        assert result[1]["type"] == "text"
+
+    def test_clears_uploaded_images_after_build(self, mock_streamlit):
+        """Test uploaded images are cleared after building prompt."""
+        mock_streamlit.session_state["uploaded_images"] = [
+            {"media_type": "image/png", "data": "data", "name": "t.png"}
+        ]
+
+        _build_agent_prompt("Test", mock_streamlit.session_state["uploaded_images"])
+
+        assert mock_streamlit.session_state["uploaded_images"] == []
+
+
+class TestSaveResponseToRedis:
+    """Test _save_response_to_redis function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.get_commit_sha") as mock_sha,
+            patch("rossum_agent.streamlit_app.app.ChatMetadata") as mock_meta,
+        ):
+            mock_sha.return_value = "abc123"
+            yield {"st": mock_streamlit, "sha": mock_sha, "meta": mock_meta}
+
+    def test_skips_when_redis_not_connected(self, mock_deps):
+        """Test saving is skipped when Redis is not connected."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = False
+        mock_deps["st"].session_state["redis_storage"] = mock_redis
+
+        chat_response = MagicMock()
+
+        _save_response_to_redis(chat_response)
+
+        mock_redis.save_chat.assert_not_called()
+
+    def test_saves_when_redis_connected(self, mock_deps):
+        """Test response is saved when Redis is connected."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = True
+        mock_deps["st"].session_state["redis_storage"] = mock_redis
+        mock_deps["st"].session_state["chat_id"] = "test-chat"
+        mock_deps["st"].session_state["messages"] = []
+        mock_deps["st"].session_state["output_dir"] = tempfile.gettempdir()
+        mock_deps["st"].session_state["user_isolation_enabled"] = False
+
+        chat_response = MagicMock()
+        chat_response.total_input_tokens = 100
+        chat_response.total_output_tokens = 50
+        chat_response.total_tool_calls = 2
+        chat_response.total_steps = 3
+
+        _save_response_to_redis(chat_response)
+
+        mock_redis.save_chat.assert_called_once()
+
+    def test_saves_with_user_isolation_enabled(self, mock_deps):
+        """Test response is saved with user ID when isolation is enabled."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = True
+        mock_deps["st"].session_state["redis_storage"] = mock_redis
+        mock_deps["st"].session_state["chat_id"] = "test-chat"
+        mock_deps["st"].session_state["messages"] = []
+        mock_deps["st"].session_state["output_dir"] = tempfile.gettempdir()
+        mock_deps["st"].session_state["user_isolation_enabled"] = True
+        mock_deps["st"].session_state["user_id"] = "test-user"
+
+        chat_response = MagicMock()
+        chat_response.total_input_tokens = 100
+        chat_response.total_output_tokens = 50
+        chat_response.total_tool_calls = 2
+        chat_response.total_steps = 3
+
+        _save_response_to_redis(chat_response)
+
+        mock_redis.save_chat.assert_called_once()
+
+
+class TestLoadMessagesFromRedisWithSharedUser:
+    """Test _load_messages_from_redis with shared user scenarios."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    def test_loads_from_shared_user_when_isolation_enabled(self, mock_streamlit):
+        """Test loading messages from shared user when isolation is enabled."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = True
+        chat_data = MagicMock()
+        chat_data.messages = [{"role": "user", "content": "Shared message"}]
+        mock_redis.load_chat.return_value = chat_data
+
+        mock_streamlit.session_state["redis_storage"] = mock_redis
+        mock_streamlit.session_state["chat_id"] = "shared-chat"
+        mock_streamlit.session_state["output_dir"] = Path(tempfile.gettempdir())
+        mock_streamlit.session_state["user_isolation_enabled"] = True
+        mock_streamlit.session_state["user_id"] = "current-user"
+        mock_streamlit.session_state["shared_user_id"] = "original-owner"
+
+        _load_messages_from_redis()
+
+        assert mock_streamlit.session_state["messages"] == [{"role": "user", "content": "Shared message"}]
+        mock_redis.load_chat.assert_called_once()
+
+    def test_loads_own_messages_without_shared_user(self, mock_streamlit):
+        """Test loading own messages when no shared_user_id."""
+        mock_redis = MagicMock()
+        mock_redis.is_connected.return_value = True
+        mock_redis.load_chat.return_value = None
+
+        mock_streamlit.session_state["redis_storage"] = mock_redis
+        mock_streamlit.session_state["chat_id"] = "own-chat"
+        mock_streamlit.session_state["output_dir"] = Path(tempfile.gettempdir())
+        mock_streamlit.session_state["user_isolation_enabled"] = True
+        mock_streamlit.session_state["user_id"] = "current-user"
+
+        _load_messages_from_redis()
+
+        assert mock_streamlit.session_state["messages"] == []
+
+
+class TestInitializeChatIdFromUrl:
+    """Test _initialize_chat_id with URL parameters."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.query_params = {}
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.generate_chat_id") as mock_gen,
+            patch("rossum_agent.streamlit_app.app.is_valid_chat_id") as mock_valid,
+        ):
+            mock_gen.return_value = "chat_20231201120000_abc123def456"
+            yield {"st": mock_streamlit, "gen": mock_gen, "valid": mock_valid}
+
+    def test_clears_session_on_chat_change(self, mock_deps):
+        """Test session is cleared when chat ID changes via URL."""
+        mock_deps["st"].session_state["chat_id"] = "old-chat-id"
+        mock_deps["st"].session_state["messages"] = [{"role": "user", "content": "old"}]
+        mock_deps["st"].session_state["output_dir"] = "/old/path"
+        mock_deps["st"].session_state["uploaded_images"] = [{"data": "img"}]
+        mock_deps["st"].session_state["uploader_key_counter"] = 5
+
+        mock_deps["st"].query_params["chat_id"] = "chat_20231201120000_newchatid12"
+        mock_deps["st"].query_params["user_id"] = "shared-owner"
+        mock_deps["valid"].return_value = True
+
+        _initialize_chat_id()
+
+        assert mock_deps["st"].session_state["chat_id"] == "chat_20231201120000_newchatid12"
+        assert mock_deps["st"].session_state["shared_user_id"] == "shared-owner"
+        assert "messages" not in mock_deps["st"].session_state
+        assert "output_dir" not in mock_deps["st"].session_state
+        assert mock_deps["st"].session_state["uploaded_images"] == []
+        assert mock_deps["st"].session_state["uploader_key_counter"] == 6
 
 
 class TestMainFunction:
@@ -332,8 +697,6 @@ class TestMainFunction:
 
     def test_main_initializes_session_state(self, mock_dependencies):
         """Test that main initializes required session state variables."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -348,8 +711,6 @@ class TestMainFunction:
 
     def test_main_generates_new_chat_id(self, mock_dependencies):
         """Test that main generates new chat ID when none exists."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -358,8 +719,6 @@ class TestMainFunction:
 
     def test_main_detects_user_from_jwt(self, mock_dependencies):
         """Test that main detects user ID from JWT headers."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         st.context.headers = {"Teleport-Jwt-Assertion": "jwt-token-here"}
 
@@ -369,8 +728,6 @@ class TestMainFunction:
 
     def test_main_enables_user_isolation_with_jwt_config(self, mock_dependencies):
         """Test that user isolation is enabled when JWT config is present."""
-        from rossum_agent.streamlit_app.app import main
-
         with patch.dict("os.environ", {"TELEPORT_JWT_JWKS_URL": "https://example.com/jwks"}):
             st = mock_dependencies["st"]
             main()
@@ -379,8 +736,6 @@ class TestMainFunction:
 
     def test_main_disables_user_isolation_without_jwt_config(self, mock_dependencies):
         """Test that user isolation is disabled when JWT config is absent."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -388,8 +743,6 @@ class TestMainFunction:
 
     def test_main_shows_credentials_warning_when_not_saved(self, mock_dependencies):
         """Test that credentials warning is shown when not saved."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -397,8 +750,6 @@ class TestMainFunction:
 
     def test_main_disables_chat_input_without_credentials(self, mock_dependencies):
         """Test that chat input is disabled without credentials."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -409,8 +760,6 @@ class TestMainFunction:
 
     def test_main_loads_messages_from_redis(self, mock_dependencies):
         """Test that messages are loaded from Redis when connected."""
-        from rossum_agent.streamlit_app.app import main
-
         redis_instance = mock_dependencies["redis_instance"]
         redis_instance.is_connected.return_value = True
         chat_data = MagicMock()
@@ -427,8 +776,6 @@ class TestMainFunction:
 
     def test_main_initializes_empty_messages_when_redis_empty(self, mock_dependencies):
         """Test that empty messages are initialized when Redis has no data."""
-        from rossum_agent.streamlit_app.app import main
-
         redis_instance = mock_dependencies["redis_instance"]
         redis_instance.is_connected.return_value = True
         redis_instance.load_chat.return_value = None
@@ -440,8 +787,6 @@ class TestMainFunction:
 
     def test_main_renders_title_and_description(self, mock_dependencies):
         """Test that title and description are rendered."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -450,8 +795,6 @@ class TestMainFunction:
 
     def test_main_renders_logo(self, mock_dependencies):
         """Test that logo is rendered in sidebar."""
-        from rossum_agent.streamlit_app.app import main
-
         st = mock_dependencies["st"]
         main()
 
@@ -459,8 +802,6 @@ class TestMainFunction:
 
     def test_main_reads_debug_credentials_from_env(self, mock_dependencies):
         """Test that credentials are read from env in debug mode."""
-        from rossum_agent.streamlit_app.app import main
-
         with patch.dict(
             "os.environ",
             {
@@ -478,8 +819,6 @@ class TestMainFunction:
 
     def test_main_disables_read_write_mode_from_env(self, mock_dependencies):
         """Test that read-write mode can be disabled via env var."""
-        from rossum_agent.streamlit_app.app import main
-
         with patch.dict("os.environ", {"ROSSUM_DISABLE_READ_WRITE": "true"}):
             st = mock_dependencies["st"]
             main()
