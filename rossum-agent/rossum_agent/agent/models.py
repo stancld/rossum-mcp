@@ -92,10 +92,6 @@ class ThinkingBlockData:
         """Serialize to dictionary for storage and API message format."""
         return {"type": "thinking", "thinking": self.thinking, "signature": self.signature}
 
-    def to_api_format(self) -> dict[str, object]:
-        """Convert to API message format (alias for to_dict)."""
-        return self.to_dict()
-
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ThinkingBlockData:
         """Deserialize from dictionary."""
@@ -145,6 +141,9 @@ class AgentConfig:
     def __post_init__(self) -> None:
         if self.temperature != 1.0:
             msg = "temperature must be 1.0 when extended thinking is enabled"
+            raise ValueError(msg)
+        if self.thinking_budget_tokens < 1024:
+            msg = "thinking_budget_tokens must be at least 1024"
             raise ValueError(msg)
 
 

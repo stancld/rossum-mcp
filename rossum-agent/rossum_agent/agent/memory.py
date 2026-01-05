@@ -53,7 +53,7 @@ class MemoryStep:
             assistant_content: list[dict[str, object]] = []
 
             for tb in self.thinking_blocks:
-                assistant_content.append(tb.to_api_format())
+                assistant_content.append(tb.to_dict())
 
             if self.text:
                 assistant_content.append({"type": "text", "text": self.text})

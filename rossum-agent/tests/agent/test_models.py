@@ -242,11 +242,6 @@ class TestThinkingBlockData:
         result = block.to_dict()
         assert result == {"type": "thinking", "thinking": "analysis", "signature": "abc"}
 
-    def test_to_api_format(self):
-        block = ThinkingBlockData(thinking="analysis", signature="abc")
-        result = block.to_api_format()
-        assert result == {"type": "thinking", "thinking": "analysis", "signature": "abc"}
-
     def test_from_dict(self):
         data = {"thinking": "my thoughts", "signature": "xyz"}
         block = ThinkingBlockData.from_dict(data)
@@ -271,3 +266,7 @@ class TestAgentConfigValidation:
     def test_default_thinking_budget(self):
         config = AgentConfig()
         assert config.thinking_budget_tokens == 10000
+
+    def test_thinking_budget_must_be_at_least_1024(self):
+        with pytest.raises(ValueError, match=r"thinking_budget_tokens must be at least 1024"):
+            AgentConfig(thinking_budget_tokens=1000)

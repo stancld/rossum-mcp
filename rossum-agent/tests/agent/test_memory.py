@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep, TaskStep
-from rossum_agent.agent.models import ToolCall, ToolResult
+from rossum_agent.agent.models import ThinkingBlockData, ToolCall, ToolResult
 
 
 class TestMemoryStep:
@@ -182,6 +182,28 @@ class TestMemoryStepSerialization:
         assert restored.tool_calls[0].id == original.tool_calls[0].id
         assert restored.input_tokens == original.input_tokens
         assert restored.output_tokens == original.output_tokens
+
+    def test_roundtrip_with_thinking_blocks(self):
+        """Test serialization roundtrip preserves thinking_blocks."""
+        original = MemoryStep(
+            step_number=1,
+            text="After thinking",
+            thinking_blocks=[
+                ThinkingBlockData(thinking="First thought process", signature="sig1"),
+                ThinkingBlockData(thinking="Second thought process", signature="sig2"),
+            ],
+            tool_calls=[ToolCall(id="tc1", name="analyze", arguments={})],
+            tool_results=[ToolResult(tool_call_id="tc1", name="analyze", content="result")],
+        )
+
+        serialized = original.to_dict()
+        restored = MemoryStep.from_dict(serialized)
+
+        assert len(restored.thinking_blocks) == 2
+        assert restored.thinking_blocks[0].thinking == "First thought process"
+        assert restored.thinking_blocks[0].signature == "sig1"
+        assert restored.thinking_blocks[1].thinking == "Second thought process"
+        assert restored.thinking_blocks[1].signature == "sig2"
 
 
 class TestTaskStep:
