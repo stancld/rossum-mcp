@@ -18,6 +18,7 @@ from rossum_agent.api.models.schemas import (
 )
 from rossum_agent.prompts import get_system_prompt
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
+from rossum_agent.streamlit_app.response_formatting import get_display_tool_name
 from rossum_agent.tools import (
     SubAgentProgress,
     SubAgentText,
@@ -57,6 +58,35 @@ def convert_sub_agent_progress_to_event(progress: SubAgentProgress) -> SubAgentP
     )
 
 
+def _create_tool_start_event(step: AgentStep, current_tool: str) -> StepEvent:
+    """Create a tool_start event from an AgentStep."""
+    current_tool_args = None
+    for tc in step.tool_calls:
+        if tc.name == current_tool:
+            current_tool_args = tc.arguments
+            break
+    display_name = get_display_tool_name(current_tool, current_tool_args)
+    return StepEvent(
+        type="tool_start",
+        step_number=step.step_number,
+        tool_name=display_name,
+        tool_arguments=current_tool_args,
+        tool_progress=step.tool_progress,
+    )
+
+
+def _create_tool_result_event(step: AgentStep) -> StepEvent:
+    """Create a tool_result event from an AgentStep."""
+    last_result = step.tool_results[-1]
+    return StepEvent(
+        type="tool_result",
+        step_number=step.step_number,
+        tool_name=last_result.name,
+        result=last_result.content,
+        is_error=last_result.is_error,
+    )
+
+
 def convert_step_to_event(step: AgentStep) -> StepEvent:
     """Convert an AgentStep to a StepEvent for SSE streaming.
 
@@ -68,8 +98,6 @@ def convert_step_to_event(step: AgentStep) -> StepEvent:
     Per Claude's extended thinking API, thinking blocks contain internal reasoning
     while text blocks contain the actual response. Both are streamed separately.
     """
-    event: StepEvent
-
     if step.error:
         event = StepEvent(type="error", step_number=step.step_number, content=step.error, is_final=True)
     elif step.is_final and step.final_answer:
@@ -83,21 +111,9 @@ def convert_step_to_event(step: AgentStep) -> StepEvent:
             type="final_answer", step_number=step.step_number, content=step.accumulated_text, is_streaming=True
         )
     elif step.current_tool and step.tool_progress:
-        event = StepEvent(
-            type="tool_start",
-            step_number=step.step_number,
-            tool_name=step.current_tool,
-            tool_progress=step.tool_progress,
-        )
+        event = _create_tool_start_event(step, step.current_tool)
     elif step.tool_results and not step.is_streaming:
-        last_result = step.tool_results[-1]
-        event = StepEvent(
-            type="tool_result",
-            step_number=step.step_number,
-            tool_name=last_result.name,
-            result=last_result.content,
-            is_error=last_result.is_error,
-        )
+        event = _create_tool_result_event(step)
     elif step.step_type == StepType.THINKING or step.thinking is not None:
         event = StepEvent(
             type="thinking", step_number=step.step_number, content=step.thinking, is_streaming=step.is_streaming

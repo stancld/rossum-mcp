@@ -10,7 +10,15 @@ from unittest.mock import Mock
 
 import pytest
 from rossum_agent.agent import AgentStep, ToolCall, ToolResult
-from rossum_agent.streamlit_app.response_formatting import ChatResponse, FinalResponse, parse_and_format_final_answer
+from rossum_agent.agent.models import StepType
+from rossum_agent.streamlit_app.response_formatting import (
+    ChatResponse,
+    FinalResponse,
+    get_display_tool_name,
+    parse_and_format_final_answer,
+)
+
+SANDBOX_ORG_ID = 729505
 
 
 class TestParseAndFormatFinalAnswerEdgeCases:
@@ -430,3 +438,322 @@ class TestChatResponseRenderDisplay:
 
         call_kwargs = mock_placeholder.markdown.call_args[1]
         assert call_kwargs.get("unsafe_allow_html") is True
+
+
+class TestChatResponseStepTypes:
+    """Test ChatResponse handling of different StepType values (matching API's agent_service.py)."""
+
+    @pytest.fixture
+    def mock_placeholder(self):
+        """Create a mock Streamlit placeholder."""
+        placeholder = Mock()
+        placeholder.markdown = Mock()
+        return placeholder
+
+    @pytest.fixture
+    def chat_response(self, mock_placeholder):
+        """Create a ChatResponse instance for testing."""
+        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder)
+
+    def test_process_thinking_step_type(self, chat_response, mock_placeholder):
+        """Test processing step with StepType.THINKING."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.THINKING,
+            thinking="I'm analyzing the data...",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "🧠 **Thinking:**" in chat_response.current_step_markdown
+        assert "I'm analyzing the data..." in chat_response.current_step_markdown
+
+    def test_process_intermediate_step_type_with_accumulated_text(self, chat_response, mock_placeholder):
+        """Test processing step with StepType.INTERMEDIATE and accumulated_text."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.INTERMEDIATE,
+            accumulated_text="Here is some intermediate text before tool calls",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "Step 1" in chat_response.current_step_markdown
+        assert "💬 **Response:**" in chat_response.current_step_markdown
+        assert "Here is some intermediate text before tool calls" in chat_response.current_step_markdown
+
+    def test_process_final_answer_step_type_with_accumulated_text(self, chat_response, mock_placeholder):
+        """Test processing step with StepType.FINAL_ANSWER and accumulated_text."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.FINAL_ANSWER,
+            accumulated_text="Here is the final answer text",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "Step 1" in chat_response.current_step_markdown
+        assert "💬 **Response:**" in chat_response.current_step_markdown
+        assert "Here is the final answer text" in chat_response.current_step_markdown
+
+    def test_process_completed_final_answer_step(self, chat_response, mock_placeholder):
+        """Test processing completed step with final_answer."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.FINAL_ANSWER,
+            final_answer="The analysis is complete.",
+            is_streaming=False,
+            is_final=True,
+        )
+
+        chat_response.process_step(step)
+
+        assert chat_response.final_answer_text is not None
+        assert "The analysis is complete." in chat_response.final_answer_text
+
+    def test_step_type_transitions_thinking_to_intermediate(self, chat_response, mock_placeholder):
+        """Test transition from thinking to intermediate within same step."""
+        thinking_step = AgentStep(
+            step_number=1,
+            step_type=StepType.THINKING,
+            thinking="Let me analyze...",
+            is_streaming=True,
+            is_final=False,
+        )
+        intermediate_step = AgentStep(
+            step_number=1,
+            step_type=StepType.INTERMEDIATE,
+            accumulated_text="Based on my analysis",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(thinking_step)
+        chat_response.process_step(intermediate_step)
+
+        assert len(chat_response.completed_steps_markdown) == 0
+        assert "Step 1" in chat_response.current_step_markdown
+
+    def test_sandbox_org_id_constant(self):
+        """Test that SANDBOX_ORG_ID is properly defined for test configuration."""
+        assert SANDBOX_ORG_ID == 729505
+
+
+class TestChatResponseTextStreaming:
+    """Test ChatResponse handling of text streaming (matching API's agent_service.py behavior)."""
+
+    @pytest.fixture
+    def mock_placeholder(self):
+        """Create a mock Streamlit placeholder."""
+        placeholder = Mock()
+        placeholder.markdown = Mock()
+        return placeholder
+
+    @pytest.fixture
+    def chat_response(self, mock_placeholder):
+        """Create a ChatResponse instance for testing."""
+        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder)
+
+    def test_streaming_text_with_thinking_and_accumulated_text(self, chat_response, mock_placeholder):
+        """Test streaming step with both thinking and accumulated_text."""
+        step = AgentStep(
+            step_number=1,
+            thinking="Let me analyze this...",
+            accumulated_text="Based on my analysis, the result is...",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "🧠 **Thinking:**" in chat_response.current_step_markdown
+        assert "Let me analyze this..." in chat_response.current_step_markdown
+        assert "💬 **Response:**" in chat_response.current_step_markdown
+        assert "Based on my analysis, the result is..." in chat_response.current_step_markdown
+
+    def test_streaming_text_incremental_updates(self, chat_response, mock_placeholder):
+        """Test that accumulated_text updates incrementally during streaming."""
+        step1 = AgentStep(
+            step_number=1,
+            accumulated_text="Hello",
+            is_streaming=True,
+            is_final=False,
+        )
+        step2 = AgentStep(
+            step_number=1,
+            accumulated_text="Hello, I am analyzing",
+            is_streaming=True,
+            is_final=False,
+        )
+        step3 = AgentStep(
+            step_number=1,
+            accumulated_text="Hello, I am analyzing your request.",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step1)
+        assert "Hello" in chat_response.current_step_markdown
+
+        chat_response.process_step(step2)
+        assert "Hello, I am analyzing" in chat_response.current_step_markdown
+
+        chat_response.process_step(step3)
+        assert "Hello, I am analyzing your request." in chat_response.current_step_markdown
+
+    def test_streaming_text_renders_to_placeholder(self, chat_response, mock_placeholder):
+        """Test that streaming text is rendered to the placeholder."""
+        step = AgentStep(
+            step_number=1,
+            step_type=StepType.INTERMEDIATE,
+            accumulated_text="Streaming response text",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        mock_placeholder.markdown.assert_called()
+        call_args = mock_placeholder.markdown.call_args[0][0]
+        assert "Streaming response text" in call_args
+
+    def test_streaming_final_answer_text(self, chat_response, mock_placeholder):
+        """Test streaming final answer via accumulated_text before completion."""
+        streaming_step = AgentStep(
+            step_number=1,
+            step_type=StepType.FINAL_ANSWER,
+            accumulated_text="The answer is 42",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(streaming_step)
+
+        assert "💬 **Response:**" in chat_response.current_step_markdown
+        assert "The answer is 42" in chat_response.current_step_markdown
+        assert chat_response.final_answer_text is None
+
+    def test_streaming_text_does_not_show_extended_thinking_message(self, chat_response, mock_placeholder):
+        """Test that streaming text doesn't show 'Extended thinking in progress' message."""
+        step = AgentStep(
+            step_number=1,
+            accumulated_text="I'm providing a response...",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        call_args = mock_placeholder.markdown.call_args[0][0]
+        assert "Extended thinking in progress" not in call_args
+
+    def test_text_delta_field_present(self, chat_response, mock_placeholder):
+        """Test step with text_delta field (used for incremental text updates)."""
+        step = AgentStep(
+            step_number=1,
+            text_delta="new chunk",
+            accumulated_text="previous text new chunk",
+            is_streaming=True,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "previous text new chunk" in chat_response.current_step_markdown
+
+
+class TestGetDisplayToolName:
+    """Tests for get_display_tool_name function."""
+
+    def test_regular_tool_returns_unchanged(self):
+        """Regular tools return their name unchanged."""
+        assert get_display_tool_name("get_queues") == "get_queues"
+        assert get_display_tool_name("update_schema", {"schema_id": 123}) == "update_schema"
+
+    def test_call_on_connection_with_full_args(self):
+        """call_on_connection with full args returns expanded format."""
+        args = {"connection_id": "sandbox", "tool_name": "get_queues", "arguments": "{}"}
+        result = get_display_tool_name("call_on_connection", args)
+        assert result == "call_on_connection[sandbox.get_queues]"
+
+    def test_call_on_connection_missing_connection_id(self):
+        """call_on_connection without connection_id returns unchanged."""
+        args = {"tool_name": "get_queues"}
+        result = get_display_tool_name("call_on_connection", args)
+        assert result == "call_on_connection"
+
+    def test_call_on_connection_missing_tool_name(self):
+        """call_on_connection without tool_name returns unchanged."""
+        args = {"connection_id": "sandbox"}
+        result = get_display_tool_name("call_on_connection", args)
+        assert result == "call_on_connection"
+
+    def test_call_on_connection_no_args(self):
+        """call_on_connection without args returns unchanged."""
+        assert get_display_tool_name("call_on_connection") == "call_on_connection"
+        assert get_display_tool_name("call_on_connection", None) == "call_on_connection"
+        assert get_display_tool_name("call_on_connection", {}) == "call_on_connection"
+
+
+class TestChatResponseCallOnConnectionDisplay:
+    """Tests for ChatResponse displaying call_on_connection with expanded tool names."""
+
+    @pytest.fixture
+    def mock_placeholder(self):
+        placeholder = Mock()
+        placeholder.markdown = Mock()
+        return placeholder
+
+    @pytest.fixture
+    def chat_response(self, mock_placeholder):
+        return ChatResponse(prompt="Test prompt", output_placeholder=mock_placeholder)
+
+    def test_streaming_step_shows_expanded_call_on_connection(self, chat_response, mock_placeholder):
+        """Streaming step shows call_on_connection[connection.tool] format."""
+        tool_call = ToolCall(
+            id="tc_1",
+            name="call_on_connection",
+            arguments={"connection_id": "sandbox", "tool_name": "get_queues", "arguments": "{}"},
+        )
+        step = AgentStep(
+            step_number=1,
+            tool_calls=[tool_call],
+            is_streaming=True,
+            is_final=False,
+            current_tool="call_on_connection",
+            tool_progress=(1, 1),
+        )
+
+        chat_response.process_step(step)
+
+        assert "call_on_connection[sandbox.get_queues]" in chat_response.current_step_markdown
+
+    def test_completed_step_shows_expanded_call_on_connection(self, chat_response, mock_placeholder):
+        """Completed step shows call_on_connection[connection.tool] in Tools list."""
+        tool_call = ToolCall(
+            id="tc_1",
+            name="call_on_connection",
+            arguments={"connection_id": "sandbox", "tool_name": "get_queues", "arguments": "{}"},
+        )
+        tool_result = ToolResult(
+            tool_call_id="tc_1",
+            name="call_on_connection",
+            content='[get_queues] {"queues": []}',
+        )
+        step = AgentStep(
+            step_number=1,
+            tool_calls=[tool_call],
+            tool_results=[tool_result],
+            is_streaming=False,
+            is_final=False,
+        )
+
+        chat_response.process_step(step)
+
+        assert "call_on_connection[sandbox.get_queues]" in "\n".join(chat_response.completed_steps_markdown)

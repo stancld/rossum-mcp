@@ -1091,7 +1091,7 @@ class Workspace:
         result: CopyResult,
     ) -> None:
         for rule in source_client.list_rules():
-            if rule.schema not in source_schema_urls:
+            if rule.schema is None or rule.schema not in source_schema_urls:
                 continue
 
             self._copy_single_rule(rule, target_client, id_mapping, result)
@@ -1099,6 +1099,10 @@ class Workspace:
     def _copy_single_rule(
         self, rule: Rule, target_client: SyncRossumAPIClient, id_mapping: IdMapping, result: CopyResult
     ) -> None:
+        if rule.schema is None:
+            result.skipped.append((ObjectType.RULE, rule.id, rule.name, "no schema"))
+            return
+
         try:
             source_schema_id = int(rule.schema.split("/")[-1])
             target_schema_id = id_mapping.get(ObjectType.SCHEMA, source_schema_id)

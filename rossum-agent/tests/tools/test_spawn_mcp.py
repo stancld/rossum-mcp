@@ -184,6 +184,7 @@ class TestCallOnConnection:
                     tool_name="some_tool",
                     arguments='{"param": "value"}',
                 )
+                assert result.startswith("[some_tool]")
                 assert '"key": "value"' in result
         finally:
             spawned.clear()
@@ -215,7 +216,7 @@ class TestCallOnConnection:
                     tool_name="some_tool",
                     arguments="",
                 )
-                assert result == "Tool executed successfully"
+                assert result == "[some_tool] Tool executed successfully"
         finally:
             spawned.clear()
             loop.close()
@@ -530,7 +531,7 @@ class TestCallOnConnectionEdgeCases:
                     tool_name="some_tool",
                     arguments="{}",
                 )
-                assert result == "String result"
+                assert result == "[some_tool] String result"
         finally:
             spawned.clear()
             loop.close()

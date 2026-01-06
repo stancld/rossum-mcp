@@ -2338,6 +2338,77 @@ class TestCopySingleEmailTemplateException:
         assert "auto-created type" in result.skipped[0][3]
 
 
+class TestCopySingleRuleNullSchema:
+    """Tests for _copy_single_rule with null schema handling."""
+
+    def test_copy_single_rule_null_schema_skipped(self, workspace: Workspace):
+        """Rule with schema=None should be skipped."""
+        mock_rule = Mock()
+        mock_rule.id = 1000
+        mock_rule.name = "Rule without schema"
+        mock_rule.schema = None
+
+        mock_client = MagicMock()
+        mapping = IdMapping(source_org_id=1, target_org_id=2)
+
+        result = CopyResult()
+        workspace._copy_single_rule(mock_rule, mock_client, mapping, result)
+
+        assert len(result.skipped) == 1
+        assert result.skipped[0][0] == ObjectType.RULE
+        assert result.skipped[0][1] == 1000
+        assert result.skipped[0][2] == "Rule without schema"
+        assert "no schema" in result.skipped[0][3]
+
+
+class TestCopyRulesNullSchema:
+    """Tests for _copy_rules filtering rules with null schema."""
+
+    def test_copy_rules_skips_null_schema_rules(self, workspace: Workspace):
+        """Rules with schema=None should be skipped in _copy_rules."""
+        mock_rule_with_schema = Mock()
+        mock_rule_with_schema.id = 1000
+        mock_rule_with_schema.name = "Rule with schema"
+        mock_rule_with_schema.schema = "https://api.example.com/v1/schemas/50"
+
+        mock_rule_without_schema = Mock()
+        mock_rule_without_schema.id = 1001
+        mock_rule_without_schema.name = "Rule without schema"
+        mock_rule_without_schema.schema = None
+
+        source_schema_urls = {"https://api.example.com/v1/schemas/50"}
+
+        with patch.object(workspace, "_client") as mock_source_client:
+            mock_source_client.list_rules.return_value = [mock_rule_with_schema, mock_rule_without_schema]
+
+            mock_target_client = MagicMock()
+            mock_target_client.internal_client.base_url = "https://api.example.com/v1"
+
+            mock_new_rule = Mock()
+            mock_new_rule.id = 2000
+            mock_target_client.create_new_rule.return_value = mock_new_rule
+
+            mock_action = Mock()
+            mock_action.id = "action1"
+            mock_action.type = "set_value"
+            mock_action.payload = {}
+            mock_action.event = "field_changed"
+            mock_action.enabled = True
+            mock_rule_with_schema.trigger_condition = "True"
+            mock_rule_with_schema.actions = [mock_action]
+            mock_rule_with_schema.enabled = True
+
+            mapping = IdMapping(source_org_id=1, target_org_id=2)
+            mapping.add(ObjectType.SCHEMA, 50, 60)
+            result = CopyResult()
+
+            workspace._copy_rules(mock_source_client, mock_target_client, source_schema_urls, mapping, result)
+
+        assert len(result.created) == 1
+        assert result.created[0][0] == ObjectType.RULE
+        assert result.created[0][1] == 1000
+
+
 class TestCopySingleRuleException:
     """Tests for _copy_single_rule exception handling."""
 
