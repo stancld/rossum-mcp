@@ -11,6 +11,8 @@ from rossum_agent.agent.models import AgentStep, StepType, ThinkingBlockData, To
 from rossum_agent.api.models.schemas import ImageContent, StepEvent, SubAgentProgressEvent, SubAgentTextEvent
 from rossum_agent.api.services.agent_service import (
     AgentService,
+    _create_tool_result_event,
+    _create_tool_start_event,
     convert_step_to_event,
     convert_sub_agent_progress_to_event,
 )
@@ -163,6 +165,124 @@ class TestConvertStepToEvent:
         assert event.type == "thinking"
         assert event.content is None
         assert event.is_streaming is True
+
+
+class TestCreateToolStartEvent:
+    """Tests for _create_tool_start_event function."""
+
+    def test_create_tool_start_event_with_tool_args(self):
+        """Test creating tool start event with matching tool call args."""
+        step = AgentStep(
+            step_number=1,
+            current_tool="list_annotations",
+            tool_calls=[
+                ToolCall(id="tc_1", name="list_annotations", arguments={"queue_id": 123}),
+            ],
+            tool_progress=(1, 2),
+        )
+        event = _create_tool_start_event(step, "list_annotations")
+
+        assert event.type == "tool_start"
+        assert event.step_number == 1
+        assert event.tool_name == "list_annotations"
+        assert event.tool_arguments == {"queue_id": 123}
+        assert event.tool_progress == (1, 2)
+
+    def test_create_tool_start_event_expands_call_on_connection(self):
+        """Test that call_on_connection tool names are expanded."""
+        step = AgentStep(
+            step_number=1,
+            current_tool="call_on_connection",
+            tool_calls=[
+                ToolCall(
+                    id="tc_1",
+                    name="call_on_connection",
+                    arguments={"connection_id": "sandbox", "tool_name": "get_queues", "arguments": "{}"},
+                ),
+            ],
+            tool_progress=(1, 1),
+        )
+        event = _create_tool_start_event(step, "call_on_connection")
+
+        assert event.type == "tool_start"
+        assert event.tool_name == "call_on_connection[sandbox.get_queues]"
+        assert event.tool_arguments == {"connection_id": "sandbox", "tool_name": "get_queues", "arguments": "{}"}
+
+    def test_create_tool_start_event_no_matching_tool_call(self):
+        """Test creating tool start event when tool call is not found."""
+        step = AgentStep(
+            step_number=1,
+            current_tool="get_annotation",
+            tool_calls=[
+                ToolCall(id="tc_1", name="list_annotations", arguments={"queue_id": 123}),
+            ],
+            tool_progress=(2, 3),
+        )
+        event = _create_tool_start_event(step, "get_annotation")
+
+        assert event.type == "tool_start"
+        assert event.tool_name == "get_annotation"
+        assert event.tool_arguments is None
+
+
+class TestCreateToolResultEvent:
+    """Tests for _create_tool_result_event function."""
+
+    def test_create_tool_result_event_success(self):
+        """Test creating tool result event from successful result."""
+        step = AgentStep(
+            step_number=1,
+            tool_results=[
+                ToolResult(
+                    tool_call_id="tc_1",
+                    name="list_annotations",
+                    content='{"annotations": [1, 2, 3]}',
+                    is_error=False,
+                ),
+            ],
+        )
+        event = _create_tool_result_event(step)
+
+        assert event.type == "tool_result"
+        assert event.step_number == 1
+        assert event.tool_name == "list_annotations"
+        assert event.result == '{"annotations": [1, 2, 3]}'
+        assert event.is_error is False
+
+    def test_create_tool_result_event_error(self):
+        """Test creating tool result event from error result."""
+        step = AgentStep(
+            step_number=2,
+            tool_results=[
+                ToolResult(
+                    tool_call_id="tc_2",
+                    name="get_annotation",
+                    content="Annotation not found",
+                    is_error=True,
+                ),
+            ],
+        )
+        event = _create_tool_result_event(step)
+
+        assert event.type == "tool_result"
+        assert event.step_number == 2
+        assert event.tool_name == "get_annotation"
+        assert event.result == "Annotation not found"
+        assert event.is_error is True
+
+    def test_create_tool_result_event_uses_last_result(self):
+        """Test that only the last tool result is used."""
+        step = AgentStep(
+            step_number=1,
+            tool_results=[
+                ToolResult(tool_call_id="tc_1", name="first_tool", content="first", is_error=False),
+                ToolResult(tool_call_id="tc_2", name="second_tool", content="second", is_error=False),
+            ],
+        )
+        event = _create_tool_result_event(step)
+
+        assert event.tool_name == "second_tool"
+        assert event.result == "second"
 
 
 class TestAgentServiceBuildUpdatedHistory:

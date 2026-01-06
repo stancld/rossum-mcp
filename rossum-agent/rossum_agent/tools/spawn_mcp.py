@@ -191,8 +191,8 @@ def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> st
         result = future.result(timeout=60)
 
         if isinstance(result, (dict, list)):
-            return json.dumps(result, indent=2, default=str)
-        return str(result) if result is not None else "Tool executed successfully"
+            return f"[{tool_name}] {json.dumps(result, indent=2, default=str)}"
+        return f"[{tool_name}] {result}" if result is not None else f"[{tool_name}] Tool executed successfully"
     except FuturesTimeoutError:
         future.cancel()
         return f"Error: Timed out calling {tool_name} after 60 seconds."

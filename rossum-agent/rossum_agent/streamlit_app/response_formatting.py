@@ -23,6 +23,20 @@ class OutputRenderer(Protocol):
     def markdown(self, body: str, *, unsafe_allow_html: bool = False) -> None: ...
 
 
+def get_display_tool_name(tool_call_name: str, tool_arguments: dict[str, Any] | None = None) -> str:
+    """Get display name for a tool, expanding call_on_connection to show the actual MCP tool.
+
+    For call_on_connection, returns 'call_on_connection[connection_id.tool_name]' format.
+    For other tools, returns the original name.
+    """
+    if tool_call_name == "call_on_connection" and tool_arguments:
+        connection_id = tool_arguments.get("connection_id", "")
+        inner_tool = tool_arguments.get("tool_name", "")
+        if connection_id and inner_tool:
+            return f"call_on_connection[{connection_id}.{inner_tool}]"
+    return tool_call_name
+
+
 def parse_and_format_final_answer(answer: str) -> str:
     """Parse and format final answer if it's a dictionary."""
     answer = answer.strip()
@@ -162,7 +176,13 @@ class ChatResponse:
             self.total_steps += 1
 
     def _process_streaming_step(self, step: AgentStep) -> None:
-        """Process a streaming step (partial thinking or tool execution)."""
+        """Process a streaming step (partial thinking, text, or tool execution).
+
+        Handles three types of streaming content (matching API's agent_service.py):
+        - thinking: Model's chain-of-thought reasoning
+        - intermediate: Model's response text before tool calls (via accumulated_text)
+        - final_answer: Model's final response streaming (via accumulated_text)
+        """
         if step.step_number != self._current_step_num:
             if self.current_step_markdown:
                 self.completed_steps_markdown.append(self.current_step_markdown)
@@ -171,19 +191,32 @@ class ChatResponse:
 
         if step.current_tool and step.tool_progress:
             current, total = step.tool_progress
-            progress_text = f"🔧 Running tool {current}/{total}: **{step.current_tool}**..."
+            current_tool_args = None
+            for tc in step.tool_calls:
+                if tc.name == step.current_tool:
+                    current_tool_args = tc.arguments
+                    break
+            display_name = get_display_tool_name(step.current_tool, current_tool_args)
+            progress_text = f"🔧 Running tool {current}/{total}: **{display_name}**..."
 
             if step.sub_agent_progress:
                 sub_progress = step.sub_agent_progress
                 sub_agent_text = self._format_sub_agent_progress(sub_progress)
                 progress_text = f"{progress_text}\n\n{sub_agent_text}"
 
+            parts = [f"#### Step {step.step_number}\n"]
             if step.thinking:
-                self.current_step_markdown = (
-                    f"#### Step {step.step_number}\n\n🧠 **Thinking:**\n\n{step.thinking}\n\n{progress_text}\n"
-                )
-            else:
-                self.current_step_markdown = f"#### Step {step.step_number}\n\n{progress_text}\n"
+                parts.append(f"🧠 **Thinking:**\n\n{step.thinking}\n")
+            if step.accumulated_text:
+                parts.append(f"💬 **Response:**\n\n{step.accumulated_text}\n")
+            parts.append(f"{progress_text}\n")
+            self.current_step_markdown = "\n".join(parts)
+        elif step.accumulated_text is not None:
+            parts = [f"#### Step {step.step_number}\n"]
+            if step.thinking:
+                parts.append(f"🧠 **Thinking:**\n\n{step.thinking}\n")
+            parts.append(f"💬 **Response:**\n\n{step.accumulated_text}\n")
+            self.current_step_markdown = "\n".join(parts)
         elif step.thinking:
             self.current_step_markdown = f"#### Step {step.step_number}\n\n🧠 **Thinking:**\n\n{step.thinking}\n"
 
@@ -223,8 +256,11 @@ class ChatResponse:
         if step.thinking:
             step_md_parts.append(f"🧠 **Thinking:**\n\n{step.thinking}\n")
 
+        if step.accumulated_text:
+            step_md_parts.append(f"💬 **Response:**\n\n{step.accumulated_text}\n")
+
         if step.tool_calls:
-            tool_names = [tc.name for tc in step.tool_calls]
+            tool_names = [get_display_tool_name(tc.name, tc.arguments) for tc in step.tool_calls]
             step_md_parts.append(f"**Tools:** {', '.join(tool_names)}\n")
 
         for result in step.tool_results:
@@ -256,7 +292,7 @@ class ChatResponse:
 
         display_md = "\n\n".join(all_steps)
 
-        if step.is_streaming and not step.thinking:
+        if step.is_streaming and not step.thinking and step.accumulated_text is None:
             display_md += "\n\n⏳ _Extended thinking in progress..._"
         elif self.final_answer_text is None and not step.is_final:
             display_md += "\n\n⏳ _Processing..._"
