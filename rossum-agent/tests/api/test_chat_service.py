@@ -202,6 +202,48 @@ class TestChatServiceGetChat:
         assert result is not None
         assert len(result.messages) == 2
 
+    def test_get_chat_handles_memory_format(self):
+        """Test get_chat handles task_step and memory_step formats from agent memory."""
+        mock_storage = MagicMock()
+        mock_storage.load_chat.return_value = ChatData(
+            messages=[
+                {"type": "task_step", "task": "What is 2+2?"},
+                {
+                    "type": "memory_step",
+                    "step_number": 1,
+                    "text": "The answer is 4.",
+                    "tool_calls": [],
+                    "tool_results": [],
+                },
+                {"type": "task_step", "task": "And 3+3?"},
+                {
+                    "type": "memory_step",
+                    "step_number": 2,
+                    "text": "The answer is 6.",
+                    "tool_calls": [],
+                    "tool_results": [],
+                },
+                {"type": "memory_step", "step_number": 3, "text": None, "tool_calls": [], "tool_results": []},
+            ],
+            output_dir=None,
+            metadata=ChatMetadata(),
+        )
+        mock_storage.list_files.return_value = []
+
+        service = ChatService(redis_storage=mock_storage)
+        result = service.get_chat(user_id="user_123", chat_id="chat_20241209143052_abc123")
+
+        assert result is not None
+        assert len(result.messages) == 4
+        assert result.messages[0].role == "user"
+        assert result.messages[0].content == "What is 2+2?"
+        assert result.messages[1].role == "assistant"
+        assert result.messages[1].content == "The answer is 4."
+        assert result.messages[2].role == "user"
+        assert result.messages[2].content == "And 3+3?"
+        assert result.messages[3].role == "assistant"
+        assert result.messages[3].content == "The answer is 6."
+
 
 class TestChatServiceDeleteChat:
     """Tests for delete_chat method."""

@@ -108,8 +108,17 @@ class ChatService:
 
         messages = []
         for msg in chat_data.messages:
+            msg_type = msg.get("type")
             role = msg.get("role")
-            if role in ("user", "assistant"):
+
+            if msg_type == "task_step":
+                task_content = msg.get("task", "")
+                messages.append(Message(role="user", content=task_content))
+            elif msg_type == "memory_step":
+                text = msg.get("text")
+                if text:
+                    messages.append(Message(role="assistant", content=text))
+            elif role in ("user", "assistant"):
                 messages.append(Message(role=role, content=msg.get("content", "")))
 
         files_data = self._storage.list_files(chat_id)
