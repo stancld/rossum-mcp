@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 from fastapi import FastAPI, Request, status
@@ -60,13 +61,24 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 app.add_middleware(RequestSizeLimitMiddleware)
+
+
+def _build_cors_origin_regex() -> str:
+    """Build CORS origin regex including any additional allowed hosts."""
+    patterns = [r".*\.rossum\.app"]
+    additional_hosts = os.environ.get("ADDITIONAL_ALLOWED_ROSSUM_HOSTS", "")
+    if additional_hosts:
+        patterns.extend(p.strip() for p in additional_hosts.split(",") if p.strip())
+    return rf"https://({'|'.join(patterns)})"
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://elis.rossum.ai",
         "https://elis.develop.r8.lol",
     ],
-    allow_origin_regex=r"https://.*\.rossum\.app",
+    allow_origin_regex=_build_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

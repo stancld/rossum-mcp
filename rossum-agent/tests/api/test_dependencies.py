@@ -283,6 +283,64 @@ class TestGetValidatedCredentialsEdgeCases:
             assert "/v1/v1/auth" not in call_args[0][0]
 
 
+class TestAllowedHostsPattern:
+    """Tests for ADDITIONAL_ALLOWED_ROSSUM_HOSTS environment variable."""
+
+    def test_additional_hosts_from_env_single(self):
+        """Test that single additional host pattern is included."""
+        with patch.dict("os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": r".*\.review\.r8\.lol"}):
+            from importlib import reload
+
+            import rossum_agent.api.dependencies as deps
+
+            reload(deps)
+
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("test.review.r8.lol")
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("elis.rossum.ai")
+
+    def test_additional_hosts_from_env_multiple(self):
+        """Test that multiple additional host patterns are included."""
+        with patch.dict(
+            "os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": r".*\.review\.r8\.lol,.*\.staging\.example\.com"}
+        ):
+            from importlib import reload
+
+            import rossum_agent.api.dependencies as deps
+
+            reload(deps)
+
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("test.review.r8.lol")
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("app.staging.example.com")
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("elis.rossum.ai")
+
+    def test_no_additional_hosts(self):
+        """Test that base hosts work without additional hosts."""
+        with patch.dict("os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": ""}):
+            from importlib import reload
+
+            import rossum_agent.api.dependencies as deps
+
+            reload(deps)
+
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("elis.rossum.ai")
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("us.rossum.app")
+            assert not deps.ALLOWED_ROSSUM_HOST_PATTERN.match("test.review.r8.lol")
+
+    def test_additional_hosts_with_whitespace(self):
+        """Test that whitespace around patterns is trimmed."""
+        with patch.dict(
+            "os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": r"  .*\.review\.r8\.lol  ,  .*\.test\.com  "}
+        ):
+            from importlib import reload
+
+            import rossum_agent.api.dependencies as deps
+
+            reload(deps)
+
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("app.review.r8.lol")
+            assert deps.ALLOWED_ROSSUM_HOST_PATTERN.match("app.test.com")
+
+
 class TestValidateRossumApiUrl:
     """Tests for validate_rossum_api_url SSRF prevention."""
 

@@ -194,6 +194,62 @@ class TestStartupShutdown:
         assert len(error_records) == 0
 
 
+class TestBuildCorsOriginRegex:
+    """Tests for _build_cors_origin_regex function."""
+
+    def test_default_cors_pattern(self):
+        """Test that default CORS pattern includes rossum.app."""
+        with patch.dict("os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": ""}):
+            from importlib import reload
+
+            import rossum_agent.api.main as main_mod
+
+            reload(main_mod)
+
+            regex = main_mod._build_cors_origin_regex()
+            import re
+
+            pattern = re.compile(regex)
+            assert pattern.match("https://us.rossum.app")
+            assert pattern.match("https://eu.rossum.app")
+            assert not pattern.match("https://test.review.r8.lol")
+
+    def test_cors_with_additional_hosts(self):
+        """Test that additional hosts are included in CORS pattern."""
+        with patch.dict("os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": r".*\.review\.r8\.lol"}):
+            from importlib import reload
+
+            import rossum_agent.api.main as main_mod
+
+            reload(main_mod)
+
+            regex = main_mod._build_cors_origin_regex()
+            import re
+
+            pattern = re.compile(regex)
+            assert pattern.match("https://us.rossum.app")
+            assert pattern.match("https://test.review.r8.lol")
+
+    def test_cors_with_multiple_additional_hosts(self):
+        """Test that multiple additional hosts are included in CORS pattern."""
+        with patch.dict(
+            "os.environ", {"ADDITIONAL_ALLOWED_ROSSUM_HOSTS": r".*\.review\.r8\.lol,.*\.staging\.example\.com"}
+        ):
+            from importlib import reload
+
+            import rossum_agent.api.main as main_mod
+
+            reload(main_mod)
+
+            regex = main_mod._build_cors_origin_regex()
+            import re
+
+            pattern = re.compile(regex)
+            assert pattern.match("https://us.rossum.app")
+            assert pattern.match("https://test.review.r8.lol")
+            assert pattern.match("https://app.staging.example.com")
+
+
 class TestMainCLI:
     """Tests for CLI entry point."""
 
