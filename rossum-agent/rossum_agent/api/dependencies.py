@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass
 from typing import Annotated  # noqa: TC003 - Required at runtime for FastAPI dependency injection
@@ -14,9 +15,24 @@ from fastapi import Header, HTTPException, status
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_ROSSUM_HOST_PATTERN = re.compile(
-    r"^(elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|(elis|api\.elis)\.develop\.r8\.lol)$"
-)
+# Base allowed hosts pattern
+_BASE_ALLOWED_HOSTS = r"elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|(elis|api\.elis)\.develop\.r8\.lol"
+
+# Additional hosts from environment variable (comma-separated regex patterns)
+# Example: ADDITIONAL_ALLOWED_ROSSUM_HOSTS=".*\.review\.r8\.lol,.*\.staging\.example\.com"
+_ADDITIONAL_HOSTS = os.environ.get("ADDITIONAL_ALLOWED_ROSSUM_HOSTS", "")
+
+
+def _build_allowed_hosts_pattern() -> re.Pattern[str]:
+    """Build the allowed hosts regex pattern including any additional hosts."""
+    patterns = [_BASE_ALLOWED_HOSTS]
+    if _ADDITIONAL_HOSTS:
+        additional = [p.strip() for p in _ADDITIONAL_HOSTS.split(",") if p.strip()]
+        patterns.extend(additional)
+    return re.compile(f"^({'|'.join(patterns)})$")
+
+
+ALLOWED_ROSSUM_HOST_PATTERN = _build_allowed_hosts_pattern()
 
 
 def validate_rossum_api_url(url: str) -> str:
