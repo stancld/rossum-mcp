@@ -10,7 +10,7 @@ from pathlib import Path
 def main() -> None:
     """Launch the Rossum Agent Streamlit application."""
     app_path = Path(__file__).parent / "app.py"
-    sys.exit(subprocess.call(["streamlit", "run", str(app_path), *sys.argv[1:]]))
+    sys.exit(subprocess.call([sys.executable, "-m", "streamlit", "run", str(app_path), *sys.argv[1:]]))
 
 
 if __name__ == "__main__":
