@@ -9,21 +9,7 @@ from __future__ import annotations
 
 from rossum_agent.prompts.base_prompt import ROSSUM_EXPERT_INTRO, get_shared_prompt_sections
 
-TOOL_USE_INTRO = """
-You have access to tools for interacting with the Rossum API. Use these tools to:
-- List and inspect queues, schemas, hooks, and annotations
-- Analyze hook dependencies and workflows
-- Document configurations
-- Debug issues
-
-When using tools:
-1. Think through what information you need
-2. Call the appropriate tools with correct parameters
-3. Analyze the results
-4. Provide clear, actionable responses"""
-
 SYSTEM_PROMPT = f"""{ROSSUM_EXPERT_INTRO}
-{TOOL_USE_INTRO}
 
 ---
 {get_shared_prompt_sections()}"""

@@ -130,7 +130,7 @@ class TestAgentConfig:
 
     def test_default_values(self):
         config = AgentConfig()
-        assert config.max_tokens == 128000
+        assert config.max_output_tokens == 64000
         assert config.max_steps == 50
         assert config.temperature == 1.0  # Required for extended thinking
 
@@ -139,8 +139,8 @@ class TestAgentConfig:
         assert config.request_delay == 3.0
 
     def test_custom_values(self):
-        config = AgentConfig(max_tokens=4096, max_steps=10, request_delay=1.0)
-        assert config.max_tokens == 4096
+        config = AgentConfig(max_output_tokens=4096, max_steps=10, request_delay=1.0)
+        assert config.max_output_tokens == 4096
         assert config.max_steps == 10
         assert config.temperature == 1.0  # Must be 1.0 for extended thinking
         assert config.request_delay == 1.0

@@ -156,7 +156,7 @@ def create_live_agent(
                 "Use --sandbox-api-token flag or set DEFAULT_SANDBOX_API_TOKEN in .env"
             )
 
-        config = AgentConfig(max_tokens=128000, max_steps=50, temperature=1.0, request_delay=3.0)
+        config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
 
         async with connect_mcp_server(
             rossum_api_token=token, rossum_api_base_url=case.api_base_url, mcp_mode="read-write"

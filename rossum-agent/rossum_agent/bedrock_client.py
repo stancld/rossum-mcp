@@ -7,7 +7,7 @@ import os
 import boto3
 from anthropic import AnthropicBedrock
 
-DEFAULT_MODEL_ID = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+DEFAULT_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
 
 def create_bedrock_client(

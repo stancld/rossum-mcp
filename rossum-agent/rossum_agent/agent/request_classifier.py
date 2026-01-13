@@ -11,26 +11,32 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from rossum_agent.prompts.base_prompt import CORE_CAPABILITIES
-
 if TYPE_CHECKING:
     from anthropic import AnthropicBedrock
 
 logger = logging.getLogger(__name__)
 
-CLASSIFIER_PROMPT = f"""You are a scope classifier for a Rossum document processing platform assistant.
+CLASSIFIER_PROMPT = """You are a scope classifier for a Rossum document processing platform assistant.
 
-{CORE_CAPABILITIES}
+The assistant can help with:
+- Queue, hook, schema, and extension analysis/configuration
+- Debugging document processing issues and errors
+- Investigating hook logs and extension behavior
+- Explaining workflows and automation
+- Writing analysis reports about Rossum configuration issues
 
-Based on the above capabilities, classify the user request.
+IN_SCOPE: Request relates to Rossum PLATFORM operations - analyzing/configuring queues, hooks, schemas, extensions, debugging errors, investigating logs, explaining workflows. Also: user asks what the assistant can do, greets assistant.
 
-IN_SCOPE: Request relates to Rossum platform operations (queues, hooks, schemas, annotations, extensions, rules, document processing, debugging, configuration, automation, formula fields) OR user asks what the assistant can do / asks for introduction / greets the assistant
+OUT_OF_SCOPE: Request is for DATA analytics - aggregating extracted data, generating charts/plots from document data, business intelligence, summarizing line items/amounts across documents, creating files unrelated to Rossum debugging. Even if it mentions Rossum annotations, if the goal is data aggregation/visualization, it's OUT_OF_SCOPE.
 
-OUT_OF_SCOPE: Request is unrelated to Rossum platform (general data analysis, charts from extracted data, generic programming, business analytics, generic file creation, unrelated topics)
+Examples:
+- "Investigate errors with document splitting on queue X" → IN_SCOPE (debugging)
+- "Aggregate line item amounts and generate a bar chart" → OUT_OF_SCOPE (data analytics)
+- "Create a markdown saying hello" → OUT_OF_SCOPE (generic file creation)
 
 Respond with exactly one word: IN_SCOPE or OUT_OF_SCOPE
 
-User request: {{message}}"""
+User request: {message}"""
 
 CLASSIFIER_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 CLASSIFIER_MAX_TOKENS = 10
@@ -62,11 +68,15 @@ class RejectionResult:
     output_tokens: int = 0
 
 
-REJECTION_PROMPT = f"""You are an expert Rossum platform specialist. The user made a request that is outside your scope.
+REJECTION_PROMPT = """You are an expert Rossum platform specialist. The user made a request that is outside your scope.
 
-{CORE_CAPABILITIES}
+I can help with:
+- Analyzing and debugging hooks, extensions, and workflows
+- Documenting queue configurations
+- Investigating processing errors
+- Configuring automation
 
-The user asked: {{message}}
+The user asked: {message}
 
 Write a brief, helpful response that:
 1. Politely explains this is outside your Rossum platform expertise

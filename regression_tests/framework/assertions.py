@@ -15,6 +15,22 @@ if TYPE_CHECKING:
     )
 
 
+def _tool_matches(expected_tool: str | tuple[str, ...], actual_tools: list[str]) -> bool:
+    """Check if expected tool (or any alternative) is in actual tools.
+
+    Args:
+        expected_tool: Either a single tool name or a tuple of alternatives (OR condition)
+        actual_tools: List of actual tool names used
+
+    Returns:
+        True if the expected tool (or any alternative) was used
+    """
+    if isinstance(expected_tool, tuple):
+        # OR condition: any of the alternatives is valid
+        return any(alt in actual_tools for alt in expected_tool)
+    return expected_tool in actual_tools
+
+
 def assert_tools_match(run: RegressionRun, expectation: ToolExpectation) -> None:
     actual = run.all_tools
     expected = list(expectation.expected_tools)
@@ -23,11 +39,13 @@ def assert_tools_match(run: RegressionRun, expectation: ToolExpectation) -> None
         return
 
     if expectation.mode == "exact_sequence":
-        if actual != expected:
-            raise AssertionError(f"Tool sequence mismatch: expected exactly {expected}, got {actual}")
+        # For exact sequence, flatten tuples to first option for comparison
+        flat_expected = [e[0] if isinstance(e, tuple) else e for e in expected]
+        if actual != flat_expected:
+            raise AssertionError(f"Tool sequence mismatch: expected exactly {flat_expected}, got {actual}")
 
     elif expectation.mode == "subset":
-        missing = [name for name in expected if name not in actual]
+        missing = [e for e in expected if not _tool_matches(e, actual)]
         if missing:
             raise AssertionError(f"Tool subset mismatch: missing expected tools {missing}, got {actual}")
 

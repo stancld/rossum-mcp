@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
 
 ### Changed
+- Migrated default model from Sonnet 4.5 to Opus 4.5 with significantly simplified prompts [#99](https://github.com/stancld/rossum-mcp/pull/99)
 - Separated model's chain-of-thought reasoning (thinking blocks) from response text (text blocks) in stream processing [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Updated Streamlit UI to display thinking blocks with "🧠 **Thinking:**" label [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills [#78](https://github.com/stancld/rossum-mcp/pull/78)

@@ -278,7 +278,7 @@ class RossumAgent:
         }
         with self.client.messages.stream(
             model=model_id,
-            max_tokens=self.config.max_tokens,
+            max_tokens=self.config.max_output_tokens,
             system=self.system_prompt,
             messages=messages,
             tools=tools if tools else Omit(),
