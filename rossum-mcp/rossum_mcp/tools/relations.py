@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.relation import (
-    Relation,  # noqa: TC002 - needed at runtime for FastMCP
-    RelationType,  # noqa: TC002 - needed at runtime for FastMCP
-)
+from rossum_api.models.relation import Relation, RelationType
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -26,8 +23,7 @@ def register_relation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         """Retrieve relation details."""
         logger.debug(f"Retrieving relation: relation_id={relation_id}")
         relation_data = await client._http_client.fetch_one(Resource.Relation, relation_id)
-        relation_obj: Relation = client._deserializer(Resource.Relation, relation_data)
-        return relation_obj
+        return cast("Relation", client._deserializer(Resource.Relation, relation_data))
 
     @mcp.tool(
         description="List all relations with optional filters. Relations introduce common relations between annotations (edit, attachment, duplicate)."

@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from pathlib import Path
 
-    from rossum_agent.agent.types import ContentBlock, UserContent
+    from anthropic.types import ImageBlockParam, TextBlockParam
+
+    from rossum_agent.agent.types import UserContent
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ def convert_sub_agent_progress_to_event(progress: SubAgentProgress) -> SubAgentP
         max_iterations=progress.max_iterations,
         current_tool=progress.current_tool,
         tool_calls=progress.tool_calls,
-        status=progress.status,  # type: ignore[arg-type]
+        status=progress.status,
     )
 
 
@@ -280,7 +282,7 @@ class AgentService:
         if not images:
             return prompt
 
-        content: list[ContentBlock] = []
+        content: list[ImageBlockParam | TextBlockParam] = []
         for img in images:
             content.append(
                 {
@@ -331,7 +333,7 @@ class AgentService:
         if isinstance(content, str):
             return content
 
-        result: list[ContentBlock] = []
+        result: list[ImageBlockParam | TextBlockParam] = []
         for block in content:
             block_type = block.get("type")
             if block_type == "image":

@@ -42,6 +42,7 @@ api = [
     "fastapi>=0.115.0",
     "python-multipart>=0.0.12",
     "redis>=7.0.0",
+    "slowapi>=0.1.9",
     "sse-starlette>=2.0.0",
     "uvicorn[standard]>=0.32.0",
 ]
@@ -73,6 +74,7 @@ tests = [
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
     "streamlit>=1.37.0",
+    "ty>=0.0.11",
 ]
 # All dependencies
 all = [
@@ -98,12 +100,14 @@ all = [
     "redis>=7.0.0",
     "requests>=2.32",
     "rossum-api>=3.7.0",
+    "slowapi>=0.1.9",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=2.0.0",
     "sse-starlette>=2.0.0",
     "streamlit>=1.37.0",
+    "ty>=0.0.11",
     "uvicorn[standard]>=0.32.0",
 ]
 
@@ -132,3 +136,32 @@ rossum_agent = ["assets/*.png"]
 
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
+
+[tool.ty.environment]
+python-version = "3.12"
+extra-paths = ["rossum-mcp", "rossum-agent", "rossum-deploy"]
+
+[tool.ty.src]
+include = ["rossum-mcp", "rossum-agent", "rossum-deploy"]
+exclude = ["**/tests/**", "**/outputs/**", "build/**"]
+
+# FastAPI/Starlette middleware and Anthropic TypedDict literals
+[[tool.ty.overrides]]
+include = ["**/api/**", "**/streamlit_app/**"]
+[tool.ty.overrides.rules]
+invalid-argument-type = "ignore"
+deprecated = "ignore"
+
+# Redis async iterators return complex union types
+[[tool.ty.overrides]]
+include = ["**/redis_storage.py"]
+[tool.ty.overrides.rules]
+not-iterable = "ignore"
+invalid-argument-type = "ignore"
+possibly-missing-attribute = "ignore"
+
+# PyJWT exports submodules dynamically
+[[tool.ty.overrides]]
+include = ["**/user_detection.py"]
+[tool.ty.overrides.rules]
+possibly-missing-attribute = "ignore"

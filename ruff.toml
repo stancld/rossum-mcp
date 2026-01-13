@@ -64,6 +64,7 @@ ignore = [
 
 [lint.per-file-ignores]
 "**/tests/**" = ["PLC0415"]
+"**/rossum_mcp/tools/*.py" = ["TC002"]  # FastMCP needs types at runtime for Pydantic
 
 [lint.flake8-import-conventions.aliases]
 "datetime" = "dt"
@@ -87,6 +88,7 @@ exempt-modules = []  # default is `typing`, but we want to include these under g
 runtime-evaluated-base-classes = [
     "pydantic.BaseModel",
 ]
+runtime-evaluated-decorators = []
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

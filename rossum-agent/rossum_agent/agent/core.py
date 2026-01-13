@@ -61,6 +61,7 @@ from anthropic.types import (
     ToolParam,
     ToolUseBlock,
 )
+from pydantic import BaseModel
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import (
@@ -222,12 +223,13 @@ class RossumAgent:
         """Get all available tools in Anthropic format (cached)."""
         if self._tools_cache is None:
             mcp_tools = await self.mcp_connection.get_tools()
-            self._tools_cache = (
+            tools: list[ToolParam] = (
                 mcp_tools_to_anthropic_format(mcp_tools)
                 + get_internal_tools()
                 + get_deploy_tools()
                 + self.additional_tools
             )
+            self._tools_cache = tools
         return self._tools_cache
 
     def _serialize_tool_result(self, result: object) -> str:
@@ -244,16 +246,28 @@ class RossumAgent:
 
         # Handle lists of dataclasses
         if isinstance(result, list) and result and dataclasses.is_dataclass(result[0]):
-            return json.dumps([dataclasses.asdict(item) for item in result], indent=2, default=str)
+            return json.dumps(
+                [
+                    dataclasses.asdict(item)
+                    for item in result
+                    if dataclasses.is_dataclass(item) and not isinstance(item, type)
+                ],
+                indent=2,
+                default=str,
+            )
 
-        # Handle pydantic models (BaseModel has model_dump method)
+        # Handle pydantic models
         # Use mode='json' to ensure nested models are properly serialized to JSON-compatible dicts
-        if hasattr(result, "model_dump"):
+        if isinstance(result, BaseModel):
             return json.dumps(result.model_dump(mode="json"), indent=2, default=str)
 
         # Handle lists of pydantic models
-        if isinstance(result, list) and result and hasattr(result[0], "model_dump"):
-            return json.dumps([item.model_dump(mode="json") for item in result], indent=2, default=str)
+        if isinstance(result, list) and result and isinstance(result[0], BaseModel):
+            return json.dumps(
+                [item.model_dump(mode="json") for item in result if isinstance(item, BaseModel)],
+                indent=2,
+                default=str,
+            )
 
         # Handle dicts and regular lists
         if isinstance(result, dict | list):
@@ -395,6 +409,9 @@ class RossumAgent:
             event, final_msg = item
             if final_msg is not None:
                 state.final_message = final_msg
+                continue
+
+            if event is None:
                 continue
 
             delta = self._process_stream_event(event, state.pending_tools, state.tool_calls)

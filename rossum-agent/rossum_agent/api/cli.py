@@ -19,12 +19,16 @@ def main() -> None:
     token = os.environ.get("ROSSUM_API_TOKEN")
     rossum_url = os.environ.get("ROSSUM_API_BASE_URL")
 
-    if not token or not rossum_url:
-        print("Error: ROSSUM_API_TOKEN and ROSSUM_API_BASE_URL required")
+    if not token:
+        print("Error: ROSSUM_API_TOKEN is required.", file=sys.stderr)
         sys.exit(1)
+    if not rossum_url:
+        print("Error: ROSSUM_API_BASE_URL is required.", file=sys.stderr)
+        sys.exit(1)
+    assert token and rossum_url
 
     prompt = args.prompt or input("Prompt: ")
-    headers = {"X-Rossum-Token": token, "X-Rossum-Api-Url": rossum_url}
+    headers: dict[str, str] = {"X-Rossum-Token": token, "X-Rossum-Api-Url": rossum_url}
 
     with httpx.Client(timeout=300) as client:
         resp = client.post(f"{args.api_url}/api/v1/chats", headers=headers)

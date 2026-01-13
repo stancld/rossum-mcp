@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
+from anthropic.types import ToolParam
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 
@@ -53,7 +54,7 @@ class MCPConnection:
         if result.data is not None:
             return result.data
         if result.content:
-            text_parts = [block.text for block in result.content if hasattr(block, "text") and block.text]
+            text_parts = [str(block.text) for block in result.content if hasattr(block, "text") and block.text]
             if len(text_parts) == 1:
                 return text_parts[0]
             return "\n".join(text_parts) if text_parts else None
@@ -109,21 +110,9 @@ async def connect_mcp_server(
         yield MCPConnection(client=client)
 
 
-def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[dict[str, object]]:
-    """Convert MCP tools to Anthropic tool format.
-
-    Anthropic's tool format requires:
-    - name: The name of the tool
-    - description: A description of what the tool does
-    - input_schema: JSON Schema describing the tool's parameters
-
-    Args:
-        mcp_tools: List of MCP tool objects from list_tools().
-
-    Returns:
-        List of tool dicts suitable for the tools parameter in messages.create().
-    """
+def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[ToolParam]:
+    """Convert MCP tools to Anthropic tool format."""
     return [
-        {"name": mcp_tool.name, "description": mcp_tool.description or "", "input_schema": mcp_tool.inputSchema}
+        ToolParam(name=mcp_tool.name, description=mcp_tool.description or "", input_schema=mcp_tool.inputSchema)
         for mcp_tool in mcp_tools
     ]

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models import deserialize_default
-from rossum_api.models.engine import Engine  # noqa: TC002 - needed at runtime for FastMCP
-from rossum_api.models.queue import Queue  # noqa: TC002 - needed at runtime for FastMCP
-from rossum_api.models.schema import Schema  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.engine import Engine
+from rossum_api.models.queue import Queue
+from rossum_api.models.schema import Schema
 
 from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
 
@@ -121,8 +121,7 @@ async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data:
 
     logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
     updated_queue_data = await client._http_client.update(Resource.Queue, queue_id, queue_data)
-    updated_queue: Queue = client._deserializer(Resource.Queue, updated_queue_data)
-    return updated_queue
+    return cast("Queue", client._deserializer(Resource.Queue, updated_queue_data))
 
 
 def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from rossum_api.models.workspace import Workspace  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
 

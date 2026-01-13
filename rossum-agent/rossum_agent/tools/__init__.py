@@ -50,7 +50,8 @@ from rossum_agent.tools.spawn_mcp import (
 )
 
 if TYPE_CHECKING:
-    from anthropic._tools import BetaTool
+    from anthropic._tools import BetaTool  # ty: ignore[unresolved-import] - private API
+    from anthropic.types import ToolParam
 
 INTERNAL_TOOLS: list[BetaTool[..., str]] = [
     write_file,
@@ -64,7 +65,7 @@ INTERNAL_TOOLS: list[BetaTool[..., str]] = [
 ]
 
 
-def get_internal_tools() -> list[dict[str, object]]:
+def get_internal_tools() -> list[ToolParam]:
     """Get all internal tools in Anthropic format."""
     return [tool.to_dict() for tool in INTERNAL_TOOLS]
 

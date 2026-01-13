@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from rossum_api.models.group import Group  # noqa: TC002 - needed at runtime for FastMCP
-from rossum_api.models.user import User  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.group import Group
+from rossum_api.models.user import User
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP

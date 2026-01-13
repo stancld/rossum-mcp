@@ -47,8 +47,10 @@ from rossum_agent.utils import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from anthropic.types import ImageBlockParam, TextBlockParam
+
     from rossum_agent.agent import AgentStep
-    from rossum_agent.agent.types import ContentBlock, ImageContentBlock, TextContentBlock, UserContent
+    from rossum_agent.agent.types import UserContent
 
 # Generate beep and encode as base64 data URL
 _beep_wav = generate_beep_wav(frequency=440, duration=0.33)
@@ -358,15 +360,15 @@ def _build_agent_prompt(prompt: str, uploaded_images: list[dict]) -> tuple[UserC
         Tuple of (agent_prompt, num_images)
     """
     if uploaded_images:
-        content_blocks: list[ContentBlock] = []
+        content_blocks: list[ImageBlockParam | TextBlockParam] = []
         for img_data in uploaded_images:
-            image_block: ImageContentBlock = {
-                "type": "image",
-                "source": {"type": "base64", "media_type": img_data["media_type"], "data": img_data["data"]},
-            }
-            content_blocks.append(image_block)
-        text_block: TextContentBlock = {"type": "text", "text": prompt}
-        content_blocks.append(text_block)
+            content_blocks.append(
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": img_data["media_type"], "data": img_data["data"]},
+                }
+            )
+        content_blocks.append({"type": "text", "text": prompt})
         st.session_state.uploaded_images = []
         return content_blocks, len(uploaded_images)
     return prompt, 0

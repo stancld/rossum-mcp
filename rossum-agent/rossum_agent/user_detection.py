@@ -8,6 +8,7 @@ import re
 from typing import TYPE_CHECKING
 
 import jwt
+import jwt.algorithms
 import requests
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ def fetch_jwt_public_key(jwks_url: str) -> rsa.RSAPublicKey:
     if "keys" not in response_json:
         raise ValueError("No JWT key found in Teleport JWK endpoint response")
 
-    return jwt.algorithms.RSAAlgorithm.from_jwk(response_json["keys"][0])
+    return jwt.algorithms.RSAAlgorithm.from_jwk(response_json["keys"][0])  # type: ignore[return-value,attr-defined]
 
 
 def decode_jwt_username(public_key: rsa.RSAPublicKey, token: str) -> str:

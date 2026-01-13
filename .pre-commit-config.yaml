@@ -28,18 +28,11 @@ repos:
             .*\.html|
           )$
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+  - repo: local
     hooks:
-      - id: mypy
-        name: mypy
-        args: [--config-file=mypy.ini]
-        additional_dependencies: [
-          numpy==2.3.3,
-          "rossum-api @ git+https://github.com/stancld/rossum-api.git@ds-feat-hook-logs",
-          types-seaborn==0.13.2.20250914,
-          types-requests==2.32.4.20250913
-        ]
-        language: python
+      - id: ty
+        name: ty
+        entry: uv run ty check
+        language: system
         pass_filenames: false
         types: [python]

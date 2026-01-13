@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.engine import (
-    Engine,  # noqa: TC002 - needed at runtime for FastMCP
-    EngineField,  # noqa: TC002 - needed at runtime for FastMCP
-    EngineFieldType,  # noqa: TC002 - needed at runtime for FastMCP
-)
+from rossum_api.models.engine import Engine, EngineField, EngineFieldType
 
 from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
 
@@ -52,8 +48,7 @@ async def _update_engine(client: AsyncRossumAPIClient, engine_id: int, engine_da
 
     logger.debug(f"Updating engine: engine_id={engine_id}, data={engine_data}")
     updated_engine_data = await client._http_client.update(Resource.Engine, engine_id, engine_data)
-    updated_engine: Engine = client._deserializer(Resource.Engine, updated_engine_data)
-    return updated_engine
+    return cast("Engine", client._deserializer(Resource.Engine, updated_engine_data))
 
 
 async def _create_engine(
@@ -72,8 +67,7 @@ async def _create_engine(
         "type": engine_type,
     }
     engine_response = await client._http_client.create(Resource.Engine, engine_data)
-    engine: Engine = client._deserializer(Resource.Engine, engine_response)
-    return engine
+    return cast("Engine", client._deserializer(Resource.Engine, engine_response))
 
 
 async def _create_engine_field(
@@ -113,8 +107,7 @@ async def _create_engine_field(
         engine_field_data["pre_trained_field_id"] = pre_trained_field_id
 
     engine_field_response = await client._http_client.create(Resource.EngineField, engine_field_data)
-    engine_field: EngineField = client._deserializer(Resource.EngineField, engine_field_response)
-    return engine_field
+    return cast("EngineField", client._deserializer(Resource.EngineField, engine_field_response))
 
 
 async def _get_engine_fields(client: AsyncRossumAPIClient, engine_id: int | None = None) -> list[EngineField]:

@@ -19,7 +19,8 @@ from rossum_deploy.workspace import Workspace
 from rossum_agent.tools.core import get_output_dir
 
 if TYPE_CHECKING:
-    from anthropic._tools import BetaTool
+    from anthropic._tools import BetaTool  # ty: ignore[unresolved-import] - private API
+    from anthropic.types import ToolParam
     from rossum_deploy.workspace import Workspace as WorkspaceType
 
 logger = logging.getLogger(__name__)
@@ -408,7 +409,7 @@ DEPLOY_TOOLS: list[BetaTool[..., str]] = [
 ]
 
 
-def get_deploy_tools() -> list[dict[str, object]]:
+def get_deploy_tools() -> list[ToolParam]:
     return [tool.to_dict() for tool in DEPLOY_TOOLS]
 
 
