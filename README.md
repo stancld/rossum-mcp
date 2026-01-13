@@ -8,8 +8,8 @@
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
-[![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
 
+[![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
 [![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
 [![Snyk Security](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-mcp/badge)](https://www.codefactor.io/repository/github/stancld/rossum-mcp)
