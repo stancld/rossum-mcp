@@ -1,243 +1,115 @@
 # Development Guidelines
 
-## Git Workflow
-- **NEVER commit or push automatically** - Only run `git commit` or `git push` when explicitly instructed by the user
-- Suggest commit messages when asked, but wait for user approval before committing
+**Goal**: Maintain code quality, consistency, and documentation across rossum-mcp and rossum-agent.
 
-## Planning & Scratch Files
-- Place planning documents, task breakdowns, and scratch files in the `.agents/` folder
-- The `.agents/` folder is gitignored and should NOT be committed to the repository
-- Use this folder for temporary work, drafts, and agent-specific notes
+## Critical Constraints
+
+- **No auto-commits** - Only `git commit`/`git push` when explicitly instructed
+- **YAGNI** - Don't add functionality until needed. Remove unused code proactively.
+- **Tests required** - New features and bug fixes must include tests
+- **Docs in sync** - Tool changes require documentation updates
 
 ## Commands
-- **Python setup**: `pip install -e .`
-- **Run server**: `python server.py`
-- **Run tests**: `pytest` (run all tests), `pytest path/to/test_file.py` (run specific test)
-- **Run rossum-deploy tests**: `cd rossum-deploy && pytest tests/` (ALWAYS run when modifying `rossum-deploy/rossum_deploy/workspace.py`)
-- **Lint & type check**: `pre-commit run --all-files`
-- **Individual tools**: `ruff check --fix`, `ruff format`, `mypy --config-file=mypy.ini`
+
+| Task | Command |
+|------|---------|
+| Setup | `pip install -e .` |
+| Server | `python server.py` |
+| Tests | `pytest` or `pytest path/to/test.py` |
+| rossum-deploy tests | `cd rossum-deploy && pytest tests/` (required when modifying `workspace.py`) |
+| Lint | `pre-commit run --all-files` |
 
 ## Architecture
-- Single-file MCP server (`server.py`) for Rossum API integration
-- Main class: `RossumMCPServer` with async tool handlers
-- 21 tools including `upload_document`, `get_annotation`, `list_annotations`, `get_hook`, `create_hook`, `list_hooks`, `list_rules`, etc.
+
+- **rossum-mcp**: Single-file MCP server (`server.py`), `RossumMCPServer` class, 21+ tools
+- **rossum-agent**: AI agent with prompts in `rossum_agent/prompts/`, skills in `rossum_agent/skills/`
 - Sync API client wrapped in async executors for MCP compatibility
-- Examples in `examples/` directory
 
-## FastMCP Tool Guidelines (rossum-mcp)
+## Prompt Engineering (rossum-agent)
 
-**CRITICAL**: rossum-mcp uses FastMCP. Follow these patterns to avoid token waste:
+**rossum-agent uses Opus 4.5** - optimize prompts in `rossum_agent/prompts/` and `rossum_agent/skills/` accordingly:
 
-### Tool Description vs Docstring
-- **`description` parameter**: Concise LLM-facing guidance (when to use, key tips). This is shown to the LLM.
-- **Docstring**: Only add if parameters need clarification not obvious from type hints. Avoid repeating the description.
-- **DO NOT** duplicate information between description and docstring.
+| Principle | Implementation |
+|-----------|----------------|
+| Goals over procedures | "Goal: Deploy safely" not step-by-step instructions |
+| Constraints over explanations | "Never mix credentials" - Opus infers consequences |
+| Tables for structure | More token-efficient than prose lists |
+| No redundancy | Don't explain what Opus can infer |
+| Facts not warnings | State rules directly, skip "IMPORTANT" preambles |
 
-### Pattern to Follow:
+## Code Style
+
+| Rule | Example |
+|------|---------|
+| Python 3.12+ | Modern syntax required |
+| Type hints | `str \| None` not `Optional[str]`, `list[str]` not `List[str]` |
+| No `Any` | Use specific types |
+| Imports | Standard library first, `from pathlib import Path` |
+| Comments | Explain why, not what |
+| No trailing commas | `[1, 2, 3]` not `[1, 2, 3,]` |
+| Noqa comments | Always explain: `# noqa: TC003 - reason` |
+
+## FastMCP Tools (rossum-mcp)
+
+**Constraint**: Don't duplicate info between `description` and docstring.
+
 ```python
-@mcp.tool(description="List users. Filter by username/email to find specific users. Returns user URLs usable as token_owner in create_hook.")
+@mcp.tool(description="List users. Filter by username/email. Returns URLs usable as token_owner.")
 async def list_users(
-    username: str | None = None,  # Type hints are self-documenting
+    username: str | None = None,
     email: str | None = None,
 ) -> list[User]:
-    # No docstring needed - description + type hints are sufficient
+    # No docstring - description + type hints sufficient
     ...
 ```
 
-### Only Add Docstring When:
-- Parameters have non-obvious formats (e.g., ISO 8601 timestamps)
-- Complex filtering logic needs explanation
-- Default behavior isn't clear from types
+Add docstring only when: non-obvious formats, complex filtering, unclear defaults.
 
-### Type Imports for FastMCP:
-- Import return types at module level (not in TYPE_CHECKING) so FastMCP can serialize them
-- Use `# noqa: TC002 - needed at runtime for FastMCP` for these imports
+Import return types at module level (not TYPE_CHECKING) for FastMCP serialization.
 
 ## Documentation Updates
 
-**CRITICAL**: When adding, removing, or modifying tools (MCP or agent tools), you MUST update documentation to keep it in sync with the code.
+When adding/modifying tools, update:
 
-### Files to Update When Adding/Modifying MCP Tools:
+| Tool Type | Files to Update |
+|-----------|-----------------|
+| MCP tools | `rossum_mcp/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
+| Agent tools | `rossum_agent/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
 
-1. **`rossum_mcp/README.md`**:
-   - Update the Features section to list the new tool
-   - Add complete tool documentation under "Available Tools" section:
-     - Tool name and description
-     - Parameters (with types and descriptions)
-     - Return format (with JSON examples)
-     - Usage examples
+Include: tool name, description, parameters with types, return format with JSON examples.
 
-2. **`docs/source/index.rst`**:
-   - Update the tool count in "Features" section (e.g., "20 tools" → "21 tools")
-   - Add the new tool to the appropriate category bullet list:
-     - Document Processing
-     - Queue & Schema Management
-     - Engine Management
-     - Extensions & Rules
+## Testing
 
-3. **`docs/source/usage.rst`**:
-   - Add full tool documentation in reStructuredText format:
-     - Tool heading (using `^^^^^` underline)
-     - Description paragraph
-     - Parameters section with proper RST formatting
-     - Returns section with `.. code-block:: json` examples
-     - Optional example usage with `.. code-block:: python`
+| Scenario | Action |
+|----------|--------|
+| New functions | Unit tests |
+| New MCP tools | Integration tests in `rossum-mcp/tests/test_server.py` |
+| New agent tools | Tests in `rossum-agent/tests/` |
+| Bug fixes | Regression tests |
+| Modified logic | Update + add tests |
 
-4. **`docs/source/mcp_reference.rst`** (if applicable):
-   - Add SDK mapping documentation if the tool uses new SDK methods
-   - Document API endpoints and query parameters
-   - Include implementation notes
+Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at file top.
 
-### Files to Update When Adding/Modifying Agent Tools:
+## Environment Variables
 
-1. **`rossum_agent/README.md`**:
-   - Update the Features section to list the new tool category (if new)
-   - Add complete tool documentation under the appropriate section:
-     - File System Tools
-     - Plotting Tools
-     - Hook Analysis Tools
-     - Internal Tools
-   - Include parameters, return values, and usage examples
+| Variable | Purpose |
+|----------|---------|
+| `ROSSUM_API_TOKEN` | Required - API authentication |
+| `ROSSUM_API_BASE_URL` | Required - API endpoint |
+| `REDIS_HOST`, `REDIS_PORT` | Optional - Redis connection (default port: 6379) |
+| `ROSSUM_MCP_MODE` | Optional - read-only or read-write |
+| `TELEPORT_JWT_JWKS_URL` | Optional - enables user isolation via JWT |
+| `PUBLIC_URL` | Optional - shareable links on remote servers |
 
-2. **`docs/source/index.rst`**:
-   - Add the new tool to the "AI Agent Toolkit" feature list if it represents a new category
+## Planning Files
 
-3. **`docs/source/usage.rst`**:
-   - Add full tool documentation in the "Agent Tools" section
-   - Use proper RST formatting with tool name as heading
-   - Include parameters, returns, and example code blocks
-   - Place under appropriate category subsection
+Place planning documents, task breakdowns, and scratch files in `.agents/` (gitignored).
 
-### Documentation Checklist:
-- [ ] Updated tool count/features in `docs/source/index.rst` (if applicable)
-- [ ] Added tool to appropriate category in `index.rst` and corresponding README.md
-- [ ] Documented parameters, return values, and examples in all relevant files
-- [ ] Verified examples match actual tool signatures in code
-- [ ] Built and reviewed generated documentation locally (if docs changes)
+## Code Review Checklist
 
-### Verification:
-After updating documentation, verify consistency by checking:
-```bash
-# Check that tool definitions in server.py match documentation
-grep -A5 "Tool(" rossum_mcp/server.py | grep "name="
-grep "^\*\*" docs/source/index.rst
-grep "^###" rossum_mcp/README.md | grep -i "available tools" -A50
-```
-
-## Testing Requirements
-
-**CRITICAL**: When adding new features or modifying existing code, you MUST write tests.
-
-### When to Write Tests:
-- **New functions/methods**: Write unit tests for all new functions and methods
-- **New MCP tools**: Add integration tests in `rossum-mcp/tests/test_server.py`
-- **New agent tools**: Add unit tests in `rossum-agent/tests/`
-- **Bug fixes**: Add regression tests to prevent the bug from reoccurring
-- **Modified logic**: Update existing tests and add new ones for changed behavior
-- **New modules**: Create corresponding test file (e.g., `foo.py` → `test_foo.py`)
-
-### Test Structure:
-- Place tests in `tests/` directory mirroring the source structure
-- Use pytest fixtures for common setup (see `conftest.py`)
-- Test file naming: `test_<module_name>.py`
-- Test function naming: `test_<functionality>_<scenario>`
-
-### Test Coverage Guidelines:
-- **Unit tests**: Test individual functions/methods in isolation
-- **Integration tests**: Test MCP tool handlers end-to-end
-- **Mock external dependencies**: Use `unittest.mock` for API calls, file I/O, etc.
-- **Edge cases**: Test error conditions, empty inputs, boundary values
-- **Async code**: Use `pytest-asyncio` for async function tests
-- **Imports**: Always place imports at the top of test files, not inside test functions or classes. This improves readability and avoids repeated import overhead.
-
-### Development Workflow:
-1. Write/modify code
-2. Write/update tests for your changes
-3. Run tests: `pytest path/to/test_file.py`
-4. Verify all tests pass: `pytest`
-5. Run pre-commit hooks: `pre-commit run --all-files`
-6. Fix any issues and repeat until all checks pass
-
-## Code Style
-- **YAGNI**: Don't add functionality until it's actually needed. Remove unused code, endpoints, and features proactively.
-- **Avoid unnecessary configurability**: We're a product, not a framework. Prefer sensible defaults over configuration options. Only add configuration when there's a clear, demonstrated need.
-- **No underscore prefix for exported functions**: Functions that are imported elsewhere in the codebase must NOT have a `_` prefix. Use `_` prefix only for truly private functions that are not exported or tested directly.
-- **Python version**: 3.12+ syntax required
-- **Typing**: Use modern union syntax (`str | None`, not `Optional[str]`) and built-ins (`list[str]`, `dict[str, int]`). Avoid using `Any` type annotation as much as possible - use specific types instead
-- **Imports**: Use `from pathlib import Path`, standard library first. Do NOT add try/except blocks for missing imports - assume all dependencies are installed
-- **Async**: Wrap sync operations with `ThreadPoolExecutor` for MCP
-- **Logging**: File-based logging to `/tmp/` since stdout is MCP protocol
-- **Error handling**: Return JSON error objects, include tracebacks for debugging
-- **Comments**: Brief, explain why not what
-- **Trailing commas**: Avoid trailing commas to save lines (e.g., `[1, 2, 3]` not `[1, 2, 3,]`)
-- **Noqa/type-ignore comments**: Always add an explanatory comment when using `# noqa` or `# type: ignore`. Explain why the suppression is necessary (e.g., `# noqa: TC003 - Callable used in type annotation at runtime for FastAPI`)
-- **Quality**: Use pre-commit hooks (ruff, mypy, codespell) before committing
-- **Development workflow**: After making code changes, iteratively run `pre-commit run --all-files` and fix all mypy type errors until the checks pass cleanly
-
-## Environment
-- Required: `ROSSUM_API_TOKEN`, `ROSSUM_API_BASE_URL`
-- Optional Redis: `REDIS_HOST`, `REDIS_PORT` (default: 6379)
-- Optional: `ROSSUM_MCP_MODE` (read-only or read-write), `ENVIRONMENT` (development/production)
-- Optional: `TELEPORT_JWT_JWKS_URL` for JWT verification and user isolation
-- Optional: `PUBLIC_URL` for shareable links on remote servers (e.g., `https://your-domain.com`)
-- MCP client configuration in Claude Desktop
-
-### User Isolation Feature
-User isolation is automatically enabled when `TELEPORT_JWT_JWKS_URL` is configured:
-- Extracts username from `Teleport-Jwt-Assertion` header (JWT token)
-- JWT token is the only supported authentication method
-- Redis keys pattern: `user:{user_id}:chat:{chat_id}` (vs shared `chat:{chat_id}`)
-- Each user sees only their own chat history in the sidebar
-- Local development (no JWT config): all users share chat history
-
-## Redis Logging Setup
-1. **Start Redis**: `docker-compose up redis -d`
-2. **Set environment variables**:
-   ```bash
-   export REDIS_HOST=localhost
-   export REDIS_PORT=6379
-   ```
-3. **View logs**: Use Redis CLI to view logs:
-   ```bash
-   redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
-   ```
-
-## Code Review Guidelines
-
-When performing code reviews, evaluate the following aspects:
-
-### Architecture & Design
-- Single Responsibility: Each class/function should have one clear purpose
-- Separation of concerns: Business logic, I/O, and presentation should be separate
-- Dependency injection: Prefer injected dependencies over hard-coded ones
-- Error boundaries: Errors should be handled at appropriate levels
-
-### Code Quality
-- **Type safety**: All functions should have type hints; avoid `Any` where possible
-- **Error handling**: Exceptions should be caught, logged, and handled gracefully
-- **Logging**: Sufficient logging for debugging without exposing sensitive data
-- **Naming**: Clear, descriptive names for variables, functions, and classes
-- **DRY**: Avoid code duplication; extract common patterns
-
-### Security
-- No hardcoded secrets or credentials
-- Input validation on all external inputs
-- Proper sanitization of data before logging
-
-### Performance
-- Avoid unnecessary I/O or API calls
-- Use caching where appropriate
-- Consider async/await for I/O-bound operations
-
-### Testing
-- Is the code testable? (Can dependencies be mocked?)
-- Are edge cases considered?
-- Is error handling tested?
-
-### Review Checklist
-- [ ] Type hints are complete and accurate
-- [ ] Error handling is comprehensive
-- [ ] Logging is appropriate (not too verbose, not too sparse)
-- [ ] No security vulnerabilities (secrets, injection, etc.)
-- [ ] Code follows project conventions (see Code Style section)
-- [ ] Tests exist or are planned for new functionality
+- Type hints complete and accurate
+- Error handling comprehensive
+- Logging appropriate
+- No security vulnerabilities
+- Follows project conventions
+- Tests exist for new functionality
