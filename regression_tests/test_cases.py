@@ -90,7 +90,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         rossum_url=None,
         prompt="Hey, what can you do?",
         tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
-        token_budget=TokenBudget(min_total_tokens=10000, max_total_tokens=16000),
+        token_budget=TokenBudget(min_total_tokens=11000, max_total_tokens=15000),
         success_criteria=SuccessCriteria(
             require_final_answer=True,
             require_subagent=False,
