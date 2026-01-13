@@ -2,13 +2,49 @@
 
 from __future__ import annotations
 
+import html
+import re
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 if TYPE_CHECKING:
     from rossum_agent.redis_storage import RedisStorage
+
+MERMAID_BLOCK_PATTERN = re.compile(r"```mermaid\s*(.*?)```", re.DOTALL)
+
+MERMAID_HTML_TEMPLATE = """
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({{startOnLoad: true, theme: 'default'}});</script>
+<div class="mermaid" style="background: white; padding: 10px; border-radius: 5px;">
+{code}
+</div>
+"""
+
+
+def render_mermaid_html(code: str, height: int = 400) -> None:
+    """Render mermaid diagram using HTML component."""
+    escaped_code = html.escape(code.strip())
+    html_content = MERMAID_HTML_TEMPLATE.format(code=escaped_code)
+    components.html(html_content, height=height, scrolling=True)
+
+
+def render_markdown_with_mermaid(content: str) -> None:
+    """Render markdown content with mermaid diagram support.
+
+    Parses markdown content for ```mermaid``` code blocks and renders them
+    using HTML components. Other content is rendered with st.markdown.
+    """
+    parts = MERMAID_BLOCK_PATTERN.split(content)
+    for i, part in enumerate(parts):
+        if not part.strip():
+            continue
+        if i % 2 == 1:
+            render_mermaid_html(part)
+        else:
+            st.markdown(part)
 
 
 def render_chat_history(redis_storage: RedisStorage, current_chat_id: str, user_id: str | None = None) -> None:
