@@ -22,12 +22,13 @@ class ToolExpectation:
 
     Attributes:
         expected_tools: List of tool names expected to be called.
+            For OR conditions, use tuple: ("get_schema", "get_queue_schema") means either is valid.
         mode: How to match tool calls:
             - "exact_sequence": must match exactly in order
             - "subset": all expected must appear in actual (order not enforced)
     """
 
-    expected_tools: Sequence[str] = field(default_factory=list)
+    expected_tools: Sequence[str | tuple[str, ...]] = field(default_factory=list)
     mode: ToolMatchMode = "subset"
 
 

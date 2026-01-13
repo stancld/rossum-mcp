@@ -132,7 +132,7 @@ class AgentStep:
 class AgentConfig:
     """Configuration for the RossumAgent."""
 
-    max_tokens: int = 128000
+    max_output_tokens: int = 64000  # Opus 4.5 limit (Sonnet 4.5 supports 128000)
     max_steps: int = 50
     temperature: float = 1.0  # Required for extended thinking
     request_delay: float = 3.0  # Delay in seconds between API calls to avoid rate limiting

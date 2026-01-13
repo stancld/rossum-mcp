@@ -10,13 +10,15 @@
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
 [![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
 
-[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
-[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
 [![Snyk Security](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-mcp/badge)](https://www.codefactor.io/repository/github/stancld/rossum-mcp)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+
+[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
+[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![Claude Opus 4.5](https://img.shields.io/badge/Claude-Opus_4.5-blueviolet.svg)](https://www.anthropic.com/claude/opus)
 
 **AI-powered Rossum orchestration: Document workflows conversationally, debug pipelines automatically, and configure automation through natural language.**
 

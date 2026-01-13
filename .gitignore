@@ -18,3 +18,7 @@ before-changes/
 after-changes/
 sandbox-after-changes/
 production-baseline/
+sandbox-workspace/
+sandbox-after/
+after/
+before/

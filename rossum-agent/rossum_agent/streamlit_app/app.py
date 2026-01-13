@@ -25,7 +25,11 @@ from rossum_agent.prompts.system_prompt import get_system_prompt
 from rossum_agent.redis_storage import ChatMetadata, RedisStorage, get_commit_sha
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
 from rossum_agent.streamlit_app.beep_sound import generate_beep_wav
-from rossum_agent.streamlit_app.render_modules import render_chat_history
+from rossum_agent.streamlit_app.render_modules import (
+    MERMAID_BLOCK_PATTERN,
+    render_chat_history,
+    render_markdown_with_mermaid,
+)
 from rossum_agent.streamlit_app.response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.tools import set_mcp_connection, set_output_dir
 from rossum_agent.url_context import RossumUrlContext, extract_url_context, format_context_for_prompt
@@ -498,7 +502,8 @@ def _run_agent_and_display(
             st.components.v1.html(BEEP_HTML, height=0)
 
         current_files_metadata = get_generated_files_with_metadata(st.session_state.output_dir)
-        if current_files_metadata != generated_files_metadata:
+        has_mermaid = final_answer_text and MERMAID_BLOCK_PATTERN.search(final_answer_text)
+        if current_files_metadata != generated_files_metadata or has_mermaid:
             st.rerun()
 
     except Exception as e:
@@ -544,7 +549,7 @@ def main() -> None:
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            render_markdown_with_mermaid(message["content"])
 
     if not st.session_state.credentials_saved:
         st.chat_input("👈 Please enter your Rossum API credentials in the sidebar", disabled=True)

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from rossum_agent.prompts.base_prompt import (
     CONFIGURATION_WORKFLOWS,
-    CORE_CAPABILITIES,
     CRITICAL_REQUIREMENTS,
     DOCUMENTATION_WORKFLOWS,
     OUTPUT_FORMATTING,
@@ -19,7 +18,6 @@ from rossum_agent.prompts.system_prompt import get_system_prompt
 
 __all__ = [
     "CONFIGURATION_WORKFLOWS",
-    "CORE_CAPABILITIES",
     "CRITICAL_REQUIREMENTS",
     "DOCUMENTATION_WORKFLOWS",
     "OUTPUT_FORMATTING",

@@ -6,7 +6,12 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.streamlit_app.render_modules import render_chat_history
+from rossum_agent.streamlit_app.render_modules import (
+    MERMAID_BLOCK_PATTERN,
+    render_chat_history,
+    render_markdown_with_mermaid,
+    render_mermaid_html,
+)
 
 FIXED_NOW = datetime(2023, 11, 14, 12, 0, 0)
 FIXED_TIMESTAMP = FIXED_NOW.timestamp()
@@ -184,3 +189,179 @@ class TestRenderChatHistory:
         button_label = call_args[0][0]
         assert short_message in button_label
         assert "..." not in button_label
+
+
+class TestMermaidBlockPattern:
+    """Test MERMAID_BLOCK_PATTERN regex."""
+
+    def test_matches_simple_mermaid_block(self):
+        """Test that pattern matches a simple mermaid code block."""
+        content = "```mermaid\ngraph TD\nA-->B\n```"
+        match = MERMAID_BLOCK_PATTERN.search(content)
+        assert match is not None
+        assert "graph TD" in match.group(1)
+
+    def test_matches_mermaid_block_with_surrounding_content(self):
+        """Test pattern matches mermaid block in mixed content."""
+        content = "Some text\n```mermaid\nflowchart LR\nA-->B\n```\nMore text"
+        match = MERMAID_BLOCK_PATTERN.search(content)
+        assert match is not None
+        assert "flowchart LR" in match.group(1)
+
+    def test_captures_multiline_diagram(self):
+        """Test pattern captures multiline mermaid diagrams."""
+        diagram = """graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do something]
+    B -->|No| D[Do something else]"""
+        content = f"```mermaid\n{diagram}\n```"
+        match = MERMAID_BLOCK_PATTERN.search(content)
+        assert match is not None
+        assert "Decision" in match.group(1)
+        assert "Do something" in match.group(1)
+
+    def test_does_not_match_non_mermaid_code_block(self):
+        """Test pattern does not match other code blocks."""
+        content = "```python\nprint('hello')\n```"
+        match = MERMAID_BLOCK_PATTERN.search(content)
+        assert match is None
+
+    def test_finds_multiple_mermaid_blocks(self):
+        """Test pattern finds all mermaid blocks using findall."""
+        content = "```mermaid\ngraph A\n```\ntext\n```mermaid\ngraph B\n```"
+        matches = MERMAID_BLOCK_PATTERN.findall(content)
+        assert len(matches) == 2
+        assert "graph A" in matches[0]
+        assert "graph B" in matches[1]
+
+    def test_split_content_with_mermaid(self):
+        """Test split behavior used by render_markdown_with_mermaid."""
+        content = "Before\n```mermaid\ndiagram\n```\nAfter"
+        parts = MERMAID_BLOCK_PATTERN.split(content)
+        assert len(parts) == 3
+        assert "Before" in parts[0]
+        assert "diagram" in parts[1]
+        assert "After" in parts[2]
+
+
+class TestRenderMermaidHtml:
+    """Test render_mermaid_html function."""
+
+    @pytest.fixture
+    def mock_components(self):
+        """Mock streamlit.components.v1."""
+        with patch("rossum_agent.streamlit_app.render_modules.components") as mock:
+            yield mock
+
+    def test_calls_components_html(self, mock_components):
+        """Test that components.html is called."""
+        render_mermaid_html("graph TD\nA-->B")
+        mock_components.html.assert_called_once()
+
+    def test_uses_default_height(self, mock_components):
+        """Test that default height of 400 is used."""
+        render_mermaid_html("graph TD")
+        call_kwargs = mock_components.html.call_args[1]
+        assert call_kwargs["height"] == 400
+
+    def test_uses_custom_height(self, mock_components):
+        """Test that custom height can be specified."""
+        render_mermaid_html("graph TD", height=600)
+        call_kwargs = mock_components.html.call_args[1]
+        assert call_kwargs["height"] == 600
+
+    def test_enables_scrolling(self, mock_components):
+        """Test that scrolling is enabled."""
+        render_mermaid_html("graph TD")
+        call_kwargs = mock_components.html.call_args[1]
+        assert call_kwargs["scrolling"] is True
+
+    def test_escapes_html_in_code(self, mock_components):
+        """Test that HTML special characters are escaped."""
+        render_mermaid_html("A[<script>alert('xss')</script>]-->B")
+        html_content = mock_components.html.call_args[0][0]
+        assert "<script>alert" not in html_content
+        assert "&lt;script&gt;" in html_content
+
+    def test_includes_mermaid_script(self, mock_components):
+        """Test that mermaid.js script is included."""
+        render_mermaid_html("graph TD")
+        html_content = mock_components.html.call_args[0][0]
+        assert "mermaid.min.js" in html_content
+
+    def test_includes_mermaid_initialize(self, mock_components):
+        """Test that mermaid.initialize is called."""
+        render_mermaid_html("graph TD")
+        html_content = mock_components.html.call_args[0][0]
+        assert "mermaid.initialize" in html_content
+
+    def test_strips_whitespace_from_code(self, mock_components):
+        """Test that whitespace is stripped from code."""
+        render_mermaid_html("  graph TD  \n  A-->B  \n  ")
+        html_content = mock_components.html.call_args[0][0]
+        assert "graph TD" in html_content
+
+
+class TestRenderMarkdownWithMermaid:
+    """Test render_markdown_with_mermaid function."""
+
+    @pytest.fixture
+    def mock_st_and_render(self):
+        """Mock st.markdown and render_mermaid_html."""
+        with (
+            patch("rossum_agent.streamlit_app.render_modules.st") as mock_st,
+            patch("rossum_agent.streamlit_app.render_modules.render_mermaid_html") as mock_render,
+        ):
+            yield mock_st, mock_render
+
+    def test_renders_plain_markdown(self, mock_st_and_render):
+        """Test that plain markdown is rendered with st.markdown."""
+        mock_st, mock_render = mock_st_and_render
+        render_markdown_with_mermaid("# Hello World")
+        mock_st.markdown.assert_called_once_with("# Hello World")
+        mock_render.assert_not_called()
+
+    def test_renders_mermaid_block(self, mock_st_and_render):
+        """Test that mermaid blocks are rendered with render_mermaid_html."""
+        _mock_st, mock_render = mock_st_and_render
+        render_markdown_with_mermaid("```mermaid\ngraph TD\nA-->B\n```")
+        mock_render.assert_called_once()
+        assert "graph TD" in mock_render.call_args[0][0]
+
+    def test_renders_mixed_content_in_order(self, mock_st_and_render):
+        """Test that mixed content renders markdown and mermaid in order."""
+        mock_st, mock_render = mock_st_and_render
+        content = "# Header\n```mermaid\ngraph TD\n```\n## Footer"
+        render_markdown_with_mermaid(content)
+
+        # Should have called st.markdown for both text sections
+        assert mock_st.markdown.call_count == 2
+        # Should have called render_mermaid_html once
+        mock_render.assert_called_once()
+
+    def test_skips_empty_parts(self, mock_st_and_render):
+        """Test that empty parts are skipped."""
+        mock_st, mock_render = mock_st_and_render
+        content = "```mermaid\ngraph TD\n```"
+        render_markdown_with_mermaid(content)
+        # Only the mermaid part should be rendered, empty strings skipped
+        mock_render.assert_called_once()
+        mock_st.markdown.assert_not_called()
+
+    def test_handles_multiple_mermaid_blocks(self, mock_st_and_render):
+        """Test handling of multiple mermaid blocks."""
+        mock_st, mock_render = mock_st_and_render
+        content = "Text\n```mermaid\ngraph A\n```\nMiddle\n```mermaid\ngraph B\n```\nEnd"
+        render_markdown_with_mermaid(content)
+
+        # Should have called st.markdown for text sections
+        assert mock_st.markdown.call_count == 3
+        # Should have called render_mermaid_html for both diagrams
+        assert mock_render.call_count == 2
+
+    def test_preserves_markdown_content(self, mock_st_and_render):
+        """Test that markdown content is passed correctly."""
+        mock_st, _mock_render = mock_st_and_render
+        markdown_text = "# Title\n\nSome **bold** text"
+        render_markdown_with_mermaid(markdown_text)
+        mock_st.markdown.assert_called_once_with(markdown_text)
