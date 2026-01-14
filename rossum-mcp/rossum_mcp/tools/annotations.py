@@ -7,7 +7,7 @@ from collections.abc import Sequence  # noqa: TC003 - needed at runtime for Fast
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from rossum_api.models.annotation import Annotation  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.annotation import Annotation
 
 from rossum_mcp.tools.base import is_read_write_mode
 

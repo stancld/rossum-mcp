@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal
 
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.schema import Schema  # noqa: TC002 - needed at runtime for FastMCP
+from rossum_api.models.schema import Schema
 
 from rossum_mcp.tools.base import is_read_write_mode
 
@@ -325,7 +325,7 @@ async def _patch_schema(
 
     node_data_dict: dict | None = None
     if node_data is not None:
-        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)  # type: ignore[call-overload]
+        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)
 
     current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
     content_list = current_schema.get("content", [])

@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal
 
+from anthropic.types import ThinkingBlockParam
+
 
 class StepType(Enum):
     """Type of streaming step for distinguishing UI rendering."""
@@ -88,9 +90,9 @@ class ThinkingBlockData:
     thinking: str
     signature: str
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> ThinkingBlockParam:
         """Serialize to dictionary for storage and API message format."""
-        return {"type": "thinking", "thinking": self.thinking, "signature": self.signature}
+        return ThinkingBlockParam(type="thinking", thinking=self.thinking, signature=self.signature)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ThinkingBlockData:

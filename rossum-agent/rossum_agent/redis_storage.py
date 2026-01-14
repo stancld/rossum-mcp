@@ -11,7 +11,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any  # noqa: TC003 - Any used in function type hints at runtime
+from typing import Any, cast
 
 import redis
 
@@ -180,7 +180,7 @@ class RedisStorage:
                 logger.info(f"Chat {chat_id} not found in Redis (user: {user_id or 'shared'})")
                 return None
 
-            data = json.loads(value.decode("utf-8"))
+            data = json.loads(cast("bytes", value).decode("utf-8"))
             messages = data if isinstance(data, list) else data.get("messages", [])
             stored_output_dir = data.get("output_dir") if isinstance(data, dict) else None
             metadata_dict = data.get("metadata", {}) if isinstance(data, dict) else {}
@@ -264,7 +264,7 @@ class RedisStorage:
         """
         try:
             pattern = self._get_chat_pattern(user_id)
-            keys = self.client.keys(pattern.encode("utf-8"))
+            keys = cast("list[bytes]", self.client.keys(pattern.encode("utf-8")))
             chats = []
 
             for key in keys:
@@ -365,7 +365,7 @@ class RedisStorage:
                 logger.info(f"File {filename} not found for chat {chat_id}")
                 return None
 
-            metadata: dict[str, Any] = json.loads(value.decode("utf-8"))
+            metadata: dict[str, Any] = json.loads(cast("bytes", value).decode("utf-8"))
             content = base64.b64decode(metadata["content"])
             logger.info(f"Loaded file {filename} for chat {chat_id} ({len(content)} bytes)")
             return content
@@ -384,7 +384,7 @@ class RedisStorage:
         """
         try:
             pattern = f"file:{chat_id}:*"
-            keys = self.client.keys(pattern.encode("utf-8"))
+            keys = cast("list[bytes]", self.client.keys(pattern.encode("utf-8")))
             files = []
 
             for key in keys:
@@ -392,7 +392,7 @@ class RedisStorage:
                 filename = key_str.split(":")[-1]
                 value = self.client.get(key)
                 if value:
-                    metadata: dict[str, Any] = json.loads(value.decode("utf-8"))
+                    metadata: dict[str, Any] = json.loads(cast("bytes", value).decode("utf-8"))
                     files.append(
                         {
                             "filename": filename,
@@ -437,14 +437,14 @@ class RedisStorage:
         """
         try:
             pattern = f"file:{chat_id}:*"
-            keys = self.client.keys(pattern.encode("utf-8"))
+            keys = cast("list[bytes]", self.client.keys(pattern.encode("utf-8")))
             if not keys:
                 logger.info(f"No files to delete for chat {chat_id}")
                 return 0
 
-            deleted = self.client.delete(*keys)
+            deleted = cast("int", self.client.delete(*keys))
             logger.info(f"Deleted {deleted} files for chat {chat_id}")
-            return int(deleted)
+            return deleted
         except Exception as e:
             logger.error(f"Failed to delete files for chat {chat_id}: {e}", exc_info=True)
             return 0

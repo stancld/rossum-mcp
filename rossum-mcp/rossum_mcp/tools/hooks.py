@@ -6,11 +6,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from rossum_api.models.hook import (  # noqa: TC002 - needed at runtime for FastMCP
-    Hook,
-    HookRunData,
-    HookType,
-)
+from rossum_api.models.hook import Hook, HookRunData, HookType
 
 from rossum_mcp.tools.base import is_read_write_mode
 
@@ -189,10 +185,7 @@ async def _list_hook_logs(
     }
     filters = {k: v for k, v in filter_mapping.items() if v is not None}
 
-    return [
-        log
-        async for log in client.list_hook_run_data(**filters)  # type: ignore[attr-defined]
-    ]
+    return [log async for log in client.list_hook_run_data(**filters)]
 
 
 async def _list_hook_templates(client: AsyncRossumAPIClient) -> list[HookTemplate]:

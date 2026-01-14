@@ -11,11 +11,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from anthropic.types import MessageParam, TextBlockParam, ThinkingBlockParam, ToolResultBlockParam, ToolUseBlockParam
+
 from rossum_agent.agent.models import ThinkingBlockData, ToolCall, ToolResult
 
 if TYPE_CHECKING:
-    from anthropic.types import MessageParam
-
     from rossum_agent.agent.types import UserContent
 
 
@@ -50,35 +50,37 @@ class MemoryStep:
         messages: list[MessageParam] = []
 
         if self.tool_calls:
-            assistant_content: list[dict[str, object]] = []
+            assistant_content: list[TextBlockParam | ToolUseBlockParam | ThinkingBlockParam] = []
 
             for tb in self.thinking_blocks:
                 assistant_content.append(tb.to_dict())
 
             if self.text:
-                assistant_content.append({"type": "text", "text": self.text})
+                assistant_content.append(TextBlockParam(type="text", text=self.text))
 
             for tc in self.tool_calls:
-                assistant_content.append({"type": "tool_use", "id": tc.id, "name": tc.name, "input": tc.arguments})
+                assistant_content.append(
+                    ToolUseBlockParam(type="tool_use", id=tc.id, name=tc.name, input=tc.arguments)
+                )
 
-            messages.append({"role": "assistant", "content": assistant_content})
+            messages.append(MessageParam(role="assistant", content=assistant_content))
 
             if self.tool_results:
-                tool_result_blocks: list[dict[str, object]] = []
+                tool_result_blocks: list[ToolResultBlockParam] = []
                 for tr in self.tool_results:
                     tool_result_blocks.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": tr.tool_call_id,
-                            "content": tr.content,
-                            "is_error": tr.is_error,
-                        }
+                        ToolResultBlockParam(
+                            type="tool_result",
+                            tool_use_id=tr.tool_call_id,
+                            content=tr.content,
+                            is_error=tr.is_error,
+                        )
                     )
 
-                messages.append({"role": "user", "content": tool_result_blocks})
+                messages.append(MessageParam(role="user", content=tool_result_blocks))
 
         elif self.text:
-            messages.append({"role": "assistant", "content": self.text})
+            messages.append(MessageParam(role="assistant", content=self.text))
 
         return messages
 
@@ -119,7 +121,7 @@ class TaskStep:
     task: UserContent
 
     def to_messages(self) -> list[MessageParam]:
-        return [{"role": "user", "content": self.task}]
+        return [MessageParam(role="user", content=self.task)]
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary for storage."""

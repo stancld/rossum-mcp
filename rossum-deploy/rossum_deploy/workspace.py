@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from rossum_api import SyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
@@ -918,7 +918,7 @@ class Workspace:
                 "training_queues": target_queue_urls,
             }
             new_engine_response = target_client.internal_client.create(Resource.Engine, engine_data)
-            new_engine: Engine = target_client._deserializer(Resource.Engine, new_engine_response)
+            new_engine = cast("Engine", target_client._deserializer(Resource.Engine, new_engine_response))
             id_mapping.add(ObjectType.ENGINE, engine.id, new_engine.id)
             result.created.append((ObjectType.ENGINE, engine.id, new_engine.id, engine.name))
         except Exception as e:
