@@ -14,7 +14,7 @@
 [![Snyk Security](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-mcp/badge)](https://www.codefactor.io/repository/github/stancld/rossum-mcp)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![ty](https://img.shields.io/badge/ty-typed-blue?logo=python&logoColor=gold)](https://github.com/astral-sh/ty)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
