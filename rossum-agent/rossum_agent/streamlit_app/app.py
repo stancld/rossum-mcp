@@ -255,6 +255,23 @@ def _render_credentials_section() -> None:
             st.session_state.credentials_saved = False
             st.rerun()
 
+    if os.getenv("DEBUG"):
+        st.markdown("---")
+        st.subheader("MCP Mode")
+        mode_options = ["read-only", "read-write"]
+        current_index = (
+            mode_options.index(st.session_state.mcp_mode) if st.session_state.mcp_mode in mode_options else 0
+        )
+        selected_mode = st.radio(
+            "Select mode:",
+            options=mode_options,
+            index=current_index,
+            horizontal=True,
+            disabled=st.session_state.read_write_disabled,
+        )
+        if selected_mode != st.session_state.mcp_mode:
+            st.session_state.mcp_mode = selected_mode
+
 
 def _render_url_context_section() -> None:
     """Render the URL context section in sidebar."""
