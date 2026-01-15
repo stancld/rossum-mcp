@@ -325,6 +325,66 @@ engine type (dedicated, generic, or standard) and details.
      "engine_type": "dedicated"
    }
 
+get_queue_template_names
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns a list of available template names for use with ``create_queue_from_template``.
+
+**Parameters:** None
+
+**Returns:**
+
+.. code-block:: json
+
+   [
+     "EU Demo Template",
+     "AP&R EU Demo Template",
+     "Tax Invoice EU Demo Template",
+     "US Demo Template",
+     "AP&R US Demo Template",
+     "Tax Invoice US Demo Template",
+     "UK Demo Template",
+     "AP&R UK Demo Template",
+     "Tax Invoice UK Demo Template",
+     "CZ Demo Template",
+     "Empty Organization Template",
+     "Delivery Notes Demo Template",
+     "Delivery Note Demo Template",
+     "Chinese Invoices (Fapiao) Demo Template",
+     "Tax Invoice CN Demo Template",
+     "Certificates of Analysis Demo Template",
+     "Purchase Order Demo Template",
+     "Credit Note Demo Template",
+     "Debit Note Demo Template",
+     "Proforma Invoice Demo Template"
+   ]
+
+create_queue_from_template
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Creates a new queue from a predefined template. **Preferred method for new customer setup.**
+Templates include pre-configured schema and AI engine optimized for specific document types.
+
+**Parameters:**
+
+- ``name`` (string, required): Name of the queue to create
+- ``template_name`` (string, required): Template name (use ``get_queue_template_names`` to list)
+- ``workspace_id`` (integer, required): Workspace ID where the queue should be created
+- ``include_documents`` (boolean, optional): Copy documents from template queue (default: false)
+- ``engine_id`` (integer, optional): Override engine assignment
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "ACME Corp - Invoices",
+     "url": "https://elis.rossum.ai/api/v1/queues/12345",
+     "workspace": "https://elis.rossum.ai/api/v1/workspaces/11111",
+     "schema": "https://elis.rossum.ai/api/v1/schemas/67890"
+   }
+
 create_queue
 ^^^^^^^^^^^^
 

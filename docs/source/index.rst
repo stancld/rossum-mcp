@@ -59,6 +59,8 @@ The MCP server provides **40 tools** organized into seven categories:
 * **get_queue**, **get_schema**, **get_queue_schema** - Retrieve configuration
 * **get_queue_engine** - Get engine information
 * **create_queue**, **create_schema** - Create new queues and schemas
+* **create_queue_from_template** - Create queues from predefined templates (EU/US/UK/CZ/CN)
+* **get_queue_template_names** - List available queue template names
 * **update_queue**, **update_schema** - Configure automation thresholds
 * **patch_schema** - Add, update, or remove individual schema nodes
 

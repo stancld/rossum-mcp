@@ -649,3 +649,124 @@ class TestUpdateQueue:
 
         assert result["error"] == "update_queue is not available in read-only mode"
         mock_client._http_client.update.assert_not_called()
+
+
+@pytest.mark.unit
+class TestGetQueueTemplateNames:
+    """Tests for get_queue_template_names tool."""
+
+    @pytest.mark.asyncio
+    async def test_get_queue_template_names_returns_list(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test that get_queue_template_names returns the template list."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        get_queue_template_names = mock_mcp._tools["get_queue_template_names"]
+        result = await get_queue_template_names()
+
+        assert isinstance(result, list)
+        assert "EU Demo Template" in result
+        assert "US Demo Template" in result
+        assert "Empty Organization Template" in result
+        assert len(result) == 20
+
+
+@pytest.mark.unit
+class TestCreateQueueFromTemplate:
+    """Tests for create_queue_from_template tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_queue_from_template_success(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test successful queue creation from template."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=300, name="New Template Queue")
+        mock_client._http_client.request_json.return_value = {"id": 300, "name": "New Template Queue"}
+        mock_client._deserializer.return_value = mock_queue
+
+        create_queue_from_template = mock_mcp._tools["create_queue_from_template"]
+        result = await create_queue_from_template(
+            name="New Template Queue",
+            template_name="EU Demo Template",
+            workspace_id=1,
+        )
+
+        assert result.id == 300
+        assert result.name == "New Template Queue"
+        mock_client._http_client.request_json.assert_called_once()
+        call_kwargs = mock_client._http_client.request_json.call_args[1]
+        assert call_kwargs["method"] == "POST"
+        assert call_kwargs["url"] == "queues/from_template"
+        assert call_kwargs["json"]["name"] == "New Template Queue"
+        assert call_kwargs["json"]["template_name"] == "EU Demo Template"
+        assert call_kwargs["json"]["workspace"] == "https://api.test.rossum.ai/v1/workspaces/1"
+        assert call_kwargs["json"]["include_documents"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_queue_from_template_with_engine(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test queue creation from template with custom engine."""
+        monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=300, name="New Template Queue")
+        mock_client._http_client.request_json.return_value = {"id": 300}
+        mock_client._deserializer.return_value = mock_queue
+
+        create_queue_from_template = mock_mcp._tools["create_queue_from_template"]
+        await create_queue_from_template(
+            name="New Template Queue",
+            template_name="US Demo Template",
+            workspace_id=1,
+            engine_id=42,
+        )
+
+        call_kwargs = mock_client._http_client.request_json.call_args[1]
+        assert call_kwargs["json"]["engine"] == "https://api.test.rossum.ai/v1/engines/42"
+
+    @pytest.mark.asyncio
+    async def test_create_queue_from_template_invalid_template(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test queue creation from template with invalid template name."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        create_queue_from_template = mock_mcp._tools["create_queue_from_template"]
+        result = await create_queue_from_template(
+            name="New Queue",
+            template_name="Invalid Template",
+            workspace_id=1,
+        )
+
+        assert "error" in result
+        assert "Invalid template_name" in result["error"]
+        assert "available_templates" in result
+        mock_client._http_client.request_json.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_create_queue_from_template_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test create_queue_from_template is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        create_queue_from_template = mock_mcp._tools["create_queue_from_template"]
+        result = await create_queue_from_template(
+            name="New Queue",
+            template_name="EU Demo Template",
+            workspace_id=1,
+        )
+
+        assert result["error"] == "create_queue_from_template is not available in read-only mode"
+        mock_client._http_client.request_json.assert_not_called()

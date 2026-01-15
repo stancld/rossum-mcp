@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-41-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-43-blue.svg)](#available-tools)
 
 [![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
 [![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
@@ -297,7 +297,7 @@ The agent includes file writing tools and Rossum integration via MCP. See [examp
 
 ## MCP Tools
 
-The MCP server provides 41 tools organized into categories:
+The MCP server provides 43 tools organized into categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -312,13 +312,15 @@ The MCP server provides 41 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Queue Management (6 tools)</strong></summary>
+<summary><strong>Queue Management (8 tools)</strong></summary>
 
 - `get_queue` - Retrieve queue details
 - `list_queues` - List queues with optional filtering
 - `get_queue_schema` - Retrieve queue schema in one call
 - `get_queue_engine` - Get engine information
 - `create_queue` - Create new queues
+- `create_queue_from_template` - Create queues from predefined templates (EU/US/UK/CZ/CN)
+- `get_queue_template_names` - List available queue template names
 - `update_queue` - Configure automation thresholds
 
 </details>
