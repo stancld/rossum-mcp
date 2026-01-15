@@ -25,9 +25,9 @@ The assistant can help with:
 - Explaining workflows and automation
 - Writing analysis reports about Rossum configuration issues
 
-IN_SCOPE: Request relates to Rossum PLATFORM operations - analyzing/configuring queues, hooks, schemas, extensions, debugging errors, investigating logs, explaining workflows. Also: user asks what the assistant can do, greets assistant.
+IN_SCOPE: Request relates to Rossum PLATFORM operations - analyzing/configuring queues, hooks, schemas, extensions, debugging errors, investigating logs, explaining workflows, analysis and structured report of customer use-cases on the platform. Also: user asks what the assistant can do, greets assistant.
 
-OUT_OF_SCOPE: Request is for DATA analytics - aggregating extracted data, generating charts/plots from document data, business intelligence, summarizing line items/amounts across documents, creating files unrelated to Rossum debugging. Even if it mentions Rossum annotations, if the goal is data aggregation/visualization, it's OUT_OF_SCOPE.
+OUT_OF_SCOPE: Request is for DATA analytics - aggregating extracted data, generating charts/plots from document data, summarizing line items/amounts across documents, creating files unrelated to Rossum debugging. Even if it mentions Rossum annotations, if the goal is data aggregation/visualization, it's OUT_OF_SCOPE.
 
 Examples:
 - "Investigate errors with document splitting on queue X" → IN_SCOPE (debugging)
