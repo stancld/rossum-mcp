@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import copy
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.schema import Schema
 
-from rossum_mcp.tools.base import is_read_write_mode
+from rossum_mcp.tools.base import TRUNCATED_MARKER, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -286,6 +286,25 @@ async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
     return schema
 
 
+def _truncate_schema_for_list(schema: Schema) -> Schema:
+    """Truncate content field in schema to save context in list responses."""
+    return replace(schema, content=TRUNCATED_MARKER)  # type: ignore[arg-type]
+
+
+async def _list_schemas(
+    client: AsyncRossumAPIClient, name: str | None = None, queue_id: int | None = None
+) -> list[Schema]:
+    logger.debug(f"Listing schemas: name={name}, queue_id={queue_id}")
+    filters: dict[str, int | str] = {}
+    if name is not None:
+        filters["name"] = name
+    if queue_id is not None:
+        filters["queue"] = queue_id
+
+    schemas = [schema async for schema in client.list_schemas(**filters)]  # type: ignore[arg-type]
+    return [_truncate_schema_for_list(schema) for schema in schemas]
+
+
 async def _update_schema(client: AsyncRossumAPIClient, schema_id: int, schema_data: dict) -> Schema | dict:
     if not is_read_write_mode():
         return {"error": "update_schema is not available in read-only mode"}
@@ -355,6 +374,10 @@ def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="Retrieve schema details.")
     async def get_schema(schema_id: int) -> Schema:
         return await _get_schema(client, schema_id)
+
+    @mcp.tool(description="List all schemas with optional filters.")
+    async def list_schemas(name: str | None = None, queue_id: int | None = None) -> list[Schema]:
+        return await _list_schemas(client, name, queue_id)
 
     @mcp.tool(description="Update schema, typically for field-level thresholds.")
     async def update_schema(schema_id: int, schema_data: dict) -> Schema | dict:

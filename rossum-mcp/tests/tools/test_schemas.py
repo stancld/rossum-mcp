@@ -96,6 +96,147 @@ class TestGetSchema:
 
 
 @pytest.mark.unit
+class TestListSchemas:
+    """Tests for list_schemas tool."""
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test successful schema listing."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schemas = [
+            create_mock_schema(id=1, name="Schema 1"),
+            create_mock_schema(id=2, name="Schema 2"),
+        ]
+
+        async def mock_list_schemas(**filters):
+            for schema in mock_schemas:
+                yield schema
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas()
+
+        assert len(result) == 2
+        assert result[0].id == 1
+        assert result[1].id == 2
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_with_name_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test schema listing with name filter."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schemas = [create_mock_schema(id=1, name="Invoice Schema")]
+        filters_received = {}
+
+        async def mock_list_schemas(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for schema in mock_schemas:
+                yield schema
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas(name="Invoice Schema")
+
+        assert len(result) == 1
+        assert filters_received["name"] == "Invoice Schema"
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_with_queue_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test schema listing with queue filter."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schemas = [create_mock_schema(id=1, name="Schema 1")]
+        filters_received = {}
+
+        async def mock_list_schemas(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for schema in mock_schemas:
+                yield schema
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas(queue_id=5)
+
+        assert len(result) == 1
+        assert filters_received["queue"] == 5
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_with_all_filters(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test schema listing with all filters."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schemas = [create_mock_schema(id=1, name="Test Schema")]
+        filters_received = {}
+
+        async def mock_list_schemas(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for schema in mock_schemas:
+                yield schema
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas(name="Test Schema", queue_id=3)
+
+        assert len(result) == 1
+        assert filters_received["name"] == "Test Schema"
+        assert filters_received["queue"] == 3
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_empty_result(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test schema listing with no results."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        async def mock_list_schemas(**filters):
+            return
+            yield
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas()
+
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_truncates_content(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test that content field is truncated in list response."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema = create_mock_schema(
+            id=1,
+            name="Schema 1",
+            content=[
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "children": [{"id": "invoice_number", "label": "Invoice Number"}],
+                }
+            ],
+        )
+
+        async def mock_list_schemas(**filters):
+            yield mock_schema
+
+        mock_client.list_schemas = mock_list_schemas
+
+        list_schemas = mock_mcp._tools["list_schemas"]
+        result = await list_schemas()
+
+        assert len(result) == 1
+        assert result[0].content == "<omitted>"
+        assert result[0].name == "Schema 1"
+        assert result[0].id == 1
+
+
+@pytest.mark.unit
 class TestUpdateSchema:
     """Tests for update_schema tool."""
 

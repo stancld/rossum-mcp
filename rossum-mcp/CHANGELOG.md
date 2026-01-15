@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added `list_queues` tool for listing queues with optional filtering by workspace or name
+- Added `list_schemas` tool for listing schemas with optional filtering by name or queue
+
 
 
 ## [0.3.4] - 2025-12-31

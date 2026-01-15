@@ -589,6 +589,7 @@ class TestListHookTemplates:
         assert result[0].description == "Validates data"
         assert result[0].settings_schema == {"type": "object"}
         assert result[0].use_token_owner is False
+        assert result[0].guide == "<omitted>"  # guide is truncated to save context
         assert result[1].id == 2
         assert result[1].name == "Webhook Template"
         assert result[1].description == ""  # default

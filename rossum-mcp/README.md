@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-mcp)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-39-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-41-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -36,7 +36,9 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 
 ### Queue & Schema Management
 - **get_queue**: Retrieve queue details including schema_id
+- **list_queues**: List all queues with optional filtering by workspace or name
 - **get_schema**: Retrieve schema details and content
+- **list_schemas**: List all schemas with optional filtering by name or queue
 - **get_queue_schema**: Retrieve complete schema for a queue in a single call
 - **get_queue_engine**: Retrieve engine information for a queue
 - **create_queue**: Create a new queue with schema and optional engine assignment
@@ -133,8 +135,8 @@ uv sync --extra tests  # Testing only
 
 When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available:
 - **Annotations:** `get_annotation`, `list_annotations`
-- **Queues:** `get_queue`, `get_queue_schema`, `get_queue_engine`
-- **Schemas:** `get_schema`
+- **Queues:** `get_queue`, `list_queues`, `get_queue_schema`, `get_queue_engine`
+- **Schemas:** `get_schema`, `list_schemas`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
 - **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
 - **Users:** `get_user`, `list_users`, `list_user_roles`
@@ -346,12 +348,90 @@ Retrieves queue details including the schema_id.
 **Parameters:**
 - `queue_id` (integer, required): Rossum queue ID to retrieve
 
+#### list_queues
+
+Lists all queues with optional filtering by workspace or name.
+
+**Parameters:**
+- `workspace_id` (integer, optional): Filter by workspace ID
+- `name` (string, optional): Filter by queue name
+
+**Returns:**
+```json
+[
+  {
+    "id": 12345,
+    "name": "Invoice Processing",
+    "url": "https://elis.rossum.ai/api/v1/queues/12345",
+    "workspace": "https://elis.rossum.ai/api/v1/workspaces/100",
+    "schema": "https://elis.rossum.ai/api/v1/schemas/200",
+    "inbox": "https://elis.rossum.ai/api/v1/inboxes/300",
+    "status": "active",
+    "locale": "en_GB",
+    "automation_enabled": true
+  }
+]
+```
+
+**Example usage:**
+```python
+# List all queues
+all_queues = list_queues()
+
+# List queues in a specific workspace
+workspace_queues = list_queues(workspace_id=100)
+
+# List queues by name
+named_queues = list_queues(name="Invoice Processing")
+
+# Combine filters
+filtered_queues = list_queues(workspace_id=100, name="Invoice")
+```
+
 #### get_schema
 
 Retrieves schema details including the schema content/structure.
 
 **Parameters:**
 - `schema_id` (integer, required): Rossum schema ID to retrieve
+
+#### list_schemas
+
+Lists all schemas with optional filtering by name or queue.
+
+**Parameters:**
+- `name` (string, optional): Filter by schema name
+- `queue_id` (integer, optional): Filter by queue ID
+
+**Returns:**
+```json
+[
+  {
+    "id": 12345,
+    "name": "Invoice Schema",
+    "url": "https://elis.rossum.ai/api/v1/schemas/12345",
+    "queues": ["https://elis.rossum.ai/api/v1/queues/100"],
+    "content": "<omitted>",
+    "metadata": {},
+    "modified_at": "2025-01-15T10:00:00Z"
+  }
+]
+```
+
+**Example usage:**
+```python
+# List all schemas
+all_schemas = list_schemas()
+
+# List schemas by name
+named_schemas = list_schemas(name="Invoice Schema")
+
+# List schemas used by a specific queue
+queue_schemas = list_schemas(queue_id=100)
+
+# Combine filters
+filtered_schemas = list_schemas(name="Invoice", queue_id=100)
+```
 
 #### get_queue_schema
 

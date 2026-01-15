@@ -135,6 +135,165 @@ class TestGetQueue:
 
 
 @pytest.mark.unit
+class TestListQueues:
+    """Tests for list_queues tool."""
+
+    @pytest.mark.asyncio
+    async def test_list_queues_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test successful queue listing."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queues = [
+            create_mock_queue(id=1, name="Queue 1"),
+            create_mock_queue(id=2, name="Queue 2"),
+        ]
+
+        async def mock_list_queues(**filters):
+            for queue in mock_queues:
+                yield queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues()
+
+        assert len(result) == 2
+        assert result[0].id == 1
+        assert result[1].id == 2
+
+    @pytest.mark.asyncio
+    async def test_list_queues_with_workspace_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue listing with workspace filter."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queues = [create_mock_queue(id=1, name="Queue 1")]
+        filters_received = {}
+
+        async def mock_list_queues(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for queue in mock_queues:
+                yield queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues(workspace_id=5)
+
+        assert len(result) == 1
+        assert filters_received["workspace"] == 5
+
+    @pytest.mark.asyncio
+    async def test_list_queues_with_name_filter(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue listing with name filter."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queues = [create_mock_queue(id=1, name="Test Queue")]
+        filters_received = {}
+
+        async def mock_list_queues(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for queue in mock_queues:
+                yield queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues(name="Test Queue")
+
+        assert len(result) == 1
+        assert filters_received["name"] == "Test Queue"
+
+    @pytest.mark.asyncio
+    async def test_list_queues_with_all_filters(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue listing with all filters."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queues = [create_mock_queue(id=1, name="Test Queue")]
+        filters_received = {}
+
+        async def mock_list_queues(**filters):
+            nonlocal filters_received
+            filters_received = filters
+            for queue in mock_queues:
+                yield queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues(workspace_id=3, name="Test Queue")
+
+        assert len(result) == 1
+        assert filters_received["workspace"] == 3
+        assert filters_received["name"] == "Test Queue"
+
+    @pytest.mark.asyncio
+    async def test_list_queues_empty_result(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test queue listing with no results."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        async def mock_list_queues(**filters):
+            return
+            yield
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues()
+
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_list_queues_truncates_verbose_settings(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test that verbose settings fields are truncated in list response."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(
+            id=1,
+            name="Queue 1",
+            settings={
+                "columns": [{"schema_id": "doc_id"}],
+                "accepted_mime_types": ["image/*", "application/pdf", "application/zip"],
+                "annotation_list_table": {"columns": [{"visible": True, "column_type": "meta"}]},
+                "ui_upload_enabled": True,
+            },
+        )
+
+        async def mock_list_queues(**filters):
+            yield mock_queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues()
+
+        assert len(result) == 1
+        assert result[0].settings["accepted_mime_types"] == "<omitted>"
+        assert result[0].settings["annotation_list_table"] == "<omitted>"
+        assert result[0].settings["columns"] == [{"schema_id": "doc_id"}]
+        assert result[0].settings["ui_upload_enabled"] is True
+
+    @pytest.mark.asyncio
+    async def test_list_queues_handles_empty_settings(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test that empty settings are handled correctly."""
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_queue = create_mock_queue(id=1, name="Queue 1", settings={})
+
+        async def mock_list_queues(**filters):
+            yield mock_queue
+
+        mock_client.list_queues = mock_list_queues
+
+        list_queues = mock_mcp._tools["list_queues"]
+        result = await list_queues()
+
+        assert len(result) == 1
+        assert result[0].settings == {}
+
+
+@pytest.mark.unit
 class TestGetQueueSchema:
     """Tests for get_queue_schema tool."""
 
