@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+- Added `list_queues` tool for listing queues with optional filtering by workspace or name [#101](https://github.com/stancld/rossum-mcp/pull/101)
+- Added `list_schemas` tool for listing schemas with optional filtering by name or queue [#101](https://github.com/stancld/rossum-mcp/pull/101)
+- Enhanced `list_annotations` tool with `ordering` and `first_n` parameters for sorting and limiting results [#101](https://github.com/stancld/rossum-mcp/pull/101)
+
 
 
 ## [0.3.4] - 2025-12-31

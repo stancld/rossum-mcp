@@ -70,13 +70,24 @@ async def _get_annotation(
 
 
 async def _list_annotations(
-    client: AsyncRossumAPIClient, queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
+    client: AsyncRossumAPIClient,
+    queue_id: int,
+    status: str | None = "importing,to_review,confirmed,exported",
+    ordering: Sequence[str] = (),
+    first_n: int | None = None,
 ) -> list[Annotation]:
-    logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}")
+    logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}, ordering={ordering}, first_n={first_n}")
     params: dict = {"queue": queue_id, "page_size": 100}
     if status:
         params["status"] = status
-    annotations_list: list[Annotation] = [item async for item in client.list_annotations(**params)]
+    if ordering:
+        params["ordering"] = ordering
+
+    annotations_list: list[Annotation] = []
+    async for item in client.list_annotations(**params):
+        annotations_list.append(item)
+        if first_n is not None and len(annotations_list) >= first_n:
+            break
     return annotations_list
 
 
@@ -130,11 +141,14 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
     async def get_annotation(annotation_id: int, sideloads: Sequence[Sideload] = ()) -> Annotation:
         return await _get_annotation(client, annotation_id, sideloads)
 
-    @mcp.tool(description="List annotations for a queue.")
+    @mcp.tool(description="List annotations for a queue. Use ordering=['-created_at'] to sort by newest first.")
     async def list_annotations(
-        queue_id: int, status: str | None = "importing,to_review,confirmed,exported"
+        queue_id: int,
+        status: str | None = "importing,to_review,confirmed,exported",
+        ordering: Sequence[str] = (),
+        first_n: int | None = None,
     ) -> list[Annotation]:
-        return await _list_annotations(client, queue_id, status)
+        return await _list_annotations(client, queue_id, status, ordering, first_n)
 
     @mcp.tool(description="Start annotation (move from 'to_review' to 'reviewing').")
     async def start_annotation(annotation_id: int) -> dict:

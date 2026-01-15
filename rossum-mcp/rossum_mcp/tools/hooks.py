@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from rossum_api.models.hook import Hook, HookRunData, HookType
 
-from rossum_mcp.tools.base import is_read_write_mode
+from rossum_mcp.tools.base import TRUNCATED_MARKER, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -202,7 +202,7 @@ async def _list_hook_templates(client: AsyncRossumAPIClient) -> list[HookTemplat
                 events=[],
                 config={},
                 settings_schema=item.get("settings_schema"),
-                guide="<truncated>",
+                guide=TRUNCATED_MARKER,
                 use_token_owner=item.get("use_token_owner", False),
             )
         )

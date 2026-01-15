@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
 from rossum_api import APIClientError
@@ -13,7 +14,7 @@ from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 
-from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
+from rossum_mcp.tools.base import build_resource_url, is_read_write_mode, truncate_dict_fields
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -21,11 +22,41 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Fields to truncate in queue.settings for list responses
+_QUEUE_SETTINGS_TRUNCATE_FIELDS = (
+    "accepted_mime_types",
+    "annotation_list_table",
+    "users",
+    "dashboard_customization",
+    "email_notifications",
+)
+
+
+def _truncate_queue_for_list(queue: Queue) -> Queue:
+    """Truncate verbose fields in queue settings to save context in list responses."""
+    if not queue.settings:
+        return queue
+    return replace(queue, settings=truncate_dict_fields(queue.settings, _QUEUE_SETTINGS_TRUNCATE_FIELDS))
+
 
 async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
     logger.debug(f"Retrieving queue: queue_id={queue_id}")
     queue: Queue = await client.retrieve_queue(queue_id)
     return queue
+
+
+async def _list_queues(
+    client: AsyncRossumAPIClient, workspace_id: int | None = None, name: str | None = None
+) -> list[Queue]:
+    logger.debug(f"Listing queues: workspace_id={workspace_id}, name={name}")
+    filters: dict[str, int | str] = {}
+    if workspace_id is not None:
+        filters["workspace"] = workspace_id
+    if name is not None:
+        filters["name"] = name
+
+    queues = [queue async for queue in client.list_queues(**filters)]  # type: ignore[arg-type]
+    return [_truncate_queue_for_list(queue) for queue in queues]
 
 
 async def _get_queue_schema(client: AsyncRossumAPIClient, queue_id: int) -> Schema:
@@ -130,6 +161,10 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="Retrieve queue details.")
     async def get_queue(queue_id: int) -> Queue:
         return await _get_queue(client, queue_id)
+
+    @mcp.tool(description="List all queues with optional filters.")
+    async def list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
+        return await _list_queues(client, workspace_id, name)
 
     @mcp.tool(description="Retrieve queue schema.")
     async def get_queue_schema(queue_id: int) -> Schema:
