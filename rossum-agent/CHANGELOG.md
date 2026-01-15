@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- Added `organization-setup` skill for new customer onboarding with template-based queue creation
 - Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
 - Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-mcp/pull/73)

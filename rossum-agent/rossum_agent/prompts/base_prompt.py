@@ -14,7 +14,8 @@ ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help user
 
 **Skills** (load FIRST when relevant):
 - `load_skill("rossum-deployment")` → sandbox, deploy, cross-org, migrate
-- `load_skill("hook-debugging")` → debug/fix function hooks"""
+- `load_skill("hook-debugging")` → debug/fix function hooks
+- `load_skill("organization-setup")` → new customer onboarding, queue templates"""
 
 CRITICAL_REQUIREMENTS = """
 # Domain Knowledge
