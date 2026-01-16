@@ -1,10 +1,9 @@
-"""Schema patching sub-agent for the Rossum Agent.
+"""Schema patching sub-agent.
 
-This module provides an Opus-driven sub-agent that uses deterministic programmatic
-schema manipulation. The workflow:
+Provides deterministic programmatic schema manipulation. The workflow:
 1. Get schema tree structure (lightweight view)
 2. Get full schema content
-3. Opus instructs which fields to keep/add based on user requirements
+3. LLM instructs which fields to keep/add based on user requirements
 4. Programmatic filtering/modification of schema content
 5. Single PUT to update schema
 """
@@ -22,15 +21,11 @@ if TYPE_CHECKING:
 
 from anthropic import beta_tool
 
-from rossum_agent.bedrock_client import create_bedrock_client
-from rossum_agent.tools.core import (
-    SubAgentProgress,
-    SubAgentTokenUsage,
-    get_output_dir,
-    report_progress,
-    report_token_usage,
+from rossum_agent.tools.subagents.base import (
+    SubAgent,
+    SubAgentConfig,
+    SubAgentResult,
 )
-from rossum_agent.tools.subagents.knowledge_base import OPUS_MODEL_ID
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool
 
 logger = logging.getLogger(__name__)
@@ -57,7 +52,15 @@ _SCHEMA_PATCHING_SYSTEM_PROMPT = """Goal: Update schema to match EXACTLY the req
 | type | Yes | string, number, date, enum |
 | table_id | If table | Multivalue ID for table columns |
 
-Optional: format, options (for enum), rir_field_names, hidden, can_export
+Optional: format, options (for enum), rir_field_names, hidden, can_export, ui_configuration
+
+## Constraints
+
+- Field `id` must be valid identifier (lowercase, underscores, no spaces)
+- Do NOT set `rir_field_names` unless user explicitly provides engine field names
+- If user mentions extraction/AI capture, check existing schema for rir_field_names patterns first
+- `ui_configuration.type` must be one of: captured, data, manual, formula, reasoning
+- `ui_configuration.edit` must be one of: enabled, enabled_without_warning, disabled
 
 ## Type Mappings
 
@@ -120,6 +123,21 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                         "rir_field_names": {"type": "array"},
                         "hidden": {"type": "boolean"},
                         "can_export": {"type": "boolean"},
+                        "ui_configuration": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": ["captured", "data", "manual", "formula", "reasoning"],
+                                    "description": "Field value source type",
+                                },
+                                "edit": {
+                                    "type": "string",
+                                    "enum": ["enabled", "enabled_without_warning", "disabled"],
+                                    "description": "Edit behavior in UI",
+                                },
+                            },
+                        },
                     },
                     "required": ["id", "label", "parent_section", "type"],
                 },
@@ -228,6 +246,9 @@ def _build_field_node(spec: dict[str, Any]) -> dict[str, Any]:
     if spec.get("can_export") is not None:
         node["can_export"] = spec["can_export"]
 
+    if spec.get("ui_configuration"):
+        node["ui_configuration"] = spec["ui_configuration"]
+
     return node
 
 
@@ -334,45 +355,43 @@ def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
     return f"Unknown tool: {tool_name}"
 
 
-def _save_patching_context(iteration: int, max_iterations: int, messages: list[dict[str, Any]]) -> None:
-    """Save agent input context to file for debugging."""
-    try:
-        output_dir = get_output_dir()
-        context_file = output_dir / f"patch_schema_context_iter_{iteration}.json"
-        context_data = {
-            "iteration": iteration,
-            "max_iterations": max_iterations,
-            "model": OPUS_MODEL_ID,
-            "max_tokens": 4096,
-            "system_prompt": _SCHEMA_PATCHING_SYSTEM_PROMPT,
-            "messages": messages,
-            "tools": _OPUS_TOOLS,
-        }
-        context_file.write_text(json.dumps(context_data, indent=2, default=str))
-        logger.info(f"patch_schema sub-agent: saved context to {context_file}")
-    except Exception as e:
-        logger.warning(f"Failed to save patch_schema context: {e}")
+class SchemaPatchingSubAgent(SubAgent):
+    """Sub-agent for schema patching with programmatic bulk replacement."""
 
-
-def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> tuple[str, int, int]:
-    """Call Opus model for schema patching with deterministic tool workflow."""
-    total_input_tokens = 0
-    total_output_tokens = 0
-
-    try:
-        client_start = time.perf_counter()
-        client = create_bedrock_client()
-        logger.info(f"patch_schema: Bedrock client created in {(time.perf_counter() - client_start) * 1000:.1f}ms")
-
-        changes_text = "\n".join(
-            f"- {c.get('action', 'add')} field '{c.get('id')}' ({c.get('type', 'string')}) "
-            f"in section '{c.get('parent_section')}'"
-            + (f" with label '{c.get('label')}'" if c.get("label") else "")
-            + (f" [TABLE: {c.get('table_id')}]" if c.get("table_field") or c.get("table_id") else "")
-            for c in changes
+    def __init__(self) -> None:
+        config = SubAgentConfig(
+            tool_name="patch_schema",
+            system_prompt=_SCHEMA_PATCHING_SYSTEM_PROMPT,
+            tools=_OPUS_TOOLS,
+            max_iterations=5,
+            max_tokens=4096,
         )
+        super().__init__(config)
 
-        user_content = f"""Update schema {schema_id} to have EXACTLY these fields:
+    def execute_tool(self, tool_name: str, tool_input: dict[str, Any]) -> str:
+        """Execute a tool call from the LLM."""
+        return _execute_opus_tool(tool_name, tool_input)
+
+    def process_response_block(self, block: Any, iteration: int, max_iterations: int) -> dict[str, Any] | None:
+        """No special block processing needed for schema patching."""
+        return None
+
+
+def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> SubAgentResult:
+    """Call Opus model for schema patching with deterministic tool workflow.
+
+    Returns:
+        SubAgentResult with analysis text and token counts.
+    """
+    changes_text = "\n".join(
+        f"- {c.get('action', 'add')} field '{c.get('id')}' ({c.get('type', 'string')}) "
+        f"in section '{c.get('parent_section')}'"
+        + (f" with label '{c.get('label')}'" if c.get("label") else "")
+        + (f" [TABLE: {c.get('table_id')}]" if c.get("table_field") or c.get("table_id") else "")
+        for c in changes
+    )
+
+    user_content = f"""Update schema {schema_id} to have EXACTLY these fields:
 
 {changes_text}
 
@@ -382,124 +401,8 @@ Workflow:
 3. apply_schema_changes with fields_to_keep (IDs to retain) and/or fields_to_add
 4. Return summary"""
 
-        messages: list[dict[str, Any]] = [{"role": "user", "content": user_content}]
-
-        max_iterations = 5
-        response = None
-        for iteration in range(max_iterations):
-            iter_start = time.perf_counter()
-            logger.info(f"patch_schema sub-agent: iteration {iteration + 1}/{max_iterations}")
-
-            report_progress(
-                SubAgentProgress(
-                    tool_name="patch_schema",
-                    iteration=iteration + 1,
-                    max_iterations=max_iterations,
-                    status="thinking",
-                )
-            )
-
-            _save_patching_context(iteration + 1, max_iterations, messages)
-
-            llm_start = time.perf_counter()
-            response = client.messages.create(
-                model=OPUS_MODEL_ID,
-                max_tokens=4096,
-                system=_SCHEMA_PATCHING_SYSTEM_PROMPT,
-                messages=messages,
-                tools=_OPUS_TOOLS,
-            )
-            llm_elapsed_ms = (time.perf_counter() - llm_start) * 1000
-
-            input_tokens = response.usage.input_tokens
-            output_tokens = response.usage.output_tokens
-            total_input_tokens += input_tokens
-            total_output_tokens += output_tokens
-
-            logger.info(
-                f"patch_schema [iter {iteration + 1}]: LLM {llm_elapsed_ms:.1f}ms, "
-                f"tokens in={input_tokens} out={output_tokens}"
-            )
-
-            report_token_usage(
-                SubAgentTokenUsage(
-                    tool_name="patch_schema",
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    iteration=iteration + 1,
-                )
-            )
-
-            has_tool_use = any(hasattr(block, "type") and block.type == "tool_use" for block in response.content)
-
-            if response.stop_reason == "end_of_turn" or not has_tool_use:
-                iter_elapsed_ms = (time.perf_counter() - iter_start) * 1000
-                logger.info(f"patch_schema: completed after {iteration + 1} iterations in {iter_elapsed_ms:.1f}ms")
-                report_progress(
-                    SubAgentProgress(
-                        tool_name="patch_schema",
-                        iteration=iteration + 1,
-                        max_iterations=max_iterations,
-                        status="completed",
-                    )
-                )
-                text_parts = [block.text for block in response.content if hasattr(block, "text")]
-                return (
-                    "\n".join(text_parts) if text_parts else "No analysis provided",
-                    total_input_tokens,
-                    total_output_tokens,
-                )
-
-            messages.append({"role": "assistant", "content": response.content})
-
-            tool_results: list[dict[str, Any]] = []
-            for block in response.content:
-                if hasattr(block, "type") and block.type == "tool_use":
-                    tool_name = block.name
-                    tool_input = block.input
-                    logger.info(f"patch_schema [iter {iteration + 1}]: calling '{tool_name}'")
-
-                    report_progress(
-                        SubAgentProgress(
-                            tool_name="patch_schema",
-                            iteration=iteration + 1,
-                            max_iterations=max_iterations,
-                            current_tool=tool_name,
-                            status="running_tool",
-                        )
-                    )
-
-                    try:
-                        tool_start = time.perf_counter()
-                        result = _execute_opus_tool(tool_name, tool_input)
-                        tool_elapsed_ms = (time.perf_counter() - tool_start) * 1000
-                        logger.info(f"patch_schema: tool '{tool_name}' executed in {tool_elapsed_ms:.1f}ms")
-                        tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
-                    except Exception as e:
-                        logger.warning(f"Tool {tool_name} failed: {e}")
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": f"Error: {e}",
-                                "is_error": True,
-                            }
-                        )
-
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
-
-        logger.warning(f"patch_schema: max iterations ({max_iterations}) reached")
-        text_parts = [block.text for block in response.content if hasattr(block, "text")] if response else []
-        return (
-            "\n".join(text_parts) if text_parts else "Max iterations reached",
-            total_input_tokens,
-            total_output_tokens,
-        )
-
-    except Exception as e:
-        logger.exception("Error calling Opus for schema patching")
-        return f"Error calling Opus sub-agent: {e}", total_input_tokens, total_output_tokens
+    sub_agent = SchemaPatchingSubAgent()
+    return sub_agent.run(user_content)
 
 
 @beta_tool
@@ -549,19 +452,23 @@ def patch_schema_with_subagent(
         )
 
     logger.info(f"patch_schema: Calling Opus for schema_id={schema_id}, {len(changes_list)} changes")
-    analysis, input_tokens, output_tokens = _call_opus_for_patching(schema_id, changes_list)
+    result = _call_opus_for_patching(schema_id, changes_list)
     elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)
 
-    logger.info(f"patch_schema: completed in {elapsed_ms:.1f}ms, tokens in={input_tokens} out={output_tokens}")
+    logger.info(
+        f"patch_schema: completed in {elapsed_ms:.1f}ms, "
+        f"tokens in={result.input_tokens} out={result.output_tokens}, "
+        f"iterations={result.iterations_used}"
+    )
 
     return json.dumps(
         {
             "schema_id": schema_id,
             "changes_requested": len(changes_list),
-            "analysis": analysis,
+            "analysis": result.analysis,
             "elapsed_ms": elapsed_ms,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
         },
         ensure_ascii=False,
         default=str,

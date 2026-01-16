@@ -1,7 +1,7 @@
-"""Hook debugging tools for the Rossum Agent.
+"""Hook debugging sub-agent.
 
-This module provides tools for debugging Rossum Python function hooks, including sandboxed execution
-and an Opus sub-agent for iterative debugging.
+Provides tools for debugging Rossum Python function hooks, including sandboxed execution
+and iterative debugging with the Opus sub-agent.
 """
 
 from __future__ import annotations
@@ -29,14 +29,8 @@ if TYPE_CHECKING:
 
 from anthropic import beta_tool
 
-from rossum_agent.bedrock_client import create_bedrock_client
-from rossum_agent.tools.core import (
-    SubAgentProgress,
-    get_output_dir,
-    report_progress,
-)
+from rossum_agent.tools.subagents.base import SubAgent, SubAgentConfig, SubAgentResult
 from rossum_agent.tools.subagents.knowledge_base import (
-    OPUS_MODEL_ID,
     WebSearchError,
     _call_opus_for_web_search_analysis,
     search_knowledge_base,
@@ -164,90 +158,76 @@ _ALLOWED_BUILTIN_NAMES = {
     "print",
 }
 
-_HOOK_DEBUG_SYSTEM_PROMPT = """You are an expert Rossum hook debugger. Your role is to fetch hook code and annotation data, \
-analyze the code, identify ALL issues, and FIX THEM by iteratively testing with the evaluate_python_hook tool.
+_HOOK_DEBUG_SYSTEM_PROMPT = """Goal: Debug Rossum hook by fetching code/data, identifying ALL issues, fixing iteratively with evaluate_python_hook.
 
-## CRITICAL: Investigate ALL Issues
+## Workflow
 
-**DO NOT stop at the first issue you find.** You MUST:
-- Continue investigating after fixing each issue
-- Look for multiple problems in the code (there are often several)
-- Check for edge cases, missing error handling, and potential runtime failures
-- Analyze the ENTIRE codebase, not just the first error location
-- Keep iterating until the code handles ALL scenarios correctly
+1. get_hook → fetch code (in config.code)
+2. get_annotation → fetch annotation data (content for datapoints)
+3. evaluate_python_hook → execute and see errors
+4. Fix all issues found
+5. Verify with evaluate_python_hook (status="success")
+6. Keep iterating until robust
 
-Common categories of issues to check:
-- Syntax errors and typos
-- Missing null/empty value checks
-- Type conversion errors (especially Decimal)
-- Missing fields or incorrect field access
-- Logic errors in calculations
-- Edge cases (empty lists, missing data, zero values)
-- Return value format errors
+Must call evaluate_python_hook at least once before final answer.
 
-## Available Tools
+## Tools
 
-You have access to:
-1. `get_hook` - Fetch hook code by ID. The code is in `config.code`.
-2. `get_annotation` - Fetch annotation data by ID. Use `content` for datapoints.
-3. `get_schema` - Optionally fetch schema by ID.
-4. `evaluate_python_hook` - Execute hook code against annotation data.
-5. `web_search` - Search Rossum Knowledge Base for documentation on extensions, hooks, and best practices that cannot be obtained from the API.
+| Tool | Purpose |
+|------|---------|
+| get_hook | Fetch hook code by ID |
+| get_annotation | Fetch annotation data by ID |
+| get_schema | Optionally fetch schema |
+| evaluate_python_hook | Execute code against annotation |
+| web_search | Search Rossum KB for docs |
 
-## Rossum Hook Context
+## Hook Structure
 
-Rossum hooks are Python functions that process document annotations. The main entry point is:
 ```python
 def rossum_hook_request_handler(payload):
-    annotation = payload["annotation"]  # The annotation object with content
-    schema = payload.get("schema")      # Optional schema definition
-    # Process and return results
+    annotation = payload["annotation"]  # content has datapoints
+    schema = payload.get("schema")
+    # Return: {"operations": [...]} or {"messages": [...]}
 ```
 
-Typical behavior:
-1. **Field access**: `annotation["content"]` contains datapoints with `schema_id`, `value`, and numeric `id`.
-2. **Field updates**: Return `{"operations": [{"op": "replace", "id": <numeric_id>, "value": {...}}]}`.
-3. **Messages**: Return `{"messages": [{"type": "error", "content": "..."}]}`.
+| Pattern | Format |
+|---------|--------|
+| Field access | `annotation["content"]` → datapoints with schema_id, value, id |
+| Field update | `{"operations": [{"op": "replace", "id": <numeric_id>, "value": {...}}]}` |
+| Messages | `{"messages": [{"type": "error", "content": "..."}]}` |
 
-## Debugging Environment Constraints
+## Environment Constraints
 
-In this debugging environment:
-- Imports and external I/O are NOT allowed in the hook code.
-- You have access to `evaluate_python_hook` tool to execute and test hook code.
-- Available modules: `collections`, `datetime`, `decimal` (with `Decimal`, `InvalidOperation`), `functools`, `itertools`, `json`, `math`, `re`, `string`.
+- No imports or external I/O
+- Available: collections, datetime, decimal (Decimal, InvalidOperation), functools, itertools, json, math, re, string
+
+## Issue Categories
+
+| Category | Check |
+|----------|-------|
+| Syntax | Typos, invalid Python |
+| Null handling | Empty strings, None values |
+| Type conversion | Decimal from strings/None |
+| Field access | Missing fields, wrong keys |
+| Logic | Calculation errors |
+| Edge cases | Empty lists, zero values |
+| Return format | Correct structure |
 
 ## Common Pitfalls
 
-- **Decimal conversion**: Field values may be empty strings, None, or contain formatting. Always handle: `Decimal(value) if value else Decimal(0)` or use try/except.
-- **Missing fields**: Always check if fields exist before accessing them.
-- **Type mismatches**: Field values are often strings, not numbers. Convert explicitly.
+| Issue | Solution |
+|-------|----------|
+| Decimal conversion | `Decimal(value) if value else Decimal(0)` or try/except |
+| Missing fields | Check existence before access |
+| Type mismatch | Field values are strings—convert explicitly |
 
-## Your Task - EXHAUSTIVE ITERATIVE DEBUGGING
+## Output Format
 
-You MUST follow this process:
-
-1. **Fetch data**: Call `get_hook` and `get_annotation` to get the hook code and annotation data.
-2. **Analyze thoroughly**: Understand what the hook is supposed to do. Look for ALL potential issues, not just the first one.
-3. **Execute**: Use `evaluate_python_hook` tool to run the code and see the actual error.
-4. **Fix ALL issues**: Based on the execution result AND your analysis, fix all problems you identified.
-5. **Verify**: Use `evaluate_python_hook` again to confirm your fix works (status="success").
-6. **Continue investigating**: Even after getting "success", review the code for other potential issues, edge cases, and improvements.
-7. **Repeat**: Keep iterating until the code is robust and handles all scenarios.
-
-IMPORTANT: You MUST call `evaluate_python_hook` at least once to verify your fix works before providing \
-your final answer. Do not just analyze - actually execute the code!
-
-## Final Output Format
-
-After your exhaustive debugging, provide:
-
-1. **What the hook does**: Brief explanation of the hook's intended purpose.
-2. **ALL issues found**: List EVERY problem you discovered through analysis and execution (not just the first one).
-3. **Root causes**: Explain why each error occurred based on actual execution results.
-4. **Fixed code**: The complete, working code that you have VERIFIED by executing it and that addresses ALL issues.
-5. **Verification**: Show the successful execution result proving your fix works.
-
-Be thorough and exhaustive. Your primary goal is to provide ROBUST, WORKING code that handles all edge cases, verified by actual execution."""
+1. Hook purpose (brief)
+2. All issues found
+3. Root causes
+4. Fixed code (verified)
+5. Successful execution result"""
 
 _GET_HOOK_TOOL: dict[str, Any] = {
     "name": "get_hook",
@@ -369,26 +349,6 @@ def _make_evaluate_response(
     return json.dumps(payload, ensure_ascii=False, default=str)
 
 
-def _save_debug_context(iteration: int, max_iterations: int, messages: list[dict[str, Any]]) -> None:
-    """Save agent input context to file for debugging."""
-    try:
-        output_dir = get_output_dir()
-        context_file = output_dir / f"debug_hook_context_iter_{iteration}.json"
-        context_data = {
-            "iteration": iteration,
-            "max_iterations": max_iterations,
-            "model": OPUS_MODEL_ID,
-            "max_tokens": 16384,
-            "system_prompt": _HOOK_DEBUG_SYSTEM_PROMPT,
-            "messages": messages,
-            "tools": _OPUS_TOOLS,
-        }
-        context_file.write_text(json.dumps(context_data, indent=2, default=str))
-        logger.info(f"debug_hook sub-agent: saved context to {context_file}")
-    except Exception as e:
-        logger.warning(f"Failed to save debug_hook context: {e}")
-
-
 def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
     """Execute a tool for the Opus sub-agent.
 
@@ -413,12 +373,49 @@ def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
     return f"Unknown tool: {tool_name}"
 
 
-def _call_opus_for_debug(hook_id: str, annotation_id: str, schema_id: str | None) -> str:
-    """Call Opus model for hook debugging with tool use for iterative testing."""
-    try:
-        client = create_bedrock_client()
+class HookDebugSubAgent(SubAgent):
+    """Sub-agent for hook debugging with sandboxed execution and web search."""
 
-        user_content = f"""Debug the hook with ID {hook_id} using annotation ID {annotation_id}.
+    def __init__(self) -> None:
+        config = SubAgentConfig(
+            tool_name="debug_hook",
+            system_prompt=_HOOK_DEBUG_SYSTEM_PROMPT,
+            tools=_OPUS_TOOLS,
+            max_iterations=15,
+            max_tokens=16384,
+        )
+        super().__init__(config)
+
+    def execute_tool(self, tool_name: str, tool_input: dict[str, Any]) -> str:
+        """Execute a tool call from the LLM."""
+        result = _execute_opus_tool(tool_name, tool_input)
+
+        if tool_name == "evaluate_python_hook":
+            try:
+                result_obj = json.loads(result)
+                status = result_obj.get("status", "unknown")
+                exc_type = result_obj.get("exception", {}).get("type") if result_obj.get("exception") else None
+                log_msg = f"evaluate_python_hook returned status='{status}'" + (
+                    f", exception={exc_type}" if exc_type else ""
+                )
+                logger.info(f"debug_hook sub-agent: {log_msg}")
+            except Exception:
+                logger.debug("Failed to parse tool result for logging")
+
+        return result
+
+    def process_response_block(self, block: Any, iteration: int, max_iterations: int) -> dict[str, Any] | None:
+        """Process web search result blocks."""
+        return _extract_and_analyze_web_search_results(block, iteration, max_iterations)
+
+
+def _call_opus_for_debug(hook_id: str, annotation_id: str, schema_id: str | None) -> SubAgentResult:
+    """Call Opus model for hook debugging with tool use for iterative testing.
+
+    Returns:
+        SubAgentResult with analysis text and token counts.
+    """
+    user_content = f"""Debug the hook with ID {hook_id} using annotation ID {annotation_id}.
 
 Steps:
 1. Call `get_hook` with hook_id="{hook_id}" to fetch the hook code (in config.code)
@@ -427,115 +424,8 @@ Steps:
 3. Use `evaluate_python_hook` to execute the code and debug any issues
 4. Fix and verify your fixes work before providing your final answer"""
 
-        messages: list[dict[str, Any]] = [{"role": "user", "content": user_content}]
-
-        max_iterations = 15
-        response = None
-        for iteration in range(max_iterations):
-            logger.info(f"debug_hook sub-agent: iteration {iteration + 1}/{max_iterations}")
-
-            report_progress(
-                SubAgentProgress(
-                    tool_name="debug_hook", iteration=iteration + 1, max_iterations=max_iterations, status="thinking"
-                )
-            )
-
-            _save_debug_context(iteration + 1, max_iterations, messages)
-
-            response = client.messages.create(
-                model=OPUS_MODEL_ID,
-                max_tokens=16384,
-                system=_HOOK_DEBUG_SYSTEM_PROMPT,
-                messages=messages,
-                tools=_OPUS_TOOLS,
-            )
-
-            has_tool_use = any(hasattr(block, "type") and block.type == "tool_use" for block in response.content)
-
-            if response.stop_reason == "end_of_turn" or not has_tool_use:
-                logger.info(
-                    f"debug_hook sub-agent: completed after {iteration + 1} iterations (stop_reason={response.stop_reason}, has_tool_use={has_tool_use})"
-                )
-                report_progress(
-                    SubAgentProgress(
-                        tool_name="debug_hook",
-                        iteration=iteration + 1,
-                        max_iterations=max_iterations,
-                        status="completed",
-                    )
-                )
-                text_parts = [block.text for block in response.content if hasattr(block, "text")]
-                return "\n".join(text_parts) if text_parts else "No analysis provided"
-
-            assistant_content = response.content
-            messages.append({"role": "assistant", "content": assistant_content})
-
-            tool_results: list[dict[str, Any]] = []
-            iteration_tool_calls: list[str] = []
-
-            for block in response.content:
-                web_result = _extract_and_analyze_web_search_results(block, iteration + 1, max_iterations)
-                if web_result:
-                    tool_results.append(web_result)
-
-            for block in response.content:
-                if hasattr(block, "type") and block.type == "tool_use":
-                    tool_name = block.name
-                    tool_input = block.input
-                    iteration_tool_calls.append(tool_name)
-                    logger.info(
-                        f"debug_hook sub-agent [iter {iteration + 1}/{max_iterations}]: calling tool '{tool_name}'"
-                    )
-
-                    report_progress(
-                        SubAgentProgress(
-                            tool_name="debug_hook",
-                            iteration=iteration + 1,
-                            max_iterations=max_iterations,
-                            current_tool=tool_name,
-                            tool_calls=iteration_tool_calls.copy(),
-                            status="running_tool",
-                        )
-                    )
-
-                    try:
-                        result = _execute_opus_tool(tool_name, tool_input)
-                        if tool_name == "evaluate_python_hook":
-                            try:
-                                result_obj = json.loads(result)
-                                status = result_obj.get("status", "unknown")
-                                exc_type = (
-                                    result_obj.get("exception", {}).get("type")
-                                    if result_obj.get("exception")
-                                    else None
-                                )
-                                log_msg = f"evaluate_python_hook returned status='{status}'" + (
-                                    f", exception={exc_type}" if exc_type else ""
-                                )
-                                logger.info(f"debug_hook sub-agent [iter {iteration + 1}/{max_iterations}]: {log_msg}")
-                            except Exception:
-                                logger.debug("Failed to parse tool result for logging")
-                        tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
-                    except Exception as e:
-                        logger.warning(f"Tool {tool_name} failed: {e}")
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": f"Error: {e}",
-                                "is_error": True,
-                            }
-                        )
-
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
-
-        text_parts = [block.text for block in response.content if hasattr(block, "text")] if response else []
-        return "\n".join(text_parts) if text_parts else "Max iterations reached without final response"
-
-    except Exception as e:
-        logger.exception("Error calling Opus for hook debugging")
-        return f"Error calling Opus sub-agent: {e}"
+    sub_agent = HookDebugSubAgent()
+    return sub_agent.run(user_content)
 
 
 @beta_tool
@@ -671,7 +561,7 @@ def debug_hook(hook_id: str, annotation_id: str, schema_id: str | None = None) -
         schema_id: Optional schema ID if schema context is needed.
 
     Returns:
-        JSON with Opus expert analysis including fixed code.
+        JSON with Opus expert analysis including fixed code and token usage.
     """
     start_time = time.perf_counter()
 
@@ -686,13 +576,22 @@ def debug_hook(hook_id: str, annotation_id: str, schema_id: str | None = None) -
         )
 
     logger.info(f"debug_hook: Calling Opus sub-agent for hook_id={hook_id}, annotation_id={annotation_id}")
-    analysis = _call_opus_for_debug(hook_id, annotation_id, schema_id)
+    result = _call_opus_for_debug(hook_id, annotation_id, schema_id)
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)
+
+    logger.info(
+        f"debug_hook: completed in {elapsed_ms:.1f}ms, "
+        f"tokens in={result.input_tokens} out={result.output_tokens}, "
+        f"iterations={result.iterations_used}"
+    )
 
     response = {
         "hook_id": hook_id,
         "annotation_id": annotation_id,
-        "analysis": analysis,
-        "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+        "analysis": result.analysis,
+        "elapsed_ms": elapsed_ms,
+        "input_tokens": result.input_tokens,
+        "output_tokens": result.output_tokens,
     }
 
     return json.dumps(response, ensure_ascii=False, default=str)

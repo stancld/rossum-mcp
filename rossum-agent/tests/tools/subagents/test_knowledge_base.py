@@ -231,7 +231,7 @@ class TestSearchAndAnalyzeKnowledgeBase:
             patch("rossum_agent.tools.subagents.knowledge_base._search_knowledge_base", return_value=mock_results),
             patch(
                 "rossum_agent.tools.subagents.knowledge_base._call_opus_for_web_search_analysis",
-                return_value="Analyzed hook configuration info",
+                return_value=("Analyzed hook configuration info", 100, 50),
             ) as mock_opus,
         ):
             result = _search_and_analyze_knowledge_base("hook configuration", user_query="How to configure hooks?")
@@ -240,6 +240,8 @@ class TestSearchAndAnalyzeKnowledgeBase:
             assert parsed["status"] == "success"
             assert parsed["query"] == "hook configuration"
             assert parsed["analysis"] == "Analyzed hook configuration info"
+            assert parsed["input_tokens"] == 100
+            assert parsed["output_tokens"] == 50
             assert "source_urls" in parsed
             mock_opus.assert_called_once()
             call_args = mock_opus.call_args

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+from rossum_agent.tools.subagents.base import SubAgentResult
 from rossum_agent.tools.subagents.schema_patching import (
     _APPLY_SCHEMA_CHANGES_TOOL,
     _GET_FULL_SCHEMA_TOOL,
@@ -18,7 +19,6 @@ from rossum_agent.tools.subagents.schema_patching import (
     _collect_field_ids,
     _execute_opus_tool,
     _filter_content,
-    _save_patching_context,
     _schema_content_cache,
     patch_schema_with_subagent,
 )
@@ -504,9 +504,15 @@ class TestPatchSchemaWithSubagent:
     def test_valid_request_calls_opus(self):
         """Test that valid request calls Opus sub-agent."""
         changes = [{"action": "add", "id": "new_field", "parent_section": "header", "type": "string"}]
+        mock_result = SubAgentResult(
+            analysis="Added field new_field",
+            input_tokens=1000,
+            output_tokens=500,
+            iterations_used=2,
+        )
         with patch(
             "rossum_agent.tools.subagents.schema_patching._call_opus_for_patching",
-            return_value=("Added field new_field", 1000, 500),
+            return_value=mock_result,
         ) as mock_opus:
             result = patch_schema_with_subagent(schema_id="123", changes=json.dumps(changes))
             parsed = json.loads(result)
@@ -521,9 +527,15 @@ class TestPatchSchemaWithSubagent:
     def test_timing_is_measured(self):
         """Test that elapsed_ms is properly measured."""
         changes = [{"id": "f1", "parent_section": "s1", "type": "string"}]
+        mock_result = SubAgentResult(
+            analysis="Done",
+            input_tokens=100,
+            output_tokens=50,
+            iterations_used=1,
+        )
         with patch(
             "rossum_agent.tools.subagents.schema_patching._call_opus_for_patching",
-            return_value=("Done", 100, 50),
+            return_value=mock_result,
         ):
             result = patch_schema_with_subagent(schema_id="123", changes=json.dumps(changes))
             parsed = json.loads(result)
@@ -551,10 +563,10 @@ class TestCallOpusForPatching:
         mock_response.usage.output_tokens = 50
 
         with (
-            patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
-            patch("rossum_agent.tools.subagents.schema_patching.report_progress", side_effect=capture_progress),
-            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
-            patch("rossum_agent.tools.subagents.schema_patching._save_patching_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
+            patch("rossum_agent.tools.subagents.base.report_progress", side_effect=capture_progress),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
         ):
             mock_client.return_value.messages.create.return_value = mock_response
 
@@ -589,10 +601,10 @@ class TestCallOpusForPatching:
         second_response.usage.output_tokens = 100
 
         with (
-            patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
-            patch("rossum_agent.tools.subagents.schema_patching.report_progress"),
-            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
-            patch("rossum_agent.tools.subagents.schema_patching._save_patching_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
             patch(
                 "rossum_agent.tools.subagents.schema_patching._execute_opus_tool",
                 return_value='[{"id": "section1"}]',
@@ -601,11 +613,11 @@ class TestCallOpusForPatching:
             mock_client.return_value.messages.create.side_effect = [first_response, second_response]
 
             changes = [{"id": "field1", "parent_section": "header", "type": "string"}]
-            result, input_tokens, output_tokens = _call_opus_for_patching("123", changes)
+            result = _call_opus_for_patching("123", changes)
 
-            assert "Schema updated successfully" in result
-            assert input_tokens == 300
-            assert output_tokens == 150
+            assert "Schema updated successfully" in result.analysis
+            assert result.input_tokens == 300
+            assert result.output_tokens == 150
             assert mock_client.return_value.messages.create.call_count == 2
 
     def test_max_iterations_is_5(self):
@@ -618,67 +630,31 @@ class TestCallOpusForPatching:
         mock_response.usage.output_tokens = 50
 
         with (
-            patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
-            patch("rossum_agent.tools.subagents.schema_patching.report_progress"),
-            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
-            patch("rossum_agent.tools.subagents.schema_patching._save_patching_context") as mock_save,
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context") as mock_save,
         ):
             mock_client.return_value.messages.create.return_value = mock_response
 
             changes = [{"id": "field1", "parent_section": "header", "type": "string"}]
             _call_opus_for_patching("123", changes)
 
-            saved_context = mock_save.call_args[0]
-            assert saved_context[1] == 5
+            saved_context = mock_save.call_args.kwargs
+            assert saved_context["max_iterations"] == 5
 
     def test_bedrock_client_exception_returns_error(self):
         """Test that create_bedrock_client exception returns error message."""
-        with (
-            patch(
-                "rossum_agent.tools.subagents.schema_patching.create_bedrock_client",
-                side_effect=Exception("AWS error"),
-            ),
-            patch("rossum_agent.tools.subagents.schema_patching.logger") as mock_logger,
+        with patch(
+            "rossum_agent.tools.subagents.base.create_bedrock_client",
+            side_effect=Exception("AWS error"),
         ):
-            result, input_tokens, output_tokens = _call_opus_for_patching("123", [{"id": "f1"}])
+            result = _call_opus_for_patching("123", [{"id": "f1"}])
 
-            assert "Error calling Opus sub-agent" in result
-            assert "AWS error" in result
-            mock_logger.exception.assert_called_once()
-            assert input_tokens == 0
-            assert output_tokens == 0
-
-
-class TestSaveContext:
-    """Test _save_patching_context function."""
-
-    def test_saves_context_file_with_expected_structure(self, tmp_path):
-        """Test that context file is saved with expected structure."""
-        messages = [{"role": "user", "content": "test"}]
-
-        with patch("rossum_agent.tools.subagents.schema_patching.get_output_dir", return_value=tmp_path):
-            _save_patching_context(iteration=1, max_iterations=5, messages=messages)
-
-        context_file = tmp_path / "patch_schema_context_iter_1.json"
-        assert context_file.exists()
-
-        context_data = json.loads(context_file.read_text())
-        assert context_data["iteration"] == 1
-        assert context_data["max_iterations"] == 5
-        assert context_data["messages"] == messages
-        assert context_data["max_tokens"] == 4096
-        assert len(context_data["tools"]) == 3
-
-    def test_logs_warning_when_save_fails(self):
-        """Test that warning is logged when save fails."""
-        with (
-            patch("rossum_agent.tools.subagents.schema_patching.get_output_dir", side_effect=Exception("Test error")),
-            patch("rossum_agent.tools.subagents.schema_patching.logger") as mock_logger,
-        ):
-            _save_patching_context(iteration=1, max_iterations=5, messages=[])
-
-            mock_logger.warning.assert_called_once()
-            assert "Failed to save patch_schema context" in mock_logger.warning.call_args[0][0]
+            assert "Error calling Opus sub-agent" in result.analysis
+            assert "AWS error" in result.analysis
+            assert result.input_tokens == 0
+            assert result.output_tokens == 0
 
 
 class TestApplySchemaChanges:

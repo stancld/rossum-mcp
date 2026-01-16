@@ -737,6 +737,8 @@ def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(
         description="""Patch schema nodes (add/update/remove fields in a schema).
 
+You MUST load `schema-patching` skill first to avoid errors.
+
 Operations:
 - add: Create new field. Requires parent_id (section or tuple id) and node_data.
 - update: Modify existing field. Requires node_data with fields to change.
@@ -748,7 +750,8 @@ Node types for add:
 - Multivalue (table): {"label": "Table", "category": "multivalue", "children": <tuple>}
 - Tuple (table row): {"id": "row_id", "label": "Row", "category": "tuple", "children": [<datapoints with id>]}
 
-Important: Datapoints inside a tuple MUST have an "id" field. Section-level datapoints get id from node_id parameter."""
+Important: Datapoints inside a tuple MUST have an "id" field. Section-level datapoints get id from node_id parameter.
+"""
     )
     async def patch_schema(
         schema_id: int,

@@ -1,6 +1,6 @@
-"""Knowledge base search tools for the Rossum Agent.
+"""Knowledge base search sub-agent.
 
-This module provides tools for searching the Rossum Knowledge Base.
+Provides tools for searching and analyzing the Rossum Knowledge Base.
 """
 
 from __future__ import annotations
@@ -14,58 +14,47 @@ from ddgs import DDGS
 from ddgs.exceptions import DDGSException
 
 from rossum_agent.bedrock_client import create_bedrock_client
-from rossum_agent.tools.core import SubAgentProgress, SubAgentText, report_progress, report_text
+from rossum_agent.tools.core import (
+    SubAgentProgress,
+    SubAgentText,
+    SubAgentTokenUsage,
+    report_progress,
+    report_text,
+    report_token_usage,
+)
 
 logger = logging.getLogger(__name__)
 
 OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
-_WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT = """You are a Rossum documentation expert. Your role is to analyze search results from the Rossum Knowledge Base and extract the most relevant information.
-
-## Your Task
-
-Given search results from the Rossum Knowledge Base, you must:
-
-1. **Analyze the results**: Identify which results are most relevant to the user's query
-2. **Extract key information**: Pull out the specific technical details, code examples, and JSON configurations
-3. **Synthesize a response**: Provide a clear, actionable summary that directly addresses the user's needs
+_WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT = """Goal: Extract actionable technical information from Rossum Knowledge Base search results.
 
 ## Output Format
 
-Your response MUST start with this section if the query involves document splitting, AI predictions, or field-based automation:
+| Section | Content |
+|---------|---------|
+| Key Information | Facts, JSON configs, code examples answering the query |
+| Implementation | Steps, code patterns if applicable |
+| Configuration | Data types, singlevalue vs multivalue (bold) |
+| Related Topics | Brief mention of related docs |
 
-### ⛔ CRITICAL SCHEMA REQUIREMENTS FOR AI-BASED FEATURES ⛔
+## AI Feature Requirements
 
-Before providing any configuration, state these MANDATORY requirements:
+For document splitting, AI predictions, or field-based automation:
 
-1. **"hidden": false is REQUIRED** - The datapoint MUST NOT be hidden. Hidden datapoints (`"hidden": true`) are invisible to Rossum AI and CANNOT receive predictions. Document splitting, field validation, and any AI-based feature will FAIL SILENTLY if the datapoint is hidden.
+| Requirement | Rule |
+|-------------|------|
+| hidden | Must be `false`. Hidden datapoints invisible to AI—features fail silently. |
+| Multivalue parent | Required for splitting (one value per split document). |
 
-2. **Multivalue parent is REQUIRED for splitting** - Document splitting requires the target field to be inside a multivalue section (one value per split document).
+## JSON Schema Examples
 
-Then continue with:
-
-1. **Most Relevant Information**: The key facts, JSON configurations, or code examples that answer the query
-2. **Implementation Details**: Specific steps or code patterns if applicable
-3. **Configuration Details**: Specific configuration details, i.e. file datatypes, singlevalue vs multivalue datapoints must be returned as bold text
-4. **Related Topics**: Brief mention of related documentation pages for further reading
-
-## ⛔ JSON EXAMPLE VALIDATION RULES ⛔
-
-When you write ANY JSON schema example for datapoints used with AI features (splitting, validation, etc.):
-
-✅ CORRECT - Always use this pattern:
+For AI features, always use `"hidden": false`:
 ```json
-{"hidden": false, "type": "string", "id": "invoice_id", ...}
+{"hidden": false, "type": "string", "id": "invoice_id"}
 ```
 
-❌ WRONG - NEVER output this (will cause silent failures):
-```json
-{"hidden": true, "type": "string", "id": "invoice_id", ...}
-```
-
-IMPORTANT: You must return exact configuration requirements and mention they are CRITICAL!.
-
-Be direct and technical. Focus on actionable information that helps with Rossum hook development, extension configuration, or API usage."""
+Never `"hidden": true`—causes silent failures."""
 
 _KNOWLEDGE_BASE_DOMAIN = "knowledge-base.rossum.ai"
 _MAX_SEARCH_RESULTS = 5
@@ -79,11 +68,17 @@ class WebSearchError(Exception):
     pass
 
 
-def _call_opus_for_web_search_analysis(query: str, search_results: str, user_query: str | None = None) -> str:
-    """Call Opus model to analyze web search results."""
+def _call_opus_for_web_search_analysis(
+    query: str, search_results: str, user_query: str | None = None
+) -> tuple[str, int, int]:
+    """Call Opus model to analyze web search results.
+
+    Returns:
+        Tuple of (analysis_text, input_tokens, output_tokens).
+    """
     try:
         report_progress(
-            SubAgentProgress(tool_name="search_knowledge_base", iteration=0, max_iterations=0, status="analyzing")
+            SubAgentProgress(tool_name="search_knowledge_base", iteration=1, max_iterations=1, status="analyzing")
         )
 
         client = create_bedrock_client()
@@ -130,20 +125,34 @@ If the topic involves document splitting, AI predictions, or field-based automat
             messages=[{"role": "user", "content": user_content}],
         )
 
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
+
+        logger.info(f"search_knowledge_base: LLM analysis, tokens in={input_tokens} out={output_tokens}")
+
+        report_token_usage(
+            SubAgentTokenUsage(
+                tool_name="search_knowledge_base",
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                iteration=1,
+            )
+        )
+
         text_parts = [block.text for block in response.content if hasattr(block, "text")]
         analysis_result = "\n".join(text_parts) if text_parts else "No analysis provided"
 
         report_progress(
-            SubAgentProgress(tool_name="search_knowledge_base", iteration=0, max_iterations=0, status="completed")
+            SubAgentProgress(tool_name="search_knowledge_base", iteration=1, max_iterations=1, status="completed")
         )
 
         report_text(SubAgentText(tool_name="search_knowledge_base", text=analysis_result, is_final=True))
 
-        return analysis_result
+        return analysis_result, input_tokens, output_tokens
 
     except Exception as e:
         logger.exception("Error calling Opus for web search analysis")
-        return f"Error analyzing search results: {e}\n\nRaw results:\n{search_results}"
+        return f"Error analyzing search results: {e}\n\nRaw results:\n{search_results}", 0, 0
 
 
 def _fetch_webpage_content(url: str) -> str:
@@ -229,14 +238,28 @@ def _search_and_analyze_knowledge_base(query: str, user_query: str | None = None
                     f"No results found in Rossum Knowledge Base for: '{query}'. "
                     "Try different keywords or check the extension/hook name spelling."
                 ),
+                "input_tokens": 0,
+                "output_tokens": 0,
             }
         )
 
     search_results_text = "\n\n---\n\n".join(f"## {r['title']}\nURL: {r['url']}\n\n{r['content']}" for r in results)
     logger.info("Analyzing knowledge base results with Opus sub-agent")
-    analyzed = _call_opus_for_web_search_analysis(query, search_results_text, user_query=user_query)
+    analyzed, input_tokens, output_tokens = _call_opus_for_web_search_analysis(
+        query, search_results_text, user_query=user_query
+    )
+
+    logger.info(f"search_knowledge_base: completed, tokens in={input_tokens} out={output_tokens}")
+
     return json.dumps(
-        {"status": "success", "query": query, "analysis": analyzed, "source_urls": [r["url"] for r in results]}
+        {
+            "status": "success",
+            "query": query,
+            "analysis": analyzed,
+            "source_urls": [r["url"] for r in results],
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+        }
     )
 
 
@@ -256,8 +279,8 @@ def search_knowledge_base(query: str, user_query: str | None = None) -> str:
         question here so Opus can tailor the analysis to address their specific needs.
 
     Returns:
-        JSON with search results containing title, URL, and snippet for each result.
+        JSON with search results containing title, URL, snippet, and token usage.
     """
     if not query:
-        return json.dumps({"status": "error", "message": "Query is required"})
+        return json.dumps({"status": "error", "message": "Query is required", "input_tokens": 0, "output_tokens": 0})
     return _search_and_analyze_knowledge_base(query, user_query=user_query)
