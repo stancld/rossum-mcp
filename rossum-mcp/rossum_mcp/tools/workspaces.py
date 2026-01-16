@@ -49,10 +49,7 @@ async def _create_workspace(
         f"Creating workspace: name={name}, organization_id={organization_id}, "
         f"organization_url={organization_url}, metadata={metadata}"
     )
-    workspace_data: dict = {
-        "name": name,
-        "organization": organization_url,
-    }
+    workspace_data: dict = {"name": name, "organization": organization_url}
     if metadata is not None:
         workspace_data["metadata"] = metadata
 
