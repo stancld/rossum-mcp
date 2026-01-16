@@ -15,6 +15,7 @@ Rossum MCP Server Documentation
 
    api
    mcp_reference
+   skills_and_subagents
 
 .. toctree::
    :maxdepth: 2

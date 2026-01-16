@@ -295,6 +295,31 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
+## Agent Skills & Sub-Agents
+
+The Rossum Agent includes specialized capabilities for complex workflows:
+
+**Skills** - Domain-specific instructions loaded on-demand via `load_skill`:
+
+| Skill | Purpose |
+|-------|---------|
+| `rossum-deployment` | Deploy configuration changes safely via sandbox with before/after diff |
+| `hook-debugging` | Identify and fix hook issues using knowledge base and Opus sub-agent |
+| `schema-patching` | Add, update, or remove individual schema fields |
+| `schema-pruning` | Remove unwanted fields from schema in one call |
+| `organization-setup` | Set up Rossum for new customers with regional templates |
+| `ui-settings` | Update queue UI settings without corrupting structure |
+
+**Sub-Agents** - Opus-powered components for complex iterative tasks:
+
+| Sub-Agent | Invoked Via | Purpose |
+|-----------|-------------|---------|
+| Hook Debug | `debug_hook(hook_id, annotation_id)` | Iterative hook debugging with sandboxed code execution |
+| Knowledge Base | `search_knowledge_base(query)` | Search Rossum docs with Opus-powered analysis |
+| Schema Patching | `patch_schema_with_subagent(schema_id, changes)` | Programmatic bulk schema modifications |
+
+See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
+
 ## MCP Tools
 
 The MCP server provides 49 tools organized into categories:
