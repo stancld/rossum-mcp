@@ -63,21 +63,20 @@ def _evaluate_criteria(
         "Token budget", lambda: assert_tokens_within_budget(run, case.token_budget), failures
     )
 
-    criteria = case.success_criteria
     final_steps = [s for s in run.steps if s.is_final]
     final_step = final_steps[-1] if final_steps else None
     final_answer = final_step.final_answer if final_step else ""
 
-    if criteria.require_final_answer:
-        all_passed &= _check("Final answer present", bool(final_answer), "No final answer", failures)
+    # Always required checks
+    all_passed &= _check("Final answer present", bool(final_answer), "No final answer", failures)
 
-    if criteria.forbid_error:
-        errors = [s.error for s in run.steps if s.error]
-        all_passed &= _check("No agent errors", not errors, f"Errors: {errors}", failures)
+    errors = [s.error for s in run.steps if s.error]
+    all_passed &= _check("No agent errors", not errors, f"Errors: {errors}", failures)
 
-    if criteria.forbid_tool_errors:
-        tool_errors = [f"{tr.name}: {tr.content}" for s in run.steps for tr in s.tool_results if tr.is_error]
-        all_passed &= _check("No tool errors", not tool_errors, f"Tool errors: {tool_errors}", failures)
+    tool_errors = [f"{tr.name}: {tr.content}" for s in run.steps for tr in s.tool_results if tr.is_error]
+    all_passed &= _check("No tool errors", not tool_errors, f"Tool errors: {tool_errors}", failures)
+
+    criteria = case.success_criteria
 
     if criteria.required_keywords:
         answer_lower = (final_answer or "").lower()

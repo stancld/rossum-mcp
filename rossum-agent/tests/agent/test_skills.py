@@ -270,3 +270,45 @@ class TestModuleLevelFunctions:
         ):
             registry = get_skill_registry()
             assert isinstance(registry, SkillRegistry)
+
+
+class TestSkillRegistryErrorHandling:
+    """Test SkillRegistry error handling."""
+
+    def test_handles_corrupted_skill_file(self, tmp_path, caplog):
+        """Test that registry handles unreadable skill files gracefully."""
+        import logging
+        import os
+
+        skill_file = tmp_path / "broken-skill.md"
+        skill_file.write_text("Valid content")
+        os.chmod(skill_file, 0o000)
+
+        try:
+            with caplog.at_level(logging.ERROR):
+                registry = SkillRegistry(tmp_path)
+                skills = registry.get_all_skills()
+
+            assert len(skills) == 0
+            assert "Failed to load skill" in caplog.text
+        finally:
+            os.chmod(skill_file, 0o644)
+
+
+class TestFormatSkillsDefaults:
+    """Test format_skills_for_prompt with default behavior."""
+
+    def test_format_skills_loads_default_skills_when_none(self):
+        """Test format_skills_for_prompt loads skills when None is passed."""
+
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "default-skill.md"
+            skill_file.write_text("# Default Skill Content")
+
+            with (
+                patch("rossum_agent.agent.skills._SKILLS_DIR", Path(tmpdir)),
+                patch("rossum_agent.agent.skills._default_registry", None),
+            ):
+                result = format_skills_for_prompt(None)
+
+                assert "Default Skill Content" in result

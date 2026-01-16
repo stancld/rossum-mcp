@@ -6,6 +6,8 @@ import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from regression_tests.framework.models import ToolMatchMode
+
 if TYPE_CHECKING:
     from regression_tests.framework.models import (
         FileExpectation,
@@ -38,13 +40,13 @@ def assert_tools_match(run: RegressionRun, expectation: ToolExpectation) -> None
     if not expected:
         return
 
-    if expectation.mode == "exact_sequence":
+    if expectation.mode == ToolMatchMode.EXACT_SEQUENCE:
         # For exact sequence, flatten tuples to first option for comparison
         flat_expected = [e[0] if isinstance(e, tuple) else e for e in expected]
         if actual != flat_expected:
             raise AssertionError(f"Tool sequence mismatch: expected exactly {flat_expected}, got {actual}")
 
-    elif expectation.mode == "subset":
+    elif expectation.mode == ToolMatchMode.SUBSET:
         missing = [e for e in expected if not _tool_matches(e, actual)]
         if missing:
             raise AssertionError(f"Tool subset mismatch: missing expected tools {missing}, got {actual}")

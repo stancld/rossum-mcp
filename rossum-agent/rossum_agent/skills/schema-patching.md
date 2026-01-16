@@ -31,6 +31,29 @@ Each change object in the `changes` array:
 | `date` | `format` |
 | `enum` | `options: [{"value": "v1", "label": "Label 1"}]` |
 
+Not supported: multiline fields. Ignore multiline requests - use regular `string` type instead.
+
+## UI Configuration
+
+Optional `ui_configuration` object controls field behavior in the UI. Only set properties when explicitly requested - do not add ui_configuration if the user hasn't specified type or edit behavior.
+
+| Property | Valid Values | Default |
+|----------|--------------|---------|
+| `type` | `captured`, `data`, `manual`, `formula`, `reasoning`, `null` | `null` |
+| `edit` | `enabled`, `enabled_without_warning`, `disabled` | `enabled` |
+
+Type meanings:
+- `captured` - Value extracted by AI/OCR from document
+- `data` - Value filled by extensions (no bounding box)
+- `manual` - User-entered value (no bounding box)
+- `formula` - Computed from formula definition
+- `reasoning` - Updated per prompt and context
+- `null` - Unset, behaves like captured
+
+Common patterns:
+- Formula field: `{"type": "formula", "edit": "disabled"}`
+- Read-only captured field: `{"type": "captured", "edit": "disabled"}`
+- Extension-filled field: `{"type": "data"}`
 
 ## Cross-Reference
 

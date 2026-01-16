@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,6 +16,7 @@ from rossum_agent.streamlit_app.app import (
     _initialize_session_defaults,
     _initialize_user_and_storage,
     _load_messages_from_redis,
+    _save_documents_to_output_dir,
     _save_response_to_redis,
     main,
     run_agent_turn,
@@ -827,3 +829,165 @@ class TestMainFunction:
             main()
 
             assert st.session_state["read_write_disabled"] is True
+
+
+class TestSaveDocumentsToOutputDir:
+    """Test _save_documents_to_output_dir function."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    def test_saves_document_to_output_dir(self, mock_streamlit):
+        """Test that documents are saved correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            mock_streamlit.session_state["output_dir"] = output_dir
+
+            test_content = b"test document content"
+            encoded_content = base64.b64encode(test_content).decode("utf-8")
+            documents = [{"name": "test.pdf", "data": encoded_content}]
+
+            _save_documents_to_output_dir(documents)
+
+            saved_file = output_dir / "test.pdf"
+            assert saved_file.exists()
+            assert saved_file.read_bytes() == test_content
+
+    def test_saves_multiple_documents(self, mock_streamlit):
+        """Test that multiple documents are saved."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            mock_streamlit.session_state["output_dir"] = output_dir
+
+            documents = [
+                {"name": "doc1.pdf", "data": base64.b64encode(b"content1").decode()},
+                {"name": "doc2.pdf", "data": base64.b64encode(b"content2").decode()},
+            ]
+
+            _save_documents_to_output_dir(documents)
+
+            assert (output_dir / "doc1.pdf").exists()
+            assert (output_dir / "doc2.pdf").exists()
+
+    def test_handles_save_error_gracefully(self, mock_streamlit):
+        """Test that save errors are logged but don't raise exceptions."""
+        mock_streamlit.session_state["output_dir"] = Path("/nonexistent/path")
+
+        documents = [{"name": "test.pdf", "data": base64.b64encode(b"content").decode()}]
+
+        _save_documents_to_output_dir(documents)
+
+
+class TestBuildAgentPromptWithDocuments:
+    """Test _build_agent_prompt with documents."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.session_state["uploaded_images"] = []
+            mock_st.session_state["uploaded_documents"] = []
+            mock_st.session_state["output_dir"] = Path(tempfile.gettempdir())
+            yield mock_st
+
+    def test_returns_content_blocks_with_documents(self, mock_streamlit):
+        """Test content blocks are returned when documents are present."""
+        documents = [{"media_type": "application/pdf", "data": "base64data", "name": "test.pdf"}]
+
+        result, num_images, num_documents = _build_agent_prompt("Process this document", [], documents)
+
+        assert isinstance(result, list)
+        assert num_images == 0
+        assert num_documents == 1
+        assert any(block.get("type") == "text" and "Uploaded documents" in block.get("text", "") for block in result)
+
+    def test_returns_content_blocks_with_images_and_documents(self, mock_streamlit):
+        """Test content blocks with both images and documents."""
+        images = [{"media_type": "image/png", "data": "imgdata", "name": "img.png"}]
+        documents = [{"media_type": "application/pdf", "data": "pdfdata", "name": "doc.pdf"}]
+
+        result, num_images, num_documents = _build_agent_prompt("Process these", images, documents)
+
+        assert isinstance(result, list)
+        assert num_images == 1
+        assert num_documents == 1
+
+    def test_clears_uploaded_documents_after_build(self, mock_streamlit):
+        """Test uploaded documents are cleared after building prompt."""
+        mock_streamlit.session_state["uploaded_documents"] = [
+            {"media_type": "application/pdf", "data": "data", "name": "t.pdf"}
+        ]
+
+        _build_agent_prompt("Test", [], mock_streamlit.session_state["uploaded_documents"])
+
+        assert mock_streamlit.session_state["uploaded_documents"] == []
+
+
+class TestInitializeChatIdWithDocuments:
+    """Test _initialize_chat_id clearing uploaded_documents."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            mock_st.query_params = {}
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.generate_chat_id") as mock_gen,
+            patch("rossum_agent.streamlit_app.app.is_valid_chat_id") as mock_valid,
+        ):
+            mock_gen.return_value = "chat_20231201120000_abc123def456"
+            yield {"st": mock_streamlit, "gen": mock_gen, "valid": mock_valid}
+
+    def test_clears_uploaded_documents_on_chat_change(self, mock_deps):
+        """Test uploaded_documents is cleared when chat ID changes via URL."""
+        mock_deps["st"].session_state["chat_id"] = "old-chat-id"
+        mock_deps["st"].session_state["uploaded_documents"] = [{"name": "doc.pdf"}]
+
+        mock_deps["st"].query_params["chat_id"] = "chat_20231201120000_newchatid12"
+        mock_deps["valid"].return_value = True
+
+        _initialize_chat_id()
+
+        assert mock_deps["st"].session_state["uploaded_documents"] == []
+
+
+class TestInitializeSessionDefaultsDocuments:
+    """Test _initialize_session_defaults for uploaded_documents."""
+
+    @pytest.fixture
+    def mock_streamlit(self):
+        """Create streamlit mock."""
+        with patch("rossum_agent.streamlit_app.app.st") as mock_st:
+            mock_st.session_state = MockSessionState()
+            yield mock_st
+
+    @pytest.fixture
+    def mock_deps(self, mock_streamlit):
+        """Set up mock dependencies."""
+        with (
+            patch("rossum_agent.streamlit_app.app.create_session_output_dir") as mock_create,
+            patch("rossum_agent.streamlit_app.app.set_session_output_dir"),
+            patch("rossum_agent.streamlit_app.app.set_output_dir"),
+            patch("rossum_agent.streamlit_app.app.RossumUrlContext") as mock_ctx,
+            patch.dict("os.environ", {}, clear=True),
+        ):
+            mock_create.return_value = Path(tempfile.mkdtemp())
+            mock_ctx.return_value = MagicMock()
+            yield {"st": mock_streamlit, "create": mock_create, "ctx": mock_ctx}
+
+    def test_initializes_uploaded_documents(self, mock_deps):
+        """Test uploaded documents list is initialized."""
+        _initialize_session_defaults()
+
+        assert mock_deps["st"].session_state["uploaded_documents"] == []

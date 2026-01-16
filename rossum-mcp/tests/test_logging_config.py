@@ -13,6 +13,21 @@ import redis
 from rossum_mcp.logging_config import RedisHandler, setup_logging
 
 
+def redis_available():
+    """Check if Redis is available at localhost:6379."""
+    try:
+        client = redis.Redis(host="localhost", port=6379, socket_connect_timeout=1)
+        client.ping()
+        client.close()
+        return True
+    except (redis.ConnectionError, redis.TimeoutError):
+        return False
+
+
+REDIS_AVAILABLE = redis_available()
+
+
+@pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available at localhost:6379")
 class TestRedisHandler:
     """Test RedisHandler class."""
 
@@ -203,27 +218,6 @@ class TestRedisHandler:
         logs = redis_client.lrange(key, 0, -1)
         assert len(logs) == 0
 
-    def test_redis_handler_emit_error_handling(self):
-        """Test that handleError is called on Redis errors."""
-        handler = RedisHandler(host="localhost", port=6379, key_prefix="test")
-        handler.client = MagicMock()
-        handler.client.rpush.side_effect = redis.ConnectionError("Connection lost")
-
-        with patch.object(handler, "handleError") as mock_handle_error:
-            record = logging.LogRecord(
-                name="test.logger",
-                level=logging.INFO,
-                pathname="test.py",
-                lineno=1,
-                msg="Test",
-                args=(),
-                exc_info=None,
-            )
-            handler.emit(record)
-
-            mock_handle_error.assert_called_once()
-            assert mock_handle_error.call_args[0][0] == record
-
     def test_redis_handler_sets_key_expiry(self, redis_client, test_key_prefix, cleanup_keys):
         """Test that Redis keys have TTL set (7 days = 604800 seconds)."""
         handler = RedisHandler(host="localhost", port=6379, key_prefix=test_key_prefix)
@@ -246,6 +240,7 @@ class TestRedisHandler:
         assert ttl <= 604800
 
 
+@pytest.mark.skipif(not REDIS_AVAILABLE, reason="Redis not available at localhost:6379")
 class TestSetupLoggingWithRedis:
     """Test setup_logging with real Redis connection."""
 
@@ -277,6 +272,31 @@ class TestSetupLoggingWithRedis:
 
         handler = redis_handlers[0]
         assert handler.additional_fields["application"] == "test-redis-app"
+
+
+class TestRedisHandlerMocked:
+    """Test RedisHandler with mocked Redis (no real connection needed)."""
+
+    def test_redis_handler_emit_error_handling(self):
+        """Test that handleError is called on Redis errors."""
+        handler = RedisHandler(host="localhost", port=6379, key_prefix="test")
+        handler.client = MagicMock()
+        handler.client.rpush.side_effect = redis.ConnectionError("Connection lost")
+
+        with patch.object(handler, "handleError") as mock_handle_error:
+            record = logging.LogRecord(
+                name="test.logger",
+                level=logging.INFO,
+                pathname="test.py",
+                lineno=1,
+                msg="Test",
+                args=(),
+                exc_info=None,
+            )
+            handler.emit(record)
+
+            mock_handle_error.assert_called_once()
+            assert mock_handle_error.call_args[0][0] == record
 
 
 class TestSetupLogging:
