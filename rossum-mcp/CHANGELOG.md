@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [0.3.5] - 2026-01-16
 - Added `get_email_template` tool for retrieving a single email template by ID [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added `list_email_templates` tool for listing email templates with optional filtering by queue, type, or name [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added `create_email_template` tool for creating new email templates with recipient configuration [#102](https://github.com/stancld/rossum-mcp/pull/102)
