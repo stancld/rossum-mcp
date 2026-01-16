@@ -12,6 +12,7 @@
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 </div>
@@ -26,7 +27,9 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 
 ## Features
 
-### Document Processing
+<details>
+<summary><strong>Document Processing (6 tools)</strong></summary>
+
 - **upload_document**: Upload a document to Rossum for processing
 - **get_annotation**: Retrieve annotation data for a previously uploaded document
 - **list_annotations**: List all annotations for a queue with optional filtering
@@ -34,7 +37,11 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **bulk_update_annotation_fields**: Bulk update annotation field values using JSON Patch operations
 - **confirm_annotation**: Confirm annotation to move it to 'confirmed' status
 
-### Queue & Schema Management
+</details>
+
+<details>
+<summary><strong>Queue & Schema Management (13 tools)</strong></summary>
+
 - **get_queue**: Retrieve queue details including schema_id
 - **list_queues**: List all queues with optional filtering by workspace or name
 - **get_schema**: Retrieve schema details and content
@@ -49,17 +56,29 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **patch_schema**: Add, update, or remove individual schema nodes without replacing entire content
 - **prune_schema_fields**: Efficiently remove multiple fields from schema at once (for organization setup)
 
-### Workspace Management
+</details>
+
+<details>
+<summary><strong>Workspace Management (3 tools)</strong></summary>
+
 - **get_workspace**: Retrieve workspace details by ID
 - **list_workspaces**: List all workspaces with optional filtering
 - **create_workspace**: Create a new workspace
 
-### User Management
+</details>
+
+<details>
+<summary><strong>User Management (3 tools)</strong></summary>
+
 - **get_user**: Retrieve user details by ID
 - **list_users**: List users with optional filtering by username, email, etc.
 - **list_user_roles**: List all user roles (permission groups) in the organization
 
-### Engine Management
+</details>
+
+<details>
+<summary><strong>Engine Management (6 tools)</strong></summary>
+
 - **get_engine**: Retrieve engine details by ID
 - **list_engines**: List all engines with optional filters
 - **create_engine**: Create a new engine (extractor or splitter)
@@ -67,7 +86,11 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **create_engine_field**: Create engine fields and link them to schemas
 - **get_engine_fields**: Retrieve engine fields for a specific engine or all engine fields
 
-### Extensions & Rules
+</details>
+
+<details>
+<summary><strong>Extensions & Rules (9 tools)</strong></summary>
+
 - **get_hook**: Get hook/extension details
 - **list_hooks**: List webhooks and serverless functions (extensions)
 - **create_hook**: Create webhooks or serverless function hooks for custom logic
@@ -78,16 +101,26 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
 
-### Email Templates
+</details>
+
+<details>
+<summary><strong>Email Templates (3 tools)</strong></summary>
+
 - **get_email_template**: Retrieve email template details by ID
 - **list_email_templates**: List email templates with optional filtering by queue, type, or name
 - **create_email_template**: Create email templates for automated or manual email sending
 
-### Relations Management
+</details>
+
+<details>
+<summary><strong>Relations Management (4 tools)</strong></summary>
+
 - **get_relation**: Retrieve relation details by ID
 - **list_relations**: List all relations between annotations (edit, attachment, duplicate)
 - **get_document_relation**: Retrieve document relation details by ID
 - **list_document_relations**: List all document relations (export, einvoice)
+
+</details>
 
 ## Prerequisites
 
