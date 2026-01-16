@@ -172,7 +172,7 @@ class TestSuggestFormulaField:
         assert parsed["status"] == "no_suggestions"
 
     @patch.dict("os.environ", {}, clear=True)
-    def test_missing_credentials(self) -> None:
+    def test_missing_base_url_credential(self) -> None:
         result = suggest_formula_field(
             label="Test",
             hint="test",
@@ -183,3 +183,61 @@ class TestSuggestFormulaField:
         parsed = json.loads(result)
         assert parsed["status"] == "error"
         assert "ROSSUM_API_BASE_URL" in parsed["error"]
+
+    @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1"}, clear=True)
+    def test_missing_token_credential(self) -> None:
+        result = suggest_formula_field(
+            label="Test",
+            hint="test",
+            schema_id=123456,
+            section_id="basic_info",
+        )
+
+        parsed = json.loads(result)
+        assert parsed["status"] == "error"
+        assert "ROSSUM_API_TOKEN" in parsed["error"]
+
+
+class TestFindFieldInSchemaEdgeCases:
+    """Additional edge case tests for _find_field_in_schema."""
+
+    def test_find_field_with_children_as_dict(self) -> None:
+        """Test finding field when children is a dict instead of list."""
+        schema = [{"id": "section", "category": "section", "children": {"id": "nested_field"}}]
+        assert _find_field_in_schema(schema, "nested_field") is True
+
+    def test_find_field_nested_deeply(self) -> None:
+        """Test finding deeply nested field."""
+        schema = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": [{"id": "subsection", "children": [{"id": "deep_field"}]}],
+            }
+        ]
+        assert _find_field_in_schema(schema, "deep_field") is True
+
+
+class TestInjectFormulaFieldEdgeCases:
+    """Additional edge case tests for _inject_formula_field."""
+
+    def test_inject_to_first_section_when_target_not_found(self) -> None:
+        """Test injection falls back to first section when target section not found."""
+        schema = [{"id": "other_section", "category": "section", "children": []}]
+        result = _inject_formula_field(schema, "New Field", "nonexistent_section")
+        assert len(result[0]["children"]) == 1
+        assert result[0]["children"][0]["id"] == "new_field"
+
+    def test_inject_to_root_when_no_sections(self) -> None:
+        """Test injection adds to root when no sections exist."""
+        schema = [{"id": "datapoint", "category": "datapoint"}]
+        result = _inject_formula_field(schema, "New Field", "nonexistent")
+        assert len(result) == 2
+        assert result[1]["id"] == "new_field"
+
+    def test_inject_with_custom_field_schema_id(self) -> None:
+        """Test injection with custom field_schema_id."""
+        schema = [{"id": "section", "category": "section", "children": []}]
+        result = _inject_formula_field(schema, "Custom Field", "section", "custom_id")
+        assert result[0]["children"][0]["id"] == "custom_id"
+        assert result[0]["children"][0]["label"] == "Custom Field"

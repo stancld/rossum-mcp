@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from enum import Enum
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -13,7 +14,16 @@ if TYPE_CHECKING:
     type CustomCheckResult = tuple[Passed, Reasoning]
     type CustomCheckFn = Callable[[list[AgentStep]], CustomCheckResult]
 
-type ToolMatchMode = Literal["exact_sequence", "subset"]
+
+class ToolMatchMode(Enum):
+    """How to match expected tools against actual tool calls.
+
+    EXACT_SEQUENCE: Actual tools must match expected exactly in order and count.
+    SUBSET: All expected tools must appear in actual (extra tools allowed, order ignored).
+    """
+
+    EXACT_SEQUENCE = "exact_sequence"
+    SUBSET = "subset"
 
 
 @dataclass
@@ -23,13 +33,11 @@ class ToolExpectation:
     Attributes:
         expected_tools: List of tool names expected to be called.
             For OR conditions, use tuple: ("get_schema", "get_queue_schema") means either is valid.
-        mode: How to match tool calls:
-            - "exact_sequence": must match exactly in order
-            - "subset": all expected must appear in actual (order not enforced)
+        mode: How to match tool calls (see ToolMatchMode enum).
     """
 
     expected_tools: Sequence[str | tuple[str, ...]] = field(default_factory=list)
-    mode: ToolMatchMode = "subset"
+    mode: ToolMatchMode = ToolMatchMode.SUBSET
 
 
 @dataclass
@@ -88,10 +96,9 @@ class CustomCheck:
 class SuccessCriteria:
     """High-level success conditions for a task.
 
+    All tests require: final answer present, no agent errors, no tool errors.
+
     Attributes:
-        require_final_answer: Require final step to have a non-empty final_answer.
-        forbid_error: Fail if any AgentStep has an error.
-        forbid_tool_errors: Fail if any ToolResult has is_error=True.
         required_keywords: Keywords that must appear in the final answer.
         max_steps: Maximum number of steps allowed.
         require_subagent: Require that an Opus sub-agent was used during execution.
@@ -100,9 +107,6 @@ class SuccessCriteria:
         custom_checks: List of custom checks to run against agent steps.
     """
 
-    require_final_answer: bool = True
-    forbid_error: bool = True
-    forbid_tool_errors: bool = True
     required_keywords: Sequence[str] = field(default_factory=list)
     max_steps: int | None = None
     require_subagent: bool = False

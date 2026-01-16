@@ -50,6 +50,20 @@ class TestExtractUrlContext:
 
         assert context.engine_id == 77777
 
+    def test_extract_document_id(self):
+        """Test extracting document_id from annotation URL."""
+        url = "https://elis.rossum.ai/document/54321"
+        context = extract_url_context(url)
+
+        assert context.document_id == 54321
+
+    def test_documents_view_with_invalid_json_filtering(self):
+        """Test documents view with malformed JSON in filtering parameter."""
+        url = "https://elis.rossum.ai/documents?filtering=%5Binvalid_json"
+        context = extract_url_context(url)
+        assert context.page_type == "documents_list"
+        assert context.queue_id is None
+
     def test_empty_url(self):
         """Test handling of empty URL."""
         context = extract_url_context("")

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from regression_tests.custom_checks import (
     check_knowledge_base_hidden_multivalue_warning,
+    check_net_terms_formula_field_added,
     check_no_misleading_training_suggestions,
 )
 from regression_tests.framework.models import (
@@ -24,6 +25,7 @@ from regression_tests.framework.models import (
     SuccessCriteria,
     TokenBudget,
     ToolExpectation,
+    ToolMatchMode,
 )
 
 HIDDEN_MULTIVALUE_CHECK = CustomCheck(
@@ -34,6 +36,11 @@ HIDDEN_MULTIVALUE_CHECK = CustomCheck(
 NO_MISLEADING_TRAINING_SUGGESTIONS_CHECK = CustomCheck(
     name="No misleading training suggestions (e.g., Inbox in training_queues)",
     check_fn=check_no_misleading_training_suggestions,
+)
+
+NET_TERMS_FORMULA_FIELD_CHECK = CustomCheck(
+    name="Net Terms formula field was added to schema",
+    check_fn=check_net_terms_formula_field_added,
 )
 
 
@@ -53,13 +60,9 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "3. Aggregate across all documents: sum amounts for each unique description\n"
             "4. Generate bar plot and store it under revenue.png"
         ),
-        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        tool_expectation=ToolExpectation(expected_tools=[], mode=ToolMatchMode.EXACT_SEQUENCE),
         token_budget=TokenBudget(min_total_tokens=500, max_total_tokens=900),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["help", "outside"],  # outside of expertise --> offers help
             max_steps=1,
             file_expectation=FileExpectation(),
@@ -71,13 +74,9 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         api_base_url="https://api.elis.develop.r8.lol/v1",
         rossum_url=None,
         prompt="Create a markdown saying Hello Rossumer.",
-        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        tool_expectation=ToolExpectation(expected_tools=[], mode=ToolMatchMode.EXACT_SEQUENCE),
         token_budget=TokenBudget(min_total_tokens=400, max_total_tokens=650),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["help", "outside"],  # outside of expertise --> offers help
             max_steps=1,
             file_expectation=FileExpectation(),
@@ -89,13 +88,9 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         api_base_url="https://api.elis.develop.r8.lol/v1",
         rossum_url=None,
         prompt="Hey, what can you do?",
-        tool_expectation=ToolExpectation(expected_tools=[], mode="exact_sequence"),
+        tool_expectation=ToolExpectation(expected_tools=[], mode=ToolMatchMode.EXACT_SEQUENCE),
         token_budget=TokenBudget(min_total_tokens=13000, max_total_tokens=16000),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["hook", "queue", "debug"],  # Simplified keywords for streamlined prompt
             max_steps=1,
             file_expectation=FileExpectation(),
@@ -108,14 +103,10 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         rossum_url="https://elis.develop.r8.lol/documents?filtering=%7B%22items%22%3A%5B%7B%22field%22%3A%22queue%22%2C%22value%22%3A%5B%223960192%22%5D%2C%22operator%22%3A%22isAnyOf%22%7D%5D%2C%22logicOperator%22%3A%22and%22%7D&level=queue&page=1&page_size=100",
         prompt="Explain a document workflow and learning workflow on this queue.",
         tool_expectation=ToolExpectation(
-            expected_tools=["get_queue", "list_hooks", "get_queue_engine"], mode="subset"
+            expected_tools=["get_queue", "list_hooks", "get_queue_engine"], mode=ToolMatchMode.SUBSET
         ),  # Agent may also use get_schema
         token_budget=TokenBudget(min_total_tokens=20000, max_total_tokens=50000),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
-            require_subagent=False,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["document_type", "classification", "training", "workflow"],
             max_steps=3,
             mermaid_expectation=MermaidExpectation(
@@ -146,14 +137,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "write_file",
                 ("get_schema", "get_queue_schema"),  # OR: either is valid
             ],
-            mode="subset",
+            mode=ToolMatchMode.SUBSET,
         ),
         token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=110000),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
             require_subagent=True,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["splitting", "invoice"],
             max_steps=6,
             file_expectation=FileExpectation(expected_files=["roast.md"]),
@@ -189,18 +177,76 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "deploy_pull",
                 ("get_schema", "get_queue_schema"),  # OR: either is valid
             ],
-            mode="subset",
+            mode=ToolMatchMode.SUBSET,
         ),
         token_budget=TokenBudget(min_total_tokens=300000, max_total_tokens=600000),
         success_criteria=SuccessCriteria(
-            require_final_answer=True,
             require_subagent=True,
-            forbid_error=True,
-            forbid_tool_errors=True,
             required_keywords=["splitting", "sandbox"],
             max_steps=16,
             file_expectation=FileExpectation(),  # no files are expected to be generated
             custom_checks=[HIDDEN_MULTIVALUE_CHECK],
+        ),
+    ),
+    RegressionTestCase(
+        name="setup_customer_queues_and_schema",
+        description="Set up customer with Invoices and Credit Notes queues with custom schema and formula field",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt=(
+            "# Set up a new customer\n\n"
+            "Workspace: 1789239\n"
+            "Region: EU\n\n"
+            "## Tasks:\n\n"
+            "1. Create two new queues: Invoices and Credit Notes.\n"
+            "2. Update schemas w.r.t. ## Schemas section\n"
+            "3. Add field to Invoices queue.\n"
+            "    - Field name: The Net Terms\n"
+            "    - Section: basic_info_section\n"
+            "    - Logic: Compute 'Due Date' - 'Issue Date' and categorize it as 'Net 15', 'Net 30' and 'Outstanding'\n\n"
+            "## Schemas\n\n"
+            "### Invoices\n"
+            "| Field | Type | Table field |\n"
+            "|-------|------| ----------- |\n"
+            "| Document ID | String | No |\n"
+            "| Issue Date | Date | No |\n"
+            "| Due Date | Date | No |\n"
+            "| Vendor Name | String | No |\n"
+            "| Vendor Address | String, multiline | No |\n"
+            "| Customer Name | String | No |\n"
+            "| Customer Address | String, multiline | No |\n"
+            "| Total Amount | Float | No |\n"
+            "| Total Tax | Float | No |\n"
+            "| Currency | String | No |\n"
+            "| Code | String, multiline | Yes |\n"
+            "| Description | String, multiline | Yes |\n"
+            "| Quantity | Integer | Yes |\n"
+            "| Unit Price | Float | Yes |\n"
+            "| Total | Float | Yes |\n\n"
+            "Constraints:\n"
+            "- No payment instructions fields\n"
+            "- No customer delivery address / name fields\n\n"
+            "### Credit notes\n"
+            "- Keep it as it is\n"
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=[
+                "load_skill",
+                "get_queue_template_names",
+                "create_queue_from_template",
+                "suggest_formula_field",
+                "patch_schema",
+                "get_schema_tree_structure",
+                "prune_schema_fields",
+            ],
+            mode=ToolMatchMode.SUBSET,
+        ),
+        token_budget=TokenBudget(min_total_tokens=120000, max_total_tokens=250000),
+        success_criteria=SuccessCriteria(
+            required_keywords=["Invoices", "Credit Notes", "Net Terms"],
+            max_steps=10,
+            file_expectation=FileExpectation(),
+            custom_checks=[NET_TERMS_FORMULA_FIELD_CHECK],
         ),
     ),
 ]

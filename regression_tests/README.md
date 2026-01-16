@@ -56,32 +56,29 @@ RegressionTestCase(
     # api_token is optional - provide via env var or --api-token flag
     tool_expectation=ToolExpectation(
         expected_tools=["list_queues", "get_annotation"],
-        mode="subset",  # "subset", "exact_sequence", or "subsequence"
+        mode=ToolMatchMode.SUBSET,
     ),
     token_budget=TokenBudget(
         min_total_tokens=40000,  # Ensure meaningful work
         max_total_tokens=75000,
     ),
     success_criteria=SuccessCriteria(
-        require_final_answer=True,
-        forbid_error=True,
-        forbid_tool_errors=True,
         required_keywords=["invoice", "workflow"],
         max_steps=5,
         mermaid_expectation=MermaidExpectation(
             descriptions=["Diagram showing document flow"],
             min_diagrams=1,
         ),
-        file_expectation=FileExpectation(),
     ),
 ),
 ```
 
 ## Tool Matching Modes
 
-- **subset**: All expected tools must appear (order doesn't matter, extras allowed)
-- **exact_sequence**: Tools must match exactly in order
-- **subsequence**: Expected tools must appear in order (extras allowed between)
+Use `ToolMatchMode` enum:
+
+- **SUBSET**: All expected tools must appear (order doesn't matter, extras allowed)
+- **EXACT_SEQUENCE**: Tools must match exactly in order
 
 ## Token Budget Options
 
@@ -94,14 +91,15 @@ RegressionTestCase(
 
 ## Success Criteria
 
-- `require_final_answer`: Agent must produce a final answer
-- `forbid_error`: No AgentStep errors allowed
-- `forbid_tool_errors`: No tool execution errors allowed
+All tests automatically require: final answer present, no agent errors, no tool errors.
+
+Configurable options:
 - `required_keywords`: Keywords that must appear in the final answer (case-insensitive)
 - `max_steps`: Maximum number of agent steps allowed
+- `require_subagent`: Require that an Opus sub-agent was used (default: False)
 - `mermaid_expectation`: Validate mermaid diagrams with LLM (see below)
 - `file_expectation`: Expected output files (see below)
-- `custom_check`: Custom validation function
+- `custom_checks`: List of custom validation functions
 
 ## Mermaid Diagram Validation
 

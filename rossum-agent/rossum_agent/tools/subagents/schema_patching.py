@@ -57,18 +57,19 @@ _SCHEMA_PATCHING_SYSTEM_PROMPT = """Goal: Update schema to match EXACTLY the req
 | type | Yes | string, number, date, enum |
 | table_id | If table | Multivalue ID for table columns |
 
-Optional: multiline, format, options (for enum), rir_field_names, hidden, can_export
+Optional: format, options (for enum), rir_field_names, hidden, can_export
 
 ## Type Mappings
 
 | User Request | Schema Config |
 |--------------|---------------|
 | String | type: "string" |
-| Multiline | type: "string", multiline: true |
 | Float/Number | type: "number" |
 | Integer | type: "number", format: "#" |
 | Date | type: "date" |
 | Enum | type: "enum", options: [...] |
+
+Not supported: multiline fields. Use regular string type instead.
 
 Return: Summary of fields kept, added, removed."""
 
@@ -114,7 +115,6 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                         "parent_section": {"type": "string"},
                         "type": {"type": "string"},
                         "table_id": {"type": "string"},
-                        "multiline": {"type": "boolean"},
                         "format": {"type": "string"},
                         "options": {"type": "array"},
                         "rir_field_names": {"type": "array"},
@@ -215,9 +215,6 @@ def _build_field_node(spec: dict[str, Any]) -> dict[str, Any]:
 
     if field_type == "enum" and spec.get("options"):
         node["options"] = spec["options"]
-
-    if spec.get("multiline"):
-        node["ui_configuration"] = {"type": "captured-multiline"}
 
     if spec.get("format"):
         node["format"] = spec["format"]
@@ -528,7 +525,6 @@ def patch_schema_with_subagent(
             - type: Field type (string, number, date, enum)
             - label: Field label (optional, defaults to id)
             - table_id: Multivalue ID if this is a table column
-            - multiline: true for multiline string fields
 
     Returns:
         JSON with update results including fields added, removed, and summary.

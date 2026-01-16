@@ -11,15 +11,18 @@ import pytest
 from rossum_agent.tools.core import (
     SubAgentProgress,
     SubAgentText,
+    SubAgentTokenUsage,
     get_mcp_connection,
     get_mcp_event_loop,
     get_output_dir,
     report_progress,
     report_text,
+    report_token_usage,
     set_mcp_connection,
     set_output_dir,
     set_progress_callback,
     set_text_callback,
+    set_token_callback,
 )
 from rossum_agent.tools.spawn_mcp import SpawnedConnection, get_spawned_connections, get_spawned_connections_lock
 
@@ -35,6 +38,7 @@ def _reset_core_state() -> Iterator[None]:
     set_output_dir(None)
     set_progress_callback(None)
     set_text_callback(None)
+    set_token_callback(None)
     set_mcp_connection(None, None)  # type: ignore[arg-type]
 
 
@@ -89,6 +93,30 @@ class TestSubAgentText:
         assert text.tool_name == "debug_hook"
         assert text.text == "Final analysis complete"
         assert text.is_final is True
+
+
+class TestSubAgentTokenUsage:
+    """Tests for SubAgentTokenUsage dataclass."""
+
+    def test_default_field_values(self) -> None:
+        usage = SubAgentTokenUsage(
+            tool_name="test_tool",
+            input_tokens=100,
+            output_tokens=50,
+        )
+        assert usage.tool_name == "test_tool"
+        assert usage.input_tokens == 100
+        assert usage.output_tokens == 50
+        assert usage.iteration is None
+
+    def test_with_iteration(self) -> None:
+        usage = SubAgentTokenUsage(
+            tool_name="debug_hook",
+            input_tokens=1000,
+            output_tokens=500,
+            iteration=3,
+        )
+        assert usage.iteration == 3
 
 
 class TestCallbacks:
@@ -153,6 +181,38 @@ class TestCallbacks:
         set_text_callback(None)
         text = SubAgentText(tool_name="test", text="output")
         report_text(text)
+
+    def test_set_token_callback_and_clear(self) -> None:
+        callback = MagicMock()
+        set_token_callback(callback)
+
+        usage = SubAgentTokenUsage(tool_name="test", input_tokens=100, output_tokens=50)
+        report_token_usage(usage)
+        callback.assert_called_once_with(usage)
+
+        set_token_callback(None)
+        callback.reset_mock()
+        report_token_usage(usage)
+        callback.assert_not_called()
+
+    def test_report_token_usage_calls_callback(self) -> None:
+        callback = MagicMock()
+        set_token_callback(callback)
+
+        usage = SubAgentTokenUsage(
+            tool_name="debug_hook",
+            input_tokens=1000,
+            output_tokens=500,
+            iteration=2,
+        )
+        report_token_usage(usage)
+
+        callback.assert_called_once_with(usage)
+
+    def test_report_token_usage_no_callback_no_error(self) -> None:
+        set_token_callback(None)
+        usage = SubAgentTokenUsage(tool_name="test", input_tokens=100, output_tokens=50)
+        report_token_usage(usage)
 
 
 class TestOutputDirectory:

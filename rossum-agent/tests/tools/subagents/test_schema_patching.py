@@ -286,14 +286,6 @@ class TestBuildFieldNode:
         assert node["category"] == "datapoint"
         assert node["type"] == "string"
 
-    def test_multiline_field(self):
-        """Test building multiline string field."""
-        spec = {"id": "my_field", "label": "My Field", "type": "string", "multiline": True}
-        node = _build_field_node(spec)
-
-        assert node["type"] == "string"
-        assert node["ui_configuration"] == {"type": "captured-multiline"}
-
     def test_number_field(self):
         """Test building number field."""
         spec = {"id": "amount", "label": "Amount", "type": "number"}
