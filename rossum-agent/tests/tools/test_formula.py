@@ -44,12 +44,17 @@ class TestFormulaFieldHelpers:
     """Tests for formula field helper functions."""
 
     def test_create_formula_field_definition(self) -> None:
-        field = _create_formula_field_definition("net_terms", "Net Terms")
+        field = _create_formula_field_definition("Net Terms", "net_terms")
         assert field["id"] == "net_terms"
         assert field["label"] == "Net Terms"
         assert field["ui_configuration"] == {"type": "formula", "edit": "disabled"}
         assert field["disable_prediction"] is True
         assert field["formula"] == ""
+
+    def test_create_formula_field_definition_derives_id(self) -> None:
+        field = _create_formula_field_definition("Net Terms")
+        assert field["id"] == "net_terms"
+        assert field["label"] == "Net Terms"
 
     def test_find_field_in_schema_found(self) -> None:
         schema = [{"id": "section", "category": "section", "children": [{"id": "date_due"}]}]
@@ -61,13 +66,13 @@ class TestFormulaFieldHelpers:
 
     def test_inject_formula_field_adds_to_section(self) -> None:
         schema = [{"id": "basic_info", "category": "section", "children": []}]
-        result = _inject_formula_field(schema, "net_terms", "basic_info")
+        result = _inject_formula_field(schema, "Net Terms", "basic_info")
         assert len(result[0]["children"]) == 1
         assert result[0]["children"][0]["id"] == "net_terms"
 
     def test_inject_formula_field_skips_if_exists(self) -> None:
         schema = [{"id": "section", "category": "section", "children": [{"id": "net_terms"}]}]
-        result = _inject_formula_field(schema, "net_terms", "section")
+        result = _inject_formula_field(schema, "Net Terms", "section")
         assert len(result[0]["children"]) == 1
 
 
@@ -98,11 +103,11 @@ class TestSuggestFormulaField:
         mock_client_class.return_value = mock_client
 
         result = suggest_formula_field(
-            field_schema_id="net_terms",
+            label="Net Terms",
             hint="Compute payment terms based on due date and issue date",
             schema_content=[{"id": "basic_info", "category": "section", "children": []}],
             section_id="basic_info",
-            label="Net Terms",
+            field_schema_id="net_terms",
         )
 
         parsed = json.loads(result)
@@ -126,7 +131,7 @@ class TestSuggestFormulaField:
         mock_client_class.return_value = mock_client
 
         result = suggest_formula_field(
-            field_schema_id="test",
+            label="Test",
             hint="test",
             schema_content=[],
             section_id="basic_info",
@@ -138,7 +143,7 @@ class TestSuggestFormulaField:
     @patch.dict("os.environ", {}, clear=True)
     def test_missing_credentials(self) -> None:
         result = suggest_formula_field(
-            field_schema_id="test",
+            label="Test",
             hint="test",
             schema_content=[],
             section_id="basic_info",

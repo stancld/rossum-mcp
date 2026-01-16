@@ -81,6 +81,7 @@ from rossum_agent.tools import (
     DEPLOY_TOOLS,
     INTERNAL_TOOLS,
     SubAgentProgress,
+    SubAgentTokenUsage,
     execute_tool,
     get_deploy_tool_names,
     get_deploy_tools,
@@ -88,6 +89,7 @@ from rossum_agent.tools import (
     get_internal_tools,
     set_mcp_connection,
     set_progress_callback,
+    set_token_callback,
 )
 
 if TYPE_CHECKING:
@@ -570,13 +572,18 @@ class RossumAgent:
         with sub_agent_progress. Always yields the final ToolResult.
         """
         progress_queue: queue.Queue[SubAgentProgress] = queue.Queue()
+        token_queue: queue.Queue[SubAgentTokenUsage] = queue.Queue()
 
         def progress_callback(progress: SubAgentProgress) -> None:
             progress_queue.put(progress)
 
+        def token_callback(usage: SubAgentTokenUsage) -> None:
+            token_queue.put(usage)
+
         try:
             if tool_call.name in get_internal_tool_names():
                 set_progress_callback(progress_callback)
+                set_token_callback(token_callback)
 
                 loop = asyncio.get_event_loop()
                 ctx = copy_context()
@@ -598,11 +605,39 @@ class RossumAgent:
                         )
                     except queue.Empty:
                         pass
+
+                    try:
+                        while True:
+                            usage = token_queue.get_nowait()
+                            self._total_input_tokens += usage.input_tokens
+                            self._total_output_tokens += usage.output_tokens
+                            logger.info(
+                                f"Sub-agent '{usage.tool_name}' token usage (iter {usage.iteration}): "
+                                f"in={usage.input_tokens}, out={usage.output_tokens}, "
+                                f"cumulative total: in={self._total_input_tokens}, out={self._total_output_tokens}"
+                            )
+                    except queue.Empty:
+                        pass
+
                     await asyncio.sleep(0.1)
+
+                try:
+                    while True:
+                        usage = token_queue.get_nowait()
+                        self._total_input_tokens += usage.input_tokens
+                        self._total_output_tokens += usage.output_tokens
+                        logger.info(
+                            f"Sub-agent '{usage.tool_name}' token usage (iter {usage.iteration}): "
+                            f"in={usage.input_tokens}, out={usage.output_tokens}, "
+                            f"cumulative total: in={self._total_input_tokens}, out={self._total_output_tokens}"
+                        )
+                except queue.Empty:
+                    pass
 
                 result = future.result()
                 content = str(result)
                 set_progress_callback(None)
+                set_token_callback(None)
             elif tool_call.name in get_deploy_tool_names():
                 loop = asyncio.get_event_loop()
                 ctx = copy_context()
@@ -620,6 +655,7 @@ class RossumAgent:
 
         except Exception as e:
             set_progress_callback(None)
+            set_token_callback(None)
             error_msg = f"Tool {tool_call.name} failed: {e}"
             logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
             yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)

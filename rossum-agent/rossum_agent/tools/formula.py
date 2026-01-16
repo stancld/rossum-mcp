@@ -43,11 +43,13 @@ def _build_suggest_formula_url(api_base_url: str) -> str:
     return f"{api_base_url.rstrip('/')}/internal/schemas/suggest_formula"
 
 
-def _create_formula_field_definition(field_schema_id: str, label: str | None = None) -> dict:
+def _create_formula_field_definition(label: str, field_schema_id: str | None = None) -> dict:
     """Create a properly structured formula field definition."""
+    if not field_schema_id:
+        field_schema_id = label.lower().replace(" ", "_")
     return {
         "id": field_schema_id,
-        "label": label or field_schema_id.replace("_", " ").title(),
+        "label": label,
         "type": "string",
         "category": "datapoint",
         "can_export": True,
@@ -77,17 +79,20 @@ def _find_field_in_schema(nodes: list[dict], field_id: str) -> bool:
 
 
 def _inject_formula_field(
-    schema_content: list[dict], field_schema_id: str, section_id: str, label: str | None = None
+    schema_content: list[dict], label: str, section_id: str, field_schema_id: str | None = None
 ) -> list[dict]:
     """Inject a formula field into the specified section of schema_content.
 
     The suggest_formula API requires the target field to exist in schema_content.
     """
+    if not field_schema_id:
+        field_schema_id = label.lower().replace(" ", "_")
+
     if _find_field_in_schema(schema_content, field_schema_id):
         return schema_content
 
     modified = copy.deepcopy(schema_content)
-    formula_field = _create_formula_field_definition(field_schema_id, label)
+    formula_field = _create_formula_field_definition(label, field_schema_id)
 
     for section in modified:
         if section.get("id") == section_id and section.get("category") == "section":
@@ -104,31 +109,31 @@ def _inject_formula_field(
 
 @beta_tool
 def suggest_formula_field(
-    field_schema_id: str,
-    hint: str,
-    schema_content: list[dict],
-    section_id: str,
-    label: str | None = None,
+    label: str, hint: str, schema_content: list[dict], section_id: str, field_schema_id: str | None = None
 ) -> str:
     """Get AI-generated formula suggestions for a new formula field.
 
     Args:
-        field_schema_id: ID for the formula field (e.g., 'net_terms').
+        label: Display label for the field (e.g., 'Net Terms').
         hint: Natural language description of the formula logic.
-        schema_content: Schema content from get_schema MCP tool.
+        schema_content: **Complete** schema content from get_schema MCP tool.
+            Must include all fields - the API needs full context to generate valid formulas.
         section_id: Section ID where the field belongs. Ask the user if not specified.
-        label: Optional display label. Defaults to title-cased field_schema_id.
+        field_schema_id: Optional ID for the formula field. Defaults to label.lower().replace(" ", "_").
 
     Returns:
         JSON with formula suggestion and field_definition for use with patch_schema.
     """
+    if not field_schema_id:
+        field_schema_id = label.lower().replace(" ", "_")
+
     logger.info(f"suggest_formula_field: {field_schema_id=}, {section_id=}, hint={hint[:100]}...")
 
     try:
         api_base_url, token = _get_credentials()
         url = _build_suggest_formula_url(api_base_url)
 
-        enriched_schema = _inject_formula_field(schema_content, field_schema_id, section_id, label)
+        enriched_schema = _inject_formula_field(schema_content, label, section_id, field_schema_id)
 
         payload = {
             "field_schema_id": field_schema_id,
@@ -162,7 +167,7 @@ def suggest_formula_field(
         if summary:
             summary = _clean_html(summary)
 
-        field_definition = _create_formula_field_definition(field_schema_id, label)
+        field_definition = _create_formula_field_definition(label, field_schema_id)
         field_definition["formula"] = formula
 
         return json.dumps(

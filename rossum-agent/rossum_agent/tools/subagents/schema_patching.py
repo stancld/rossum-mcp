@@ -20,10 +20,12 @@ from anthropic import beta_tool
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.tools.core import (
     SubAgentProgress,
+    SubAgentTokenUsage,
     get_mcp_connection,
     get_mcp_event_loop,
     get_output_dir,
     report_progress,
+    report_token_usage,
 )
 from rossum_agent.tools.subagents.knowledge_base import OPUS_MODEL_ID
 
@@ -111,8 +113,12 @@ def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
     if mcp_connection is None or mcp_event_loop is None:
         raise RuntimeError("MCP connection not set. Call set_mcp_connection first.")
 
+    start = time.perf_counter()
     future = asyncio.run_coroutine_threadsafe(mcp_connection.call_tool(name, arguments), mcp_event_loop)
-    return future.result(timeout=60)
+    result = future.result(timeout=60)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(f"patch_schema MCP call '{name}' completed in {elapsed_ms:.1f}ms")
+    return result
 
 
 def _save_patching_context(iteration: int, max_iterations: int, messages: list[dict[str, Any]]) -> None:
@@ -148,10 +154,19 @@ def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
     return f"Unknown tool: {tool_name}"
 
 
-def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> str:
-    """Call Opus model for schema patching with tool use."""
+def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> tuple[str, int, int]:
+    """Call Opus model for schema patching with tool use.
+
+    Returns:
+        Tuple of (analysis_text, total_input_tokens, total_output_tokens)
+    """
+    total_input_tokens = 0
+    total_output_tokens = 0
+
     try:
+        client_start = time.perf_counter()
         client = create_bedrock_client()
+        logger.info(f"patch_schema: Bedrock client created in {(time.perf_counter() - client_start) * 1000:.1f}ms")
 
         changes_text = "\n".join(
             f"- {c.get('action', 'add')} field '{c.get('id')}' ({c.get('type', 'string')}) "
@@ -176,7 +191,8 @@ Workflow:
         max_iterations = 10
         response = None
         for iteration in range(max_iterations):
-            logger.info(f"patch_schema sub-agent: iteration {iteration + 1}/{max_iterations}")
+            iter_start = time.perf_counter()
+            logger.info(f"patch_schema sub-agent: starting iteration {iteration + 1}/{max_iterations}")
 
             report_progress(
                 SubAgentProgress(
@@ -189,6 +205,7 @@ Workflow:
 
             _save_patching_context(iteration + 1, max_iterations, messages)
 
+            llm_start = time.perf_counter()
             response = client.messages.create(
                 model=OPUS_MODEL_ID,
                 max_tokens=8192,
@@ -196,13 +213,36 @@ Workflow:
                 messages=messages,
                 tools=_OPUS_TOOLS,
             )
+            llm_elapsed_ms = (time.perf_counter() - llm_start) * 1000
+
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            total_input_tokens += input_tokens
+            total_output_tokens += output_tokens
+
+            logger.info(
+                f"patch_schema sub-agent [iter {iteration + 1}]: LLM call completed in {llm_elapsed_ms:.1f}ms, "
+                f"tokens: in={input_tokens}, out={output_tokens}, "
+                f"cumulative: in={total_input_tokens}, out={total_output_tokens}"
+            )
+
+            report_token_usage(
+                SubAgentTokenUsage(
+                    tool_name="patch_schema",
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    iteration=iteration + 1,
+                )
+            )
 
             has_tool_use = any(hasattr(block, "type") and block.type == "tool_use" for block in response.content)
 
             if response.stop_reason == "end_of_turn" or not has_tool_use:
+                iter_elapsed_ms = (time.perf_counter() - iter_start) * 1000
                 logger.info(
                     f"patch_schema sub-agent: completed after {iteration + 1} iterations "
-                    f"(stop_reason={response.stop_reason})"
+                    f"(stop_reason={response.stop_reason}), iteration took {iter_elapsed_ms:.1f}ms, "
+                    f"total tokens: in={total_input_tokens}, out={total_output_tokens}"
                 )
                 report_progress(
                     SubAgentProgress(
@@ -213,7 +253,11 @@ Workflow:
                     )
                 )
                 text_parts = [block.text for block in response.content if hasattr(block, "text")]
-                return "\n".join(text_parts) if text_parts else "No analysis provided"
+                return (
+                    "\n".join(text_parts) if text_parts else "No analysis provided",
+                    total_input_tokens,
+                    total_output_tokens,
+                )
 
             assistant_content = response.content
             messages.append({"role": "assistant", "content": assistant_content})
@@ -242,7 +286,13 @@ Workflow:
                     )
 
                     try:
+                        tool_start = time.perf_counter()
                         result = _execute_opus_tool(tool_name, tool_input)
+                        tool_elapsed_ms = (time.perf_counter() - tool_start) * 1000
+                        logger.info(
+                            f"patch_schema sub-agent [iter {iteration + 1}]: tool '{tool_name}' "
+                            f"executed in {tool_elapsed_ms:.1f}ms"
+                        )
                         tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result})
                     except Exception as e:
                         logger.warning(f"Tool {tool_name} failed: {e}")
@@ -255,15 +305,26 @@ Workflow:
                             }
                         )
 
+            iter_elapsed_ms = (time.perf_counter() - iter_start) * 1000
+            logger.info(f"patch_schema sub-agent: iteration {iteration + 1} completed in {iter_elapsed_ms:.1f}ms")
+
             if tool_results:
                 messages.append({"role": "user", "content": tool_results})
 
+        logger.warning(
+            f"patch_schema sub-agent: max iterations ({max_iterations}) reached, "
+            f"total tokens: in={total_input_tokens}, out={total_output_tokens}"
+        )
         text_parts = [block.text for block in response.content if hasattr(block, "text")] if response else []
-        return "\n".join(text_parts) if text_parts else "Max iterations reached without final response"
+        return (
+            "\n".join(text_parts) if text_parts else "Max iterations reached without final response",
+            total_input_tokens,
+            total_output_tokens,
+        )
 
     except Exception as e:
         logger.exception("Error calling Opus for schema patching")
-        return f"Error calling Opus sub-agent: {e}"
+        return f"Error calling Opus sub-agent: {e}", total_input_tokens, total_output_tokens
 
 
 @beta_tool
@@ -313,13 +374,18 @@ def patch_schema_with_subagent(
         )
 
     logger.info(f"patch_schema: Calling Opus sub-agent for schema_id={schema_id}, {len(changes_list)} changes")
-    analysis = _call_opus_for_patching(schema_id, changes_list)
+    analysis, input_tokens, output_tokens = _call_opus_for_patching(schema_id, changes_list)
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 3)
+
+    logger.info(f"patch_schema: completed in {elapsed_ms:.1f}ms, total tokens: in={input_tokens}, out={output_tokens}")
 
     response = {
         "schema_id": schema_id,
         "changes_requested": len(changes_list),
         "analysis": analysis,
-        "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3),
+        "elapsed_ms": elapsed_ms,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
     }
 
     return json.dumps(response, ensure_ascii=False, default=str)

@@ -31,6 +31,16 @@ class SubAgentProgress:
 
 
 @dataclass
+class SubAgentTokenUsage:
+    """Token usage from a sub-agent call."""
+
+    tool_name: str
+    input_tokens: int
+    output_tokens: int
+    iteration: int | None = None
+
+
+@dataclass
 class SubAgentText:
     """Text output from a sub-agent (e.g., debug_hook's Opus sub-agent)."""
 
@@ -41,10 +51,12 @@ class SubAgentText:
 
 SubAgentProgressCallback = Callable[[SubAgentProgress], None]
 SubAgentTextCallback = Callable[[SubAgentText], None]
+SubAgentTokenCallback = Callable[[SubAgentTokenUsage], None]
 
 # Context variables for thread-safe state management
 _progress_callback: ContextVar[SubAgentProgressCallback | None] = ContextVar("progress_callback", default=None)
 _text_callback: ContextVar[SubAgentTextCallback | None] = ContextVar("text_callback", default=None)
+_token_callback: ContextVar[SubAgentTokenCallback | None] = ContextVar("token_callback", default=None)
 _mcp_connection: ContextVar[MCPConnection | None] = ContextVar("mcp_connection", default=None)
 _mcp_event_loop: ContextVar[asyncio.AbstractEventLoop | None] = ContextVar("mcp_event_loop", default=None)
 _output_dir: ContextVar[Path | None] = ContextVar("output_dir", default=None)
@@ -60,6 +72,11 @@ def set_text_callback(callback: SubAgentTextCallback | None) -> None:
     _text_callback.set(callback)
 
 
+def set_token_callback(callback: SubAgentTokenCallback | None) -> None:
+    """Set the token callback for sub-agent token usage reporting."""
+    _token_callback.set(callback)
+
+
 def report_progress(progress: SubAgentProgress) -> None:
     """Report progress via the callback if set."""
     if (callback := _progress_callback.get()) is not None:
@@ -70,6 +87,12 @@ def report_text(text: SubAgentText) -> None:
     """Report text via the callback if set."""
     if (callback := _text_callback.get()) is not None:
         callback(text)
+
+
+def report_token_usage(usage: SubAgentTokenUsage) -> None:
+    """Report token usage via the callback if set."""
+    if (callback := _token_callback.get()) is not None:
+        callback(usage)
 
 
 def set_output_dir(output_dir: Path | None) -> None:

@@ -121,7 +121,7 @@ class TestPatchSchemaWithSubagent:
         changes = [{"action": "add", "id": "new_field", "parent_section": "header", "type": "string"}]
         with patch(
             "rossum_agent.tools.subagents.schema_patching._call_opus_for_patching",
-            return_value="Added field new_field to header section",
+            return_value=("Added field new_field to header section", 1000, 500),
         ) as mock_opus:
             result = patch_schema_with_subagent(schema_id="123", changes=json.dumps(changes))
             parsed = json.loads(result)
@@ -130,13 +130,15 @@ class TestPatchSchemaWithSubagent:
             assert parsed["schema_id"] == "123"
             assert parsed["changes_requested"] == 1
             assert "Added field" in parsed["analysis"]
+            assert parsed["input_tokens"] == 1000
+            assert parsed["output_tokens"] == 500
 
     def test_timing_is_measured(self):
         """Test that elapsed_ms is properly measured."""
         changes = [{"id": "f1", "parent_section": "s1", "type": "string"}]
         with patch(
             "rossum_agent.tools.subagents.schema_patching._call_opus_for_patching",
-            return_value="Done",
+            return_value=("Done", 100, 50),
         ):
             result = patch_schema_with_subagent(schema_id="123", changes=json.dumps(changes))
             parsed = json.loads(result)
@@ -160,10 +162,13 @@ class TestCallOpusForPatching:
         mock_response.stop_reason = "end_of_turn"
         mock_response.content = [MagicMock(text="Patching complete", type="text")]
         mock_response.content[0].text = "Patching complete"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
 
         with (
             patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
             patch("rossum_agent.tools.subagents.schema_patching.report_progress", side_effect=capture_progress),
+            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
             patch("rossum_agent.tools.subagents.schema_patching._save_patching_context"),
         ):
             mock_client.return_value.messages.create.return_value = mock_response
@@ -185,6 +190,8 @@ class TestCallOpusForPatching:
         first_response = MagicMock()
         first_response.stop_reason = "tool_use"
         first_response.content = [tool_use_block]
+        first_response.usage.input_tokens = 100
+        first_response.usage.output_tokens = 50
 
         text_block = MagicMock()
         text_block.type = "text"
@@ -193,19 +200,24 @@ class TestCallOpusForPatching:
         second_response = MagicMock()
         second_response.stop_reason = "end_of_turn"
         second_response.content = [text_block]
+        second_response.usage.input_tokens = 200
+        second_response.usage.output_tokens = 100
 
         with (
             patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
             patch("rossum_agent.tools.subagents.schema_patching.report_progress"),
+            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
             patch("rossum_agent.tools.subagents.schema_patching._save_patching_context"),
             patch("rossum_agent.tools.subagents.schema_patching._execute_opus_tool", return_value='{"id": "123"}'),
         ):
             mock_client.return_value.messages.create.side_effect = [first_response, second_response]
 
             changes = [{"id": "field1", "parent_section": "header", "type": "string"}]
-            result = _call_opus_for_patching("123", changes)
+            result, input_tokens, output_tokens = _call_opus_for_patching("123", changes)
 
             assert "Schema updated successfully" in result
+            assert input_tokens == 300
+            assert output_tokens == 150
             assert mock_client.return_value.messages.create.call_count == 2
 
     def test_max_iterations_reduced(self):
@@ -214,10 +226,13 @@ class TestCallOpusForPatching:
         mock_response.stop_reason = "end_of_turn"
         mock_response.content = [MagicMock(text="Done", type="text")]
         mock_response.content[0].text = "Done"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
 
         with (
             patch("rossum_agent.tools.subagents.schema_patching.create_bedrock_client") as mock_client,
             patch("rossum_agent.tools.subagents.schema_patching.report_progress"),
+            patch("rossum_agent.tools.subagents.schema_patching.report_token_usage"),
             patch("rossum_agent.tools.subagents.schema_patching._save_patching_context") as mock_save,
         ):
             mock_client.return_value.messages.create.return_value = mock_response
