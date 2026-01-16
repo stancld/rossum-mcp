@@ -7,8 +7,6 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- Added `organization-setup` skill for new customer onboarding with template-based queue creation
-- Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
 - Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added `hook-debugging` skill for systematic hook debugging workflow [#73](https://github.com/stancld/rossum-mcp/pull/73)
@@ -16,12 +14,16 @@ All notable changes to this project will be documented in this file.
 - Added deployment-related internal tools: `pull_workspace`, `compare_workspaces`, `copy_workspace`, `get_id_mapping` [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added `list_local_files` and `clean_schema_dict` internal tools [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
+- Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
+- Added `organization-setup` skill for new customer onboarding with template-based queue creation [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Added `patch_schema_with_subagent` tool for safe schema patching with Opus sub-agent verification [#102](https://github.com/stancld/rossum-mcp/pull/102)
 
 ### Changed
 - Migrated default model from Sonnet 4.5 to Opus 4.5 with significantly simplified prompts [#99](https://github.com/stancld/rossum-mcp/pull/99)
 - Separated model's chain-of-thought reasoning (thinking blocks) from response text (text blocks) in stream processing [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Updated Streamlit UI to display thinking blocks with "🧠 **Thinking:**" label [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills [#78](https://github.com/stancld/rossum-mcp/pull/78)
+- Reorganized sub-agent tools into `tools/subagents/` module (hook_debug, knowledge_base, schema_patching)
 - Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
 - Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-mcp/pull/73)

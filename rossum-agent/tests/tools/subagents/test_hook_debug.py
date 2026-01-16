@@ -1,4 +1,4 @@
-"""Tests for rossum_agent.tools.hook_debug module."""
+"""Tests for rossum_agent.tools.subagents.hook_debug module."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.tools.hook_debug import (
+from rossum_agent.tools.subagents.hook_debug import (
     _ALLOWED_BUILTIN_NAMES,
     _EVALUATE_HOOK_TOOL,
     _GET_ANNOTATION_TOOL,
@@ -27,7 +27,7 @@ from rossum_agent.tools.hook_debug import (
     debug_hook,
     evaluate_python_hook,
 )
-from rossum_agent.tools.knowledge_base import WebSearchError
+from rossum_agent.tools.subagents.knowledge_base import WebSearchError
 
 
 class TestConstants:
@@ -280,7 +280,7 @@ class TestSaveDebugContext:
         mock_output_dir = MagicMock()
         mock_output_dir.__truediv__ = MagicMock(return_value=mock_path)
 
-        with patch("rossum_agent.tools.hook_debug.get_output_dir", return_value=mock_output_dir):
+        with patch("rossum_agent.tools.subagents.hook_debug.get_output_dir", return_value=mock_output_dir):
             _save_debug_context(
                 iteration=1,
                 max_iterations=15,
@@ -300,7 +300,7 @@ class TestSaveDebugContext:
         mock_output_dir = MagicMock()
         mock_output_dir.__truediv__.side_effect = OSError("Disk full")
 
-        with patch("rossum_agent.tools.hook_debug.get_output_dir", return_value=mock_output_dir):
+        with patch("rossum_agent.tools.subagents.hook_debug.get_output_dir", return_value=mock_output_dir):
             _save_debug_context(1, 15, [])
 
 
@@ -309,7 +309,9 @@ class TestExecuteOpusTool:
 
     def test_calls_evaluate_python_hook_for_that_tool_name(self):
         """Test calls evaluate_python_hook for evaluate_python_hook tool."""
-        with patch("rossum_agent.tools.hook_debug.evaluate_python_hook", return_value='{"status": "success"}') as mock:
+        with patch(
+            "rossum_agent.tools.subagents.hook_debug.evaluate_python_hook", return_value='{"status": "success"}'
+        ) as mock:
             result = _execute_opus_tool(
                 "evaluate_python_hook",
                 {"code": "def foo(): pass", "annotation_json": "{}"},
@@ -332,7 +334,9 @@ class TestExecuteOpusTool:
                 "source_urls": ["https://kb.rossum.ai/test"],
             }
         )
-        with patch("rossum_agent.tools.hook_debug.search_knowledge_base", return_value=mock_response) as mock:
+        with patch(
+            "rossum_agent.tools.subagents.hook_debug.search_knowledge_base", return_value=mock_response
+        ) as mock:
             result = _execute_opus_tool("search_knowledge_base", {"query": "hooks"})
 
             mock.assert_called_once_with("hooks")
@@ -342,7 +346,7 @@ class TestExecuteOpusTool:
     def test_search_knowledge_base_returns_no_results(self):
         """Test search_knowledge_base returns no_results for empty search."""
         mock_response = json.dumps({"status": "no_results", "query": "nonexistent", "message": "No results"})
-        with patch("rossum_agent.tools.hook_debug.search_knowledge_base", return_value=mock_response):
+        with patch("rossum_agent.tools.subagents.hook_debug.search_knowledge_base", return_value=mock_response):
             result = _execute_opus_tool("search_knowledge_base", {"query": "nonexistent"})
 
             parsed = json.loads(result)
@@ -359,7 +363,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_hook(self):
         """Test calls call_mcp_tool for get_hook tool."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
             return_value={"id": "123", "config": {"code": "def handler(p): pass"}},
         ) as mock:
             result = _execute_opus_tool("get_hook", {"hook_id": "123"})
@@ -371,7 +375,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_annotation(self):
         """Test calls call_mcp_tool for get_annotation tool."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
             return_value={"id": "456", "content": []},
         ) as mock:
             result = _execute_opus_tool("get_annotation", {"annotation_id": "456"})
@@ -382,7 +386,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_schema(self):
         """Test calls call_mcp_tool for get_schema tool."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
             return_value={"id": "789", "content": []},
         ) as mock:
             result = _execute_opus_tool("get_schema", {"schema_id": "789"})
@@ -392,7 +396,7 @@ class TestExecuteOpusTool:
 
     def test_returns_no_data_when_mcp_tool_returns_none(self):
         """Test returns 'No data returned' when call_mcp_tool returns None."""
-        with patch("rossum_agent.tools.hook_debug._call_mcp_tool", return_value=None):
+        with patch("rossum_agent.tools.subagents.hook_debug._call_mcp_tool", return_value=None):
             result = _execute_opus_tool("get_hook", {"hook_id": "123"})
 
             assert result == "No data returned"
@@ -419,9 +423,9 @@ class TestCallOpusForDebug:
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
         ):
             result = _call_opus_for_debug("hook123", "ann456", None)
 
@@ -440,9 +444,9 @@ class TestCallOpusForDebug:
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
@@ -472,11 +476,13 @@ class TestCallOpusForDebug:
         mock_client.messages.create.side_effect = [first_response, second_response]
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
-            patch("rossum_agent.tools.hook_debug._execute_opus_tool", return_value='{"id": "123"}'),
-            patch("rossum_agent.tools.hook_debug._extract_and_analyze_web_search_results", return_value=None),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug._execute_opus_tool", return_value='{"id": "123"}'),
+            patch(
+                "rossum_agent.tools.subagents.hook_debug._extract_and_analyze_web_search_results", return_value=None
+            ),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
@@ -507,11 +513,15 @@ class TestCallOpusForDebug:
         mock_client.messages.create.side_effect = [first_response, second_response]
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
-            patch("rossum_agent.tools.hook_debug._execute_opus_tool", side_effect=RuntimeError("Tool failed")),
-            patch("rossum_agent.tools.hook_debug._extract_and_analyze_web_search_results", return_value=None),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch(
+                "rossum_agent.tools.subagents.hook_debug._execute_opus_tool", side_effect=RuntimeError("Tool failed")
+            ),
+            patch(
+                "rossum_agent.tools.subagents.hook_debug._extract_and_analyze_web_search_results", return_value=None
+            ),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
@@ -520,7 +530,7 @@ class TestCallOpusForDebug:
     def test_returns_error_on_exception(self):
         """Test returns error message on exception."""
         with patch(
-            "rossum_agent.tools.hook_debug.create_bedrock_client",
+            "rossum_agent.tools.subagents.hook_debug.create_bedrock_client",
             side_effect=RuntimeError("Connection failed"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
@@ -537,9 +547,9 @@ class TestCallOpusForDebug:
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
@@ -557,9 +567,9 @@ class TestCallOpusForDebug:
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
         ):
             _call_opus_for_debug("h1", "a1", "schema999")
 
@@ -594,11 +604,13 @@ class TestCallOpusForDebug:
         eval_result = json.dumps({"status": "success", "exception": None})
 
         with (
-            patch("rossum_agent.tools.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.hook_debug.report_progress"),
-            patch("rossum_agent.tools.hook_debug._save_debug_context"),
-            patch("rossum_agent.tools.hook_debug._execute_opus_tool", return_value=eval_result),
-            patch("rossum_agent.tools.hook_debug._extract_and_analyze_web_search_results", return_value=None),
+            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
+            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.hook_debug._execute_opus_tool", return_value=eval_result),
+            patch(
+                "rossum_agent.tools.subagents.hook_debug._extract_and_analyze_web_search_results", return_value=None
+            ),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
@@ -833,7 +845,7 @@ class TestDebugHook:
     def test_with_both_hook_id_and_annotation_id(self):
         """Test debug_hook with required hook_id and annotation_id."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_opus_for_debug",
+            "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
             return_value="Analysis: The hook is working correctly.",
         ):
             result = debug_hook(hook_id="123", annotation_id="456")
@@ -847,7 +859,7 @@ class TestDebugHook:
     def test_with_schema_id(self):
         """Test debug_hook with optional schema_id."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_opus_for_debug",
+            "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
             return_value="Analysis with schema",
         ) as mock:
             result = debug_hook(hook_id="123", annotation_id="456", schema_id="789")
@@ -859,7 +871,7 @@ class TestDebugHook:
     def test_timing_is_measured(self):
         """Test that elapsed_ms is properly measured."""
         with patch(
-            "rossum_agent.tools.hook_debug._call_opus_for_debug",
+            "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
             return_value="Analysis",
         ):
             result = debug_hook(hook_id="h1", annotation_id="a1")
@@ -1014,7 +1026,7 @@ class TestExtractAndAnalyzeWebSearchResults:
         block.content = [search_result]
 
         with patch(
-            "rossum_agent.tools.hook_debug._call_opus_for_web_search_analysis",
+            "rossum_agent.tools.subagents.hook_debug._call_opus_for_web_search_analysis",
             return_value="Opus analyzed this content",
         ) as mock_opus:
             result = _extract_and_analyze_web_search_results(block, iteration=2, max_iterations=10)
@@ -1041,7 +1053,7 @@ class TestExtractAndAnalyzeWebSearchResults:
         del block.search_query
 
         with patch(
-            "rossum_agent.tools.hook_debug._call_opus_for_web_search_analysis",
+            "rossum_agent.tools.subagents.hook_debug._call_opus_for_web_search_analysis",
             return_value="Analysis",
         ) as mock_opus:
             _extract_and_analyze_web_search_results(block, iteration=1, max_iterations=5)

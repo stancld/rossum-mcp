@@ -38,7 +38,7 @@ from rossum_agent.tools.core import (
     get_output_dir,
     report_progress,
 )
-from rossum_agent.tools.knowledge_base import (
+from rossum_agent.tools.subagents.knowledge_base import (
     OPUS_MODEL_ID,
     WebSearchError,
     _call_opus_for_web_search_analysis,

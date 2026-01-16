@@ -791,7 +791,7 @@ class TestApplySchemaPatch:
             }
         ]
 
-        with pytest.raises(ValueError, match=r"Cannot remove tuple .* from multivalue"):
+        with pytest.raises(ValueError, match=r"Cannot remove .* from multivalue"):
             apply_schema_patch(
                 content=content,
                 operation="remove",

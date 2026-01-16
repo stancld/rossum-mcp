@@ -22,6 +22,94 @@ PatchOperation = Literal["add", "update", "remove"]
 DatapointType = Literal["string", "number", "date", "enum", "button"]
 NodeCategory = Literal["datapoint", "multivalue", "tuple"]
 
+MAX_ID_LENGTH = 50
+VALID_DATAPOINT_TYPES = {"string", "number", "date", "enum", "button"}
+
+
+class SchemaValidationError(ValueError):
+    """Raised when schema validation fails."""
+
+
+def _validate_id(node_id: str, context: str = "") -> None:
+    """Validate node ID constraints."""
+    if not node_id:
+        raise SchemaValidationError(f"Node id is required{context}")
+    if len(node_id) > MAX_ID_LENGTH:
+        raise SchemaValidationError(f"Node id '{node_id}' exceeds {MAX_ID_LENGTH} characters{context}")
+
+
+def _validate_datapoint(node: dict, context: str = "") -> None:
+    """Validate a datapoint node has required fields."""
+    if "label" not in node:
+        raise SchemaValidationError(f"Datapoint missing required 'label'{context}")
+    if "type" not in node:
+        raise SchemaValidationError(f"Datapoint missing required 'type'{context}")
+    if node["type"] not in VALID_DATAPOINT_TYPES:
+        raise SchemaValidationError(
+            f"Invalid datapoint type '{node['type']}'. Must be one of: {', '.join(VALID_DATAPOINT_TYPES)}{context}"
+        )
+
+
+def _validate_tuple(node: dict, node_id: str, context: str) -> None:
+    """Validate a tuple node."""
+    if "label" not in node:
+        raise SchemaValidationError(f"Tuple missing required 'label'{context}")
+    if "id" not in node:
+        raise SchemaValidationError(f"Tuple missing required 'id'{context}")
+    children = node.get("children", [])
+    if not isinstance(children, list):
+        raise SchemaValidationError(f"Tuple children must be a list{context}")
+    for i, child in enumerate(children):
+        child_id = child.get("id", f"index {i}")
+        _validate_node(child, f" in tuple '{node_id}' child '{child_id}'")
+        if "id" not in child:
+            raise SchemaValidationError(f"Datapoint inside tuple must have 'id'{context} child index {i}")
+
+
+def _validate_multivalue(node: dict, node_id: str, context: str) -> None:
+    """Validate a multivalue node."""
+    if "label" not in node:
+        raise SchemaValidationError(f"Multivalue missing required 'label'{context}")
+    children = node.get("children")
+    if children is None:
+        raise SchemaValidationError(f"Multivalue missing required 'children'{context}")
+    if isinstance(children, list):
+        raise SchemaValidationError(f"Multivalue 'children' must be a single object (dict), not a list{context}")
+    if isinstance(children, dict):
+        _validate_node(children, f" in multivalue '{node_id}' children")
+
+
+def _validate_section(node: dict, node_id: str, context: str) -> None:
+    """Validate a section node."""
+    if "label" not in node:
+        raise SchemaValidationError(f"Section missing required 'label'{context}")
+    if "id" not in node:
+        raise SchemaValidationError(f"Section missing required 'id'{context}")
+    children = node.get("children", [])
+    if not isinstance(children, list):
+        raise SchemaValidationError(f"Section children must be a list{context}")
+    for child in children:
+        child_id = child.get("id", "unknown")
+        _validate_node(child, f" in section '{node_id}' child '{child_id}'")
+
+
+def _validate_node(node: dict, context: str = "") -> None:
+    """Validate a schema node recursively."""
+    category = node.get("category")
+    node_id = node.get("id", "")
+
+    if node_id:
+        _validate_id(node_id, context)
+
+    if category == "datapoint":
+        _validate_datapoint(node, context)
+    elif category == "tuple":
+        _validate_tuple(node, node_id, context)
+    elif category == "multivalue":
+        _validate_multivalue(node, node_id, context)
+    elif category == "section":
+        _validate_section(node, node_id, context)
+
 
 @dataclass
 class SchemaDatapoint:
@@ -174,28 +262,51 @@ def _find_node_in_children(
     return None, None, None, None
 
 
-def _find_parent_children_list(content: list[dict], parent_id: str) -> list[dict] | None:
-    """Find the children list of a parent node by its ID."""
+def _is_multivalue_node(node: dict) -> bool:
+    """Check if a node is a multivalue (has dict children or category is multivalue)."""
+    return node.get("category") == "multivalue" or ("children" in node and isinstance(node["children"], dict))
+
+
+def _find_parent_children_list(content: list[dict], parent_id: str) -> tuple[list[dict] | None, bool]:
+    """Find the children list of a parent node by its ID.
+
+    Returns (children_list, is_multivalue) tuple.
+    For multivalue nodes, returns (None, True) since they can't have children added.
+    """
     for section in content:
         if section.get("id") == parent_id:
+            if _is_multivalue_node(section):
+                return None, True
             children: list[dict] = section.setdefault("children", [])
-            return children
+            return children, False
 
-        section_children = section.get("children", [])
-        node, _, _, _ = _find_node_in_children(section_children, parent_id)
+        section_children = section.get("children")
+        if section_children is None:
+            continue
+
+        if isinstance(section_children, list):
+            node, _, _, _ = _find_node_in_children(section_children, parent_id)
+        else:
+            if section_children.get("id") == parent_id:
+                node = section_children
+            elif "children" in section_children:
+                node, _, _, _ = _find_node_in_children(section_children.get("children", []), parent_id)
+            else:
+                node = None
+
         if node is not None:
+            if _is_multivalue_node(node):
+                return None, True
             if "children" in node:
                 if isinstance(node["children"], list):
                     result: list[dict] = node["children"]
-                    return result
-                if isinstance(node["children"], dict):
-                    return [node["children"]]
+                    return result, False
             else:
                 node["children"] = []
                 node_children: list[dict] = node["children"]
-                return node_children
+                return node_children, False
 
-    return None
+    return None, False
 
 
 def _apply_add_operation(
@@ -209,7 +320,13 @@ def _apply_add_operation(
     node_data = copy.deepcopy(node_data)
     node_data["id"] = node_id
 
-    parent_children = _find_parent_children_list(content, parent_id)
+    parent_children, is_multivalue = _find_parent_children_list(content, parent_id)
+    if is_multivalue:
+        raise ValueError(
+            f"Cannot add children to multivalue '{parent_id}'. "
+            "Multivalue nodes have a single child (tuple or datapoint). "
+            "Use 'update' to replace the multivalue's children, or add to the tuple inside it."
+        )
     if parent_children is None:
         raise ValueError(f"Parent node '{parent_id}' not found in schema")
 
@@ -220,20 +337,42 @@ def _apply_add_operation(
     return content
 
 
+def _get_section_children_as_list(section: dict) -> list[dict]:
+    """Get section children as a list, handling both list and dict (multivalue) cases."""
+    children = section.get("children")
+    if children is None:
+        return []
+    if isinstance(children, list):
+        return children
+    if isinstance(children, dict):
+        return [children]
+    return []
+
+
+def _find_node_anywhere(
+    content: list[dict], node_id: str
+) -> tuple[dict | None, int | None, list[dict] | None, dict | None]:
+    """Find a node by ID anywhere in the schema content.
+
+    Returns (node, index, parent_children_list, parent_node).
+    """
+    for section in content:
+        if section.get("id") == node_id:
+            return section, None, None, None
+
+        section_children = _get_section_children_as_list(section)
+        result = _find_node_in_children(section_children, node_id, section)
+        if result[0] is not None:
+            return result
+
+    return None, None, None, None
+
+
 def _apply_update_operation(content: list[dict], node_id: str, node_data: dict | None) -> list[dict]:
     if node_data is None:
         raise ValueError("node_data is required for 'update' operation")
 
-    for section in content:
-        if section.get("id") == node_id:
-            section.update(node_data)
-            return content
-
-    node: dict | None = None
-    for section in content:
-        node, _, _, _ = _find_node_in_children(section.get("children", []), node_id)
-        if node is not None:
-            break
+    node, _, _, _ = _find_node_anywhere(content, node_id)
 
     if node is None:
         raise ValueError(f"Node '{node_id}' not found in schema")
@@ -244,20 +383,27 @@ def _apply_update_operation(content: list[dict], node_id: str, node_data: dict |
 
 def _apply_remove_operation(content: list[dict], node_id: str) -> list[dict]:
     for section in content:
-        if section.get("id") == node_id:
+        if section.get("id") == node_id and section.get("category") == "section":
             raise ValueError("Cannot remove a section - sections must exist")
 
-    for section in content:
-        section_children = section.get("children", [])
-        node, idx, parent_list, parent_node = _find_node_in_children(section_children, node_id)
-        if node is not None and idx is not None:
-            if parent_list is not None:
-                parent_list.pop(idx)
-            elif parent_node is not None:
-                raise ValueError(f"Cannot remove tuple '{node_id}' from multivalue - remove the multivalue instead")
-            return content
+    node, idx, parent_list, parent_node = _find_node_anywhere(content, node_id)
 
-    raise ValueError(f"Node '{node_id}' not found in schema")
+    if node is None:
+        raise ValueError(f"Node '{node_id}' not found in schema")
+
+    if idx is None and parent_list is None:
+        if node.get("category") == "section":
+            raise ValueError("Cannot remove a section - sections must exist")
+        raise ValueError(f"Cannot determine how to remove node '{node_id}'")
+
+    if parent_list is not None and idx is not None:
+        parent_list.pop(idx)
+    elif parent_node is not None:
+        if parent_node.get("category") == "multivalue":
+            raise ValueError(f"Cannot remove '{node_id}' from multivalue - remove the multivalue instead")
+        raise ValueError(f"Cannot remove '{node_id}' - unexpected parent structure")
+
+    return content
 
 
 def apply_schema_patch(

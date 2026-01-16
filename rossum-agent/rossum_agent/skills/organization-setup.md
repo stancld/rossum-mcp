@@ -2,61 +2,55 @@
 
 **Goal**: Set up Rossum for new customers with correct document types and regional configurations.
 
-## Queue Creation Strategy
+## Queue Creation
 
-| Scenario | Recommended Tool |
-|----------|------------------|
-| New customer onboarding | `create_queue_from_template` (preferred) |
-| Copying existing queue config | `create_queue` with custom schema |
-| Empty queue for custom schema | `create_queue` |
+| Scenario | Tool |
+|----------|------|
+| New customer onboarding | `create_queue_from_template` |
+| Copy existing config | `create_queue` with custom schema |
+| Empty queue | `create_queue` |
 
-**Always prefer `create_queue_from_template`** - templates include pre-configured schema, field mappings, and AI engine optimized for specific document types.
+## Templates
 
-## Available Templates
-
-| Template | Use Case |
-|----------|----------|
-| EU Demo Template | European invoices (general) |
-| AP&R EU Demo Template | EU accounts payable & receivable |
-| Tax Invoice EU Demo Template | EU tax invoices |
-| US Demo Template | US invoices (general) |
-| AP&R US Demo Template | US accounts payable & receivable |
-| Tax Invoice US Demo Template | US tax invoices |
-| UK Demo Template | UK invoices (general) |
-| AP&R UK Demo Template | UK accounts payable & receivable |
-| Tax Invoice UK Demo Template | UK tax invoices |
+| Template | Region/Type |
+|----------|-------------|
+| EU Demo Template | European invoices |
+| US Demo Template | US invoices |
+| UK Demo Template | UK invoices |
 | CZ Demo Template | Czech invoices |
-| Chinese Invoices (Fapiao) Demo Template | Chinese Fapiao invoices |
-| Tax Invoice CN Demo Template | Chinese tax invoices |
-| Purchase Order Demo Template | Purchase orders |
+| Chinese Invoices (Fapiao) Demo Template | Chinese Fapiao |
 | Credit Note Demo Template | Credit notes |
 | Debit Note Demo Template | Debit notes |
+| Purchase Order Demo Template | Purchase orders |
+| Delivery Note Demo Template | Delivery notes |
 | Proforma Invoice Demo Template | Proforma invoices |
-| Delivery Notes Demo Template | Delivery notes |
-| Delivery Note Demo Template | Delivery note (singular) |
 | Certificates of Analysis Demo Template | Certificates of analysis |
-| Empty Organization Template | Blank starting point |
 
-## Setup Workflow
+Regional variants: `AP&R {Region} Demo Template`, `Tax Invoice {Region} Demo Template`
 
-1. **Identify document types** - Ask customer what documents they process
-2. **Determine region** - Match to EU/US/UK/CZ/CN templates
-3. **Create workspace** - Use `create_workspace` if needed
-4. **Create queue from template** - Use `create_queue_from_template` with appropriate template
-5. **Customize schema** - Modify if customer needs additional fields or remove redundant fields
+## Schema Customization
 
-## Example
+**Load `schema-patching` skill first** - schema modification is complex and error-prone.
 
-```python
-create_queue_from_template(
-    name="ACME Corp - Invoices",
-    template_name="EU Demo Template",
-    workspace_id=123
-)
-```
+| Field status | Action |
+|--------------|--------|
+| Requested + exists in template | Keep |
+| Requested + not in template | Add to correct section |
+| In template + not requested | **Remove** |
 
-## Key Constraints
+**Section placement** (verify against actual schema):
 
-- **Region matters** - EU/US/UK templates have different field defaults and tax handling
-- **Template includes engine** - No need to manually assign engine when using templates
-- **Schema is editable after creation** - Start with template, then customize via `update_schema`
+| Field semantics | Typical section |
+|-----------------|-----------------|
+| Document ID, dates, order numbers | `basic_info_section` |
+| Vendor/supplier info | Section with `sender_` prefixed fields |
+| Customer/recipient info | Section with `recipient_` prefixed fields |
+| Amounts, totals, tax | `amounts_section` |
+| Line item columns | `line_items_section` (multivalue) |
+
+## Constraints
+
+- Match region to template (EU/US/UK/CZ/CN defaults differ)
+- Templates include pre-configured engine
+- No mermaid diagrams unless explicitly requested
+- Customize via `update_schema` after creation

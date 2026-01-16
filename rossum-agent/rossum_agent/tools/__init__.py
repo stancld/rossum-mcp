@@ -37,8 +37,6 @@ from rossum_agent.tools.deploy import (
     get_workspace_credentials,
 )
 from rossum_agent.tools.file_tools import write_file
-from rossum_agent.tools.hook_debug import debug_hook, evaluate_python_hook
-from rossum_agent.tools.knowledge_base import OPUS_MODEL_ID, WebSearchError, search_knowledge_base
 from rossum_agent.tools.skills import load_skill
 from rossum_agent.tools.spawn_mcp import (
     SpawnedConnection,
@@ -47,6 +45,14 @@ from rossum_agent.tools.spawn_mcp import (
     clear_spawned_connections,
     close_connection,
     spawn_mcp_connection,
+)
+from rossum_agent.tools.subagents import (
+    OPUS_MODEL_ID,
+    WebSearchError,
+    debug_hook,
+    evaluate_python_hook,
+    patch_schema_with_subagent,
+    search_knowledge_base,
 )
 
 if TYPE_CHECKING:
@@ -58,6 +64,7 @@ INTERNAL_TOOLS: list[BetaTool[..., str]] = [
     search_knowledge_base,
     evaluate_python_hook,
     debug_hook,
+    patch_schema_with_subagent,
     load_skill,
     spawn_mcp_connection,
     call_on_connection,
@@ -131,6 +138,7 @@ __all__ = [
     "get_output_dir",
     "get_workspace_credentials",
     "load_skill",
+    "patch_schema_with_subagent",
     "report_progress",
     "report_text",
     "search_knowledge_base",

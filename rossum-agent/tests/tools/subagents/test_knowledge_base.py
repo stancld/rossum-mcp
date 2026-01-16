@@ -1,4 +1,4 @@
-"""Tests for rossum_agent.tools.knowledge_base module."""
+"""Tests for rossum_agent.tools.subagents.knowledge_base module."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from ddgs.exceptions import DDGSException
 from requests import RequestException
-from rossum_agent.tools.knowledge_base import (
+from rossum_agent.tools.subagents.knowledge_base import (
     _KNOWLEDGE_BASE_DOMAIN,
     _MAX_SEARCH_RESULTS,
     _WEBPAGE_FETCH_TIMEOUT,
@@ -52,7 +52,7 @@ class TestFetchWebpageContent:
         mock_response.text = "# Sample Markdown Content\n\nThis is the page content."
         mock_response.raise_for_status = MagicMock()
 
-        with patch("rossum_agent.tools.knowledge_base.requests.get", return_value=mock_response) as mock_get:
+        with patch("rossum_agent.tools.subagents.knowledge_base.requests.get", return_value=mock_response) as mock_get:
             result = _fetch_webpage_content("https://knowledge-base.rossum.ai/docs/test")
 
             assert result == "# Sample Markdown Content\n\nThis is the page content."
@@ -68,7 +68,7 @@ class TestFetchWebpageContent:
         mock_response.text = long_content
         mock_response.raise_for_status = MagicMock()
 
-        with patch("rossum_agent.tools.knowledge_base.requests.get", return_value=mock_response):
+        with patch("rossum_agent.tools.subagents.knowledge_base.requests.get", return_value=mock_response):
             result = _fetch_webpage_content("https://example.com")
 
             assert len(result) == 50000
@@ -76,7 +76,7 @@ class TestFetchWebpageContent:
     def test_failed_fetch_returns_error_message(self):
         """Test that failed fetch returns error message."""
         with patch(
-            "rossum_agent.tools.knowledge_base.requests.get",
+            "rossum_agent.tools.subagents.knowledge_base.requests.get",
             side_effect=RequestException("Connection timed out"),
         ):
             result = _fetch_webpage_content("https://example.com/failing")
@@ -101,8 +101,8 @@ class TestSearchKnowledgeBase:
             progress_calls.append(progress)
 
         with (
-            patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance),
-            patch("rossum_agent.tools.knowledge_base.report_progress", side_effect=capture_progress),
+            patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
+            patch("rossum_agent.tools.subagents.knowledge_base.report_progress", side_effect=capture_progress),
         ):
             _search_knowledge_base("test query")
 
@@ -117,7 +117,7 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
-        with patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance):
+        with patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance):
             result = _search_knowledge_base("nonexistent topic")
 
             assert result == []
@@ -133,9 +133,9 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
         with (
-            patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance),
+            patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
             patch(
-                "rossum_agent.tools.knowledge_base._fetch_webpage_content",
+                "rossum_agent.tools.subagents.knowledge_base._fetch_webpage_content",
                 return_value="Page content here",
             ),
         ):
@@ -152,7 +152,7 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
-        with patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance):
+        with patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance):
             with pytest.raises(WebSearchError, match="Rate limit exceeded"):
                 search_knowledge_base("test query")
 
@@ -169,9 +169,9 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
         with (
-            patch("rossum_agent.tools.knowledge_base.DDGS", return_value=mock_ddgs_instance),
+            patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
             patch(
-                "rossum_agent.tools.knowledge_base._fetch_webpage_content",
+                "rossum_agent.tools.subagents.knowledge_base._fetch_webpage_content",
                 return_value="Content",
             ) as mock_fetch,
         ):
@@ -186,7 +186,7 @@ class TestCallOpusForWebSearchAnalysis:
 
     def test_reports_analyzing_progress(self):
         """Test that analyzing status is reported before Opus analysis starts."""
-        from rossum_agent.tools.knowledge_base import _call_opus_for_web_search_analysis
+        from rossum_agent.tools.subagents.knowledge_base import _call_opus_for_web_search_analysis
 
         progress_calls: list = []
 
@@ -197,9 +197,9 @@ class TestCallOpusForWebSearchAnalysis:
         mock_response.content = [MagicMock(text="Analysis result")]
 
         with (
-            patch("rossum_agent.tools.knowledge_base.create_bedrock_client") as mock_client,
-            patch("rossum_agent.tools.knowledge_base.report_progress", side_effect=capture_progress),
-            patch("rossum_agent.tools.knowledge_base.report_text"),
+            patch("rossum_agent.tools.subagents.knowledge_base.create_bedrock_client") as mock_client,
+            patch("rossum_agent.tools.subagents.knowledge_base.report_progress", side_effect=capture_progress),
+            patch("rossum_agent.tools.subagents.knowledge_base.report_text"),
         ):
             mock_client.return_value.messages.create.return_value = mock_response
             _call_opus_for_web_search_analysis("test query", "search results")
@@ -215,7 +215,7 @@ class TestSearchAndAnalyzeKnowledgeBase:
 
     def test_no_results_found(self):
         """Test search with no results found."""
-        with patch("rossum_agent.tools.knowledge_base._search_knowledge_base", return_value=[]):
+        with patch("rossum_agent.tools.subagents.knowledge_base._search_knowledge_base", return_value=[]):
             result = _search_and_analyze_knowledge_base("nonexistent topic")
 
             parsed = json.loads(result)
@@ -228,9 +228,9 @@ class TestSearchAndAnalyzeKnowledgeBase:
         mock_results = [{"title": "Hook Config", "url": "https://kb.rossum.ai/hooks", "content": "Hook docs"}]
 
         with (
-            patch("rossum_agent.tools.knowledge_base._search_knowledge_base", return_value=mock_results),
+            patch("rossum_agent.tools.subagents.knowledge_base._search_knowledge_base", return_value=mock_results),
             patch(
-                "rossum_agent.tools.knowledge_base._call_opus_for_web_search_analysis",
+                "rossum_agent.tools.subagents.knowledge_base._call_opus_for_web_search_analysis",
                 return_value="Analyzed hook configuration info",
             ) as mock_opus,
         ):
@@ -261,7 +261,7 @@ class TestSearchKnowledgeBaseTool:
     def test_valid_query_calls_search_and_analyze(self):
         """Test that valid query calls _search_and_analyze_knowledge_base."""
         with patch(
-            "rossum_agent.tools.knowledge_base._search_and_analyze_knowledge_base",
+            "rossum_agent.tools.subagents.knowledge_base._search_and_analyze_knowledge_base",
             return_value='{"status": "success", "results": []}',
         ) as mock_search:
             result = search_knowledge_base("document splitting", user_query="How to split documents?")
@@ -280,7 +280,7 @@ class TestSearchKnowledgeBaseTool:
     def test_whitespace_only_query_is_accepted(self):
         """Test that whitespace-only query is passed through (not validated as empty)."""
         with patch(
-            "rossum_agent.tools.knowledge_base._search_and_analyze_knowledge_base",
+            "rossum_agent.tools.subagents.knowledge_base._search_and_analyze_knowledge_base",
             return_value='{"status": "no_results"}',
         ) as mock_search:
             search_knowledge_base("   ")
