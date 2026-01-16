@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Added `organization-setup` skill for new customer onboarding with template-based queue creation [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added `patch_schema_with_subagent` tool for safe schema patching with Opus sub-agent verification [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Added Rossum Local Copilot integration for formula field suggestions [#102](https://github.com/stancld/rossum-mcp/pull/102)
 
 ### Changed
 - Migrated default model from Sonnet 4.5 to Opus 4.5 with significantly simplified prompts [#99](https://github.com/stancld/rossum-mcp/pull/99)

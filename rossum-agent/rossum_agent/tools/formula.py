@@ -1,0 +1,194 @@
+"""Formula field suggestion tool for the Rossum Agent.
+
+This module provides a tool to get formula suggestions from Rossum's internal API
+for formula fields based on natural language descriptions.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import logging
+import os
+import re
+
+import httpx
+from anthropic import beta_tool
+
+logger = logging.getLogger(__name__)
+
+_SUGGEST_FORMULA_TIMEOUT = 60
+
+
+def _get_credentials() -> tuple[str, str]:
+    """Get Rossum API credentials from environment.
+
+    Returns:
+        Tuple of (api_base_url, api_token).
+    """
+    if not (api_base := os.getenv("ROSSUM_API_BASE_URL")):
+        raise ValueError("ROSSUM_API_BASE_URL environment variable is required")
+    if not (token := os.getenv("ROSSUM_API_TOKEN")):
+        raise ValueError("ROSSUM_API_TOKEN environment variable is required")
+
+    return api_base, token
+
+
+def _build_suggest_formula_url(api_base_url: str) -> str:
+    """Build the suggest_formula endpoint URL.
+
+    Uses the base URL directly (e.g., https://elis.rossum.ai/api/v1)
+    and appends the internal endpoint path.
+    """
+    return f"{api_base_url.rstrip('/')}/internal/schemas/suggest_formula"
+
+
+def _create_formula_field_definition(field_schema_id: str, label: str | None = None) -> dict:
+    """Create a properly structured formula field definition."""
+    return {
+        "id": field_schema_id,
+        "label": label or field_schema_id.replace("_", " ").title(),
+        "type": "string",
+        "category": "datapoint",
+        "can_export": True,
+        "constraints": {"required": False},
+        "disable_prediction": True,
+        "formula": "",
+        "hidden": False,
+        "rir_field_names": [],
+        "score_threshold": 0,
+        "suggest": True,
+        "ui_configuration": {"type": "formula", "edit": "disabled"},
+    }
+
+
+def _find_field_in_schema(nodes: list[dict], field_id: str) -> bool:
+    """Recursively search for a field ID in schema content."""
+    for node in nodes:
+        if node.get("id") == field_id:
+            return True
+        if "children" in node:
+            children = node["children"]
+            if isinstance(children, list) and _find_field_in_schema(children, field_id):
+                return True
+            if isinstance(children, dict) and _find_field_in_schema([children], field_id):
+                return True
+    return False
+
+
+def _inject_formula_field(
+    schema_content: list[dict], field_schema_id: str, section_id: str, label: str | None = None
+) -> list[dict]:
+    """Inject a formula field into the specified section of schema_content.
+
+    The suggest_formula API requires the target field to exist in schema_content.
+    """
+    if _find_field_in_schema(schema_content, field_schema_id):
+        return schema_content
+
+    modified = copy.deepcopy(schema_content)
+    formula_field = _create_formula_field_definition(field_schema_id, label)
+
+    for section in modified:
+        if section.get("id") == section_id and section.get("category") == "section":
+            section.setdefault("children", []).append(formula_field)
+            return modified
+
+    if modified and modified[0].get("category") == "section":
+        modified[0].setdefault("children", []).append(formula_field)
+    else:
+        modified.append(formula_field)
+
+    return modified
+
+
+@beta_tool
+def suggest_formula_field(
+    field_schema_id: str,
+    hint: str,
+    schema_content: list[dict],
+    section_id: str,
+    label: str | None = None,
+) -> str:
+    """Get AI-generated formula suggestions for a new formula field.
+
+    Args:
+        field_schema_id: ID for the formula field (e.g., 'net_terms').
+        hint: Natural language description of the formula logic.
+        schema_content: Schema content from get_schema MCP tool.
+        section_id: Section ID where the field belongs. Ask the user if not specified.
+        label: Optional display label. Defaults to title-cased field_schema_id.
+
+    Returns:
+        JSON with formula suggestion and field_definition for use with patch_schema.
+    """
+    logger.info(f"suggest_formula_field: {field_schema_id=}, {section_id=}, hint={hint[:100]}...")
+
+    try:
+        api_base_url, token = _get_credentials()
+        url = _build_suggest_formula_url(api_base_url)
+
+        enriched_schema = _inject_formula_field(schema_content, field_schema_id, section_id, label)
+
+        payload = {
+            "field_schema_id": field_schema_id,
+            "hint": hint,
+            "schema_content": enriched_schema,
+        }
+
+        logger.debug(f"Calling suggest_formula API: {url}")
+
+        with httpx.Client(timeout=_SUGGEST_FORMULA_TIMEOUT) as client:
+            response = client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            result = response.json()
+
+        suggestions = result.get("results", [])
+        if not suggestions:
+            return json.dumps(
+                {
+                    "status": "no_suggestions",
+                    "message": "No formula suggestions returned. Try rephrasing the hint.",
+                }
+            )
+
+        top_suggestion = suggestions[0]
+        formula = top_suggestion.get("formula", "")
+        summary = top_suggestion.get("summary", "")
+        if summary:
+            summary = _clean_html(summary)
+
+        field_definition = _create_formula_field_definition(field_schema_id, label)
+        field_definition["formula"] = formula
+
+        return json.dumps(
+            {
+                "status": "success",
+                "formula": formula,
+                "field_definition": field_definition,
+                "section_id": section_id,
+                "summary": summary,
+                "description": _clean_html(top_suggestion.get("description", "")),
+            }
+        )
+
+    except httpx.HTTPStatusError as e:
+        logger.exception("HTTP error in suggest_formula_field")
+        return json.dumps(
+            {
+                "status": "error",
+                "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}",
+            }
+        )
+    except Exception as e:
+        logger.exception("Error in suggest_formula_field")
+        return json.dumps({"status": "error", "error": str(e)})
+
+
+def _clean_html(text: str) -> str:
+    """Remove HTML tags from text (simple cleanup for display)."""
+    return re.sub(r"<[^>]+>", "", text)

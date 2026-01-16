@@ -37,6 +37,7 @@ from rossum_agent.tools.deploy import (
     get_workspace_credentials,
 )
 from rossum_agent.tools.file_tools import write_file
+from rossum_agent.tools.formula import suggest_formula_field
 from rossum_agent.tools.skills import load_skill
 from rossum_agent.tools.spawn_mcp import (
     SpawnedConnection,
@@ -65,6 +66,7 @@ INTERNAL_TOOLS: list[BetaTool[..., str]] = [
     evaluate_python_hook,
     debug_hook,
     patch_schema_with_subagent,
+    suggest_formula_field,
     load_skill,
     spawn_mcp_connection,
     call_on_connection,
@@ -147,5 +149,6 @@ __all__ = [
     "set_progress_callback",
     "set_text_callback",
     "spawn_mcp_connection",
+    "suggest_formula_field",
     "write_file",
 ]
