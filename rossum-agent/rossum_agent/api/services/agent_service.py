@@ -10,6 +10,7 @@ from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.memory import AgentMemory
 from rossum_agent.agent.models import AgentConfig, AgentStep, StepType
 from rossum_agent.api.models.schemas import (
+    DocumentContent,
     ImageContent,
     StepEvent,
     StreamDoneEvent,
@@ -177,6 +178,7 @@ class AgentService:
         mcp_mode: Literal["read-only", "read-write"] = "read-only",
         rossum_url: str | None = None,
         images: list[ImageContent] | None = None,
+        documents: list[DocumentContent] | None = None,
     ) -> AsyncIterator[StepEvent | StreamDoneEvent | SubAgentProgressEvent | SubAgentTextEvent]:
         """Run the agent with a new prompt.
 
@@ -190,11 +192,16 @@ class AgentService:
         logger.info(f"Starting agent run with {len(conversation_history)} history messages")
         if images:
             logger.info(f"Including {len(images)} images in the prompt")
+        if documents:
+            logger.info(f"Including {len(documents)} documents in the prompt")
 
         self._output_dir = create_session_output_dir()
         set_session_output_dir(self._output_dir)
         set_output_dir(self._output_dir)
         logger.info(f"Created session output directory: {self._output_dir}")
+
+        if documents:
+            self._save_documents_to_output_dir(documents)
 
         self._sub_agent_queue = asyncio.Queue(maxsize=100)
         set_progress_callback(self._on_sub_agent_progress)
@@ -224,7 +231,7 @@ class AgentService:
                 total_input_tokens = 0
                 total_output_tokens = 0
 
-                user_content = self._build_user_content(prompt, images)
+                user_content = self._build_user_content(prompt, images, documents)
 
                 try:
                     async for step in agent.run(user_content):
@@ -269,31 +276,60 @@ class AgentService:
             set_output_dir(None)
             self._sub_agent_queue = None
 
-    def _build_user_content(self, prompt: str, images: list[ImageContent] | None) -> UserContent:
-        """Build user content for the agent, optionally including images.
+    def _save_documents_to_output_dir(self, documents: list[DocumentContent]) -> None:
+        """Save uploaded documents to the output directory.
+
+        Args:
+            documents: List of documents to save.
+        """
+        import base64  # noqa: PLC0415 - import here to avoid circular import at module level
+
+        if self._output_dir is None:
+            logger.warning("Cannot save documents: output directory not set")
+            return
+
+        for doc in documents:
+            file_path = self._output_dir / doc.filename
+            try:
+                file_data = base64.b64decode(doc.data)
+                file_path.write_bytes(file_data)
+                logger.info(f"Saved document to {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to save document {doc.filename}: {e}")
+
+    def _build_user_content(
+        self, prompt: str, images: list[ImageContent] | None, documents: list[DocumentContent] | None = None
+    ) -> UserContent:
+        """Build user content for the agent, optionally including images and documents.
 
         Args:
             prompt: The user's text prompt.
             images: Optional list of images to include.
+            documents: Optional list of documents (paths are included in prompt).
 
         Returns:
             Either a plain string (text-only) or a list of content blocks (multimodal).
         """
-        if not images:
+        if not images and not documents:
             return prompt
 
         content: list[ImageBlockParam | TextBlockParam] = []
-        for img in images:
-            content.append(
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": img.media_type,
-                        "data": img.data,
-                    },
-                }
-            )
+        if images:
+            for img in images:
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": img.media_type,
+                            "data": img.data,
+                        },
+                    }
+                )
+        if documents and self._output_dir:
+            doc_paths = [str(self._output_dir / doc.filename) for doc in documents]
+            doc_info = "\n".join(f"- {path}" for path in doc_paths)
+            content.append({"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"})
         content.append({"type": "text", "text": prompt})
         return content
 
@@ -359,6 +395,7 @@ class AgentService:
         user_prompt: str,
         final_response: str | None,
         images: list[ImageContent] | None = None,
+        documents: list[DocumentContent] | None = None,
     ) -> list[dict[str, Any]]:
         """Build updated conversation history after agent execution.
 
@@ -370,6 +407,7 @@ class AgentService:
             user_prompt: The user's prompt that was just processed.
             final_response: The agent's final response, if any.
             images: Optional list of images included with the user prompt.
+            documents: Optional list of documents included with the user prompt.
         """
         if self._last_memory is not None:
             lean_history: list[dict[str, Any]] = []
@@ -394,6 +432,12 @@ class AgentService:
 
         updated = list(existing_history)
         user_content = self._build_user_content(user_prompt, images)
+        if documents:
+            doc_names = ", ".join(doc.filename for doc in documents)
+            if isinstance(user_content, str):
+                user_content = f"[Uploaded documents: {doc_names}]\n\n{user_content}"
+            else:
+                user_content.insert(0, {"type": "text", "text": f"[Uploaded documents: {doc_names}]"})
         updated.append({"role": "user", "content": user_content})
         if final_response:
             updated.append({"role": "assistant", "content": final_response})

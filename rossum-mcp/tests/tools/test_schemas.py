@@ -1462,6 +1462,157 @@ class TestPruneSchemaFields:
         assert sorted(result["remaining_fields"]) == ["header_section", "invoice_number"]
         mock_client._http_client.update.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_multivalue_when_tuple_removed(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that removing tuple also removes parent multivalue (no stub left)."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {
+                            "id": "line_items",
+                            "label": "Line Items",
+                            "category": "multivalue",
+                            "children": {
+                                "id": "line_item",
+                                "label": "Line Item",
+                                "category": "tuple",
+                                "children": [
+                                    {
+                                        "id": "item_desc",
+                                        "label": "Description",
+                                        "category": "datapoint",
+                                        "type": "string",
+                                    }
+                                ],
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_remove=["line_item"])
+
+        assert "line_item" in result["removed_fields"]
+        assert "line_items" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_multivalue_when_all_tuple_children_removed(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that removing all tuple children also removes multivalue."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {
+                            "id": "line_items",
+                            "label": "Line Items",
+                            "category": "multivalue",
+                            "children": {
+                                "id": "line_item",
+                                "label": "Line Item",
+                                "category": "tuple",
+                                "children": [
+                                    {
+                                        "id": "item_desc",
+                                        "label": "Description",
+                                        "category": "datapoint",
+                                        "type": "string",
+                                    },
+                                    {"id": "item_qty", "label": "Quantity", "category": "datapoint", "type": "number"},
+                                ],
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_remove=["item_desc", "item_qty"])
+
+        assert "item_desc" in result["removed_fields"]
+        assert "item_qty" in result["removed_fields"]
+        assert "line_item" in result["removed_fields"]
+        assert "line_items" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_empty_sections(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that sections with no remaining children are removed (API rejects empty sections)."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"}
+                    ],
+                },
+                {
+                    "id": "payment_section",
+                    "label": "Payment",
+                    "category": "section",
+                    "children": [
+                        {"id": "bank_account", "label": "Bank Account", "category": "datapoint", "type": "string"}
+                    ],
+                },
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["invoice_number"])
+
+        assert "bank_account" in result["removed_fields"]
+        assert "payment_section" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+        assert "header_section" in result["remaining_fields"]
+        assert "payment_section" not in result["remaining_fields"]
+
 
 @pytest.mark.unit
 class TestRemoveOperation:
@@ -1603,7 +1754,7 @@ class TestFieldPruning:
         assert parent_children[0]["id"] == "keep_field"
 
     def test_remove_fields_from_dict_children_inner_tuple(self) -> None:
-        """Test _remove_fields_from_content removes field from dict children (multivalue tuple)."""
+        """Test _remove_fields_from_content removes entire multivalue when tuple is removed."""
         content = [
             {
                 "id": "section1",
@@ -1628,10 +1779,8 @@ class TestFieldPruning:
         result, removed = _remove_fields_from_content(content, {"tuple1"})
 
         assert "tuple1" in removed
-        inner = result[0]["children"][0]["children"]
-        assert inner["id"] == ""
-        assert inner["category"] == "tuple"
-        assert inner["children"] == []
+        assert "multivalue1" in removed
+        assert result[0]["children"] == []
 
     def test_remove_fields_filters_inside_dict_children_nested(self) -> None:
         """Test _remove_fields_from_content filters children inside dict children's nested list."""

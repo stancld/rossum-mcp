@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- Added PDF document upload support for both REST API and Streamlit UI. Documents are stored in session output directory for agent use (e.g., upload to Rossum) [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
 - Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added `hook-debugging` skill for systematic hook debugging workflow [#73](https://github.com/stancld/rossum-mcp/pull/73)

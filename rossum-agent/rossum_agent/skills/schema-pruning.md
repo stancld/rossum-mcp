@@ -14,6 +14,7 @@ Returns `{removed_fields: [...], remaining_fields: [...]}`.
 
 - Specify leaf field IDs only
 - Parent containers (sections, multivalues, tuples) preserved automatically
+- Sections with no remaining children are removed automatically (API rejects empty sections)
 - Alternative: use `fields_to_remove` to remove specific fields instead
 
 ## Cross-Reference

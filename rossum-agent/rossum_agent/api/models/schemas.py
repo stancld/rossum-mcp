@@ -57,6 +57,24 @@ class ImageContent(BaseModel):
         return v
 
 
+class DocumentContent(BaseModel):
+    """Document content in a message."""
+
+    type: Literal["document"] = "document"
+    media_type: Literal["application/pdf"]
+    data: str = Field(..., description="Base64-encoded document data")
+    filename: str = Field(..., description="Original filename of the document")
+
+    @field_validator("data")
+    @classmethod
+    def validate_base64_size(cls, v: str) -> str:
+        max_size = 20 * 1024 * 1024  # 20 MB limit for base64 data
+        if len(v) > max_size * 4 // 3:
+            msg = "Document data exceeds maximum size of 20 MB"
+            raise ValueError(msg)
+        return v
+
+
 class TextContent(BaseModel):
     """Text content in a message."""
 
@@ -98,8 +116,9 @@ class DeleteResponse(BaseModel):
 class MessageRequest(BaseModel):
     """Request body for sending a message.
 
-    Supports text-only messages or multimodal messages with images.
+    Supports text-only messages or multimodal messages with images and documents.
     For image messages, use the `images` field with base64-encoded image data.
+    For document messages, use the `documents` field with base64-encoded PDF data.
     """
 
     content: str = Field(..., min_length=1, max_length=50000, description="Text content of the message")
@@ -107,6 +126,11 @@ class MessageRequest(BaseModel):
         default=None,
         max_length=5,
         description="Optional list of images (max 5) to include with the message",
+    )
+    documents: list[DocumentContent] | None = Field(
+        default=None,
+        max_length=5,
+        description="Optional list of PDF documents (max 5) to include with the message",
     )
     rossum_url: str | None = Field(default=None, description="Optional Rossum app URL for context")
 

@@ -113,11 +113,14 @@ def suggest_formula_field(
 ) -> str:
     """Get AI-generated formula suggestions for a new formula field.
 
+    IMPORTANT: First call get_schema MCP tool to retrieve the full schema content,
+    then pass the complete 'content' array from that response to schema_content.
+
     Args:
         label: Display label for the field (e.g., 'Net Terms').
         hint: Natural language description of the formula logic.
-        schema_content: **Complete** schema content from get_schema MCP tool.
-            Must include all fields - the API needs full context to generate valid formulas.
+        schema_content: The FULL 'content' array from get_schema MCP tool response.
+            Do NOT summarize or omit fields - pass the entire array as-is.
         section_id: Section ID where the field belongs. Ask the user if not specified.
         field_schema_id: Optional ID for the formula field. Defaults to label.lower().replace(" ", "_").
 
@@ -142,6 +145,7 @@ def suggest_formula_field(
         }
 
         logger.debug(f"Calling suggest_formula API: {url}")
+        logger.debug(f"suggest_formula payload: {json.dumps(payload, indent=2)}")
 
         with httpx.Client(timeout=_SUGGEST_FORMULA_TIMEOUT) as client:
             response = client.post(

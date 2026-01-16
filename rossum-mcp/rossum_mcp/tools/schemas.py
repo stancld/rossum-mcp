@@ -553,11 +553,16 @@ def _remove_fields_from_content(content: list[dict], fields_to_remove: set[str])
                     nested_id = nested.get("id", "")
                     if nested_id in fields_to_remove:
                         removed.append(nested_id)
-                        child["children"] = {"id": "", "label": "", "category": "tuple", "children": []}
-                    else:
-                        nested_children = nested.get("children")
-                        if isinstance(nested_children, list):
-                            nested["children"] = _filter_children(nested_children)
+                        removed.append(child_id)
+                        continue
+                    nested_children = nested.get("children")
+                    if isinstance(nested_children, list):
+                        filtered_nested = _filter_children(nested_children)
+                        if not filtered_nested:
+                            removed.append(nested_id)
+                            removed.append(child_id)
+                            continue
+                        nested["children"] = filtered_nested
             result.append(child)
         return result
 
@@ -565,6 +570,11 @@ def _remove_fields_from_content(content: list[dict], fields_to_remove: set[str])
         section_children = section.get("children")
         if isinstance(section_children, list):
             section["children"] = _filter_children(section_children)
+
+    # Remove sections with empty children (API rejects empty sections)
+    removed_sections = [s.get("id", "") for s in content if not s.get("children")]
+    removed.extend(removed_sections)
+    content = [s for s in content if s.get("children")]
 
     return content, removed
 
@@ -627,7 +637,12 @@ async def _patch_schema(
 
     node_data_dict: dict | None = None
     if node_data is not None:
-        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else asdict(node_data)
+        if isinstance(node_data, dict):
+            node_data_dict = node_data
+        elif hasattr(node_data, "to_dict"):
+            node_data_dict = node_data.to_dict()
+        else:
+            node_data_dict = asdict(node_data)
 
     current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
     content_list = current_schema.get("content", [])
