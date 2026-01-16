@@ -30,7 +30,11 @@ Regional variants: `AP&R {Region} Demo Template`, `Tax Invoice {Region} Demo Tem
 
 ## Schema Customization
 
-**Load `schema-patching` skill first** - schema modification is complex and error-prone.
+**Load `schema-pruning` skill** for bulk field removal, **`schema-patching` skill** for adding fields.
+
+### Schema Pruning
+
+Use `prune_schema_fields(schema_id, fields_to_keep=[...])` to remove unwanted fields in one call. Specify leaf field IDs only—parent containers (sections, multivalues, tuples) are preserved automatically. Alternatively, use `fields_to_remove` parameter to remove specific fields instead.
 
 | Field status | Action |
 |--------------|--------|

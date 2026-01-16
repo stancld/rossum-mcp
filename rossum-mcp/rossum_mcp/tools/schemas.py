@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import copy
 import logging
-from dataclasses import asdict, dataclass, replace
-from typing import TYPE_CHECKING, Literal
+from dataclasses import asdict, dataclass, is_dataclass, replace
+from typing import TYPE_CHECKING, Any, Literal
 
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.schema import Schema
@@ -432,9 +432,146 @@ async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
     return schema
 
 
+@dataclass
+class SchemaTreeNode:
+    """Lightweight schema node for tree structure display."""
+
+    id: str
+    label: str
+    category: str
+    type: str | None = None
+    children: list[SchemaTreeNode] | None = None
+
+    def to_dict(self) -> dict:
+        """Convert to dict, excluding None values."""
+        result: dict = {"id": self.id, "label": self.label, "category": self.category}
+        if self.type:
+            result["type"] = self.type
+        if self.children:
+            result["children"] = [child.to_dict() for child in self.children]
+        return result
+
+
+def _build_tree_node(node: dict) -> SchemaTreeNode:
+    """Build a lightweight tree node from a schema node."""
+    category = node.get("category", "")
+    node_id = node.get("id", "")
+    label = node.get("label", "")
+    node_type = node.get("type") if category == "datapoint" else None
+
+    children_data = node.get("children")
+    children: list[SchemaTreeNode] | None = None
+
+    if children_data is not None:
+        if isinstance(children_data, list):
+            children = [_build_tree_node(child) for child in children_data]
+        elif isinstance(children_data, dict):
+            children = [_build_tree_node(children_data)]
+
+    return SchemaTreeNode(id=node_id, label=label, category=category, type=node_type, children=children)
+
+
+def _extract_schema_tree(content: list[dict]) -> list[dict]:
+    """Extract lightweight tree structure from schema content."""
+    return [_build_tree_node(section).to_dict() for section in content]
+
+
+def _collect_all_field_ids(content: list[dict]) -> set[str]:
+    """Collect all field IDs from schema content recursively."""
+    ids: set[str] = set()
+
+    def _traverse(node: dict) -> None:
+        node_id = node.get("id")
+        if node_id:
+            ids.add(node_id)
+        children = node.get("children")
+        if children is not None:
+            if isinstance(children, list):
+                for child in children:
+                    _traverse(child)
+            elif isinstance(children, dict):
+                _traverse(children)
+
+    for section in content:
+        _traverse(section)
+
+    return ids
+
+
+def _collect_ancestor_ids(content: list[dict], target_ids: set[str]) -> set[str]:
+    """Collect all ancestor IDs for the given target field IDs.
+
+    Returns set of IDs for all parent containers (multivalue, tuple, section) of target fields.
+    """
+    ancestors: set[str] = set()
+
+    def _find_ancestors(node: dict, path: list[str]) -> None:
+        node_id = node.get("id", "")
+        current_path = [*path, node_id] if node_id else path
+
+        if node_id in target_ids:
+            ancestors.update(current_path[:-1])
+
+        children = node.get("children")
+        if children is not None:
+            if isinstance(children, list):
+                for child in children:
+                    _find_ancestors(child, current_path)
+            elif isinstance(children, dict):
+                _find_ancestors(children, current_path)
+
+    for section in content:
+        _find_ancestors(section, [])
+
+    return ancestors
+
+
+def _remove_fields_from_content(content: list[dict], fields_to_remove: set[str]) -> tuple[list[dict], list[str]]:
+    """Remove multiple fields from schema content.
+
+    Returns (modified_content, list_of_removed_field_ids).
+    Sections cannot be removed.
+    """
+    content = copy.deepcopy(content)
+    removed: list[str] = []
+
+    def _filter_children(children: list[dict]) -> list[dict]:
+        result = []
+        for child in children:
+            child_id = child.get("id", "")
+            category = child.get("category", "")
+
+            if child_id in fields_to_remove and category != "section":
+                removed.append(child_id)
+                continue
+
+            nested = child.get("children")
+            if nested is not None:
+                if isinstance(nested, list):
+                    child["children"] = _filter_children(nested)
+                elif isinstance(nested, dict):
+                    nested_id = nested.get("id", "")
+                    if nested_id in fields_to_remove:
+                        removed.append(nested_id)
+                        child["children"] = {"id": "", "label": "", "category": "tuple", "children": []}
+                    else:
+                        nested_children = nested.get("children")
+                        if isinstance(nested_children, list):
+                            nested["children"] = _filter_children(nested_children)
+            result.append(child)
+        return result
+
+    for section in content:
+        section_children = section.get("children")
+        if isinstance(section_children, list):
+            section["children"] = _filter_children(section_children)
+
+    return content, removed
+
+
 def _truncate_schema_for_list(schema: Schema) -> Schema:
     """Truncate content field in schema to save context in list responses."""
-    return replace(schema, content=TRUNCATED_MARKER)  # type: ignore[arg-type]
+    return replace(schema, content=TRUNCATED_MARKER)
 
 
 async def _list_schemas(
@@ -490,7 +627,7 @@ async def _patch_schema(
 
     node_data_dict: dict | None = None
     if node_data is not None:
-        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else dict(node_data)
+        node_data_dict = node_data.to_dict() if hasattr(node_data, "to_dict") else asdict(node_data)
 
     current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
     content_list = current_schema.get("content", [])
@@ -512,6 +649,55 @@ async def _patch_schema(
     await client._http_client.update(Resource.Schema, schema_id, {"content": patched_content})
     updated_schema: Schema = await client.retrieve_schema(schema_id)
     return updated_schema
+
+
+async def _get_schema_tree_structure(client: AsyncRossumAPIClient, schema_id: int) -> list[dict]:
+    schema = await _get_schema(client, schema_id)
+    content_dicts: list[dict[str, Any]] = [
+        asdict(section) if is_dataclass(section) else dict(section)  # type: ignore[arg-type]
+        for section in schema.content
+    ]
+    return _extract_schema_tree(content_dicts)
+
+
+async def _prune_schema_fields(
+    client: AsyncRossumAPIClient,
+    schema_id: int,
+    fields_to_keep: list[str] | None = None,
+    fields_to_remove: list[str] | None = None,
+) -> dict:
+    if not is_read_write_mode():
+        return {"error": "prune_schema_fields is not available in read-only mode"}
+
+    if fields_to_keep and fields_to_remove:
+        return {"error": "Specify fields_to_keep OR fields_to_remove, not both"}
+    if not fields_to_keep and not fields_to_remove:
+        return {"error": "Must specify fields_to_keep or fields_to_remove"}
+
+    current_schema: dict = await client._http_client.request_json("GET", f"schemas/{schema_id}")
+    content = current_schema.get("content", [])
+    if not isinstance(content, list):
+        return {"error": "Unexpected schema content format"}
+    all_ids = _collect_all_field_ids(content)
+
+    section_ids = {s.get("id") for s in content if s.get("category") == "section"}
+
+    if fields_to_keep:
+        fields_to_keep_set = set(fields_to_keep) | section_ids
+        ancestor_ids = _collect_ancestor_ids(content, fields_to_keep_set)
+        fields_to_keep_set |= ancestor_ids
+        remove_set = all_ids - fields_to_keep_set
+    else:
+        remove_set = set(fields_to_remove) - section_ids  # type: ignore[arg-type]
+
+    if not remove_set:
+        return {"removed_fields": [], "remaining_fields": sorted(all_ids)}
+
+    pruned_content, removed = _remove_fields_from_content(content, remove_set)
+    await client._http_client.update(Resource.Schema, schema_id, {"content": pruned_content})
+
+    remaining_ids = _collect_all_field_ids(pruned_content)
+    return {"removed_fields": sorted(removed), "remaining_fields": sorted(remaining_ids)}
 
 
 def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
@@ -558,3 +744,23 @@ Important: Datapoints inside a tuple MUST have an "id" field. Section-level data
         position: int | None = None,
     ) -> Schema | dict:
         return await _patch_schema(client, schema_id, operation, node_id, node_data, parent_id, position)
+
+    @mcp.tool(description="Get lightweight tree structure of schema with only ids, labels, categories, and types.")
+    async def get_schema_tree_structure(schema_id: int) -> list[dict]:
+        return await _get_schema_tree_structure(client, schema_id)
+
+    @mcp.tool(
+        description="""Remove multiple fields from schema at once. Efficient for pruning unwanted fields during setup.
+
+Use fields_to_keep OR fields_to_remove (not both):
+- fields_to_keep: Keep only these field IDs (plus sections). All others removed.
+- fields_to_remove: Remove these specific field IDs.
+
+Returns dict with removed_fields and remaining_fields lists. Sections cannot be removed."""
+    )
+    async def prune_schema_fields(
+        schema_id: int,
+        fields_to_keep: list[str] | None = None,
+        fields_to_remove: list[str] | None = None,
+    ) -> dict:
+        return await _prune_schema_fields(client, schema_id, fields_to_keep, fields_to_remove)

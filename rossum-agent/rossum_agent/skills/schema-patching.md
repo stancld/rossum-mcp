@@ -1,22 +1,14 @@
 # Schema Patching Skill
 
-**Goal**: Modify document schemas safely with validation and error recovery.
+**Goal**: Add, update, or remove individual schema fields.
 
-## Usage
+## Tool
 
-**Use `patch_schema_with_subagent` tool** for all schema modifications.
-
-```json
-patch_schema_with_subagent(
-  schema_id="12345",
-  changes='[{"action": "add", "id": "invoice_number", "parent_section": "header_section", "type": "string", "label": "Invoice Number"}]'
-)
+```
+patch_schema_with_subagent(schema_id="12345", changes='[{"action": "add", "id": "invoice_number", "parent_section": "header_section", "type": "string", "label": "Invoice Number"}]')
 ```
 
-The sub-agent:
-- Fetches schema, applies changes one at a time (max 3 before re-fetching)
-- Verifies only requested fields are present after patching
-- Returns summary of changes made
+Sub-agent handles fetching, applying, and verifying changes.
 
 ## Changes Format
 

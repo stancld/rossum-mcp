@@ -6,7 +6,6 @@ and an Opus sub-agent for iterative debugging.
 
 from __future__ import annotations
 
-import asyncio
 import builtins
 import collections
 import datetime as dt
@@ -33,8 +32,6 @@ from anthropic import beta_tool
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.tools.core import (
     SubAgentProgress,
-    get_mcp_connection,
-    get_mcp_event_loop,
     get_output_dir,
     report_progress,
 )
@@ -44,6 +41,7 @@ from rossum_agent.tools.subagents.knowledge_base import (
     _call_opus_for_web_search_analysis,
     search_knowledge_base,
 )
+from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool
 
 logger = logging.getLogger(__name__)
 
@@ -122,20 +120,6 @@ def _extract_and_analyze_web_search_results(block: Any, iteration: int, max_iter
         "tool_use_id": block.id,
         "content": f"Analyzed Rossum Knowledge Base search results:\n\n{analyzed_results}",
     }
-
-
-def _call_mcp_tool(name: str, arguments: dict[str, Any]) -> Any:
-    """Call an MCP tool synchronously from within a thread.
-
-    This uses run_coroutine_threadsafe to call async MCP tools from sync context.
-    """
-    mcp_connection = get_mcp_connection()
-    mcp_event_loop = get_mcp_event_loop()
-    if mcp_connection is None or mcp_event_loop is None:
-        raise RuntimeError("MCP connection not set. Call set_mcp_connection first.")
-
-    future = asyncio.run_coroutine_threadsafe(mcp_connection.call_tool(name, arguments), mcp_event_loop)
-    return future.result(timeout=60)
 
 
 _ALLOWED_BUILTIN_NAMES = {
@@ -424,7 +408,7 @@ def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
         kb_result: str = search_knowledge_base(query)
         return kb_result
     if tool_name in ("get_hook", "get_annotation", "get_schema"):
-        mcp_result = _call_mcp_tool(tool_name, tool_input)
+        mcp_result = call_mcp_tool(tool_name, tool_input)
         return json.dumps(mcp_result, indent=2, default=str) if mcp_result else "No data returned"
     return f"Unknown tool: {tool_name}"
 

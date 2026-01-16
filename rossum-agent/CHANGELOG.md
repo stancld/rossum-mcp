@@ -16,7 +16,9 @@ All notable changes to this project will be documented in this file.
 - Added logging for deploy tools usage [#73](https://github.com/stancld/rossum-mcp/pull/73)
 - Added extended thinking support with configurable budget (default 10k tokens) for improved reasoning [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Added `organization-setup` skill for new customer onboarding with template-based queue creation [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Added `schema-pruning` skill for efficient removal of unwanted schema fields [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added `patch_schema_with_subagent` tool for safe schema patching with Opus sub-agent verification [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Added MCP helpers module for shared sub-agent utilities [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added Rossum Local Copilot integration for formula field suggestions [#102](https://github.com/stancld/rossum-mcp/pull/102)
 
 ### Changed

@@ -363,7 +363,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_hook(self):
         """Test calls call_mcp_tool for get_hook tool."""
         with patch(
-            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug.call_mcp_tool",
             return_value={"id": "123", "config": {"code": "def handler(p): pass"}},
         ) as mock:
             result = _execute_opus_tool("get_hook", {"hook_id": "123"})
@@ -375,7 +375,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_annotation(self):
         """Test calls call_mcp_tool for get_annotation tool."""
         with patch(
-            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug.call_mcp_tool",
             return_value={"id": "456", "content": []},
         ) as mock:
             result = _execute_opus_tool("get_annotation", {"annotation_id": "456"})
@@ -386,7 +386,7 @@ class TestExecuteOpusTool:
     def test_calls_call_mcp_tool_for_get_schema(self):
         """Test calls call_mcp_tool for get_schema tool."""
         with patch(
-            "rossum_agent.tools.subagents.hook_debug._call_mcp_tool",
+            "rossum_agent.tools.subagents.hook_debug.call_mcp_tool",
             return_value={"id": "789", "content": []},
         ) as mock:
             result = _execute_opus_tool("get_schema", {"schema_id": "789"})
@@ -396,7 +396,7 @@ class TestExecuteOpusTool:
 
     def test_returns_no_data_when_mcp_tool_returns_none(self):
         """Test returns 'No data returned' when call_mcp_tool returns None."""
-        with patch("rossum_agent.tools.subagents.hook_debug._call_mcp_tool", return_value=None):
+        with patch("rossum_agent.tools.subagents.hook_debug.call_mcp_tool", return_value=None):
             result = _execute_opus_tool("get_hook", {"hook_id": "123"})
 
             assert result == "No data returned"

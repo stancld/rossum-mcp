@@ -39,6 +39,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **list_queues**: List all queues with optional filtering by workspace or name
 - **get_schema**: Retrieve schema details and content
 - **list_schemas**: List all schemas with optional filtering by name or queue
+- **get_schema_tree_structure**: Get lightweight tree view of schema with only ids, labels, categories, and types
 - **get_queue_schema**: Retrieve complete schema for a queue in a single call
 - **get_queue_engine**: Retrieve engine information for a queue
 - **create_queue**: Create a new queue with schema and optional engine assignment
@@ -46,6 +47,7 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **update_queue**: Update queue settings including automation thresholds
 - **update_schema**: Update schema with field-level automation thresholds
 - **patch_schema**: Add, update, or remove individual schema nodes without replacing entire content
+- **prune_schema_fields**: Efficiently remove multiple fields from schema at once (for organization setup)
 
 ### Workspace Management
 - **get_workspace**: Retrieve workspace details by ID

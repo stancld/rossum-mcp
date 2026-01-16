@@ -31,9 +31,15 @@
 | Validate `schema_id` exists | Check queue schema before adding |
 | Preserve column order | Unless explicitly reordering |
 
+## Default Columns
+
+These columns are always present in the UI by default. To hide them, set `visible: false` explicitly—omitting them from the list does NOT hide them:
+
+`deleted_at`, `labels`, `created_at`, `modified_at`, `modified_by`, `deleted_by`, `rejected_at`, `rejected_by`, `confirmed_at`, `confirmed_by`, `exported_at`, `export_failed_at`, `exported_by`
+
 ## Column List Behavior
 
 | User Request | Action |
 |--------------|--------|
 | "Add column X" | Keep existing columns, append new |
-| Provides full list | Use ONLY listed columns, discard unlisted |
+| Provides full list | Include listed columns with `visible: true`, set unlisted default columns to `visible: false` |
