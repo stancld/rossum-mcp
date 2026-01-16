@@ -1780,7 +1780,8 @@ class TestFieldPruning:
 
         assert "tuple1" in removed
         assert "multivalue1" in removed
-        assert result[0]["children"] == []
+        assert "section1" in removed
+        assert result == []
 
     def test_remove_fields_filters_inside_dict_children_nested(self) -> None:
         """Test _remove_fields_from_content filters children inside dict children's nested list."""
