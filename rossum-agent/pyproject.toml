@@ -103,6 +103,12 @@ rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat
 rossum-deploy = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-deploy" }
 rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
 
+[tool.pytest.ini_options]
+markers = [
+    "smoke: smoke tests requiring real API credentials (ROSSUM_API_TOKEN, ROSSUM_API_BASE_URL)"
+]
+asyncio_mode = "auto"
+
 [tool.setuptools.packages.find]
 include = ["rossum_mcp*", "rossum_agent*", "rossum_deploy*"]
 
