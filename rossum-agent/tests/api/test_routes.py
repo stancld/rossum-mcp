@@ -83,19 +83,34 @@ class TestCreateChatEndpoint:
         assert "created_at" in data
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_create_chat_always_uses_read_write_mode(self, mock_httpx, client, mock_chat_service, valid_headers):
-        """Test creating a chat always uses read-write mode regardless of request."""
+    def test_create_chat_respects_mcp_mode_from_request(self, mock_httpx, client, mock_chat_service, valid_headers):
+        """Test creating a chat respects mcp_mode from request body."""
         mock_httpx.return_value = create_mock_httpx_client()
 
         now = datetime.now(UTC)
         mock_chat_service.create_chat.return_value = ChatResponse(chat_id="chat_123", created_at=now)
 
-        response = client.post("/api/v1/chats", headers=valid_headers, json={"mcp_mode": "read-only"})
+        response = client.post("/api/v1/chats", headers=valid_headers, json={"mcp_mode": "read-write"})
 
         assert response.status_code == 201
         mock_chat_service.create_chat.assert_called_once()
         call_kwargs = mock_chat_service.create_chat.call_args
         assert call_kwargs.kwargs["mcp_mode"] == "read-write"
+
+    @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
+    def test_create_chat_defaults_to_read_only_mode(self, mock_httpx, client, mock_chat_service, valid_headers):
+        """Test creating a chat defaults to read-only mode when not specified."""
+        mock_httpx.return_value = create_mock_httpx_client()
+
+        now = datetime.now(UTC)
+        mock_chat_service.create_chat.return_value = ChatResponse(chat_id="chat_123", created_at=now)
+
+        response = client.post("/api/v1/chats", headers=valid_headers)
+
+        assert response.status_code == 201
+        mock_chat_service.create_chat.assert_called_once()
+        call_kwargs = mock_chat_service.create_chat.call_args
+        assert call_kwargs.kwargs["mcp_mode"] == "read-only"
 
     def test_create_chat_missing_token(self, client, mock_chat_service):
         """Test creating a chat without token."""
