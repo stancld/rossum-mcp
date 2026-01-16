@@ -419,20 +419,22 @@ class TestBuildAgentPrompt:
             yield mock_st
 
     def test_returns_string_when_no_images(self, mock_streamlit):
-        """Test string prompt is returned when no images."""
-        result, num_images = _build_agent_prompt("Hello agent", [])
+        """Test string prompt is returned when no images or documents."""
+        result, num_images, num_documents = _build_agent_prompt("Hello agent", [], [])
 
         assert result == "Hello agent"
         assert num_images == 0
+        assert num_documents == 0
 
     def test_returns_content_blocks_with_images(self, mock_streamlit):
         """Test content blocks are returned when images are present."""
         images = [{"media_type": "image/png", "data": "base64data", "name": "test.png"}]
 
-        result, num_images = _build_agent_prompt("Describe this", images)
+        result, num_images, num_documents = _build_agent_prompt("Describe this", images, [])
 
         assert isinstance(result, list)
         assert num_images == 1
+        assert num_documents == 0
         assert len(result) == 2
         assert result[0]["type"] == "image"
         assert result[1]["type"] == "text"
@@ -442,8 +444,9 @@ class TestBuildAgentPrompt:
         mock_streamlit.session_state["uploaded_images"] = [
             {"media_type": "image/png", "data": "data", "name": "t.png"}
         ]
+        mock_streamlit.session_state["uploaded_documents"] = []
 
-        _build_agent_prompt("Test", mock_streamlit.session_state["uploaded_images"])
+        _build_agent_prompt("Test", mock_streamlit.session_state["uploaded_images"], [])
 
         assert mock_streamlit.session_state["uploaded_images"] == []
 

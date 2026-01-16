@@ -143,6 +143,8 @@ def _initialize_chat_id() -> None:
                     del st.session_state[key]
             if "uploaded_images" in st.session_state:
                 st.session_state.uploaded_images = []
+            if "uploaded_documents" in st.session_state:
+                st.session_state.uploaded_documents = []
             if "uploader_key_counter" in st.session_state:
                 st.session_state.uploader_key_counter += 1
             logger.info(f"Loaded chat ID from URL: {url_chat_id}, shared_user_id: {url_shared_user_id}")
@@ -182,6 +184,9 @@ def _initialize_session_defaults() -> None:
 
     if "uploaded_images" not in st.session_state:
         st.session_state.uploaded_images = []
+
+    if "uploaded_documents" not in st.session_state:
+        st.session_state.uploaded_documents = []
 
     if "uploader_key_counter" not in st.session_state:
         st.session_state.uploader_key_counter = 0
@@ -254,6 +259,23 @@ def _render_credentials_section() -> None:
         if st.button("Update Credentials"):
             st.session_state.credentials_saved = False
             st.rerun()
+
+    if os.getenv("DEBUG"):
+        st.markdown("---")
+        st.subheader("MCP Mode")
+        mode_options = ["read-only", "read-write"]
+        current_index = (
+            mode_options.index(st.session_state.mcp_mode) if st.session_state.mcp_mode in mode_options else 0
+        )
+        selected_mode = st.radio(
+            "Select mode:",
+            options=mode_options,
+            index=current_index,
+            horizontal=True,
+            disabled=st.session_state.read_write_disabled,
+        )
+        if selected_mode != st.session_state.mcp_mode:
+            st.session_state.mcp_mode = selected_mode
 
 
 def _render_url_context_section() -> None:
@@ -353,13 +375,15 @@ def _render_sidebar() -> dict[str, float]:
     return generated_files_metadata
 
 
-def _build_agent_prompt(prompt: str, uploaded_images: list[dict]) -> tuple[UserContent, int]:
-    """Build agent prompt from text and optional images.
+def _build_agent_prompt(
+    prompt: str, uploaded_images: list[dict], uploaded_documents: list[dict]
+) -> tuple[UserContent, int, int]:
+    """Build agent prompt from text and optional images/documents.
 
     Returns:
-        Tuple of (agent_prompt, num_images)
+        Tuple of (agent_prompt, num_images, num_documents)
     """
-    if uploaded_images:
+    if uploaded_images or uploaded_documents:
         content_blocks: list[ImageBlockParam | TextBlockParam] = []
         for img_data in uploaded_images:
             content_blocks.append(
@@ -368,47 +392,87 @@ def _build_agent_prompt(prompt: str, uploaded_images: list[dict]) -> tuple[UserC
                     "source": {"type": "base64", "media_type": img_data["media_type"], "data": img_data["data"]},
                 }
             )
+        if uploaded_documents:
+            output_dir = st.session_state.output_dir
+            doc_paths = [str(output_dir / doc["name"]) for doc in uploaded_documents]
+            doc_info = "\n".join(f"- {path}" for path in doc_paths)
+            content_blocks.append(
+                {"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"}
+            )
         content_blocks.append({"type": "text", "text": prompt})
         st.session_state.uploaded_images = []
-        return content_blocks, len(uploaded_images)
-    return prompt, 0
+        st.session_state.uploaded_documents = []
+        return content_blocks, len(uploaded_images), len(uploaded_documents)
+    return prompt, 0, 0
 
 
-def _render_image_upload() -> None:
-    """Render image upload section."""
+def _render_file_upload() -> None:
+    """Render file upload section for images and PDFs."""
     col1, col2 = st.columns([1, 15])
     with col1:
-        with st.popover("+", help="Attach images"):
+        with st.popover("+", help="Attach files"):
             uploaded_files = st.file_uploader(
-                "Upload images",
-                type=["png", "jpg", "jpeg", "gif", "webp"],
+                "Upload files",
+                type=["png", "jpg", "jpeg", "gif", "webp", "pdf"],
                 accept_multiple_files=True,
-                key=f"image_uploader_{st.session_state.uploader_key_counter}",
+                key=f"file_uploader_{st.session_state.uploader_key_counter}",
                 label_visibility="collapsed",
             )
             if uploaded_files:
                 st.session_state.uploaded_images = []
-                for uploaded_file in uploaded_files[:5]:
+                st.session_state.uploaded_documents = []
+                image_count = 0
+                doc_count = 0
+                for uploaded_file in uploaded_files:
                     file_bytes = uploaded_file.read()
                     b64_data = base64.b64encode(file_bytes).decode("utf-8")
-                    mime_type = uploaded_file.type or "image/png"
-                    st.session_state.uploaded_images.append(
-                        {"name": uploaded_file.name, "media_type": mime_type, "data": b64_data}
-                    )
+                    mime_type = uploaded_file.type or ""
+                    if mime_type == "application/pdf" and doc_count < 5:
+                        st.session_state.uploaded_documents.append(
+                            {"name": uploaded_file.name, "media_type": mime_type, "data": b64_data}
+                        )
+                        doc_count += 1
+                    elif mime_type.startswith("image/") and image_count < 5:
+                        st.session_state.uploaded_images.append(
+                            {"name": uploaded_file.name, "media_type": mime_type, "data": b64_data}
+                        )
+                        image_count += 1
                     uploaded_file.seek(0)
-                if len(uploaded_files) > 5:
-                    st.warning("Max 5 images allowed. Only first 5 will be used.")
+                if image_count >= 5 or doc_count >= 5:
+                    st.warning("Max 5 files per type allowed.")
 
     with col2:
-        if st.session_state.uploaded_images:
-            thumb_cols = st.columns(len(st.session_state.uploaded_images) + 1)
-            for idx, img_data in enumerate(st.session_state.uploaded_images):
-                with thumb_cols[idx]:
+        has_uploads = st.session_state.uploaded_images or st.session_state.uploaded_documents
+        if has_uploads:
+            total_items = len(st.session_state.uploaded_images) + len(st.session_state.uploaded_documents) + 1
+            thumb_cols = st.columns(total_items)
+            col_idx = 0
+            for img_data in st.session_state.uploaded_images:
+                with thumb_cols[col_idx]:
                     st.image(f"data:{img_data['media_type']};base64,{img_data['data']}", width=50)
+                col_idx += 1
+            for doc_data in st.session_state.uploaded_documents:
+                with thumb_cols[col_idx]:
+                    st.markdown(f"📄 {doc_data['name'][:10]}...")
+                col_idx += 1
             with thumb_cols[-1]:
-                if st.button("✕", key="clear_images", help="Clear images"):
+                if st.button("✕", key="clear_files", help="Clear files"):
                     st.session_state.uploaded_images = []
+                    st.session_state.uploaded_documents = []
                     st.rerun()
+
+
+def _save_documents_to_output_dir(uploaded_documents: list[dict]) -> None:
+    """Save uploaded documents to the output directory."""
+    output_dir = st.session_state.output_dir
+    for doc in uploaded_documents:
+        file_path = output_dir / doc["name"]
+        try:
+            file_data = base64.b64decode(doc["data"])
+            file_path.write_bytes(file_data)
+            logger.info(f"Saved document to {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save document {doc['name']}: {e}")
 
 
 def _process_user_input(generated_files_metadata: dict[str, float]) -> None:
@@ -420,9 +484,19 @@ def _process_user_input(generated_files_metadata: dict[str, float]) -> None:
     logger.info(f"User prompt received: {prompt[:100]}...")
 
     uploaded_images = st.session_state.uploaded_images
-    agent_prompt, num_images = _build_agent_prompt(prompt, uploaded_images)
+    uploaded_documents = st.session_state.uploaded_documents
 
-    display_content = f"[{num_images} image(s) attached]\n\n{prompt}" if num_images > 0 else prompt
+    if uploaded_documents:
+        _save_documents_to_output_dir(uploaded_documents)
+
+    agent_prompt, num_images, num_documents = _build_agent_prompt(prompt, uploaded_images, uploaded_documents)
+
+    attachment_parts = []
+    if num_images > 0:
+        attachment_parts.append(f"{num_images} image(s)")
+    if num_documents > 0:
+        attachment_parts.append(f"{num_documents} document(s)")
+    display_content = f"[{', '.join(attachment_parts)} attached]\n\n{prompt}" if attachment_parts else prompt
     st.session_state.messages.append({"role": "user", "content": display_content})
 
     if st.session_state.redis_storage.is_connected():
@@ -435,11 +509,15 @@ def _process_user_input(generated_files_metadata: dict[str, float]) -> None:
         st.markdown(display_content)
 
     with st.chat_message("assistant"):
-        _run_agent_and_display(prompt, agent_prompt, num_images, generated_files_metadata)
+        _run_agent_and_display(prompt, agent_prompt, num_images, num_documents, generated_files_metadata)
 
 
 def _run_agent_and_display(
-    prompt: str, agent_prompt: UserContent, num_images: int, generated_files_metadata: dict[str, float]
+    prompt: str,
+    agent_prompt: UserContent,
+    num_images: int,
+    num_documents: int,
+    generated_files_metadata: dict[str, float],
 ) -> None:
     """Run the agent and display results."""
     final_answer_text = None
@@ -467,6 +545,7 @@ def _run_agent_and_display(
             f"Agent input context:\n"
             f"  - Prompt: {prompt[:500]}{'...' if len(prompt) > 500 else ''}\n"
             f"  - Num images: {num_images}\n"
+            f"  - Num documents: {num_documents}\n"
             f"  - Conversation history length: {len(conversation_history)}\n"
             f"  - MCP mode: {mcp_mode}\n"
             f"  - Rossum URL context: {st.session_state.rossum_url_context.raw_url}"
@@ -557,7 +636,7 @@ def main() -> None:
         st.chat_input("👈 Please enter your Rossum API credentials in the sidebar", disabled=True)
         return
 
-    _render_image_upload()
+    _render_file_upload()
     _process_user_input(generated_files_metadata)
 
 

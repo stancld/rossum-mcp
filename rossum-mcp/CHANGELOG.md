@@ -5,9 +5,18 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
+- Added `get_email_template` tool for retrieving a single email template by ID
+- Added `list_email_templates` tool for listing email templates with optional filtering by queue, type, or name
+- Added `create_email_template` tool for creating new email templates with recipient configuration
+- Added `get_schema_tree_structure` tool for lightweight schema tree view with only ids, labels, categories, and types
+- Added `prune_schema_fields` tool for efficiently removing multiple fields from schema at once (batch pruning)
+- Added `create_queue_from_template` tool for creating queues from predefined templates (EU/US/UK/CZ/CN demo templates) [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Added `get_queue_template_names` tool for listing available queue template names [#102](https://github.com/stancld/rossum-mcp/pull/102)
 - Added `list_queues` tool for listing queues with optional filtering by workspace or name [#101](https://github.com/stancld/rossum-mcp/pull/101)
-- Added `list_schemas` tool for listing schemas with optional filtering by name or queue [#101](https://github.com/stancld/rossum-mcp/pull/101)
+- Added `list_schemas` tool for listing schemas with optional filtering by name or queue [#101](https://github.com/stancl/rossum-mcp/pull/101)
 - Enhanced `list_annotations` tool with `ordering` and `first_n` parameters for sorting and limiting results [#101](https://github.com/stancld/rossum-mcp/pull/101)
+- Added schema validation with clear error messages for datapoint, tuple, multivalue, and section nodes [#102](https://github.com/stancld/rossum-mcp/pull/102)
+- Improved multivalue node handling in `patch_schema` with explicit error when attempting to add children to multivalue nodes [#102](https://github.com/stancl/rossum-mcp/pull/102)
 
 
 

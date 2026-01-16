@@ -14,6 +14,7 @@ from slowapi.util import get_remote_address
 
 from rossum_agent.api.dependencies import RossumCredentials, get_validated_credentials
 from rossum_agent.api.models.schemas import (
+    DocumentContent,
     FileCreatedEvent,
     ImageContent,
     MessageRequest,
@@ -156,6 +157,7 @@ async def send_message(
     history = chat_service.get_messages(credentials.user_id, chat_id) or []
     user_prompt = message.content
     images: list[ImageContent] | None = message.images
+    documents: list[DocumentContent] | None = message.documents
 
     async def event_generator() -> Iterator[str]:  # type: ignore[misc]
         final_response: str | None = None
@@ -165,6 +167,7 @@ async def send_message(
             async for event in agent_service.run_agent(
                 prompt=user_prompt,
                 images=images,
+                documents=documents,
                 conversation_history=history,
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
@@ -185,7 +188,11 @@ async def send_message(
             return
 
         updated_history = agent_service.build_updated_history(
-            existing_history=history, user_prompt=user_prompt, final_response=final_response, images=images
+            existing_history=history,
+            user_prompt=user_prompt,
+            final_response=final_response,
+            images=images,
+            documents=documents,
         )
         chat_service.save_messages(
             user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir

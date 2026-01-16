@@ -14,6 +14,15 @@ from rossum_mcp.tools.schemas import (
     SchemaMultivalue,
     SchemaNodeUpdate,
     SchemaTuple,
+    _apply_add_operation,
+    _apply_remove_operation,
+    _apply_update_operation,
+    _collect_all_field_ids,
+    _find_node_anywhere,
+    _find_node_in_children,
+    _find_parent_children_list,
+    _get_section_children_as_list,
+    _remove_fields_from_content,
     apply_schema_patch,
     register_schema_tools,
 )
@@ -791,7 +800,7 @@ class TestApplySchemaPatch:
             }
         ]
 
-        with pytest.raises(ValueError, match=r"Cannot remove tuple .* from multivalue"):
+        with pytest.raises(ValueError, match=r"Cannot remove .* from multivalue"):
             apply_schema_patch(
                 content=content,
                 operation="remove",
@@ -1108,3 +1117,1114 @@ class TestSchemaDataclasses:
         datapoint = updated_content[0]["children"][0]
         assert datapoint["label"] == "Invoice #"
         assert datapoint["score_threshold"] == 0.95
+
+
+@pytest.mark.unit
+class TestGetSchemaTreeStructure:
+    """Tests for get_schema_tree_structure tool."""
+
+    @pytest.mark.asyncio
+    async def test_get_schema_tree_structure_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test successful tree structure extraction."""
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema = create_mock_schema(
+            id=50,
+            content=[
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {"id": "invoice_date", "label": "Invoice Date", "category": "datapoint", "type": "date"},
+                    ],
+                },
+                {
+                    "id": "line_items_section",
+                    "label": "Line Items",
+                    "category": "section",
+                    "children": [
+                        {
+                            "id": "line_items",
+                            "label": "Line Items",
+                            "category": "multivalue",
+                            "children": {
+                                "id": "line_item",
+                                "label": "Line Item",
+                                "category": "tuple",
+                                "children": [
+                                    {
+                                        "id": "description",
+                                        "label": "Description",
+                                        "category": "datapoint",
+                                        "type": "string",
+                                    },
+                                    {"id": "amount", "label": "Amount", "category": "datapoint", "type": "number"},
+                                ],
+                            },
+                        }
+                    ],
+                },
+            ],
+        )
+        mock_client.retrieve_schema.return_value = mock_schema
+
+        get_schema_tree_structure = mock_mcp._tools["get_schema_tree_structure"]
+        result = await get_schema_tree_structure(schema_id=50)
+
+        assert len(result) == 2
+        assert result[0]["id"] == "header_section"
+        assert result[0]["label"] == "Header"
+        assert len(result[0]["children"]) == 2
+        assert result[0]["children"][0]["id"] == "invoice_number"
+        assert result[0]["children"][0]["type"] == "string"
+        assert result[1]["children"][0]["id"] == "line_items"
+        assert result[1]["children"][0]["children"][0]["id"] == "line_item"
+
+
+@pytest.mark.unit
+class TestPruneSchemaFields:
+    """Tests for prune_schema_fields tool."""
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_with_fields_to_keep(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test pruning with fields_to_keep."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {"id": "invoice_date", "label": "Invoice Date", "category": "datapoint", "type": "date"},
+                        {"id": "vendor_name", "label": "Vendor Name", "category": "datapoint", "type": "string"},
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["invoice_number"])
+
+        assert "invoice_date" in result["removed_fields"]
+        assert "vendor_name" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+        assert "header_section" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_with_fields_to_remove(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test pruning with fields_to_remove."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {"id": "invoice_date", "label": "Invoice Date", "category": "datapoint", "type": "date"},
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_remove=["invoice_date"])
+
+        assert "invoice_date" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test pruning in read-only mode returns error."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["invoice_number"])
+
+        assert "error" in result
+        assert "read-only" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_both_params_error(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test error when both fields_to_keep and fields_to_remove provided."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["a"], fields_to_remove=["b"])
+
+        assert "error" in result
+        assert "not both" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_no_params_error(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test error when neither parameter provided."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50)
+
+        assert "error" in result
+        assert "Must specify" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_preserves_parent_containers_for_nested_fields(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that keeping a nested field preserves its parent containers (multivalue, section)."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "197466",
+                    "category": "section",
+                    "schema_id": "invoice_info_section",
+                    "children": [
+                        {
+                            "id": "197467",
+                            "category": "datapoint",
+                            "schema_id": "invoice_number",
+                            "page": 1,
+                            "position": [916, 168, 1190, 222],
+                            "rir_position": [916, 168, 1190, 222],
+                            "rir_confidence": 0.97657,
+                            "value": "FV103828806S",
+                            "validation_sources": ["score"],
+                            "type": "string",
+                        },
+                        {
+                            "id": "197468",
+                            "category": "datapoint",
+                            "schema_id": "date_due",
+                            "page": 1,
+                            "position": [938, 618, 1000, 654],
+                            "rir_position": [940, 618, 1020, 655],
+                            "rir_confidence": 0.98279,
+                            "value": "12/22/2018",
+                            "validation_sources": ["score"],
+                            "type": "date",
+                        },
+                        {
+                            "id": "197469",
+                            "category": "datapoint",
+                            "schema_id": "amount_due",
+                            "page": 1,
+                            "position": [1134, 1050, 1190, 1080],
+                            "rir_position": [1134, 1050, 1190, 1080],
+                            "rir_confidence": 0.74237,
+                            "value": "55.20",
+                            "validation_sources": ["human"],
+                            "type": "number",
+                        },
+                    ],
+                },
+                {
+                    "id": "197500",
+                    "category": "section",
+                    "schema_id": "line_items_section",
+                    "children": [
+                        {
+                            "id": "197501",
+                            "category": "multivalue",
+                            "schema_id": "line_items",
+                            "children": [
+                                {
+                                    "id": "198139",
+                                    "category": "tuple",
+                                    "schema_id": "line_item",
+                                    "children": [
+                                        {
+                                            "id": "198140",
+                                            "category": "datapoint",
+                                            "schema_id": "item_desc",
+                                            "page": 1,
+                                            "position": [173, 883, 395, 904],
+                                            "rir_position": None,
+                                            "rir_confidence": None,
+                                            "value": "Red Rose",
+                                            "validation_sources": [],
+                                            "type": "string",
+                                        },
+                                        {
+                                            "id": "198142",
+                                            "category": "datapoint",
+                                            "schema_id": "item_net_unit_price",
+                                            "page": 1,
+                                            "position": [714, 846, 768, 870],
+                                            "rir_position": None,
+                                            "rir_confidence": None,
+                                            "value": "1532.02",
+                                            "validation_sources": ["human"],
+                                            "type": "number",
+                                        },
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["198140"])
+
+        assert "197501" in result["remaining_fields"]
+        assert "197500" in result["remaining_fields"]
+        assert "198139" in result["remaining_fields"]
+        assert "198140" in result["remaining_fields"]
+
+        assert "198142" in result["removed_fields"]
+        assert "197467" in result["removed_fields"]
+        assert "197468" in result["removed_fields"]
+        assert "197469" in result["removed_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_all_fields_kept(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test prune when fields_to_keep matches all fields so remove_set is empty."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"}
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["header_section", "invoice_number"])
+
+        assert result["removed_fields"] == []
+        assert sorted(result["remaining_fields"]) == ["header_section", "invoice_number"]
+        mock_client._http_client.update.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_multivalue_when_tuple_removed(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that removing tuple also removes parent multivalue (no stub left)."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {
+                            "id": "line_items",
+                            "label": "Line Items",
+                            "category": "multivalue",
+                            "children": {
+                                "id": "line_item",
+                                "label": "Line Item",
+                                "category": "tuple",
+                                "children": [
+                                    {
+                                        "id": "item_desc",
+                                        "label": "Description",
+                                        "category": "datapoint",
+                                        "type": "string",
+                                    }
+                                ],
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_remove=["line_item"])
+
+        assert "line_item" in result["removed_fields"]
+        assert "line_items" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_multivalue_when_all_tuple_children_removed(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that removing all tuple children also removes multivalue."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
+                        {
+                            "id": "line_items",
+                            "label": "Line Items",
+                            "category": "multivalue",
+                            "children": {
+                                "id": "line_item",
+                                "label": "Line Item",
+                                "category": "tuple",
+                                "children": [
+                                    {
+                                        "id": "item_desc",
+                                        "label": "Description",
+                                        "category": "datapoint",
+                                        "type": "string",
+                                    },
+                                    {"id": "item_qty", "label": "Quantity", "category": "datapoint", "type": "number"},
+                                ],
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_remove=["item_desc", "item_qty"])
+
+        assert "item_desc" in result["removed_fields"]
+        assert "item_qty" in result["removed_fields"]
+        assert "line_item" in result["removed_fields"]
+        assert "line_items" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_empty_sections(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that sections with no remaining children are removed (API rejects empty sections)."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_schema_dict = {
+            "id": 50,
+            "content": [
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"}
+                    ],
+                },
+                {
+                    "id": "payment_section",
+                    "label": "Payment",
+                    "category": "section",
+                    "children": [
+                        {"id": "bank_account", "label": "Bank Account", "category": "datapoint", "type": "string"}
+                    ],
+                },
+            ],
+        }
+        mock_client._http_client.request_json.return_value = mock_schema_dict
+        mock_client._http_client.update.return_value = {}
+
+        prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
+        result = await prune_schema_fields(schema_id=50, fields_to_keep=["invoice_number"])
+
+        assert "bank_account" in result["removed_fields"]
+        assert "payment_section" in result["removed_fields"]
+        assert "invoice_number" in result["remaining_fields"]
+        assert "header_section" in result["remaining_fields"]
+        assert "payment_section" not in result["remaining_fields"]
+
+
+@pytest.mark.unit
+class TestRemoveOperation:
+    """Tests for _apply_remove_operation edge cases."""
+
+    def test_apply_update_operation_raises_when_node_data_none(self) -> None:
+        """Test _apply_update_operation raises ValueError when node_data is None."""
+        content = [
+            {
+                "id": "header_section",
+                "category": "section",
+                "children": [{"id": "field1", "category": "datapoint"}],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="node_data is required"):
+            _apply_update_operation(content, "field1", None)
+
+    def test_apply_remove_operation_cannot_remove_multivalue_child(self) -> None:
+        """Test removing a multivalue's inner tuple directly raises error."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "line_item",
+                            "category": "tuple",
+                            "children": [{"id": "desc", "category": "datapoint"}],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="remove the multivalue instead"):
+            _apply_remove_operation(content, "line_item")
+
+    def test_apply_remove_operation_unexpected_parent_structure(self) -> None:
+        """Test removing node with unexpected parent structure raises error."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "weird_node",
+                        "category": "tuple",
+                        "children": {
+                            "id": "child_node",
+                            "category": "datapoint",
+                        },
+                    }
+                ],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="unexpected parent structure"):
+            _apply_remove_operation(content, "child_node")
+
+    def test_apply_remove_operation_top_level_node_without_section_category(self) -> None:
+        """Test removing a top-level node without 'section' category (lines 394-397)."""
+        content = [
+            {"id": "top_level_node", "category": "datapoint", "label": "Top Level"},
+            {"id": "section1", "category": "section", "children": []},
+        ]
+
+        with pytest.raises(ValueError, match="Cannot determine how to remove"):
+            schemas._apply_remove_operation(content, "top_level_node")
+
+    def test_apply_remove_operation_top_level_section_without_category(self) -> None:
+        """Test removing a top-level node with implicit section category (lines 395-396)."""
+        content = [
+            {"id": "implicit_section", "category": "section", "children": []},
+        ]
+
+        with pytest.raises(ValueError, match="Cannot remove a section"):
+            schemas._apply_remove_operation(content, "implicit_section")
+
+
+@pytest.mark.unit
+class TestFieldPruning:
+    """Tests for field collection and pruning functions."""
+
+    def test_collect_all_field_ids_with_dict_children(self) -> None:
+        """Test _collect_all_field_ids traverses dict children (multivalue case)."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "multivalue1",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "tuple1",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "field1", "category": "datapoint"},
+                                {"id": "field2", "category": "datapoint"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        result = _collect_all_field_ids(content)
+
+        assert result == {"section1", "multivalue1", "tuple1", "field1", "field2"}
+
+    def test_remove_fields_from_nested_list_children(self) -> None:
+        """Test _remove_fields_from_content removes field from nested list children."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "parent1",
+                        "category": "tuple",
+                        "children": [
+                            {"id": "keep_field", "category": "datapoint"},
+                            {"id": "remove_field", "category": "datapoint"},
+                        ],
+                    }
+                ],
+            }
+        ]
+
+        result, removed = _remove_fields_from_content(content, {"remove_field"})
+
+        assert removed == ["remove_field"]
+        parent_children = result[0]["children"][0]["children"]
+        assert len(parent_children) == 1
+        assert parent_children[0]["id"] == "keep_field"
+
+    def test_remove_fields_from_dict_children_inner_tuple(self) -> None:
+        """Test _remove_fields_from_content removes entire multivalue when tuple is removed."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "multivalue1",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "tuple1",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "keep_me", "category": "datapoint"},
+                                {"id": "remove_me", "category": "datapoint"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        result, removed = _remove_fields_from_content(content, {"tuple1"})
+
+        assert "tuple1" in removed
+        assert "multivalue1" in removed
+        assert "section1" in removed
+        assert result == []
+
+    def test_remove_fields_filters_inside_dict_children_nested(self) -> None:
+        """Test _remove_fields_from_content filters children inside dict children's nested list."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "multivalue1",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "tuple1",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "desc", "category": "datapoint"},
+                                {"id": "amount", "category": "datapoint"},
+                                {"id": "unit_price", "category": "datapoint"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        result, removed = _remove_fields_from_content(content, {"amount", "unit_price"})
+
+        assert sorted(removed) == ["amount", "unit_price"]
+        tuple_children = result[0]["children"][0]["children"]["children"]
+        assert len(tuple_children) == 1
+        assert tuple_children[0]["id"] == "desc"
+
+
+@pytest.mark.unit
+class TestNodeSearching:
+    """Tests for node searching helper functions."""
+
+    def test_find_node_in_children_finds_node_in_multivalue_dict(self) -> None:
+        """Test finding a node directly inside multivalue's dict children."""
+        multivalue_node = {
+            "id": "line_items",
+            "category": "multivalue",
+            "children": {"id": "line_item", "category": "tuple", "children": []},
+        }
+        children = [multivalue_node]
+
+        node, index, parent_list, parent_node = _find_node_in_children(children, "line_item", None)
+
+        assert node is not None
+        assert node["id"] == "line_item"
+        assert index == 0
+        assert parent_list is None
+        assert parent_node == multivalue_node
+
+    def test_find_node_in_children_finds_node_nested_in_tuple_within_multivalue(self) -> None:
+        """Test finding a node nested inside tuple within multivalue."""
+        tuple_node = {
+            "id": "line_item",
+            "category": "tuple",
+            "children": [{"id": "description", "category": "datapoint"}],
+        }
+        multivalue_node = {
+            "id": "line_items",
+            "category": "multivalue",
+            "children": tuple_node,
+        }
+        children = [multivalue_node]
+
+        node, index, parent_list, parent_node = _find_node_in_children(children, "description", None)
+
+        assert node is not None
+        assert node["id"] == "description"
+        assert index == 0
+        assert parent_list == tuple_node["children"]
+        assert parent_node == tuple_node
+
+    def test_find_parent_children_list_returns_none_true_for_multivalue(self) -> None:
+        """Test _find_parent_children_list returns (None, True) for multivalue parent."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": [{"id": "multivalue_node", "category": "multivalue", "children": {"id": "tuple"}}],
+            }
+        ]
+
+        result, is_multivalue = _find_parent_children_list(content, "multivalue_node")
+
+        assert result is None
+        assert is_multivalue is True
+
+    def test_find_parent_children_list_handles_none_section_children(self) -> None:
+        """Test _find_parent_children_list skips sections with None children."""
+        content = [
+            {"id": "empty_section", "category": "section", "children": None},
+            {"id": "target_section", "category": "section", "children": []},
+        ]
+
+        result, is_multivalue = _find_parent_children_list(content, "target_section")
+
+        assert result == []
+        assert is_multivalue is False
+
+    def test_find_parent_children_list_handles_dict_children_in_section(self) -> None:
+        """Test _find_parent_children_list handles dict children inside section."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": {"id": "tuple_child", "category": "tuple", "children": []},
+            }
+        ]
+
+        result, is_multivalue = _find_parent_children_list(content, "tuple_child")
+
+        assert result == []
+        assert is_multivalue is False
+
+    def test_find_parent_children_list_finds_parent_in_section_dict_children(self) -> None:
+        """Test finding parent when node is inside section_children dict (multivalue case)."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": {
+                    "id": "multivalue_child",
+                    "category": "multivalue",
+                    "children": {"id": "inner_tuple"},
+                },
+            }
+        ]
+
+        result, is_multivalue = _find_parent_children_list(content, "multivalue_child")
+
+        assert result is None
+        assert is_multivalue is True
+
+    def test_apply_add_operation_error_for_multivalue_parent(self) -> None:
+        """Test _apply_add_operation raises error when trying to add to multivalue parent."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": [{"id": "multivalue_node", "category": "multivalue", "children": {"id": "tuple"}}],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Cannot add children to multivalue"):
+            _apply_add_operation(
+                content,
+                node_id="new_node",
+                node_data={"label": "New Node"},
+                parent_id="multivalue_node",
+                position=None,
+            )
+
+    def test_get_section_children_as_list_returns_empty_for_none(self) -> None:
+        """Test _get_section_children_as_list returns [] when children is None."""
+        section = {"id": "section", "children": None}
+
+        result = _get_section_children_as_list(section)
+
+        assert result == []
+
+    def test_get_section_children_as_list_returns_list_when_list(self) -> None:
+        """Test _get_section_children_as_list returns list when children is list."""
+        children_list = [{"id": "child1"}, {"id": "child2"}]
+        section = {"id": "section", "children": children_list}
+
+        result = _get_section_children_as_list(section)
+
+        assert result == children_list
+
+    def test_get_section_children_as_list_returns_wrapped_dict(self) -> None:
+        """Test _get_section_children_as_list returns [children] when children is dict."""
+        child_dict = {"id": "child"}
+        section = {"id": "section", "children": child_dict}
+
+        result = _get_section_children_as_list(section)
+
+        assert result == [child_dict]
+
+    def test_find_node_anywhere_finds_section_by_id(self) -> None:
+        """Test _find_node_anywhere finds section by ID and returns (section, None, None, None)."""
+        content = [
+            {"id": "section1", "category": "section", "children": []},
+            {"id": "section2", "category": "section", "children": []},
+        ]
+
+        node, index, parent_list, parent_node = _find_node_anywhere(content, "section1")
+
+        assert node is not None
+        assert node["id"] == "section1"
+        assert index is None
+        assert parent_list is None
+        assert parent_node is None
+
+    def test_find_node_anywhere_finds_node_inside_multivalue(self) -> None:
+        """Test _find_node_anywhere finds node inside multivalue structure."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "line_item",
+                            "category": "tuple",
+                            "children": [{"id": "amount", "category": "datapoint"}],
+                        },
+                    }
+                ],
+            }
+        ]
+
+        node, index, parent_list, parent_node = _find_node_anywhere(content, "amount")
+
+        assert node is not None
+        assert node["id"] == "amount"
+        assert index == 0
+        assert parent_list is not None
+        assert parent_node["id"] == "line_item"
+
+    def test_find_node_in_children_finds_nested_node_in_list_children(self) -> None:
+        """Test finding a node nested in list children (line 251-253)."""
+        tuple_node = {
+            "id": "parent_tuple",
+            "category": "tuple",
+            "children": [{"id": "nested_field", "category": "datapoint"}],
+        }
+        children = [tuple_node]
+
+        node, _index, _parent_list, parent_node = schemas._find_node_in_children(children, "nested_field", None)
+
+        assert node is not None
+        assert node["id"] == "nested_field"
+        assert parent_node == tuple_node
+
+    def test_find_parent_children_list_section_is_multivalue(self) -> None:
+        """Test _find_parent_children_list returns (None, True) for top-level multivalue section (line 279)."""
+        content = [{"id": "multivalue_section", "category": "multivalue", "children": {"id": "inner"}}]
+
+        result, is_multivalue = schemas._find_parent_children_list(content, "multivalue_section")
+
+        assert result is None
+        assert is_multivalue is True
+
+    def test_find_parent_children_list_dict_children_with_nested_search(self) -> None:
+        """Test finding parent inside dict children's children list (lines 292-295)."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": {
+                    "id": "outer_tuple",
+                    "category": "tuple",
+                    "children": [{"id": "target_tuple", "category": "tuple", "children": []}],
+                },
+            }
+        ]
+
+        result, is_multivalue = schemas._find_parent_children_list(content, "target_tuple")
+
+        assert result == []
+        assert is_multivalue is False
+
+    def test_find_parent_children_list_dict_children_no_nested_children(self) -> None:
+        """Test dict children with no 'children' key returns None (line 294-295)."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": {"id": "simple_child", "category": "datapoint"},
+            }
+        ]
+
+        result, is_multivalue = schemas._find_parent_children_list(content, "nonexistent")
+
+        assert result is None
+        assert is_multivalue is False
+
+    def test_apply_add_operation_missing_node_data_raises_error(self) -> None:
+        """Test _apply_add_operation raises ValueError when node_data is None (line 316)."""
+        content = [{"id": "section", "children": []}]
+
+        with pytest.raises(ValueError, match="node_data is required"):
+            schemas._apply_add_operation(content, "new_id", None, "section", None)
+
+    def test_apply_add_operation_missing_parent_id_raises_error(self) -> None:
+        """Test _apply_add_operation raises ValueError when parent_id is None (line 318)."""
+        content = [{"id": "section", "children": []}]
+
+        with pytest.raises(ValueError, match="parent_id is required"):
+            schemas._apply_add_operation(content, "new_id", {"label": "New"}, None, None)
+
+    def test_get_section_children_as_list_returns_empty_for_invalid_type(self) -> None:
+        """Test _get_section_children_as_list returns [] for non-list/dict children (line 349)."""
+        section = {"id": "section", "children": "invalid_string"}
+
+        result = schemas._get_section_children_as_list(section)
+
+        assert result == []
+
+    def test_apply_remove_operation_multivalue_child_raises_error(self) -> None:
+        """Test removing a multivalue's direct child raises appropriate error (lines 395-397, 402-404)."""
+        content = [
+            {
+                "id": "section",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "mv",
+                        "category": "multivalue",
+                        "children": {"id": "inner_tuple", "category": "tuple", "children": []},
+                    }
+                ],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="Cannot remove 'inner_tuple' from multivalue"):
+            schemas._apply_remove_operation(content, "inner_tuple")
+
+
+@pytest.mark.unit
+class TestSchemaValidation:
+    """Tests for schema validation functions.
+
+    Note: These tests use schemas.* to access functions/classes dynamically
+    because other tests use importlib.reload(schemas) which creates new class objects.
+    """
+
+    def test_validate_id_empty_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Node id is required"):
+            schemas._validate_id("")
+
+    def test_validate_id_exceeds_max_length_raises_error(self) -> None:
+        long_id = "a" * 51
+        with pytest.raises(schemas.SchemaValidationError, match="exceeds 50 characters"):
+            schemas._validate_id(long_id)
+
+    def test_validate_id_valid_passes(self) -> None:
+        schemas._validate_id("valid_id")
+        schemas._validate_id("a" * 50)
+
+    def test_validate_datapoint_missing_label_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="missing required 'label'"):
+            schemas._validate_datapoint({"type": "string"})
+
+    def test_validate_datapoint_missing_type_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="missing required 'type'"):
+            schemas._validate_datapoint({"label": "Test"})
+
+    def test_validate_datapoint_invalid_type_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Invalid datapoint type 'invalid'"):
+            schemas._validate_datapoint({"label": "Test", "type": "invalid"})
+
+    def test_validate_datapoint_valid_types_pass(self) -> None:
+        for dp_type in ["string", "number", "date", "enum", "button"]:
+            schemas._validate_datapoint({"label": "Test", "type": dp_type})
+
+    def test_validate_tuple_missing_label_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Tuple missing required 'label'"):
+            schemas._validate_tuple({"id": "test", "children": []}, "test", "")
+
+    def test_validate_tuple_missing_id_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Tuple missing required 'id'"):
+            schemas._validate_tuple({"label": "Test", "children": []}, "", "")
+
+    def test_validate_tuple_children_not_list_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="children must be a list"):
+            schemas._validate_tuple({"id": "test", "label": "Test", "children": {}}, "test", "")
+
+    def test_validate_tuple_child_without_id_raises_error(self) -> None:
+        node = {
+            "id": "test",
+            "label": "Test",
+            "children": [{"category": "datapoint", "label": "Child", "type": "string"}],
+        }
+        with pytest.raises(schemas.SchemaValidationError, match="must have 'id'"):
+            schemas._validate_tuple(node, "test", "")
+
+    def test_validate_multivalue_missing_label_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Multivalue missing required 'label'"):
+            schemas._validate_multivalue({"children": {}}, "test", "")
+
+    def test_validate_multivalue_missing_children_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Multivalue missing required 'children'"):
+            schemas._validate_multivalue({"label": "Test"}, "test", "")
+
+    def test_validate_multivalue_children_as_list_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="must be a single object"):
+            schemas._validate_multivalue({"label": "Test", "children": []}, "test", "")
+
+    def test_validate_section_missing_label_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Section missing required 'label'"):
+            schemas._validate_section({"id": "test", "children": []}, "test", "")
+
+    def test_validate_section_missing_id_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="Section missing required 'id'"):
+            schemas._validate_section({"label": "Test", "children": []}, "", "")
+
+    def test_validate_section_children_not_list_raises_error(self) -> None:
+        with pytest.raises(schemas.SchemaValidationError, match="children must be a list"):
+            schemas._validate_section({"id": "test", "label": "Test", "children": {}}, "test", "")
+
+    def test_validate_node_datapoint(self) -> None:
+        schemas._validate_node({"category": "datapoint", "id": "field", "label": "Field", "type": "string"})
+
+    def test_validate_node_tuple(self) -> None:
+        node = {
+            "category": "tuple",
+            "id": "row",
+            "label": "Row",
+            "children": [{"category": "datapoint", "id": "col", "label": "Col", "type": "string"}],
+        }
+        schemas._validate_node(node)
+
+    def test_validate_node_multivalue(self) -> None:
+        node = {
+            "category": "multivalue",
+            "id": "items",
+            "label": "Items",
+            "children": {"category": "tuple", "id": "item", "label": "Item", "children": []},
+        }
+        schemas._validate_node(node)
+
+    def test_validate_node_section(self) -> None:
+        node = {
+            "category": "section",
+            "id": "header",
+            "label": "Header",
+            "children": [{"category": "datapoint", "id": "field", "label": "Field", "type": "string"}],
+        }
+        schemas._validate_node(node)
+
+    def test_validate_node_invalid_id_in_nested_child(self) -> None:
+        node = {
+            "category": "section",
+            "id": "header",
+            "label": "Header",
+            "children": [{"category": "datapoint", "id": "a" * 51, "label": "Field", "type": "string"}],
+        }
+        with pytest.raises(schemas.SchemaValidationError, match="exceeds 50 characters"):
+            schemas._validate_node(node)

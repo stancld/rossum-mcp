@@ -178,6 +178,25 @@ Expert-level hook debugging with Claude Opus sub-agent. This is the primary tool
 
 The tool fetches hook code and annotation data, executes the hook, and uses Opus to analyze errors and suggest fixes.
 
+### Schema Tools
+
+#### patch_schema_with_subagent
+Safely patch Rossum schemas using a Claude Opus sub-agent. The sub-agent fetches the schema, applies changes one at a time, and verifies only requested fields are present.
+
+**Parameters:**
+- `schema_id` (string, required): The schema ID to patch
+- `changes` (string, required): JSON array of changes. Each change object should have:
+  - `action`: "add" or "remove" (default: "add")
+  - `id`: Field ID (schema_id)
+  - `parent_section`: Section ID to add field to (for "add")
+  - `type`: Field type (string, number, date, enum)
+  - `label`: Field label (optional, defaults to id)
+
+**Features:**
+- Max 3 patches before re-fetching schema to ensure consistency
+- Verifies only requested fields are present after patching
+- Supports formula fields and enum options
+
 ### Deployment Tools
 
 #### deploy_pull

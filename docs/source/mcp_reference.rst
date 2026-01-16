@@ -161,6 +161,43 @@ get_queue_engine
   embedded in the queue response, it deserializes it directly without an additional
   API call. See ``rossum_mcp.server:265-337``
 
+get_queue_template_names
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``get_queue_template_names()``
+
+**API Endpoint:**
+  N/A (returns static list of available template names)
+
+**Implementation:**
+  Returns list of 20 available template names for use with ``create_queue_from_template``.
+
+create_queue_from_template
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``create_queue_from_template(name: str, template_name: str, workspace_id: int,
+  include_documents: bool, engine_id: int | None)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient._http_client.request_json("POST", "queues/from_template", ...)``
+
+**API Endpoint:**
+  ``POST /v1/queues/from_template``
+
+**Request Body:**
+  JSON object with queue name, template_name, workspace URL, include_documents flag,
+  and optional engine URL.
+
+**SDK Documentation:**
+  https://rossum.app/api/docs/#tag/Queue/operation/queues_from_template
+
+**Implementation:**
+  Creates a queue from predefined templates. Preferred method for new customer setup.
+  Templates include pre-configured schema and AI engine for specific document types
+  (EU/US/UK/CZ/CN invoices, purchase orders, credit notes, etc.).
+
 create_queue
 ^^^^^^^^^^^^
 

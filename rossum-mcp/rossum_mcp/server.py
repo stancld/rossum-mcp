@@ -18,6 +18,7 @@ from rossum_mcp.logging_config import setup_logging
 from rossum_mcp.tools import (
     register_annotation_tools,
     register_document_relation_tools,
+    register_email_template_tools,
     register_engine_tools,
     register_hook_tools,
     register_queue_tools,
@@ -49,6 +50,7 @@ register_queue_tools(mcp, client)
 register_schema_tools(mcp, client)
 register_engine_tools(mcp, client)
 register_hook_tools(mcp, client)
+register_email_template_tools(mcp, client)
 register_document_relation_tools(mcp, client)
 register_relation_tools(mcp, client)
 register_rule_tools(mcp, client)

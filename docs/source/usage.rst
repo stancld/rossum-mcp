@@ -325,6 +325,66 @@ engine type (dedicated, generic, or standard) and details.
      "engine_type": "dedicated"
    }
 
+get_queue_template_names
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns a list of available template names for use with ``create_queue_from_template``.
+
+**Parameters:** None
+
+**Returns:**
+
+.. code-block:: json
+
+   [
+     "EU Demo Template",
+     "AP&R EU Demo Template",
+     "Tax Invoice EU Demo Template",
+     "US Demo Template",
+     "AP&R US Demo Template",
+     "Tax Invoice US Demo Template",
+     "UK Demo Template",
+     "AP&R UK Demo Template",
+     "Tax Invoice UK Demo Template",
+     "CZ Demo Template",
+     "Empty Organization Template",
+     "Delivery Notes Demo Template",
+     "Delivery Note Demo Template",
+     "Chinese Invoices (Fapiao) Demo Template",
+     "Tax Invoice CN Demo Template",
+     "Certificates of Analysis Demo Template",
+     "Purchase Order Demo Template",
+     "Credit Note Demo Template",
+     "Debit Note Demo Template",
+     "Proforma Invoice Demo Template"
+   ]
+
+create_queue_from_template
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Creates a new queue from a predefined template. **Preferred method for new customer setup.**
+Templates include pre-configured schema and AI engine optimized for specific document types.
+
+**Parameters:**
+
+- ``name`` (string, required): Name of the queue to create
+- ``template_name`` (string, required): Template name (use ``get_queue_template_names`` to list)
+- ``workspace_id`` (integer, required): Workspace ID where the queue should be created
+- ``include_documents`` (boolean, optional): Copy documents from template queue (default: false)
+- ``engine_id`` (integer, optional): Override engine assignment
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "ACME Corp - Invoices",
+     "url": "https://elis.rossum.ai/api/v1/queues/12345",
+     "workspace": "https://elis.rossum.ai/api/v1/workspaces/11111",
+     "schema": "https://elis.rossum.ai/api/v1/schemas/67890"
+   }
+
 create_queue
 ^^^^^^^^^^^^
 
@@ -1595,6 +1655,175 @@ Lists all document relations with optional filters. Document relations introduce
 
    # List document relations containing a specific document
    document_relations = list_document_relations(documents=200)
+
+Email Template Tools
+^^^^^^^^^^^^^^^^^^^^
+
+get_email_template
+""""""""""""""""""
+
+Retrieves details of a specific email template by its ID.
+
+**Parameters:**
+
+- ``email_template_id`` (integer, required): Email template ID
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 1500,
+     "name": "Rejection Email",
+     "url": "https://elis.rossum.ai/api/v1/email_templates/1500",
+     "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+     "organization": "https://elis.rossum.ai/api/v1/organizations/1",
+     "subject": "Document Rejected",
+     "message": "<p>Your document has been rejected.</p>",
+     "type": "rejection",
+     "enabled": true,
+     "automate": false,
+     "triggers": [],
+     "to": [{"type": "annotator", "value": ""}],
+     "cc": [],
+     "bcc": []
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Get email template details
+   template = get_email_template(email_template_id=1500)
+
+list_email_templates
+""""""""""""""""""""
+
+Lists all email templates with optional filters. Email templates define automated or
+manual email responses sent from Rossum queues.
+
+**Parameters:**
+
+- ``queue_id`` (integer, optional): Filter by queue ID
+- ``type`` (string, optional): Filter by template type ('rejection', 'rejection_default',
+  'email_with_no_processable_attachments', 'custom')
+- ``name`` (string, optional): Filter by template name
+- ``first_n`` (integer, optional): Limit results to first N templates
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 1500,
+         "name": "Rejection Email",
+         "type": "rejection",
+         "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+         "automate": false
+       },
+       {
+         "id": 1501,
+         "name": "No Attachments Notification",
+         "type": "email_with_no_processable_attachments",
+         "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+         "automate": true
+       }
+     ]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # List all email templates
+   all_templates = list_email_templates()
+
+   # List email templates for a specific queue
+   queue_templates = list_email_templates(queue_id=8199)
+
+   # List rejection templates
+   rejection_templates = list_email_templates(type="rejection")
+
+   # List first 5 templates
+   first_templates = list_email_templates(first_n=5)
+
+create_email_template
+"""""""""""""""""""""
+
+Creates a new email template. Templates can be automated to send emails automatically
+on specific triggers, or manual for user-initiated sending.
+
+**Parameters:**
+
+- ``name`` (string, required): Name of the email template
+- ``queue`` (string, required): URL of the queue to associate with
+- ``subject`` (string, required): Email subject line
+- ``message`` (string, required): Email body (HTML supported)
+- ``type`` (string, optional): Template type - 'rejection', 'rejection_default',
+  'email_with_no_processable_attachments', 'custom' (default: 'custom')
+- ``automate`` (boolean, optional): If true, email is sent automatically on trigger (default: false)
+- ``to`` (array, optional): List of recipient objects with 'type' and 'value' keys
+- ``cc`` (array, optional): List of CC recipient objects
+- ``bcc`` (array, optional): List of BCC recipient objects
+- ``triggers`` (array, optional): List of trigger URLs
+
+**Recipient object types:**
+
+- ``{"type": "annotator", "value": ""}`` - Send to the document annotator
+- ``{"type": "constant", "value": "email@example.com"}`` - Send to a fixed email address
+- ``{"type": "datapoint", "value": "email_field_id"}`` - Send to email from a datapoint field
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 1502,
+     "name": "Custom Notification",
+     "url": "https://elis.rossum.ai/api/v1/email_templates/1502",
+     "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+     "subject": "Document Processed",
+     "message": "<p>Your document has been processed.</p>",
+     "type": "custom",
+     "automate": true,
+     "to": [{"type": "constant", "value": "notifications@example.com"}]
+   }
+
+**Example usage:**
+
+.. code-block:: python
+
+   # Create a simple custom email template
+   template = create_email_template(
+       name="Processing Complete",
+       queue="https://elis.rossum.ai/api/v1/queues/8199",
+       subject="Document Processing Complete",
+       message="<p>Your document has been successfully processed.</p>"
+   )
+
+   # Create an automated rejection template
+   template = create_email_template(
+       name="Auto Rejection",
+       queue="https://elis.rossum.ai/api/v1/queues/8199",
+       subject="Document Rejected",
+       message="<p>Your document could not be processed.</p>",
+       type="rejection",
+       automate=True,
+       to=[{"type": "annotator", "value": ""}]
+   )
+
+   # Create template with multiple recipients
+   template = create_email_template(
+       name="Team Notification",
+       queue="https://elis.rossum.ai/api/v1/queues/8199",
+       subject="New Document",
+       message="<p>A new document has arrived.</p>",
+       to=[{"type": "constant", "value": "team@example.com"}],
+       cc=[{"type": "datapoint", "value": "sender_email"}]
+   )
 
 Agent Tools
 -----------

@@ -155,6 +155,70 @@ async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data:
     return cast("Queue", client._deserializer(Resource.Queue, updated_queue_data))
 
 
+# Available template names for create_queue_from_template
+QUEUE_TEMPLATE_NAMES = (
+    "EU Demo Template",
+    "AP&R EU Demo Template",
+    "Tax Invoice EU Demo Template",
+    "US Demo Template",
+    "AP&R US Demo Template",
+    "Tax Invoice US Demo Template",
+    "UK Demo Template",
+    "AP&R UK Demo Template",
+    "Tax Invoice UK Demo Template",
+    "CZ Demo Template",
+    "Empty Organization Template",
+    "Delivery Notes Demo Template",
+    "Delivery Note Demo Template",
+    "Chinese Invoices (Fapiao) Demo Template",
+    "Tax Invoice CN Demo Template",
+    "Certificates of Analysis Demo Template",
+    "Purchase Order Demo Template",
+    "Credit Note Demo Template",
+    "Debit Note Demo Template",
+    "Proforma Invoice Demo Template",
+)
+
+
+async def _create_queue_from_template(
+    client: AsyncRossumAPIClient,
+    name: str,
+    template_name: str,
+    workspace_id: int,
+    include_documents: bool = False,
+    engine_id: int | None = None,
+) -> Queue | dict:
+    if not is_read_write_mode():
+        return {"error": "create_queue_from_template is not available in read-only mode"}
+
+    if template_name not in QUEUE_TEMPLATE_NAMES:
+        return {
+            "error": f"Invalid template_name: '{template_name}'",
+            "available_templates": QUEUE_TEMPLATE_NAMES,
+        }
+
+    logger.debug(
+        f"Creating queue from template: name={name}, template_name={template_name}, workspace_id={workspace_id}"
+    )
+
+    payload: dict = {
+        "name": name,
+        "template_name": template_name,
+        "workspace": build_resource_url("workspaces", workspace_id),
+        "include_documents": include_documents,
+    }
+
+    if engine_id is not None:
+        payload["engine"] = build_resource_url("engines", engine_id)
+
+    response = await client._http_client.request_json(
+        method="POST",
+        url="queues/from_template",
+        json=payload,
+    )
+    return cast("Queue", client._deserializer(Resource.Queue, response))
+
+
 def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register queue-related tools with the FastMCP server."""
 
@@ -206,3 +270,30 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="Update queue settings.")
     async def update_queue(queue_id: int, queue_data: dict) -> Queue | dict:
         return await _update_queue(client, queue_id, queue_data)
+
+    @mcp.tool(description="Get available queue template names for create_queue_from_template.")
+    async def get_queue_template_names() -> list[str]:
+        return list(QUEUE_TEMPLATE_NAMES)
+
+    @mcp.tool(
+        description="Create queue from a predefined template. Preferred method for new customer setup. "
+        "Templates include pre-configured schema and AI engine for common document types."
+    )
+    async def create_queue_from_template(
+        name: str,
+        template_name: str,
+        workspace_id: int,
+        include_documents: bool = False,
+        engine_id: int | None = None,
+    ) -> Queue | dict:
+        """
+        Available templates: EU Demo Template, AP&R EU Demo Template, Tax Invoice EU Demo Template,
+        US Demo Template, AP&R US Demo Template, Tax Invoice US Demo Template, UK Demo Template,
+        AP&R UK Demo Template, Tax Invoice UK Demo Template, CZ Demo Template, Empty Organization Template,
+        Delivery Notes Demo Template, Delivery Note Demo Template, Chinese Invoices (Fapiao) Demo Template,
+        Tax Invoice CN Demo Template, Certificates of Analysis Demo Template, Purchase Order Demo Template,
+        Credit Note Demo Template, Debit Note Demo Template, Proforma Invoice Demo Template.
+        """
+        return await _create_queue_from_template(
+            client, name, template_name, workspace_id, include_documents, engine_id
+        )
