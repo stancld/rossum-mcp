@@ -24,6 +24,7 @@
 - **rossum-mcp**: Single-file MCP server (`server.py`), `RossumMCPServer` class, 43 tools
 - **rossum-agent**: AI agent with prompts in `rossum_agent/prompts/`, skills in `rossum_agent/skills/`
 - Sync API client wrapped in async executors for MCP compatibility
+- **New skills**: Add to `rossum_agent/prompts/base_prompt.py` ROSSUM_EXPERT_INTRO section
 
 ## Prompt Engineering (rossum-agent)
 
