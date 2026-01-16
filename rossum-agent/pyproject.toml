@@ -13,6 +13,17 @@ authors = [
     {name = "Dan Stancl (Rossum AI)", email = "daniel.stancl@gmail.com"}
 ]
 keywords = ["agent", "rossum", "document-processing", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "anthropic>=0.75.0",
     "boto3>=1.0",
