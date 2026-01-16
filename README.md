@@ -297,7 +297,7 @@ The agent includes file writing tools and Rossum integration via MCP. See [examp
 
 ## MCP Tools
 
-The MCP server provides 43 tools organized into categories:
+The MCP server provides 49 tools organized into categories:
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
@@ -326,13 +326,15 @@ The MCP server provides 43 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Schema Management (5 tools)</strong></summary>
+<summary><strong>Schema Management (7 tools)</strong></summary>
 
 - `get_schema` - Retrieve schema details
 - `list_schemas` - List schemas with optional filtering
 - `create_schema` - Create new schemas
 - `update_schema` - Configure field-level thresholds
 - `patch_schema` - Add, update, or remove individual schema nodes
+- `get_schema_tree_structure` - Get lightweight tree structure of schema
+- `prune_schema_fields` - Remove multiple fields from schema at once
 
 </details>
 
@@ -388,6 +390,15 @@ The MCP server provides 43 tools organized into categories:
 - `list_relations` - List relations (edit, attachment, duplicate)
 - `get_document_relation` - Retrieve document relation details
 - `list_document_relations` - List document relations (export, einvoice)
+
+</details>
+
+<details>
+<summary><strong>Email Templates (3 tools)</strong></summary>
+
+- `get_email_template` - Retrieve email template details
+- `list_email_templates` - List email templates with optional filtering
+- `create_email_template` - Create new email templates
 
 </details>
 
