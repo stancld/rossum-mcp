@@ -9,6 +9,7 @@ from rossum_agent.tools.formula import (
     _build_suggest_formula_url,
     _clean_html,
     _create_formula_field_definition,
+    _fetch_schema_content,
     _find_field_in_schema,
     _inject_formula_field,
     suggest_formula_field,
@@ -38,6 +39,29 @@ class TestCleanHtml:
     def test_preserves_plain_text(self) -> None:
         text = "Simple text without HTML"
         assert _clean_html(text) == text
+
+
+class TestFetchSchemaContent:
+    """Tests for _fetch_schema_content."""
+
+    @patch("rossum_agent.tools.formula.httpx.Client")
+    def test_fetches_schema_content(self, mock_client_class: MagicMock) -> None:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"content": [{"id": "section", "category": "section", "children": []}]}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        result = _fetch_schema_content("https://api.rossum.ai/v1", "test_token", 123456)
+
+        assert result == [{"id": "section", "category": "section", "children": []}]
+        mock_client.get.assert_called_once()
+        call_args = mock_client.get.call_args
+        assert "schemas/123456" in call_args[0][0]
 
 
 class TestFormulaFieldHelpers:
@@ -80,8 +104,11 @@ class TestSuggestFormulaField:
     """Tests for suggest_formula_field tool."""
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
+    @patch("rossum_agent.tools.formula._fetch_schema_content")
     @patch("rossum_agent.tools.formula.httpx.Client")
-    def test_successful_suggestion(self, mock_client_class: MagicMock) -> None:
+    def test_successful_suggestion(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
+        mock_fetch.return_value = [{"id": "basic_info", "category": "section", "children": []}]
+
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "results": [
@@ -105,7 +132,7 @@ class TestSuggestFormulaField:
         result = suggest_formula_field(
             label="Net Terms",
             hint="Compute payment terms based on due date and issue date",
-            schema_content=[{"id": "basic_info", "category": "section", "children": []}],
+            schema_id=123456,
             section_id="basic_info",
             field_schema_id="net_terms",
         )
@@ -116,10 +143,14 @@ class TestSuggestFormulaField:
         assert parsed["summary"] == "Calculates payment terms"
         assert parsed["field_definition"]["id"] == "net_terms"
         assert parsed["field_definition"]["formula"] == parsed["formula"]
+        mock_fetch.assert_called_once_with("https://api.rossum.ai/v1", "test_token", 123456)
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
+    @patch("rossum_agent.tools.formula._fetch_schema_content")
     @patch("rossum_agent.tools.formula.httpx.Client")
-    def test_no_suggestions(self, mock_client_class: MagicMock) -> None:
+    def test_no_suggestions(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
+        mock_fetch.return_value = [{"id": "basic_info", "category": "section", "children": []}]
+
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": []}
         mock_response.raise_for_status = MagicMock()
@@ -133,7 +164,7 @@ class TestSuggestFormulaField:
         result = suggest_formula_field(
             label="Test",
             hint="test",
-            schema_content=[],
+            schema_id=123456,
             section_id="basic_info",
         )
 
@@ -145,7 +176,7 @@ class TestSuggestFormulaField:
         result = suggest_formula_field(
             label="Test",
             hint="test",
-            schema_content=[],
+            schema_id=123456,
             section_id="basic_info",
         )
 

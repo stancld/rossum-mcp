@@ -43,6 +43,15 @@ def _build_suggest_formula_url(api_base_url: str) -> str:
     return f"{api_base_url.rstrip('/')}/internal/schemas/suggest_formula"
 
 
+def _fetch_schema_content(api_base_url: str, token: str, schema_id: int) -> list[dict]:
+    """Fetch schema content from Rossum API."""
+    url = f"{api_base_url.rstrip('/')}/schemas/{schema_id}"
+    with httpx.Client(timeout=30) as client:
+        response = client.get(url, headers={"Authorization": f"Bearer {token}"})
+        response.raise_for_status()
+        return response.json()["content"]
+
+
 def _create_formula_field_definition(label: str, field_schema_id: str | None = None) -> dict:
     """Create a properly structured formula field definition."""
     if not field_schema_id:
@@ -109,18 +118,14 @@ def _inject_formula_field(
 
 @beta_tool
 def suggest_formula_field(
-    label: str, hint: str, schema_content: list[dict], section_id: str, field_schema_id: str | None = None
+    label: str, hint: str, schema_id: int, section_id: str, field_schema_id: str | None = None
 ) -> str:
     """Get AI-generated formula suggestions for a new formula field.
-
-    IMPORTANT: First call get_schema MCP tool to retrieve the full schema content,
-    then pass the complete 'content' array from that response to schema_content.
 
     Args:
         label: Display label for the field (e.g., 'Net Terms').
         hint: Natural language description of the formula logic.
-        schema_content: The FULL 'content' array from get_schema MCP tool response.
-            Do NOT summarize or omit fields - pass the entire array as-is.
+        schema_id: The numeric schema ID (e.g., 9389721). Get this from get_schema or list_queues.
         section_id: Section ID where the field belongs. Ask the user if not specified.
         field_schema_id: Optional ID for the formula field. Defaults to label.lower().replace(" ", "_").
 
@@ -130,19 +135,16 @@ def suggest_formula_field(
     if not field_schema_id:
         field_schema_id = label.lower().replace(" ", "_")
 
-    logger.info(f"suggest_formula_field: {field_schema_id=}, {section_id=}, hint={hint[:100]}...")
+    logger.info(f"suggest_formula_field: {field_schema_id=}, {schema_id=}, {section_id=}, hint={hint[:100]}...")
 
     try:
         api_base_url, token = _get_credentials()
         url = _build_suggest_formula_url(api_base_url)
 
+        schema_content = _fetch_schema_content(api_base_url, token, schema_id)
         enriched_schema = _inject_formula_field(schema_content, label, section_id, field_schema_id)
 
-        payload = {
-            "field_schema_id": field_schema_id,
-            "hint": hint,
-            "schema_content": enriched_schema,
-        }
+        payload = {"field_schema_id": field_schema_id, "hint": hint, "schema_content": enriched_schema}
 
         logger.debug(f"Calling suggest_formula API: {url}")
         logger.debug(f"suggest_formula payload: {json.dumps(payload, indent=2)}")
@@ -159,10 +161,7 @@ def suggest_formula_field(
         suggestions = result.get("results", [])
         if not suggestions:
             return json.dumps(
-                {
-                    "status": "no_suggestions",
-                    "message": "No formula suggestions returned. Try rephrasing the hint.",
-                }
+                {"status": "no_suggestions", "message": "No formula suggestions returned. Try rephrasing the hint."}
             )
 
         top_suggestion = suggestions[0]

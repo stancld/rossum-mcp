@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
+- Added `get_email_template` tool for retrieving a single email template by ID
+- Added `list_email_templates` tool for listing email templates with optional filtering by queue, type, or name
+- Added `create_email_template` tool for creating new email templates with recipient configuration
 - Added `get_schema_tree_structure` tool for lightweight schema tree view with only ids, labels, categories, and types
 - Added `prune_schema_fields` tool for efficiently removing multiple fields from schema at once (batch pruning)
 - Added `create_queue_from_template` tool for creating queues from predefined templates (EU/US/UK/CZ/CN demo templates) [#102](https://github.com/stancld/rossum-mcp/pull/102)

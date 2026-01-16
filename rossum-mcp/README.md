@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-mcp)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-41-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-44-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -78,6 +78,11 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **get_rule**: Get business rule details
 - **list_rules**: List business rules with trigger conditions and actions
 
+### Email Templates
+- **get_email_template**: Retrieve email template details by ID
+- **list_email_templates**: List email templates with optional filtering by queue, type, or name
+- **create_email_template**: Create email templates for automated or manual email sending
+
 ### Relations Management
 - **get_relation**: Retrieve relation details by ID
 - **list_relations**: List all relations between annotations (edit, attachment, duplicate)
@@ -141,6 +146,7 @@ When `ROSSUM_MCP_MODE` is set to `read-only`, only read operations are available
 - **Schemas:** `get_schema`, `list_schemas`
 - **Engines:** `get_engine`, `list_engines`, `get_engine_fields`
 - **Hooks:** `get_hook`, `list_hooks`, `list_hook_templates`, `list_hook_logs`
+- **Email Templates:** `get_email_template`, `list_email_templates`
 - **Users:** `get_user`, `list_users`, `list_user_roles`
 - **Rules:** `get_rule`, `list_rules`
 - **Relations:** `get_relation`, `list_relations`
@@ -1507,6 +1513,157 @@ annotation_doc_relations = list_document_relations(annotation=100)
 
 # List document relations containing a specific document
 document_relations = list_document_relations(documents=200)
+```
+
+### Email Templates
+
+#### get_email_template
+
+Retrieves details of a specific email template by its ID.
+
+**Parameters:**
+- `email_template_id` (integer, required): Email template ID
+
+**Returns:**
+```json
+{
+  "id": 1500,
+  "name": "Rejection Email",
+  "url": "https://elis.rossum.ai/api/v1/email_templates/1500",
+  "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+  "organization": "https://elis.rossum.ai/api/v1/organizations/1",
+  "subject": "Document Rejected",
+  "message": "<p>Your document has been rejected.</p>",
+  "type": "rejection",
+  "enabled": true,
+  "automate": false,
+  "triggers": [],
+  "to": [{"type": "annotator", "value": ""}],
+  "cc": [],
+  "bcc": []
+}
+```
+
+**Example usage:**
+```python
+# Get email template details
+template = get_email_template(email_template_id=1500)
+```
+
+#### list_email_templates
+
+Lists all email templates with optional filters. Email templates define automated or manual email responses sent from Rossum queues.
+
+**Parameters:**
+- `queue_id` (integer, optional): Filter by queue ID
+- `type` (string, optional): Filter by template type ('rejection', 'rejection_default', 'email_with_no_processable_attachments', 'custom')
+- `name` (string, optional): Filter by template name
+- `first_n` (integer, optional): Limit results to first N templates
+
+**Returns:**
+```json
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 1500,
+      "name": "Rejection Email",
+      "type": "rejection",
+      "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+      "automate": false
+    },
+    {
+      "id": 1501,
+      "name": "No Attachments Notification",
+      "type": "email_with_no_processable_attachments",
+      "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+      "automate": true
+    }
+  ]
+}
+```
+
+**Example usage:**
+```python
+# List all email templates
+all_templates = list_email_templates()
+
+# List email templates for a specific queue
+queue_templates = list_email_templates(queue_id=8199)
+
+# List rejection templates
+rejection_templates = list_email_templates(type="rejection")
+
+# List first 5 templates
+first_templates = list_email_templates(first_n=5)
+```
+
+#### create_email_template
+
+Creates a new email template. Templates can be automated to send emails automatically on specific triggers, or manual for user-initiated sending.
+
+**Parameters:**
+- `name` (string, required): Name of the email template
+- `queue` (string, required): URL of the queue to associate with
+- `subject` (string, required): Email subject line
+- `message` (string, required): Email body (HTML supported)
+- `type` (string, optional): Template type - 'rejection', 'rejection_default', 'email_with_no_processable_attachments', 'custom' (default: 'custom')
+- `automate` (boolean, optional): If true, email is sent automatically on trigger (default: false)
+- `to` (array, optional): List of recipient objects with 'type' and 'value' keys
+- `cc` (array, optional): List of CC recipient objects
+- `bcc` (array, optional): List of BCC recipient objects
+- `triggers` (array, optional): List of trigger URLs
+
+**Recipient object types:**
+- `{"type": "annotator", "value": ""}` - Send to the document annotator
+- `{"type": "constant", "value": "email@example.com"}` - Send to a fixed email address
+- `{"type": "datapoint", "value": "email_field_id"}` - Send to email from a datapoint field
+
+**Returns:**
+```json
+{
+  "id": 1502,
+  "name": "Custom Notification",
+  "url": "https://elis.rossum.ai/api/v1/email_templates/1502",
+  "queue": "https://elis.rossum.ai/api/v1/queues/8199",
+  "subject": "Document Processed",
+  "message": "<p>Your document has been processed.</p>",
+  "type": "custom",
+  "automate": true,
+  "to": [{"type": "constant", "value": "notifications@example.com"}]
+}
+```
+
+**Example usage:**
+```python
+# Create a simple custom email template
+template = create_email_template(
+    name="Processing Complete",
+    queue="https://elis.rossum.ai/api/v1/queues/8199",
+    subject="Document Processing Complete",
+    message="<p>Your document has been successfully processed.</p>"
+)
+
+# Create an automated rejection template
+template = create_email_template(
+    name="Auto Rejection",
+    queue="https://elis.rossum.ai/api/v1/queues/8199",
+    subject="Document Rejected",
+    message="<p>Your document could not be processed.</p>",
+    type="rejection",
+    automate=True,
+    to=[{"type": "annotator", "value": ""}]
+)
+
+# Create template with multiple recipients
+template = create_email_template(
+    name="Team Notification",
+    queue="https://elis.rossum.ai/api/v1/queues/8199",
+    subject="New Document",
+    message="<p>A new document has arrived.</p>",
+    to=[{"type": "constant", "value": "team@example.com"}],
+    cc=[{"type": "datapoint", "value": "sender_email"}]
+)
 ```
 
 ## Annotation Status Workflow

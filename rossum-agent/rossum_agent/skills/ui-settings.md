@@ -17,7 +17,7 @@
 
 ### Meta `meta_name` Values
 
-`status`, `original_file_name`, `labels`, `assignees`, `queue`, `details`, `created_at`, `modified_at`, `confirmed_at`, `exported_at`, `rejected_at`, `deleted_at`, `assigned_at`, `modifier`, `confirmed_by`, `exported_by`, `rejected_by`, `deleted_by`
+`status`, `original_file_name`, `labels`, `assignees`, `queue`, `details`, `created_at`, `modified_at`, `confirmed_at`, `exported_at`, `rejected_at`, `deleted_at`, `assigned_at`, `modifier`, `confirmed_by`, `exported_by`, `export_failed_at`, `rejected_by`, `deleted_by`
 
 ### Schema `data_type` Values
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from rossum_mcp.tools.annotations import register_annotation_tools
 from rossum_mcp.tools.document_relations import register_document_relation_tools
+from rossum_mcp.tools.email_templates import register_email_template_tools
 from rossum_mcp.tools.engines import register_engine_tools
 from rossum_mcp.tools.hooks import register_hook_tools
 from rossum_mcp.tools.queues import register_queue_tools
@@ -16,6 +17,7 @@ from rossum_mcp.tools.workspaces import register_workspace_tools
 __all__ = [
     "register_annotation_tools",
     "register_document_relation_tools",
+    "register_email_template_tools",
     "register_engine_tools",
     "register_hook_tools",
     "register_queue_tools",

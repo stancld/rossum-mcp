@@ -31,19 +31,6 @@ Each change object in the `changes` array:
 | `date` | `format` |
 | `enum` | `options: [{"value": "v1", "label": "Label 1"}]` |
 
-## Formula Fields
-
-```json
-{"id": "total", "type": "number", "is_formula": true, "formula": "field.amount + field.tax", "score_threshold": 0.8}
-```
-
-`score_threshold` is required for formula fields (default `0.8`).
-
-## AI/Reasoning Fields
-
-```json
-{"id": "category", "type": "string", "is_reasoning": true, "prompt": "Extract the document category", "score_threshold": 0.8}
-```
 
 ## Cross-Reference
 
