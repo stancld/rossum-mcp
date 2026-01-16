@@ -15,7 +15,7 @@ from rossum_agent.api.models.schemas import (
     FileInfo,
     Message,
 )
-from rossum_agent.redis_storage import ChatMetadata, RedisStorage
+from rossum_agent.redis_storage import ChatData, ChatMetadata, RedisStorage
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -61,9 +61,10 @@ class ChatService:
         chat_id = f"chat_{timestamp_str}_{unique_suffix}"
 
         initial_messages: list[dict[str, Any]] = []
-        self._storage.save_chat(user_id, chat_id, initial_messages)
+        metadata = ChatMetadata(mcp_mode=mcp_mode)
+        self._storage.save_chat(user_id, chat_id, initial_messages, metadata=metadata)
 
-        logger.info(f"Created chat {chat_id} for user {user_id or 'shared'}")
+        logger.info(f"Created chat {chat_id} for user {user_id or 'shared'} with mcp_mode={mcp_mode}")
         return ChatResponse(chat_id=chat_id, created_at=timestamp)
 
     def list_chats(self, user_id: str | None, limit: int = 50, offset: int = 0) -> ChatListResponse:
@@ -163,6 +164,15 @@ class ChatService:
         if (chat_data := self._storage.load_chat(user_id, chat_id)) is None:
             return None
         return chat_data.messages
+
+    def get_chat_data(self, user_id: str | None, chat_id: str) -> ChatData | None:
+        """Get full chat data including metadata.
+
+        Args:
+            user_id: User identifier for isolation.
+            chat_id: Chat session identifier.
+        """
+        return self._storage.load_chat(user_id, chat_id)
 
     def save_messages(
         self,

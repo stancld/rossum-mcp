@@ -73,6 +73,7 @@ class ChatMetadata:
     total_output_tokens: int = 0
     total_tool_calls: int = 0
     total_steps: int = 0
+    mcp_mode: str = "read-only"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -82,6 +83,7 @@ class ChatMetadata:
             "total_output_tokens": self.total_output_tokens,
             "total_tool_calls": self.total_tool_calls,
             "total_steps": self.total_steps,
+            "mcp_mode": self.mcp_mode,
         }
 
     @classmethod
@@ -93,6 +95,7 @@ class ChatMetadata:
             total_output_tokens=data.get("total_output_tokens", 0),
             total_tool_calls=data.get("total_tool_calls", 0),
             total_steps=data.get("total_steps", 0),
+            mcp_mode=data.get("mcp_mode", "read-only"),
         )
 
 

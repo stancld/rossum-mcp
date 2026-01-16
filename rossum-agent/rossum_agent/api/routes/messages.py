@@ -151,10 +151,12 @@ async def send_message(
     Raises:
         HTTPException: If chat not found.
     """
-    if not chat_service.chat_exists(credentials.user_id, chat_id):
+    chat_data = chat_service.get_chat_data(credentials.user_id, chat_id)
+    if chat_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chat {chat_id} not found")
 
-    history = chat_service.get_messages(credentials.user_id, chat_id) or []
+    history = chat_data.messages
+    mcp_mode = chat_data.metadata.mcp_mode
     user_prompt = message.content
     images: list[ImageContent] | None = message.images
     documents: list[DocumentContent] | None = message.documents
@@ -172,6 +174,7 @@ async def send_message(
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
                 rossum_url=message.rossum_url,
+                mcp_mode=mcp_mode,  # type: ignore[arg-type]
             ):
                 result = _process_agent_event(event)
                 if result.done_event:

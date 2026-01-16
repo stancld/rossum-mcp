@@ -162,6 +162,7 @@ class TestChatMetadata:
             "total_output_tokens": 50,
             "total_tool_calls": 5,
             "total_steps": 3,
+            "mcp_mode": "read-only",
         }
 
     def test_from_dict(self):

@@ -20,6 +20,7 @@ from rossum_agent.api.models.schemas import (
 from rossum_agent.api.routes import chats, files, health, messages
 from rossum_agent.api.routes.chats import get_chat_service_dep as chats_get_chat_service_dep
 from rossum_agent.api.routes.health import get_chat_service_dep as health_get_chat_service_dep
+from rossum_agent.redis_storage import ChatData, ChatMetadata
 
 from .conftest import create_mock_httpx_client
 
@@ -256,7 +257,7 @@ class TestSendMessageEndpoint:
     ):
         """Test sending message to non-existent chat."""
         mock_httpx.return_value = create_mock_httpx_client()
-        mock_chat_service.chat_exists.return_value = False
+        mock_chat_service.get_chat_data.return_value = None
 
         response = client.post(
             "/api/v1/chats/chat_nonexistent/messages", headers=valid_headers, json={"content": "Hello"}
@@ -283,8 +284,9 @@ class TestSendMessageEndpoint:
         """Test that send message returns streaming response."""
         mock_httpx.return_value = create_mock_httpx_client()
 
-        mock_chat_service.chat_exists.return_value = True
-        mock_chat_service.get_messages.return_value = []
+        mock_chat_service.get_chat_data.return_value = ChatData(
+            messages=[], metadata=ChatMetadata(mcp_mode="read-only")
+        )
         mock_chat_service.save_messages.return_value = True
 
         async def mock_run_agent(*args, **kwargs):
