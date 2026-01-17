@@ -6,7 +6,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.bedrock_client import DEFAULT_MODEL_ID, create_bedrock_client, get_model_id
+from rossum_agent.bedrock_client import OPUS_MODEL_ID, create_bedrock_client, get_model_id
 
 
 class TestCreateBedrockClient:
@@ -169,7 +169,7 @@ class TestGetModelId:
         with patch.dict(os.environ, env_without_model_vars, clear=True):
             model_id = get_model_id()
 
-            assert model_id == DEFAULT_MODEL_ID
+            assert model_id == OPUS_MODEL_ID
 
     def test_returns_model_arn_when_set(self):
         """Test that AWS_BEDROCK_MODEL_ARN takes precedence."""

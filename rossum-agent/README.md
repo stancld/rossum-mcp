@@ -75,9 +75,6 @@ export AWS_REGION="eu-central-1"
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 
-# Optional: Custom model
-export LLM_MODEL_ID="bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
-
 # Optional: Redis for chat persistence (API mode)
 export REDIS_HOST="localhost"
 export REDIS_PORT="6379"

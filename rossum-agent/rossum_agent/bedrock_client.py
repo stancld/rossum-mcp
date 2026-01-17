@@ -7,7 +7,7 @@ import os
 import boto3
 from anthropic import AnthropicBedrock
 
-DEFAULT_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
+OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
 
 def create_bedrock_client(
@@ -57,7 +57,6 @@ def get_model_id() -> str:
     """Get the Bedrock model ID from environment or return default.
 
     The model ID can be configured via:
-    - LLM_MODEL_ID environment variable (without 'bedrock/' prefix)
     - AWS_BEDROCK_MODEL_ARN for cross-account model access
 
     Returns:
@@ -65,9 +64,4 @@ def get_model_id() -> str:
     """
     if model_arn := os.environ.get("AWS_BEDROCK_MODEL_ARN"):
         return model_arn
-
-    model_id = os.environ.get("LLM_MODEL_ID", f"bedrock/{DEFAULT_MODEL_ID}")
-    if model_id.startswith("bedrock/"):
-        model_id = model_id[len("bedrock/") :]
-
-    return model_id
+    return f"bedrock/{OPUS_MODEL_ID}"
