@@ -56,3 +56,31 @@ class TestMCPConnectionSmoke:
             assert isinstance(result, dict), "Expected dict result from list_workspaces"
             assert "result" in result, "Expected 'result' key in response"
             assert isinstance(result["result"], list), "Expected list in result['result']"
+
+    async def test_mcp_call_list_tool_categories(self) -> None:
+        """Verify list_tool_categories returns catalog with keywords for dynamic loading."""
+        async with connect_mcp_server(
+            rossum_api_token=ROSSUM_API_TOKEN, rossum_api_base_url=ROSSUM_API_BASE_URL, mcp_mode="read-only"
+        ) as connection:
+            result = await connection.call_tool("list_tool_categories")
+
+            # FastMCP wraps list returns in {"result": [...]}
+            assert isinstance(result, dict), "Expected dict result"
+            assert "result" in result, "Expected 'result' key"
+            categories = result["result"]
+            assert isinstance(categories, list), "Expected list of categories"
+            assert len(categories) >= 10, "Expected at least 10 tool categories"
+
+            # Verify category structure
+            category_names = {cat["name"] for cat in categories}
+            assert "queues" in category_names, "Expected 'queues' category"
+            assert "schemas" in category_names, "Expected 'schemas' category"
+            assert "hooks" in category_names, "Expected 'hooks' category"
+
+            # Verify each category has required fields including keywords
+            for cat in categories:
+                assert "name" in cat, f"Category missing 'name': {cat}"
+                assert "description" in cat, f"Category {cat['name']} missing 'description'"
+                assert "tools" in cat, f"Category {cat['name']} missing 'tools'"
+                assert "keywords" in cat, f"Category {cat['name']} missing 'keywords'"
+                assert len(cat["keywords"]) > 0, f"Category {cat['name']} has no keywords"

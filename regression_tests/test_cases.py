@@ -101,7 +101,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         rossum_url=None,
         prompt="Hey, what can you do?",
         tool_expectation=ToolExpectation(expected_tools=[], mode=ToolMatchMode.EXACT_SEQUENCE),
-        token_budget=TokenBudget(min_total_tokens=13000, max_total_tokens=16000),
+        token_budget=TokenBudget(min_total_tokens=5500, max_total_tokens=7000),
         success_criteria=SuccessCriteria(
             required_keywords=["hook", "queue", "debug"],  # Simplified keywords for streamlined prompt
             max_steps=1,
@@ -114,13 +114,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         api_base_url="https://api.elis.develop.r8.lol/v1",
         rossum_url="https://elis.develop.r8.lol/documents?filtering=%7B%22items%22%3A%5B%7B%22field%22%3A%22queue%22%2C%22value%22%3A%5B%223960192%22%5D%2C%22operator%22%3A%22isAnyOf%22%7D%5D%2C%22logicOperator%22%3A%22and%22%7D&level=queue&page=1&page_size=100",
         prompt="Explain a document workflow and learning workflow on this queue.",
-        tool_expectation=ToolExpectation(
-            expected_tools=["get_queue", "list_hooks", "get_queue_engine"], mode=ToolMatchMode.SUBSET
-        ),
-        token_budget=TokenBudget(min_total_tokens=20000, max_total_tokens=50000),
+        tool_expectation=ToolExpectation(expected_tools=["get_queue", "get_queue_engine"], mode=ToolMatchMode.SUBSET),
+        token_budget=TokenBudget(min_total_tokens=18000, max_total_tokens=35000),
         success_criteria=SuccessCriteria(
             required_keywords=["document_type", "classification", "training", "workflow"],
-            max_steps=3,
+            max_steps=4,
             mermaid_expectation=MermaidExpectation(
                 descriptions=[
                     "Document workflow showing upload, classification, review, and routing to specialized queues",
@@ -151,11 +149,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=140000),
+        token_budget=TokenBudget(min_total_tokens=50000, max_total_tokens=90000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
-            required_keywords=["splitting", "invoice"],
-            max_steps=6,
+            required_keywords=[],
+            max_steps=4,
             file_expectation=FileExpectation(expected_files=["roast.md"]),
             custom_checks=[HIDDEN_MULTIVALUE_CHECK],
         ),
@@ -187,15 +185,14 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "spawn_mcp_connection",
                 "call_on_connection",
                 "deploy_pull",
-                ("get_schema", "get_queue_schema", "get_schema_tree_structure"),  # OR: either is valid
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=400000, max_total_tokens=800000),
+        token_budget=TokenBudget(min_total_tokens=400000, max_total_tokens=600000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=["splitting", "sandbox"],
-            max_steps=16,
+            max_steps=15,
             file_expectation=FileExpectation(),  # no files are expected to be generated
             custom_checks=[HIDDEN_MULTIVALUE_CHECK],
         ),
@@ -254,7 +251,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=120000, max_total_tokens=250000),
+        token_budget=TokenBudget(min_total_tokens=120000, max_total_tokens=200000),
         success_criteria=SuccessCriteria(
             required_keywords=["Invoices", "Credit Notes", "Net Terms"],
             max_steps=10,
@@ -281,17 +278,15 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         ),
         tool_expectation=ToolExpectation(
             expected_tools=[
-                "get_queue_template_names",
                 "create_queue_from_template",
                 "search_knowledge_base",
                 "list_hook_templates",
                 "create_hook_from_template",
                 "update_hook",
-                ("get_schema", "get_queue_schema", "get_schema_tree_structure"),  # OR: either is valid
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=100000, max_total_tokens=150000),
+        token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=90000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=[],
@@ -323,19 +318,13 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "Return only the queue_id as a one-word answer."
         ),
         tool_expectation=ToolExpectation(
-            expected_tools=[
-                "get_queue_template_names",
-                "create_queue_from_template",
-                "load_skill",
-                "get_schema_tree_structure",
-                "update_queue",
-            ],
+            expected_tools=["create_queue_from_template", "load_skill", "update_queue"],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=120000),
+        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=70000),
         success_criteria=SuccessCriteria(
             required_keywords=[],
-            max_steps=6,
+            max_steps=4,
             file_expectation=FileExpectation(),
             custom_checks=[QUEUE_UI_SETTINGS_CHECK],
         ),

@@ -174,7 +174,7 @@ async def send_message(
                 rossum_api_token=credentials.token,
                 rossum_api_base_url=credentials.api_url,
                 rossum_url=message.rossum_url,
-                mcp_mode=mcp_mode,  # type: ignore[arg-type]
+                mcp_mode=mcp_mode,
             ):
                 result = _process_agent_event(event)
                 if result.done_event:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import replace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast, get_args
 
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
@@ -156,7 +156,7 @@ async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data:
 
 
 # Available template names for create_queue_from_template
-QUEUE_TEMPLATE_NAMES = (
+QueueTemplateName = Literal[
     "EU Demo Template",
     "AP&R EU Demo Template",
     "Tax Invoice EU Demo Template",
@@ -177,13 +177,14 @@ QUEUE_TEMPLATE_NAMES = (
     "Credit Note Demo Template",
     "Debit Note Demo Template",
     "Proforma Invoice Demo Template",
-)
+]
+QUEUE_TEMPLATE_NAMES = get_args(QueueTemplateName)
 
 
 async def _create_queue_from_template(
     client: AsyncRossumAPIClient,
     name: str,
-    template_name: str,
+    template_name: QueueTemplateName,
     workspace_id: int,
     include_documents: bool = False,
     engine_id: int | None = None,
@@ -281,19 +282,11 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     )
     async def create_queue_from_template(
         name: str,
-        template_name: str,
+        template_name: QueueTemplateName,
         workspace_id: int,
         include_documents: bool = False,
         engine_id: int | None = None,
     ) -> Queue | dict:
-        """
-        Available templates: EU Demo Template, AP&R EU Demo Template, Tax Invoice EU Demo Template,
-        US Demo Template, AP&R US Demo Template, Tax Invoice US Demo Template, UK Demo Template,
-        AP&R UK Demo Template, Tax Invoice UK Demo Template, CZ Demo Template, Empty Organization Template,
-        Delivery Notes Demo Template, Delivery Note Demo Template, Chinese Invoices (Fapiao) Demo Template,
-        Tax Invoice CN Demo Template, Certificates of Analysis Demo Template, Purchase Order Demo Template,
-        Credit Note Demo Template, Debit Note Demo Template, Proforma Invoice Demo Template.
-        """
         return await _create_queue_from_template(
             client, name, template_name, workspace_id, include_documents, engine_id
         )

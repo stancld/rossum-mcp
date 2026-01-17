@@ -159,6 +159,42 @@ class TestCallOnConnection:
             loop.close()
             set_mcp_connection(None, None)
 
+    def test_call_with_dict_arguments(self) -> None:
+        """Test that call accepts dict arguments directly (not just JSON strings)."""
+        loop = asyncio.new_event_loop()
+        mock_conn = MagicMock()
+        set_mcp_connection(mock_conn, loop)
+
+        mock_connection = MagicMock()
+        spawned = get_spawned_connections()
+        spawned["test"] = SpawnedConnection(
+            connection=mock_connection,
+            client=MagicMock(),
+            api_base_url="https://api.test.com",
+        )
+
+        try:
+            with patch("rossum_agent.tools.spawn_mcp.asyncio.run_coroutine_threadsafe") as mock_run:
+                future = MagicMock()
+                future.result.return_value = {"result": "ok"}
+                mock_run.return_value = future
+
+                # Pass dict directly instead of JSON string
+                result = call_on_connection(
+                    connection_id="test",
+                    tool_name="some_tool",
+                    arguments={"param": "value"},
+                )
+                assert result.startswith("[some_tool]")
+                assert '"result": "ok"' in result
+
+                # Verify call_tool received the dict
+                mock_connection.call_tool.assert_called_once_with("some_tool", {"param": "value"})
+        finally:
+            spawned.clear()
+            loop.close()
+            set_mcp_connection(None, None)
+
     def test_call_success_with_dict_result(self) -> None:
         """Test successful call returning dict."""
         loop = asyncio.new_event_loop()

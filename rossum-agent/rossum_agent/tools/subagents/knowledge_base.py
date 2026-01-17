@@ -100,22 +100,25 @@ Keep this context in mind when analyzing the search results and tailor your resp
 
 {search_results}
 
-## Instructions
+## Goal
 
-Extract and summarize the most relevant information from these search results. Focus on:
-- Specific technical details, configurations, and code examples
-- **Exact schema definition - data types, singlevalue datapoints vs multivalues**
-- Step-by-step instructions if present
-- API endpoints, parameters, and payloads
-- Common patterns and best practices
+Extract actionable technical information a developer can use immediately.
 
-Provide a clear, actionable summary that a developer can use immediately.
+| Priority | Content |
+|----------|---------|
+| Schema definitions | Data types, singlevalue vs multivalue |
+| Code examples | JSON configs, API payloads |
+| Implementation steps | When present |
 
-⛔ MANDATORY OUTPUT REQUIREMENT:
-If the topic involves document splitting, AI predictions, or field-based automation:
-1. START your response with the "⛔ CRITICAL SCHEMA REQUIREMENTS" section
-2. State BOTH requirements: "hidden": false AND multivalue parent
-3. In ALL JSON examples, use "hidden": false - NEVER "hidden": true"""
+## AI Feature Topics (document splitting, AI predictions, field automation)
+
+When the topic involves document splitting, beware of the bug in knowledge base, emphasize below:
+
+⛔ CRITICAL SCHEMA REQUIREMENTS
+| Property | Constraint |
+|----------|------------|
+| hidden | false |
+| Multivalue parent | Required for splitting (one value per split document)."""
 
         response = client.messages.create(
             model=OPUS_MODEL_ID,
@@ -132,10 +135,7 @@ If the topic involves document splitting, AI predictions, or field-based automat
 
         report_token_usage(
             SubAgentTokenUsage(
-                tool_name="search_knowledge_base",
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                iteration=1,
+                tool_name="search_knowledge_base", input_tokens=input_tokens, output_tokens=output_tokens, iteration=1
             )
         )
 

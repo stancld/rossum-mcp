@@ -16,7 +16,11 @@ if TYPE_CHECKING:
 EXPECTED_CHECKS = [
     {"fields": {"amount_total"}, "operator": "inequality", "type": "error"},
     {"fields": {"item_amount_total", "amount_total"}, "operator": "sum_equality", "type": "error"},
-    {"fields": {"item_quantity", "item_amount", "item_amount_total"}, "operator": "mult_equality", "type": "error"},
+    {
+        "fields": {"item_quantity", "item_amount_base", "item_amount_total"},
+        "operator": "mult_equality",
+        "type": "error",
+    },
 ]
 
 

@@ -406,10 +406,7 @@ Workflow:
 
 
 @beta_tool
-def patch_schema_with_subagent(
-    schema_id: str,
-    changes: str,
-) -> str:
+def patch_schema_with_subagent(schema_id: str, changes: str) -> str:
     """Update a Rossum schema using an Opus sub-agent with programmatic bulk replacement.
 
     Delegates schema update to a sub-agent that:

@@ -40,6 +40,17 @@ from rossum_agent.tools.deploy import (
     get_deploy_tools,
     get_workspace_credentials,
 )
+from rossum_agent.tools.dynamic_tools import (
+    DISCOVERY_TOOL_NAME,
+    DynamicToolsState,
+    get_dynamic_tools,
+    get_load_tool_category_definition,
+    get_loaded_categories,
+    load_tool_category,
+    preload_categories_for_request,
+    reset_dynamic_tools,
+    suggest_categories_for_request,
+)
 from rossum_agent.tools.file_tools import write_file
 from rossum_agent.tools.formula import suggest_formula_field
 from rossum_agent.tools.skills import load_skill
@@ -64,7 +75,8 @@ if TYPE_CHECKING:
     from anthropic._tools import BetaTool  # ty: ignore[unresolved-import] - private API
     from anthropic.types import ToolParam
 
-INTERNAL_TOOLS: list[BetaTool[..., str]] = [
+# Tools using @beta_tool decorator
+_BETA_TOOLS: list[BetaTool[..., str]] = [
     write_file,
     search_knowledge_base,
     evaluate_python_hook,
@@ -80,21 +92,20 @@ INTERNAL_TOOLS: list[BetaTool[..., str]] = [
 
 def get_internal_tools() -> list[ToolParam]:
     """Get all internal tools in Anthropic format."""
-    return [tool.to_dict() for tool in INTERNAL_TOOLS]
+    return [tool.to_dict() for tool in _BETA_TOOLS] + [get_load_tool_category_definition()]
 
 
 def get_internal_tool_names() -> set[str]:
     """Get the names of all internal tools."""
-    return {tool.name for tool in INTERNAL_TOOLS}
+    return {tool.name for tool in _BETA_TOOLS} | {"load_tool_category"}
 
 
-def execute_tool(name: str, arguments: dict[str, object], tools: list[BetaTool[..., str]]) -> str:
-    """Execute a tool by name from the given tool set.
+def execute_internal_tool(name: str, arguments: dict[str, object]) -> str:
+    """Execute an internal tool by name.
 
     Args:
         name: The name of the tool to execute.
         arguments: The arguments to pass to the tool.
-        tools: The list of tools to search in.
 
     Returns:
         The result of the tool execution as a string.
@@ -102,18 +113,38 @@ def execute_tool(name: str, arguments: dict[str, object], tools: list[BetaTool[.
     Raises:
         ValueError: If the tool name is not recognized.
     """
-    for tool in tools:
+    if name == "load_tool_category":
+        raw_categories = arguments.get("categories", [])
+        categories = [str(c) for c in raw_categories] if isinstance(raw_categories, list) else [str(raw_categories)]
+        return load_tool_category(categories)
+
+    for tool in _BETA_TOOLS:
         if tool.name == name:
             result: str = tool(**arguments)
             return result
 
+    raise ValueError(f"Unknown internal tool: {name}")
+
+
+# Legacy alias for backwards compatibility
+def execute_tool(name: str, arguments: dict[str, object], tools: list[BetaTool[..., str]]) -> str:
+    """Execute a tool by name from the given tool set (legacy API)."""
+    for tool in tools:
+        if tool.name == name:
+            result: str = tool(**arguments)
+            return result
     raise ValueError(f"Unknown tool: {name}")
 
 
+# Legacy export for deploy tools execution
+INTERNAL_TOOLS = _BETA_TOOLS
+
 __all__ = [
     "DEPLOY_TOOLS",
+    "DISCOVERY_TOOL_NAME",
     "INTERNAL_TOOLS",
     "OPUS_MODEL_ID",
+    "DynamicToolsState",
     "SpawnedConnection",
     "SubAgentProgress",
     "SubAgentProgressCallback",
@@ -136,20 +167,27 @@ __all__ = [
     "deploy_push",
     "deploy_to_org",
     "evaluate_python_hook",
+    "execute_internal_tool",
     "execute_tool",
     "get_deploy_tool_names",
     "get_deploy_tools",
+    "get_dynamic_tools",
     "get_internal_tool_names",
     "get_internal_tools",
+    "get_load_tool_category_definition",
+    "get_loaded_categories",
     "get_mcp_connection",
     "get_mcp_event_loop",
     "get_output_dir",
     "get_workspace_credentials",
     "load_skill",
+    "load_tool_category",
     "patch_schema_with_subagent",
+    "preload_categories_for_request",
     "report_progress",
     "report_text",
     "report_token_usage",
+    "reset_dynamic_tools",
     "search_knowledge_base",
     "set_mcp_connection",
     "set_output_dir",
@@ -157,6 +195,7 @@ __all__ = [
     "set_text_callback",
     "set_token_callback",
     "spawn_mcp_connection",
+    "suggest_categories_for_request",
     "suggest_formula_field",
     "write_file",
 ]
