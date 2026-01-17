@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -127,25 +128,33 @@ def get_sandbox_token_for_case(
     return case.sandbox_api_token
 
 
+@dataclass
+class LiveAgentContext:
+    """Context returned from create_live_agent fixture."""
+
+    agent: RossumAgent
+    api_token: str
+
+
 @pytest.fixture
 def create_live_agent(
     env_tokens: dict[str, str],
     api_token_override: str | None,
     sandbox_api_token_override: str | None,
     temp_output_dir: Path,
-) -> Callable[[RegressionTestCase], AsyncIterator[tuple[RossumAgent, str]]]:
+) -> Callable[[RegressionTestCase], AsyncIterator[LiveAgentContext]]:
     """Factory fixture to create a live RossumAgent for a test case.
 
     Usage:
-        async with create_live_agent(case) as (agent, prompt):
-            # run tests with agent using the formatted prompt
+        async with create_live_agent(case) as ctx:
+            # run tests with ctx.agent, ctx.api_token available
 
     Token priority: --api-token flag > .env TEST_NAME_API_TOKEN > .env DEFAULT_API_TOKEN > case.api_token
     Sandbox token priority: --sandbox-api-token flag > .env TEST_NAME_SANDBOX_API_TOKEN > .env DEFAULT_SANDBOX_API_TOKEN > case.sandbox_api_token
     """
 
     @asynccontextmanager
-    async def _create_agent(case: RegressionTestCase) -> AsyncIterator[tuple[RossumAgent, str]]:
+    async def _create_agent(case: RegressionTestCase) -> AsyncIterator[LiveAgentContext]:
         token = get_token_for_case(case, env_tokens, api_token_override)
         sandbox_token = get_sandbox_token_for_case(case, env_tokens, sandbox_api_token_override)
         if sandbox_token and "{sandbox_api_token}" in case.prompt:
@@ -176,7 +185,7 @@ def create_live_agent(
             )
 
             try:
-                yield agent
+                yield LiveAgentContext(agent=agent, api_token=token)
             finally:
                 set_output_dir(None)
 

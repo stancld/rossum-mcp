@@ -26,7 +26,9 @@ IMPORTANT: "passed": true means the response is ACCURATE (no misleading suggesti
 "passed": false means MISLEADING suggestions were found."""
 
 
-def check_no_misleading_training_suggestions(steps: list[AgentStep]) -> tuple[bool, str]:
+def check_no_misleading_training_suggestions(
+    steps: list[AgentStep], _api_base_url: str, _api_token: str
+) -> tuple[bool, str]:
     """Verify the final answer doesn't contain misleading training suggestions.
 
     Uses Haiku to semantically verify that the agent's response doesn't make

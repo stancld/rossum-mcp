@@ -10,7 +10,9 @@ if TYPE_CHECKING:
 _REQUIRED_TERMS = ["Net 15", "Net 30", "Outstanding"]
 
 
-def check_net_terms_formula_field_added(steps: list[AgentStep]) -> tuple[bool, str]:
+def check_net_terms_formula_field_added(
+    steps: list[AgentStep], _api_base_url: str, _api_token: str
+) -> tuple[bool, str]:
     """Verify that a formula field for Net Terms was added to the schema."""
     for step in steps:
         for tr in step.tool_results:

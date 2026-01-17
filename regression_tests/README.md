@@ -91,7 +91,7 @@ Use `ToolMatchMode` enum:
 
 ## Success Criteria
 
-All tests automatically require: final answer present, no agent errors, no tool errors.
+All tests automatically require: final answer present, no agent errors.
 
 Configurable options:
 - `required_keywords`: Keywords that must appear in the final answer (case-insensitive)

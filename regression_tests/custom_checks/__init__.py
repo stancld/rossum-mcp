@@ -1,10 +1,13 @@
 """Custom check functions for regression tests.
 
-Each check function takes list[AgentStep] and returns tuple[bool, str] (passed, reasoning).
+Each check function takes (steps, api_base_url, api_token) and returns tuple[bool, str] (passed, reasoning).
 """
 
 from __future__ import annotations
 
+from regression_tests.custom_checks.business_validation_hook import (
+    check_business_validation_hook_settings,
+)
 from regression_tests.custom_checks.hidden_multivalue_warning import (
     check_knowledge_base_hidden_multivalue_warning,
 )
@@ -16,6 +19,7 @@ from regression_tests.custom_checks.no_misleading_training_suggestions import (
 )
 
 __all__ = [
+    "check_business_validation_hook_settings",
     "check_knowledge_base_hidden_multivalue_warning",
     "check_net_terms_formula_field_added",
     "check_no_misleading_training_suggestions",

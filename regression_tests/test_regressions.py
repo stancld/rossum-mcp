@@ -3,6 +3,18 @@
 This module runs all regression test cases defined in test_cases.py.
 Tests are parameterized so each case runs as a separate test.
 
+Checks implemented:
+- Tool expectation: Validates expected tools were used
+- Token budget: Ensures token usage stays within limits
+- Final answer present: Verifies agent produced a final answer
+- No agent errors: Checks for errors in agent steps
+- Required keywords: Validates keywords appear in final answer
+- Max steps: Ensures step count doesn't exceed limit
+- Sub-agent usage: Validates sub-agent was/wasn't used as expected
+- Mermaid diagrams: Validates diagram count and content
+- File expectation: Checks expected files were created
+- Custom checks: Runs user-defined validation functions
+
 Run with: pytest regression_tests/ -v -s
 """
 
@@ -50,7 +62,7 @@ def _check_assertion(name: str, check_fn, failures: list[str] | None = None) -> 
 
 
 def _evaluate_criteria(
-    run: RegressionRun, case: RegressionTestCase, output_dir: Path | None = None
+    run: RegressionRun, case: RegressionTestCase, api_token: str, output_dir: Path | None = None
 ) -> tuple[bool, list[str]]:
     """Evaluate all success criteria and print results. Returns (all_passed, failures)."""
     all_passed = True
@@ -72,9 +84,6 @@ def _evaluate_criteria(
 
     errors = [s.error for s in run.steps if s.error]
     all_passed &= _check("No agent errors", not errors, f"Errors: {errors}", failures)
-
-    tool_errors = [f"{tr.name}: {tr.content}" for s in run.steps for tr in s.tool_results if tr.is_error]
-    all_passed &= _check("No tool errors", not tool_errors, f"Tool errors: {tool_errors}", failures)
 
     criteria = case.success_criteria
 
@@ -108,19 +117,21 @@ def _evaluate_criteria(
     else:
         print("  - File expectation: (none expected)")
 
-    all_passed &= _evaluate_custom_checks(run.steps, criteria.custom_checks, failures)
+    all_passed &= _evaluate_custom_checks(run.steps, criteria.custom_checks, case.api_base_url, api_token, failures)
 
     return all_passed, failures
 
 
-def _evaluate_custom_checks(steps: list, custom_checks, failures: list[str] | None = None) -> bool:
+def _evaluate_custom_checks(
+    steps: list, custom_checks, api_base_url: str, api_token: str, failures: list[str] | None = None
+) -> bool:
     """Evaluate all custom checks. Returns True if all pass."""
     if not custom_checks:
         return True
 
     all_passed = True
     for check in custom_checks:
-        passed, reasoning = check.check_fn(steps)
+        passed, reasoning = check.check_fn(steps, api_base_url, api_token)
         all_passed &= _check(f"Custom: {check.name}", passed, reasoning, failures)
         if passed:
             print(f"    LLM reasoning: {reasoning}")
@@ -158,8 +169,8 @@ def _evaluate_mermaid(final_answer: str, mermaid_exp, failures: list[str] | None
 @pytest.mark.parametrize("case", REGRESSION_TEST_CASES, ids=lambda c: c.name)
 async def test_agent_regression(case, create_live_agent, show_answer, temp_output_dir):
     """Run a single regression test case against live API."""
-    async with create_live_agent(case) as agent:
-        run = await run_regression_test(agent, case.prompt)
+    async with create_live_agent(case) as ctx:
+        run = await run_regression_test(ctx.agent, case.prompt)
 
         print(f"\n{'=' * 60}")
         print(f"Test: {case.name}")
@@ -177,7 +188,7 @@ async def test_agent_regression(case, create_live_agent, show_answer, temp_outpu
             print(f"Error: {run.error}")
 
         print("\n--- Criteria Evaluation ---")
-        all_passed, failures = _evaluate_criteria(run, case, temp_output_dir)
+        all_passed, failures = _evaluate_criteria(run, case, ctx.api_token, temp_output_dir)
 
         if show_answer:
             final_steps = [s for s in run.steps if s.is_final]

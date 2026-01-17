@@ -13,6 +13,7 @@ Each case defines:
 from __future__ import annotations
 
 from regression_tests.custom_checks import (
+    check_business_validation_hook_settings,
     check_knowledge_base_hidden_multivalue_warning,
     check_net_terms_formula_field_added,
     check_no_misleading_training_suggestions,
@@ -41,6 +42,11 @@ NO_MISLEADING_TRAINING_SUGGESTIONS_CHECK = CustomCheck(
 NET_TERMS_FORMULA_FIELD_CHECK = CustomCheck(
     name="Net Terms formula field was added to schema",
     check_fn=check_net_terms_formula_field_added,
+)
+
+BUSINESS_VALIDATION_HOOK_CHECK = CustomCheck(
+    name="Business validation hook has correct check settings",
+    check_fn=check_business_validation_hook_settings,
 )
 
 
@@ -248,6 +254,44 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             max_steps=10,
             file_expectation=FileExpectation(),
             custom_checks=[NET_TERMS_FORMULA_FIELD_CHECK],
+        ),
+    ),
+    RegressionTestCase(
+        name="setup_invoice_queue_with_business_validation",
+        description="Create Invoice queue with business validation hook and return hook_id",
+        api_base_url="https://api.elis.rossum.ai/v1",
+        rossum_url=None,
+        prompt=(
+            "# Set up Invoice queue with business validation\n\n"
+            "Workspace: 1680043\n"
+            "Region: EU\n\n"
+            "## Tasks:\n\n"
+            "1. Create a new queue: Invoices\n"
+            "2. Add business validations with these 3 checks:\n"
+            '    - Total amount is smaller than 400. Error message: "Total amount is larger than allowed 400."\n'
+            '    - Sum of all total amount line items equals total amount. Error message: "Sum of all total amount line items does not equal total amount."\n'
+            '    - All line items it holds: "quantity x unit price = total amount"\n\n'
+            "Return only the hook_id as a one-word answer."
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=[
+                "get_queue_template_names",
+                "create_queue_from_template",
+                "search_knowledge_base",
+                "list_hook_templates",
+                "create_hook_from_template",
+                "update_hook",
+                ("get_schema", "get_queue_schema", "get_schema_tree_structure"),  # OR: either is valid
+            ],
+            mode=ToolMatchMode.SUBSET,
+        ),
+        token_budget=TokenBudget(min_total_tokens=100000, max_total_tokens=150000),
+        success_criteria=SuccessCriteria(
+            require_subagent=True,
+            required_keywords=[],
+            max_steps=6,
+            file_expectation=FileExpectation(),
+            custom_checks=[BUSINESS_VALIDATION_HOOK_CHECK],
         ),
     ),
 ]

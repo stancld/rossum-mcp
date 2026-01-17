@@ -64,4 +64,4 @@ def get_model_id() -> str:
     """
     if model_arn := os.environ.get("AWS_BEDROCK_MODEL_ARN"):
         return model_arn
-    return f"bedrock/{OPUS_MODEL_ID}"
+    return OPUS_MODEL_ID

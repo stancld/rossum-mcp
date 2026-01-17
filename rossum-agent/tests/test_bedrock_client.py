@@ -167,7 +167,7 @@ class TestGetModelId:
         with patch.dict(os.environ, env_without_model_vars, clear=True):
             model_id = get_model_id()
 
-            assert model_id == f"bedrock/{OPUS_MODEL_ID}"
+            assert model_id == OPUS_MODEL_ID
 
     def test_returns_model_arn_when_set(self):
         """Test that AWS_BEDROCK_MODEL_ARN takes precedence."""

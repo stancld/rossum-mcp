@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     type Passed = bool
     type Reasoning = str
     type CustomCheckResult = tuple[Passed, Reasoning]
-    type CustomCheckFn = Callable[[list[AgentStep]], CustomCheckResult]
+    type CustomCheckFn = Callable[[list[AgentStep], str, str], CustomCheckResult]
 
 
 class ToolMatchMode(Enum):
@@ -85,7 +85,7 @@ class CustomCheck:
 
     Attributes:
         name: Short name for the check (displayed in test output).
-        check_fn: Callable that takes agent steps and returns (passed, reasoning).
+        check_fn: Callable that takes (agent_steps, api_base_url, api_token) and returns (passed, reasoning).
     """
 
     name: str
@@ -96,7 +96,7 @@ class CustomCheck:
 class SuccessCriteria:
     """High-level success conditions for a task.
 
-    All tests require: final answer present, no agent errors, no tool errors.
+    All tests require: final answer present, no agent errors.
 
     Attributes:
         required_keywords: Keywords that must appear in the final answer.

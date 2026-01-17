@@ -24,7 +24,9 @@ Answer with a JSON object:
 {{"passed": true/false, "reasoning": "Brief explanation of what requirements were mentioned or missing"}}"""
 
 
-def check_knowledge_base_hidden_multivalue_warning(steps: list[AgentStep]) -> tuple[bool, str]:
+def check_knowledge_base_hidden_multivalue_warning(
+    steps: list[AgentStep], _api_base_url: str, _api_token: str
+) -> tuple[bool, str]:
     """Verify search_knowledge_base warns about hidden and multivalue datapoint requirements.
 
     Uses Haiku to semantically verify that the Opus sub-agent's analysis
