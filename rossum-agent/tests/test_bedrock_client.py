@@ -162,46 +162,18 @@ class TestGetModelId:
 
     def test_returns_default_model_id(self):
         """Test that default model ID is returned when no env vars are set."""
-        env_without_model_vars = {
-            k: v for k, v in os.environ.items() if k not in ("LLM_MODEL_ID", "AWS_BEDROCK_MODEL_ARN")
-        }
+        env_without_model_vars = {k: v for k, v in os.environ.items() if k != "AWS_BEDROCK_MODEL_ARN"}
 
         with patch.dict(os.environ, env_without_model_vars, clear=True):
             model_id = get_model_id()
 
-            assert model_id == OPUS_MODEL_ID
+            assert model_id == f"bedrock/{OPUS_MODEL_ID}"
 
     def test_returns_model_arn_when_set(self):
         """Test that AWS_BEDROCK_MODEL_ARN takes precedence."""
         model_arn = "arn:aws:bedrock:us-east-1:123456789012:provisioned-model/abc123"
 
-        with patch.dict(
-            os.environ,
-            {
-                "AWS_BEDROCK_MODEL_ARN": model_arn,
-                "LLM_MODEL_ID": "bedrock/some-other-model",
-            },
-        ):
+        with patch.dict(os.environ, {"AWS_BEDROCK_MODEL_ARN": model_arn}):
             result = get_model_id()
 
             assert result == model_arn
-
-    def test_strips_bedrock_prefix_from_llm_model_id(self):
-        """Test that 'bedrock/' prefix is stripped from LLM_MODEL_ID."""
-        env_without_arn = {k: v for k, v in os.environ.items() if k != "AWS_BEDROCK_MODEL_ARN"}
-        env_without_arn["LLM_MODEL_ID"] = "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
-
-        with patch.dict(os.environ, env_without_arn, clear=True):
-            result = get_model_id()
-
-            assert result == "anthropic.claude-3-sonnet-20240229-v1:0"
-
-    def test_returns_llm_model_id_without_prefix_unchanged(self):
-        """Test that LLM_MODEL_ID without prefix is returned unchanged."""
-        env_without_arn = {k: v for k, v in os.environ.items() if k != "AWS_BEDROCK_MODEL_ARN"}
-        env_without_arn["LLM_MODEL_ID"] = "anthropic.claude-3-haiku-20240307-v1:0"
-
-        with patch.dict(os.environ, env_without_arn, clear=True):
-            result = get_model_id()
-
-            assert result == "anthropic.claude-3-haiku-20240307-v1:0"
