@@ -610,36 +610,6 @@ wheels = [
 ]
 
 [[package]]
-name = "elastic-transport"
-version = "9.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "sniffio" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/23/0a/a92140b666afdcb9862a16e4d80873b3c887c1b7e3f17e945fc3460edf1b/elastic_transport-9.2.1.tar.gz", hash = "sha256:97d9abd638ba8aa90faa4ca1bf1a18bde0fe2088fbc8757f2eb7b299f205773d", size = 77403, upload-time = "2025-12-23T11:54:12.849Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/e6/a42b600ae8b808371f740381f6c32050cad93f870d36cc697b8b7006bf7c/elastic_transport-9.2.1-py3-none-any.whl", hash = "sha256:39e1a25e486af34ce7aa1bc9005d1c736f1b6fb04c9b64ea0604ded5a61fc1d4", size = 65327, upload-time = "2025-12-23T11:54:11.681Z" },
-]
-
-[[package]]
-name = "elasticsearch"
-version = "9.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "elastic-transport" },
-    { name = "python-dateutil" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/6c/67bb17ca0035b0cac4cfbbe64e18d120203fef22da66dd4c636563a0ea63/elasticsearch-9.2.1.tar.gz", hash = "sha256:97f473418e8976611349757287ac982acf12f4e305182863d985d5a031c36830", size = 878062, upload-time = "2025-12-23T14:37:31.694Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/d5/84264c29ec67f2f8129676ce11f05defb52f44e97e5f411db9a220f2aa43/elasticsearch-9.2.1-py3-none-any.whl", hash = "sha256:8665f5a0b4d29a7c2772851c05ea8a09279abb7928b7d727524613bd61d75958", size = 963593, upload-time = "2025-12-23T14:37:28.047Z" },
-]
-
-[[package]]
 name = "email-validator"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2259,7 +2229,6 @@ dependencies = [
     { name = "boto3" },
     { name = "cryptography" },
     { name = "ddgs" },
-    { name = "elasticsearch" },
     { name = "fastmcp" },
     { name = "jinja2" },
     { name = "pyjwt" },
@@ -2332,7 +2301,6 @@ requires-dist = [
     { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "cryptography", specifier = ">=41.0" },
     { name = "ddgs", specifier = ">=9.9.0" },
-    { name = "elasticsearch", specifier = ">=9.0" },
     { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.115.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
     { name = "fastmcp", specifier = ">=2.13.0" },
@@ -2398,7 +2366,7 @@ dependencies = [
 [[package]]
 name = "rossum-deploy"
 version = "0.2.0.dev0"
-source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-deploy#a74f2387cd798702bff345a575e71eefa7a13f0e" }
+source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-deploy#e410b049936c6f4f282013d9752f863d6fe7f529" }
 dependencies = [
     { name = "pydantic" },
     { name = "rossum-api" },
@@ -2407,7 +2375,7 @@ dependencies = [
 [[package]]
 name = "rossum-mcp"
 version = "0.3.6.dev0"
-source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-mcp#a74f2387cd798702bff345a575e71eefa7a13f0e" }
+source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-mcp#e410b049936c6f4f282013d9752f863d6fe7f529" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },

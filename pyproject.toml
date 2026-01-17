@@ -29,7 +29,6 @@ agent = [
     "boto3>=1.0",
     "cryptography>=41.0",
     "ddgs>=9.9.0",
-    "elasticsearch>=9.0",
     "fastmcp>=2.13.0",
     "jinja2>=3.0",
     "PyJWT>=2.8",
@@ -58,7 +57,6 @@ docs = [
 mcp = [
     "fastmcp>=2.0.0",
     "mcp>=1.0.0",
-    "elasticsearch>=9.0",
 ]
 # Streamlit UI
 streamlit = [
@@ -67,7 +65,6 @@ streamlit = [
 ]
 # Testing
 tests = [
-    "elasticsearch>=9.0",
     "coverage>=7.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
