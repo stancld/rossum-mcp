@@ -17,10 +17,14 @@ from regression_tests.custom_checks.net_terms_formula_field import (
 from regression_tests.custom_checks.no_misleading_training_suggestions import (
     check_no_misleading_training_suggestions,
 )
+from regression_tests.custom_checks.queue_ui_settings import (
+    check_queue_ui_settings,
+)
 
 __all__ = [
     "check_business_validation_hook_settings",
     "check_knowledge_base_hidden_multivalue_warning",
     "check_net_terms_formula_field_added",
     "check_no_misleading_training_suggestions",
+    "check_queue_ui_settings",
 ]

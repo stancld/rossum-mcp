@@ -17,6 +17,7 @@ from regression_tests.custom_checks import (
     check_knowledge_base_hidden_multivalue_warning,
     check_net_terms_formula_field_added,
     check_no_misleading_training_suggestions,
+    check_queue_ui_settings,
 )
 from regression_tests.framework.models import (
     CustomCheck,
@@ -47,6 +48,11 @@ NET_TERMS_FORMULA_FIELD_CHECK = CustomCheck(
 BUSINESS_VALIDATION_HOOK_CHECK = CustomCheck(
     name="Business validation hook has correct check settings",
     check_fn=check_business_validation_hook_settings,
+)
+
+QUEUE_UI_SETTINGS_CHECK = CustomCheck(
+    name="Queue UI has correct column settings",
+    check_fn=check_queue_ui_settings,
 )
 
 
@@ -292,6 +298,46 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             max_steps=6,
             file_expectation=FileExpectation(),
             custom_checks=[BUSINESS_VALIDATION_HOOK_CHECK],
+        ),
+    ),
+    RegressionTestCase(
+        name="setup_us_invoice_queue_with_ui_settings",
+        description="Create US Invoice queue from template and configure UI settings",
+        api_base_url="https://api.elis.rossum.ai/v1",
+        rossum_url=None,
+        prompt=(
+            "# Set up US Invoice queue with custom UI settings\n\n"
+            "Workspace: 1680043\n"
+            "Region: US\n\n"
+            "## Tasks:\n\n"
+            "1. Create a new queue from US Invoice template: Invoices\n"
+            "2. Update queue UI settings to display the following fields:\n"
+            "    - status\n"
+            "    - original file name\n"
+            "    - details\n"
+            "    - Document ID\n"
+            "    - Due Date\n"
+            "    - Total Amount\n"
+            "    - Vendor Name\n"
+            "    - Received at\n\n"
+            "Return only the queue_id as a one-word answer."
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=[
+                "get_queue_template_names",
+                "create_queue_from_template",
+                "load_skill",
+                "get_schema_tree_structure",
+                "update_queue",
+            ],
+            mode=ToolMatchMode.SUBSET,
+        ),
+        token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=120000),
+        success_criteria=SuccessCriteria(
+            required_keywords=[],
+            max_steps=6,
+            file_expectation=FileExpectation(),
+            custom_checks=[QUEUE_UI_SETTINGS_CHECK],
         ),
     ),
 ]
