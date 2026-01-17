@@ -7,6 +7,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
+from rossum_agent.tools.subagents.base import SubAgentResult
 from rossum_agent.tools.subagents.hook_debug import (
     _ALLOWED_BUILTIN_NAMES,
     _EVALUATE_HOOK_TOOL,
@@ -22,7 +23,6 @@ from rossum_agent.tools.subagents.hook_debug import (
     _extract_and_analyze_web_search_results,
     _extract_web_search_text_from_block,
     _make_evaluate_response,
-    _save_debug_context,
     _strip_imports,
     debug_hook,
     evaluate_python_hook,
@@ -271,39 +271,6 @@ class TestMakeEvaluateResponse:
         assert parsed["stderr"] == "Invalid JSON"
 
 
-class TestSaveDebugContext:
-    """Test _save_debug_context function."""
-
-    def test_saves_file_to_output_directory(self):
-        """Test saves context file to output directory."""
-        mock_path = MagicMock()
-        mock_output_dir = MagicMock()
-        mock_output_dir.__truediv__ = MagicMock(return_value=mock_path)
-
-        with patch("rossum_agent.tools.subagents.hook_debug.get_output_dir", return_value=mock_output_dir):
-            _save_debug_context(
-                iteration=1,
-                max_iterations=15,
-                messages=[{"role": "user", "content": "test"}],
-            )
-
-            mock_output_dir.__truediv__.assert_called_once_with("debug_hook_context_iter_1.json")
-            mock_path.write_text.assert_called_once()
-            written_content = mock_path.write_text.call_args[0][0]
-            parsed = json.loads(written_content)
-            assert parsed["iteration"] == 1
-            assert parsed["max_iterations"] == 15
-            assert len(parsed["messages"]) == 1
-
-    def test_handles_file_write_failure_gracefully(self):
-        """Test handles file write failure without raising."""
-        mock_output_dir = MagicMock()
-        mock_output_dir.__truediv__.side_effect = OSError("Disk full")
-
-        with patch("rossum_agent.tools.subagents.hook_debug.get_output_dir", return_value=mock_output_dir):
-            _save_debug_context(1, 15, [])
-
-
 class TestExecuteOpusTool:
     """Test _execute_opus_tool function."""
 
@@ -420,17 +387,22 @@ class TestCallOpusForDebug:
         mock_text_block.type = "text"
         mock_response.content = [mock_text_block]
         mock_response.stop_reason = "end_of_turn"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
         ):
             result = _call_opus_for_debug("hook123", "ann456", None)
 
             mock_client.messages.create.assert_called_once()
-            assert result == "Analysis complete"
+            assert result.analysis == "Analysis complete"
+            assert result.input_tokens == 100
+            assert result.output_tokens == 50
 
     def test_handles_end_of_turn_stop_reason(self):
         """Test handles end_of_turn stop reason and returns text."""
@@ -441,16 +413,19 @@ class TestCallOpusForDebug:
         mock_response = MagicMock()
         mock_response.content = [mock_text_block]
         mock_response.stop_reason = "end_of_turn"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert result == "Final analysis"
+            assert result.analysis == "Final analysis"
 
     def test_handles_tool_use_blocks(self):
         """Test handles tool use blocks and calls tools."""
@@ -465,6 +440,8 @@ class TestCallOpusForDebug:
         first_response = MagicMock()
         first_response.content = [mock_tool_block]
         first_response.stop_reason = "tool_use"
+        first_response.usage.input_tokens = 100
+        first_response.usage.output_tokens = 50
 
         mock_text_block = MagicMock()
         mock_text_block.text = "Done"
@@ -472,13 +449,16 @@ class TestCallOpusForDebug:
         second_response = MagicMock()
         second_response.content = [mock_text_block]
         second_response.stop_reason = "end_of_turn"
+        second_response.usage.input_tokens = 150
+        second_response.usage.output_tokens = 75
 
         mock_client.messages.create.side_effect = [first_response, second_response]
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
             patch("rossum_agent.tools.subagents.hook_debug._execute_opus_tool", return_value='{"id": "123"}'),
             patch(
                 "rossum_agent.tools.subagents.hook_debug._extract_and_analyze_web_search_results", return_value=None
@@ -486,7 +466,9 @@ class TestCallOpusForDebug:
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert result == "Done"
+            assert result.analysis == "Done"
+            assert result.input_tokens == 250
+            assert result.output_tokens == 125
             assert mock_client.messages.create.call_count == 2
 
     def test_handles_tool_execution_failure(self):
@@ -502,6 +484,8 @@ class TestCallOpusForDebug:
         first_response = MagicMock()
         first_response.content = [mock_tool_block]
         first_response.stop_reason = "tool_use"
+        first_response.usage.input_tokens = 100
+        first_response.usage.output_tokens = 50
 
         mock_text_block = MagicMock()
         mock_text_block.text = "Handled error"
@@ -509,13 +493,16 @@ class TestCallOpusForDebug:
         second_response = MagicMock()
         second_response.content = [mock_text_block]
         second_response.stop_reason = "end_of_turn"
+        second_response.usage.input_tokens = 150
+        second_response.usage.output_tokens = 75
 
         mock_client.messages.create.side_effect = [first_response, second_response]
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
             patch(
                 "rossum_agent.tools.subagents.hook_debug._execute_opus_tool", side_effect=RuntimeError("Tool failed")
             ),
@@ -525,18 +512,20 @@ class TestCallOpusForDebug:
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert result == "Handled error"
+            assert result.analysis == "Handled error"
 
     def test_returns_error_on_exception(self):
         """Test returns error message on exception."""
         with patch(
-            "rossum_agent.tools.subagents.hook_debug.create_bedrock_client",
+            "rossum_agent.tools.subagents.base.create_bedrock_client",
             side_effect=RuntimeError("Connection failed"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert "Error calling Opus sub-agent" in result
-            assert "Connection failed" in result
+            assert "Error calling Opus sub-agent" in result.analysis
+            assert "Connection failed" in result.analysis
+            assert result.input_tokens == 0
+            assert result.output_tokens == 0
 
     def test_returns_no_analysis_when_no_text_blocks(self):
         """Test returns 'No analysis provided' when no text blocks."""
@@ -544,16 +533,19 @@ class TestCallOpusForDebug:
         mock_response = MagicMock()
         mock_response.content = []
         mock_response.stop_reason = "end_of_turn"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert result == "No analysis provided"
+            assert result.analysis == "No analysis provided"
 
     def test_includes_schema_id_in_prompt_when_provided(self):
         """Test includes schema_id in user content when provided."""
@@ -564,12 +556,15 @@ class TestCallOpusForDebug:
         mock_response = MagicMock()
         mock_response.content = [mock_text_block]
         mock_response.stop_reason = "end_of_turn"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
         mock_client.messages.create.return_value = mock_response
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
         ):
             _call_opus_for_debug("h1", "a1", "schema999")
 
@@ -591,6 +586,8 @@ class TestCallOpusForDebug:
         first_response = MagicMock()
         first_response.content = [mock_tool_block]
         first_response.stop_reason = "tool_use"
+        first_response.usage.input_tokens = 100
+        first_response.usage.output_tokens = 50
 
         mock_text_block = MagicMock()
         mock_text_block.text = "Done"
@@ -598,15 +595,18 @@ class TestCallOpusForDebug:
         second_response = MagicMock()
         second_response.content = [mock_text_block]
         second_response.stop_reason = "end_of_turn"
+        second_response.usage.input_tokens = 150
+        second_response.usage.output_tokens = 75
 
         mock_client.messages.create.side_effect = [first_response, second_response]
 
         eval_result = json.dumps({"status": "success", "exception": None})
 
         with (
-            patch("rossum_agent.tools.subagents.hook_debug.create_bedrock_client", return_value=mock_client),
-            patch("rossum_agent.tools.subagents.hook_debug.report_progress"),
-            patch("rossum_agent.tools.subagents.hook_debug._save_debug_context"),
+            patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client),
+            patch("rossum_agent.tools.subagents.base.report_progress"),
+            patch("rossum_agent.tools.subagents.base.report_token_usage"),
+            patch("rossum_agent.tools.subagents.base.save_iteration_context"),
             patch("rossum_agent.tools.subagents.hook_debug._execute_opus_tool", return_value=eval_result),
             patch(
                 "rossum_agent.tools.subagents.hook_debug._extract_and_analyze_web_search_results", return_value=None
@@ -614,7 +614,7 @@ class TestCallOpusForDebug:
         ):
             result = _call_opus_for_debug("h1", "a1", None)
 
-            assert result == "Done"
+            assert result.analysis == "Done"
 
 
 class TestEvaluatePythonHook:
@@ -844,9 +844,15 @@ class TestDebugHook:
 
     def test_with_both_hook_id_and_annotation_id(self):
         """Test debug_hook with required hook_id and annotation_id."""
+        mock_result = SubAgentResult(
+            analysis="Analysis: The hook is working correctly.",
+            input_tokens=100,
+            output_tokens=50,
+            iterations_used=2,
+        )
         with patch(
             "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
-            return_value="Analysis: The hook is working correctly.",
+            return_value=mock_result,
         ):
             result = debug_hook(hook_id="123", annotation_id="456")
             parsed = json.loads(result)
@@ -855,12 +861,20 @@ class TestDebugHook:
             assert parsed["annotation_id"] == "456"
             assert "Analysis" in parsed["analysis"]
             assert "elapsed_ms" in parsed
+            assert parsed["input_tokens"] == 100
+            assert parsed["output_tokens"] == 50
 
     def test_with_schema_id(self):
         """Test debug_hook with optional schema_id."""
+        mock_result = SubAgentResult(
+            analysis="Analysis with schema",
+            input_tokens=100,
+            output_tokens=50,
+            iterations_used=1,
+        )
         with patch(
             "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
-            return_value="Analysis with schema",
+            return_value=mock_result,
         ) as mock:
             result = debug_hook(hook_id="123", annotation_id="456", schema_id="789")
             parsed = json.loads(result)
@@ -870,9 +884,15 @@ class TestDebugHook:
 
     def test_timing_is_measured(self):
         """Test that elapsed_ms is properly measured."""
+        mock_result = SubAgentResult(
+            analysis="Analysis",
+            input_tokens=100,
+            output_tokens=50,
+            iterations_used=1,
+        )
         with patch(
             "rossum_agent.tools.subagents.hook_debug._call_opus_for_debug",
-            return_value="Analysis",
+            return_value=mock_result,
         ):
             result = debug_hook(hook_id="h1", annotation_id="a1")
             parsed = json.loads(result)

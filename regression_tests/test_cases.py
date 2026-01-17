@@ -104,7 +104,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         prompt="Explain a document workflow and learning workflow on this queue.",
         tool_expectation=ToolExpectation(
             expected_tools=["get_queue", "list_hooks", "get_queue_engine"], mode=ToolMatchMode.SUBSET
-        ),  # Agent may also use get_schema
+        ),
         token_budget=TokenBudget(min_total_tokens=20000, max_total_tokens=50000),
         success_criteria=SuccessCriteria(
             required_keywords=["document_type", "classification", "training", "workflow"],
@@ -135,11 +135,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "list_hook_logs",
                 "search_knowledge_base",
                 "write_file",
-                ("get_schema", "get_queue_schema"),  # OR: either is valid
+                ("get_schema", "get_queue_schema", "get_schema_tree_structure"),  # OR: either is valid
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=110000),
+        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=140000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=["splitting", "invoice"],
@@ -175,11 +175,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
                 "spawn_mcp_connection",
                 "call_on_connection",
                 "deploy_pull",
-                ("get_schema", "get_queue_schema"),  # OR: either is valid
+                ("get_schema", "get_queue_schema", "get_schema_tree_structure"),  # OR: either is valid
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=300000, max_total_tokens=600000),
+        token_budget=TokenBudget(min_total_tokens=400000, max_total_tokens=800000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=["splitting", "sandbox"],
@@ -188,14 +188,15 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             custom_checks=[HIDDEN_MULTIVALUE_CHECK],
         ),
     ),
+    # Different env, requires different token
     RegressionTestCase(
         name="setup_customer_queues_and_schema",
         description="Set up customer with Invoices and Credit Notes queues with custom schema and formula field",
-        api_base_url="https://api.elis.develop.r8.lol/v1",
+        api_base_url="https://api.elis.rossum.ai/v1",
         rossum_url=None,
         prompt=(
             "# Set up a new customer\n\n"
-            "Workspace: 1789239\n"
+            "Workspace: 1680043\n"
             "Region: EU\n\n"
             "## Tasks:\n\n"
             "1. Create two new queues: Invoices and Credit Notes.\n"

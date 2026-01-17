@@ -63,7 +63,7 @@ def _create_formula_field_definition(label: str, field_schema_id: str | None = N
         "category": "datapoint",
         "can_export": True,
         "constraints": {"required": False},
-        "disable_prediction": True,
+        "disable_prediction": False,
         "formula": "",
         "hidden": False,
         "rir_field_names": [],

@@ -23,6 +23,8 @@ All notable changes to this project will be documented in this file.
 - Added Rossum Local Copilot integration for formula field suggestions [#102](https://github.com/stancld/rossum-mcp/pull/102)
 
 ### Changed
+- Refactored sub-agents (hook_debug, schema_patching, knowledge_base) to shared `SubAgent` base class with unified iteration loop [#107](https://github.com/stancld/rossum-mcp/pull/107)
+- Added token tracking to all sub-agents with counts propagated via `SubAgentResult` [#107](https://github.com/stancld/rossum-mcp/pull/107)
 - Migrated default model from Sonnet 4.5 to Opus 4.5 with significantly simplified prompts [#99](https://github.com/stancld/rossum-mcp/pull/99)
 - Separated model's chain-of-thought reasoning (thinking blocks) from response text (text blocks) in stream processing [#92](https://github.com/stancld/rossum-mcp/pull/92)
 - Updated Streamlit UI to display thinking blocks with "🧠 **Thinking:**" label [#92](https://github.com/stancld/rossum-mcp/pull/92)

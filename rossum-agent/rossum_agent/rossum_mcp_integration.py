@@ -6,6 +6,7 @@ to Anthropic tool format for use with the Claude API.
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from mcp.types import Tool as MCPTool
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -44,6 +47,8 @@ class MCPConnection:
         Returns:
             The result of the tool call.
         """
+        logger.info(f"Calling MCP tool {name}")
+
         result = await self.client.call_tool(name, arguments or {})
         # Prefer structured_content (raw dict) over data (parsed pydantic model)
         # because FastMCP's json_schema_to_type has a bug where nested dict fields

@@ -72,7 +72,7 @@ class TestFormulaFieldHelpers:
         assert field["id"] == "net_terms"
         assert field["label"] == "Net Terms"
         assert field["ui_configuration"] == {"type": "formula", "edit": "disabled"}
-        assert field["disable_prediction"] is True
+        assert field["disable_prediction"] is False
         assert field["formula"] == ""
 
     def test_create_formula_field_definition_derives_id(self) -> None:
