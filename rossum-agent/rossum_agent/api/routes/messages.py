@@ -198,7 +198,11 @@ async def send_message(
             documents=documents,
         )
         chat_service.save_messages(
-            user_id=credentials.user_id, chat_id=chat_id, messages=updated_history, output_dir=agent_service.output_dir
+            user_id=credentials.user_id,
+            chat_id=chat_id,
+            messages=updated_history,
+            output_dir=agent_service.output_dir,
+            metadata=chat_data.metadata,
         )
 
         for file_event in _yield_file_events(agent_service.output_dir, chat_id):
