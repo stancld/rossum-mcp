@@ -309,6 +309,33 @@ class TestSendMessageEndpoint:
         assert "event: step" in content
         assert "event: done" in content
 
+    @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
+    def test_send_message_preserves_mcp_mode_metadata(
+        self, mock_httpx, client, mock_chat_service, mock_agent_service, valid_headers
+    ):
+        """Test that send message preserves mcp_mode in metadata across messages."""
+        mock_httpx.return_value = create_mock_httpx_client()
+
+        original_metadata = ChatMetadata(mcp_mode="read-write")
+        mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=original_metadata)
+        mock_chat_service.save_messages.return_value = True
+
+        async def mock_run_agent(*args, **kwargs):
+            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
+            yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
+
+        mock_agent_service.run_agent = mock_run_agent
+        mock_agent_service.build_updated_history.return_value = []
+
+        response = client.post("/api/v1/chats/chat_123/messages", headers=valid_headers, json={"content": "Hello"})
+
+        assert response.status_code == 200
+
+        mock_chat_service.save_messages.assert_called_once()
+        call_kwargs = mock_chat_service.save_messages.call_args.kwargs
+        assert call_kwargs["metadata"] is original_metadata
+        assert call_kwargs["metadata"].mcp_mode == "read-write"
+
 
 class TestOpenAPIDocumentation:
     """Tests for OpenAPI documentation endpoints."""
