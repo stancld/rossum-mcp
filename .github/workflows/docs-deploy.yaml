@@ -38,10 +38,19 @@ jobs:
           uv run make html
         shell: bash
 
+      - name: Prepare site structure
+        run: |
+          # Create site directory with landing page at root
+          mkdir -p _site
+          cp -r docs/landing/* _site/
+          # Move Sphinx docs to /source/ subdirectory
+          cp -r docs/build/html _site/source
+        shell: bash
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build/html/
+          path: _site/
 
   deploy:
     environment:
