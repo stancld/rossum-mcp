@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [0.4.0] - 2026-01-18
 
 ### Added
 - Added dynamic tool discovery system with `list_tool_categories` MCP tool [#113](https://github.com/stancld/rossum-mcp/pull/113)
