@@ -305,8 +305,8 @@
     }
 
     .toc li::before {
-      content: counter(list-item);
       counter-increment: list-item;
+      content: counter(list-item);
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--primary);
