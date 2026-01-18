@@ -293,10 +293,12 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-<details>
-<summary><h2>🧠 Agent Skills & Sub-Agents</h2></summary>
+## 🧠 Agent Skills & Sub-Agents
 
 The Rossum Agent includes specialized capabilities for complex workflows:
+
+<details>
+<summary><strong>Show skills and sub-agents</strong></summary>
 
 **Skills** - Domain-specific instructions loaded on-demand via `load_skill`:
 
@@ -321,10 +323,12 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 
 </details>
 
-<details>
-<summary><h2>🔌 MCP Tools</h2></summary>
+## 🔌 MCP Tools
 
 The MCP server provides 49 tools organized into categories:
+
+<details>
+<summary><strong>Show all tools</strong></summary>
 
 <details>
 <summary><strong>Document Processing (6 tools)</strong></summary>
