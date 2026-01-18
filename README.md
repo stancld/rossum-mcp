@@ -2,6 +2,8 @@
 
 <div align="center">
 
+**AI-powered Rossum orchestration: Document workflows conversationally, debug pipelines automatically, and configure automation through natural language.**
+
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -21,8 +23,6 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Claude Opus 4.5](https://img.shields.io/badge/Claude-Opus_4.5-blueviolet.svg)](https://www.anthropic.com/claude/opus)
 
-**AI-powered Rossum orchestration: Document workflows conversationally, debug pipelines automatically, and configure automation through natural language.**
-
 </div>
 
 Conversational AI toolkit for the Rossum intelligent document processing platform. Transforms complex workflow setup, debugging, and configuration into natural language conversations through a Model Context Protocol (MCP) server and specialized AI agent.
@@ -33,7 +33,7 @@ Conversational AI toolkit for the Rossum intelligent document processing platfor
 > [!WARNING]
 > This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
 
-## What Can You Do?
+## ✨ What Can You Do?
 
 <details>
 <summary><strong>Example 1: Aurora Splitting & Sorting Demo</strong></summary>
@@ -160,7 +160,7 @@ Each package can be installed and used independently or together for complete fu
 
 ## 🚀 Installation & Usage
 
-**Prerequisites**: Python 3.12+, Rossum account with API credentials
+**Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://elis.rossum.ai/api/docs/#authentication)
 
 ### 🐳 Docker Compose (Recommended)
 
@@ -263,9 +263,7 @@ Or run standalone: `rossum-mcp`
 
 ---
 
-## Usage
-
-### AI Agent Interfaces
+### 🤖 AI Agent Interfaces
 
 ```bash
 # Docker (recommended for local)
@@ -287,7 +285,7 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-## Agent Skills & Sub-Agents
+## 🧠 Agent Skills & Sub-Agents
 
 The Rossum Agent includes specialized capabilities for complex workflows:
 
@@ -312,7 +310,7 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 
 See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
 
-## MCP Tools
+## 🔌 MCP Tools
 
 The MCP server provides 49 tools organized into categories:
 
@@ -429,7 +427,7 @@ For detailed API documentation, parameters, and workflows, see the [full documen
 - **[Deploy README](rossum-deploy/README.md)** - Deployment tool usage
 - **[Examples](examples/)** - Sample workflows and use cases
 
-## Resources
+## 🔗 Resources
 
 - [Rossum API](https://elis.rossum.ai/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
