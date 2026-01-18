@@ -15,6 +15,7 @@
   <meta name="twitter:description" content="MCP server and AI agent toolkit powering the chat assistant in rossum.ai">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://stancld.github.io/rossum-mcp/">
+  <meta property="og:url" content="https://stancld.github.io/rossum-mcp/">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <style>
@@ -113,6 +114,8 @@
       text-decoration: none;
       font-size: 0.95rem;
       transition: color 0.2s;
+      padding: 0.5rem;
+      margin: -0.5rem;
     }
 
     .nav-links a:hover { color: var(--primary); }
@@ -775,9 +778,11 @@
       pre { font-size: 0.8rem; padding: 1rem; }
       .feature-flag { padding: 0.75rem 1rem; font-size: 0.9rem; }
 
-      /* Hide tooltips on small mobile - hover doesn't work well */
-      .stat-tooltip { display: none; }
-      .stat-with-tooltip { cursor: default; }
+      /* Show tooltips on tap for mobile */
+      .stat-with-tooltip.tooltip-active .stat-tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
     }
 
     /* Print styles */
@@ -944,11 +949,11 @@
 
     <div class="container">
       <div class="stats">
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="49 MCP Tools - hover or focus for details">
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="49 MCP Tools" aria-describedby="tooltip-mcp-tools">
           <div class="stat-value">49</div>
           <div class="stat-label">MCP Tools</div>
           <div class="stat-desc">Thin wrapper around the Rossum API</div>
-          <div class="stat-tooltip" role="tooltip">
+          <div class="stat-tooltip" role="tooltip" id="tooltip-mcp-tools">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Document Processing (6)</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Queues & Schemas (13)</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Extensions & Rules (9)</a></div>
@@ -957,11 +962,11 @@
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Email & Relations (7)</a></div>
           </div>
         </div>
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="6 Agent Skills - hover or focus for details">
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="6 Agent Skills" aria-describedby="tooltip-agent-skills">
           <div class="stat-value">6</div>
           <div class="stat-label">Agent Skills</div>
           <div class="stat-desc">Precise workflows for complex tasks</div>
-          <div class="stat-tooltip" role="tooltip">
+          <div class="stat-tooltip" role="tooltip" id="tooltip-agent-skills">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/skills/hook-debugging.md" target="_blank" rel="noopener">Hook Debugging</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/skills/schema-patching.md" target="_blank" rel="noopener">Schema Patching</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/skills/schema-pruning.md" target="_blank" rel="noopener">Schema Pruning</a></div>
@@ -970,11 +975,11 @@
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/skills/rossum-deployment.md" target="_blank" rel="noopener">Rossum Deployment</a></div>
           </div>
         </div>
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="3 Sub-Agents - hover or focus for details">
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="3 Sub-Agents" aria-describedby="tooltip-sub-agents">
           <div class="stat-value">3</div>
           <div class="stat-label">Sub-Agents</div>
           <div class="stat-desc">Offload work, keep context clean</div>
-          <div class="stat-tooltip" role="tooltip">
+          <div class="stat-tooltip" role="tooltip" id="tooltip-sub-agents">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/tools/subagents/hook_debug.py" target="_blank" rel="noopener">Hook Debug</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/tools/subagents/schema_patching.py" target="_blank" rel="noopener">Schema Patching</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-mcp/blob/master/rossum-agent/rossum_agent/tools/subagents/knowledge_base.py" target="_blank" rel="noopener">Knowledge Base</a></div>
@@ -1087,7 +1092,7 @@
                 <circle cx="25" cy="18" r="2" fill="#C2410C"/>
               </svg>
               <strong>rossum.ai</strong>
-              <span>Chat UI</span>
+              <span>Mr Fabry</span>
             </div>
             <span class="arch-arrow">
               <svg viewBox="0 0 36 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1259,11 +1264,41 @@
         if (e.key === 'Escape') closeLightbox();
       });
 
-      // Close tooltip on Escape for keyboard users
-      document.querySelectorAll('.stat-with-tooltip').forEach(stat => {
+      // Tooltip keyboard and touch handling
+      const stats = document.querySelectorAll('.stat-with-tooltip');
+
+      stats.forEach(stat => {
+        // Close tooltip on Escape for keyboard users
         stat.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape') stat.blur();
+          if (e.key === 'Escape') {
+            stat.classList.remove('tooltip-active');
+            stat.blur();
+          }
         });
+
+        // Tap to toggle on touch devices
+        stat.addEventListener('click', (e) => {
+          // Only apply tap behavior on small screens
+          if (window.innerWidth <= 480) {
+            e.preventDefault();
+            const wasActive = stat.classList.contains('tooltip-active');
+
+            // Close all other tooltips
+            stats.forEach(s => s.classList.remove('tooltip-active'));
+
+            // Toggle current tooltip
+            if (!wasActive) {
+              stat.classList.add('tooltip-active');
+            }
+          }
+        });
+      });
+
+      // Close tooltips when tapping outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.stat-with-tooltip')) {
+          stats.forEach(s => s.classList.remove('tooltip-active'));
+        }
       });
     });
   </script>
