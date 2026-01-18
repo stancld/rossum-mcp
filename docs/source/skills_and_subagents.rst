@@ -116,6 +116,87 @@ UI Settings Skill
 Workflow: Fetch current settings → Modify only ``columns`` array → Patch via ``update_queue``.
 
 
+Dynamic Tool Loading
+--------------------
+
+The agent uses dynamic tool loading to reduce initial context usage from ~8K to ~800 tokens. Instead of loading all MCP tools at startup, tools are loaded on-demand based on task requirements.
+
+How It Works
+^^^^^^^^^^^^
+
+1. **Discovery**: The MCP server provides a ``list_tool_categories`` tool that returns all available categories with metadata
+2. **Automatic Pre-loading**: On the first user message, keywords are matched against category keywords to pre-load relevant tools
+3. **On-demand Loading**: The agent can explicitly load additional categories using ``load_tool_category``
+
+Loading Tools
+^^^^^^^^^^^^^
+
+Use ``load_tool_category`` to load MCP tools from specific categories:
+
+.. code-block:: python
+
+   # Load single category
+   load_tool_category(categories=["schemas"])
+
+   # Load multiple categories
+   load_tool_category(categories=["queues", "schemas", "engines"])
+
+Available Categories
+^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 50 30
+
+   * - Category
+     - Description
+     - Keywords (for auto-loading)
+   * - ``annotations``
+     - Document processing: upload, retrieve, update, confirm
+     - annotation, document, upload, extract, confirm, review
+   * - ``queues``
+     - Queue management: create, configure, list
+     - queue, inbox, connector
+   * - ``schemas``
+     - Schema management: define, modify field structures
+     - schema, field, datapoint, section, multivalue, tuple
+   * - ``engines``
+     - AI engine management: extraction/splitting engines
+     - engine, ai, extractor, splitter, training
+   * - ``hooks``
+     - Extensions/webhooks: automation hooks
+     - hook, extension, webhook, automation, function, serverless
+   * - ``email_templates``
+     - Email templates: automated email responses
+     - email, template, notification, rejection
+   * - ``document_relations``
+     - Document relations: export/einvoice links
+     - document relation, export, einvoice
+   * - ``relations``
+     - Annotation relations: edit/attachment/duplicate links
+     - relation, duplicate, attachment, edit
+   * - ``rules``
+     - Validation rules: schema validation
+     - rule, validation, constraint
+   * - ``users``
+     - User management: list users and roles
+     - user, role, permission, token_owner
+   * - ``workspaces``
+     - Workspace management: organize queues
+     - workspace, organization
+
+Automatic Pre-loading
+^^^^^^^^^^^^^^^^^^^^^
+
+When the user sends their first message, the agent scans for keywords and automatically loads matching categories. For example:
+
+- User says "update the schema" → ``schemas`` category is pre-loaded
+- User says "create a new hook" → ``hooks`` category is pre-loaded
+- User says "list all queues" → ``queues`` category is pre-loaded
+
+This ensures relevant tools are available without requiring explicit loading while keeping context usage minimal.
+
+
 Sub-Agents
 ----------
 

@@ -297,8 +297,9 @@ def deploy_compare_workspaces(
 ) -> str:
     """Compare two local workspaces to see differences between source and target.
 
-    Use after copying a workspace to sandbox and making changes to see exactly
-    what changed. Shows field-level diffs for all modified objects.
+    PREREQUISITE: Both directories must contain JSON files from deploy_pull.
+    This tool compares local files only - it does not fetch from remote APIs.
+    Call deploy_pull twice (before and after modifications) before using this tool.
 
     Two use cases:
     1. Compare prod vs sandbox: Pass id_mapping_path from copy_workspace to map IDs
@@ -306,7 +307,9 @@ def deploy_compare_workspaces(
 
     Args:
         source_workspace_path: Path to the source (original/production) workspace directory.
+            Must contain JSON files from deploy_pull.
         target_workspace_path: Path to the target (modified/sandbox) workspace directory.
+            Must contain JSON files from deploy_pull.
         id_mapping_path: Optional path to ID mapping JSON file from copy_workspace.
             If None, objects are matched by their original IDs.
 

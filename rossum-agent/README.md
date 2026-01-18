@@ -294,6 +294,39 @@ Load a specialized skill that provides domain-specific instructions and workflow
 - `rossum-deployment`: Deployment workflow instructions
 - `hook-debugging`: Hook debugging best practices
 
+### Dynamic Tool Loading
+
+The agent uses dynamic tool loading to significantly reduce initial context usage. Tools are loaded on-demand based on task requirements.
+
+#### load_tool_category
+Load MCP tools from one or more categories. Once loaded, the tools become available for use.
+
+**Parameters:**
+- `categories` (array, required): Category names to load (e.g., `["queues", "schemas"]`)
+
+**Available Categories:**
+- `annotations` - Document processing (upload, retrieve, update, confirm)
+- `queues` - Queue management (create, configure, list)
+- `schemas` - Schema management (define, modify field structures)
+- `engines` - AI engine management (extraction/splitting engines)
+- `hooks` - Extensions/webhooks (automation hooks)
+- `email_templates` - Email templates (automated email responses)
+- `document_relations` - Document relations (export/einvoice links)
+- `relations` - Annotation relations (edit/attachment/duplicate links)
+- `rules` - Validation rules (schema validation)
+- `users` - User management (list users and roles)
+- `workspaces` - Workspace management (organize queues)
+
+**Returns:**
+```json
+{
+  "message": "Loaded 8 tools from ['queues']: create_queue, create_queue_from_template, get_queue, get_queue_engine, get_queue_schema, get_queue_template_names, list_queues, update_queue"
+}
+```
+
+**Automatic Pre-loading:**
+The agent automatically pre-loads tool categories based on keywords in the user's first message. For example, if the user mentions "schema", the schemas category is loaded automatically.
+
 ### Rossum MCP Tools
 
 When configured with the Rossum MCP server, the agent can use all MCP tools including:

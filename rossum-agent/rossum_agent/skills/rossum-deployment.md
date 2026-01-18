@@ -2,6 +2,19 @@
 
 **Goal**: Deploy configuration changes safely via sandbox with before/after diff.
 
+## Credential Identification
+
+**Identify tokens BEFORE any deployment operation.** User may provide tokens with unclear naming.
+
+| Identification Method | How to Apply |
+|-----------------------|--------------|
+| Check organization ID | Use `get_organization(org_id)` with each token to see org name - sandbox orgs typically contain "sandbox", "test", or "dev" |
+| Check org URL pattern | Sandbox orgs often use different base URLs or have distinct naming conventions |
+| Ask user explicitly | If tokens are ambiguous, ask: "Which token is for production and which for sandbox?" |
+| Default env token = production | Token in `ROSSUM_API_TOKEN` env var is production (your main connection) |
+
+**Constraint**: Never assume which token is prod/sandbox. Verify or ask.
+
 ## Credential Rules
 
 **Every tool call touches exactly one environment. Know which one before calling.**
@@ -35,10 +48,15 @@ Step 3: Never use direct MCP calls (`update_schema`, `update_queue`, etc.) - tho
 
 ## Key Constraints
 
-- **Pull BEFORE immediately after copy** - captures baseline for diff
-- **Spawned connections don't persist** - re-spawn `spawn_mcp_connection` each conversation turn
-- **Never deploy without approval** - always show diff and wait
-- **IDs differ between environments** - sandbox copies have NEW IDs. Use `deploy_copy_workspace` return value or `call_on_connection("sandbox", "list_queues", ...)` to get sandbox IDs. Production IDs will 404 in sandbox.
+| Constraint | Rule |
+|------------|------|
+| Pull before compare | **Never call `deploy_compare_workspaces` without first pulling both directories via `deploy_pull`**. Comparison requires local JSON files - there is nothing to compare without pulling first. |
+| Pull BEFORE immediately | After `deploy_copy_workspace`, immediately run `deploy_pull` to `./before`. This captures the baseline. |
+| Pull AFTER last | After all sandbox modifications, run `deploy_pull` to `./after`. Then compare. |
+| Spawned connections don't persist | Re-spawn `spawn_mcp_connection` each conversation turn. |
+| Never deploy without approval | Always show diff and wait for explicit user approval. |
+| IDs differ between environments | Sandbox copies have NEW IDs. Use `deploy_copy_workspace` return value or `call_on_connection("sandbox", "list_queues", ...)` to get sandbox IDs. Production IDs will 404 in sandbox. |
+| Identify credentials first | Before deployment, verify which token is production vs sandbox (see Credential Identification). |
 
 ## Sandbox Connection Setup
 
@@ -68,11 +86,16 @@ All read operations (get_schema, get_queue, list_hooks) on sandbox also require 
 
 ## Before/After Diff is Mandatory
 
-`deploy_pull` saves workspace configuration to local files. Use it twice:
-1. **BEFORE** modifications → `./before` directory
-2. **AFTER** modifications → `./after` directory
+**`deploy_compare_workspaces` compares local JSON files, not remote APIs.** Without pulling, there are no files to compare.
 
-Then run `deploy_compare_workspaces(before_path="./before", after_path="./after")` to get the diff.
+| Step | Command | Output Directory |
+|------|---------|------------------|
+| 1. Pull baseline | `deploy_pull(org_id=..., workspace_path="./before", token=SANDBOX_TOKEN)` | `./before/` |
+| 2. Make modifications | `call_on_connection("sandbox", ...)` | - |
+| 3. Pull modified state | `deploy_pull(org_id=..., workspace_path="./after", token=SANDBOX_TOKEN)` | `./after/` |
+| 4. Compare | `deploy_compare_workspaces(source_workspace_path="./before", target_workspace_path="./after")` | Diff output |
+
+**Constraint**: Steps 1 and 3 are prerequisites for step 4. Skipping pull = empty comparison = deployment failure.
 
 **Always show the diff output to the user before deployment.** This is the user's only chance to review changes before they go to production.
 

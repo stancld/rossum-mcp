@@ -607,6 +607,85 @@ list_user_roles
 **Implementation:**
   Lists all user roles (groups of permissions) in the organization.
 
+list_tool_categories
+^^^^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``list_tool_categories()``
+
+**API Endpoint:**
+  N/A (returns data from local catalog)
+
+**Implementation:**
+  Returns all available tool categories with their metadata. The catalog is defined
+  in ``rossum_mcp.tools.catalog`` and includes category names, descriptions, tool
+  lists, and keywords for automatic pre-loading based on user request text.
+  See ``rossum_mcp.tools.discovery:18-36``
+
+**Returns:**
+  List of category objects with structure:
+
+  - ``name``: Category identifier (e.g., "queues", "schemas")
+  - ``description``: Human-readable category description
+  - ``tool_count``: Number of tools in the category
+  - ``tools``: List of tool metadata (name, description)
+  - ``keywords``: Keywords for automatic category matching
+
+**Available Categories:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 50 30
+
+   * - Category
+     - Description
+     - Keywords
+   * - ``annotations``
+     - Document processing: upload, retrieve, update, confirm
+     - annotation, document, upload, extract, confirm, review
+   * - ``queues``
+     - Queue management: create, configure, list
+     - queue, inbox, connector
+   * - ``schemas``
+     - Schema management: define, modify field structures
+     - schema, field, datapoint, section, multivalue, tuple
+   * - ``engines``
+     - AI engine management: extraction/splitting engines
+     - engine, ai, extractor, splitter, training
+   * - ``hooks``
+     - Extensions/webhooks: automation hooks
+     - hook, extension, webhook, automation, function, serverless
+   * - ``email_templates``
+     - Email templates: automated email responses
+     - email, template, notification, rejection
+   * - ``document_relations``
+     - Document relations: export/einvoice links
+     - document relation, export, einvoice
+   * - ``relations``
+     - Annotation relations: edit/attachment/duplicate links
+     - relation, duplicate, attachment, edit
+   * - ``rules``
+     - Validation rules: schema validation
+     - rule, validation, constraint
+   * - ``users``
+     - User management: list users and roles
+     - user, role, permission, token_owner
+   * - ``workspaces``
+     - Workspace management: organize queues
+     - workspace, organization
+
+**Example:**
+
+.. code-block:: python
+
+   # Get all available categories
+   categories = await server.list_tool_categories()
+
+   # Find categories matching a keyword
+   for cat in categories:
+       if "schema" in cat["keywords"]:
+           print(f"{cat['name']}: {cat['tool_count']} tools")
+
 Async Wrapper Pattern
 ----------------------
 

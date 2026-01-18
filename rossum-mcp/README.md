@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-mcp)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-49-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -119,6 +119,13 @@ A Model Context Protocol (MCP) server that provides tools for uploading document
 - **list_relations**: List all relations between annotations (edit, attachment, duplicate)
 - **get_document_relation**: Retrieve document relation details by ID
 - **list_document_relations**: List all document relations (export, einvoice)
+
+</details>
+
+<details>
+<summary><strong>Tool Discovery (1 tool)</strong></summary>
+
+- **list_tool_categories**: List all available tool categories with descriptions, tool names, and keywords for dynamic tool loading
 
 </details>
 
@@ -1697,6 +1704,65 @@ template = create_email_template(
     to=[{"type": "constant", "value": "team@example.com"}],
     cc=[{"type": "datapoint", "value": "sender_email"}]
 )
+```
+
+### Tool Discovery
+
+#### list_tool_categories
+
+Lists all available tool categories with their descriptions, tool names, and keywords. This enables dynamic tool loading where agents can discover and load only the tools they need for a specific task.
+
+**Parameters:**
+None
+
+**Returns:**
+```json
+[
+  {
+    "name": "annotations",
+    "description": "Document processing: upload, retrieve, update, and confirm annotations",
+    "tool_count": 6,
+    "tools": [
+      {"name": "upload_document", "description": "Upload document to queue"},
+      {"name": "get_annotation", "description": "Retrieve annotation with extracted data"}
+    ],
+    "keywords": ["annotation", "document", "upload", "extract", "confirm", "review"]
+  },
+  {
+    "name": "queues",
+    "description": "Queue management: create, configure, and list document processing queues",
+    "tool_count": 8,
+    "tools": [
+      {"name": "get_queue", "description": "Retrieve queue details"},
+      {"name": "list_queues", "description": "List all queues"}
+    ],
+    "keywords": ["queue", "inbox", "connector"]
+  }
+]
+```
+
+**Available Categories:**
+- `annotations` - Document processing tools (6 tools)
+- `queues` - Queue management tools (8 tools)
+- `schemas` - Schema management tools (7 tools)
+- `engines` - AI engine management tools (6 tools)
+- `hooks` - Extensions/webhooks tools (7 tools)
+- `email_templates` - Email template tools (3 tools)
+- `document_relations` - Document relation tools (2 tools)
+- `relations` - Annotation relation tools (2 tools)
+- `rules` - Validation rule tools (2 tools)
+- `users` - User management tools (3 tools)
+- `workspaces` - Workspace management tools (3 tools)
+
+**Example usage:**
+```python
+# Discover all tool categories
+categories = list_tool_categories()
+
+# Find categories by keyword matching
+for category in categories:
+    if "schema" in category["keywords"]:
+        print(f"Found: {category['name']} with {category['tool_count']} tools")
 ```
 
 ## Annotation Status Workflow

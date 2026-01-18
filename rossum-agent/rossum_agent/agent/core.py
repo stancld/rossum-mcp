@@ -54,6 +54,7 @@ from anthropic.types import (
     MessageStreamEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
+    TextBlockParam,
     TextDelta,
     ThinkingBlock,
     ThinkingConfigEnabledParam,
@@ -79,14 +80,18 @@ from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.rossum_mcp_integration import MCPConnection, mcp_tools_to_anthropic_format
 from rossum_agent.tools import (
     DEPLOY_TOOLS,
-    INTERNAL_TOOLS,
+    DISCOVERY_TOOL_NAME,
     SubAgentProgress,
     SubAgentTokenUsage,
+    execute_internal_tool,
     execute_tool,
     get_deploy_tool_names,
     get_deploy_tools,
+    get_dynamic_tools,
     get_internal_tool_names,
     get_internal_tools,
+    preload_categories_for_request,
+    reset_dynamic_tools,
     set_mcp_connection,
     set_progress_callback,
     set_token_callback,
@@ -111,6 +116,40 @@ RATE_LIMIT_MAX_DELAY = 60.0
 # whether this is an intermediate step (with tool calls) or final answer text.
 # This delay helps correctly classify the step type before streaming to the client.
 INITIAL_TEXT_BUFFER_DELAY = 1.5
+
+
+def _parse_json_encoded_strings(arguments: dict) -> dict:
+    """Recursively parse JSON-encoded strings in tool arguments.
+
+    LLMs sometimes generate JSON-encoded strings for list/dict arguments instead of
+    actual lists/dicts. This function detects and parses such strings.
+
+    For example, converts:
+        {"fields_to_keep": "[\"a\", \"b\"]"}
+    To:
+        {"fields_to_keep": ["a", "b"]}
+    """
+    # Parameters that should remain as JSON strings (not parsed to lists/dicts)
+    keep_as_string = {"changes"}
+
+    result = {}
+    for key, value in arguments.items():
+        if key in keep_as_string:
+            result[key] = value
+        elif isinstance(value, str) and value.startswith(("[", "{")):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, (list, dict)):
+                    result[key] = parsed
+                else:
+                    result[key] = value
+            except json.JSONDecodeError:
+                result[key] = value
+        elif isinstance(value, dict):
+            result[key] = _parse_json_encoded_strings(value)
+        else:
+            result[key] = value
+    return result
 
 
 @dataclasses.dataclass
@@ -206,6 +245,7 @@ class RossumAgent:
         self.memory.reset()
         self._total_input_tokens = 0
         self._total_output_tokens = 0
+        reset_dynamic_tools()
 
     def add_user_message(self, content: UserContent) -> None:
         """Add a user message to the conversation history."""
@@ -222,17 +262,24 @@ class RossumAgent:
         self.memory.add_step(step)
 
     async def _get_tools(self) -> list[ToolParam]:
-        """Get all available tools in Anthropic format (cached)."""
+        """Get all available tools in Anthropic format.
+
+        Initially loads only the discovery tool from MCP (list_tool_categories)
+        plus internal tools and deploy tools. Additional MCP tools are loaded dynamically
+        via load_tool_category and added to the tool list through get_dynamic_tools().
+        """
         if self._tools_cache is None:
+            # Load only discovery tool from MCP initially to reduce context usage
             mcp_tools = await self.mcp_connection.get_tools()
-            tools: list[ToolParam] = (
-                mcp_tools_to_anthropic_format(mcp_tools)
+            discovery_tools = [t for t in mcp_tools if t.name == DISCOVERY_TOOL_NAME]
+            self._tools_cache = (
+                mcp_tools_to_anthropic_format(discovery_tools)
                 + get_internal_tools()
                 + get_deploy_tools()
                 + self.additional_tools
             )
-            self._tools_cache = tools
-        return self._tools_cache
+        # Include dynamically loaded tools
+        return self._tools_cache + get_dynamic_tools()
 
     def _serialize_tool_result(self, result: object) -> str:
         """Serialize a tool result to a string for storage in context.
@@ -336,6 +383,7 @@ class RossumAgent:
             tool_info = pending_tools.pop(event.index)
             try:
                 arguments = json.loads(tool_info["json"]) if tool_info["json"] else {}
+                arguments = _parse_json_encoded_strings(arguments)
             except json.JSONDecodeError as e:
                 logger.warning("Failed to decode tool arguments for %s: %s", tool_info["name"], e)
                 arguments = {}
@@ -588,7 +636,7 @@ class RossumAgent:
                 loop = asyncio.get_event_loop()
                 ctx = copy_context()
                 future = loop.run_in_executor(
-                    None, partial(ctx.run, execute_tool, tool_call.name, tool_call.arguments, INTERNAL_TOOLS)
+                    None, partial(ctx.run, execute_internal_tool, tool_call.name, tool_call.arguments)
                 )
 
                 while not future.done():
@@ -694,6 +742,22 @@ class RossumAgent:
             )
         return None
 
+    def _inject_preload_info(self, prompt: UserContent, preload_result: str) -> UserContent:
+        """Inject preload result info into the user prompt."""
+        suffix = (
+            f"\n\n[System: {preload_result}. Use these tools directly without calling list_tool_categories first.]"
+        )
+        if isinstance(prompt, str):
+            return prompt + suffix
+        system_block: TextBlockParam = {"type": "text", "text": suffix}
+        return [*prompt, system_block]
+
+    def _calculate_rate_limit_delay(self, retries: int) -> float:
+        """Calculate exponential backoff delay with jitter for rate limiting."""
+        delay = min(RATE_LIMIT_BASE_DELAY * (2 ** (retries - 1)), RATE_LIMIT_MAX_DELAY)
+        jitter = random.uniform(0, delay * 0.1)
+        return delay + jitter
+
     async def run(self, prompt: UserContent) -> AsyncIterator[AgentStep]:
         """Run the agent with the given prompt, yielding steps.
 
@@ -707,14 +771,28 @@ class RossumAgent:
             yield rejection
             return
 
-        set_mcp_connection(self.mcp_connection, asyncio.get_event_loop())
+        loop = asyncio.get_event_loop()
+        set_mcp_connection(self.mcp_connection, loop)
+
+        # Pre-load tool categories based on keywords in the user's request
+        # Run in thread pool to avoid blocking the event loop (preload uses sync MCP calls)
+        request_text = self._extract_text_from_prompt(prompt)
+        ctx = copy_context()
+        preload_result = await loop.run_in_executor(
+            None, partial(ctx.run, preload_categories_for_request, request_text)
+        )
+
+        # Inject pre-load info into the task so agent knows what tools are available
+        if preload_result:
+            prompt = self._inject_preload_info(prompt, preload_result)
+
         self.memory.add_task(prompt)
 
         for step_num in range(1, self.config.max_steps + 1):
             rate_limit_retries = 0
 
             # Throttle requests to avoid rate limiting (skip delay on first step)
-            if step_num > 1 and self.config.request_delay > 0:
+            if step_num > 1:
                 await asyncio.sleep(self.config.request_delay)
 
             while True:
@@ -742,9 +820,7 @@ class RossumAgent:
                         )
                         return
 
-                    delay = min(RATE_LIMIT_BASE_DELAY * (2 ** (rate_limit_retries - 1)), RATE_LIMIT_MAX_DELAY)
-                    jitter = random.uniform(0, delay * 0.1)
-                    wait_time = delay + jitter
+                    wait_time = self._calculate_rate_limit_delay(rate_limit_retries)
                     logger.warning(
                         f"Rate limit hit at step {step_num} (attempt {rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES}), "
                         f"retrying in {wait_time:.1f}s: {e}"
@@ -757,21 +833,18 @@ class RossumAgent:
                     )
                     await asyncio.sleep(wait_time)
 
-                except APITimeoutError as e:
-                    logger.warning(f"API timeout at step {step_num}: {e}")
-                    yield AgentStep(
-                        step_number=step_num,
-                        error=f"Request timed out. Please try again. Details: {e}",
-                        is_final=True,
-                        step_type=StepType.FINAL_ANSWER,
-                    )
-                    return
-
                 except APIError as e:
-                    logger.error(f"API error at step {step_num}: {e}")
+                    is_timeout = isinstance(e, APITimeoutError)
+                    log_fn = logger.warning if is_timeout else logger.error
+                    log_fn(f"API {'timeout' if is_timeout else 'error'} at step {step_num}: {e}")
+                    error_msg = (
+                        f"Request timed out. Please try again. Details: {e}"
+                        if is_timeout
+                        else f"API error occurred: {e}"
+                    )
                     yield AgentStep(
                         step_number=step_num,
-                        error=f"API error occurred: {e}",
+                        error=error_msg,
                         is_final=True,
                         step_type=StepType.FINAL_ANSWER,
                     )

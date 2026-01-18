@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [Unreleased] - YYYY-MM-DD
--
+
+### Added
+- Added dynamic tool discovery system with `list_tool_categories` MCP tool [#113](https://github.com/stancld/rossum-mcp/pull/113)
+- Added tool catalog (`catalog.py`) with categories, keywords, and tool metadata for on-demand loading [#113](https://github.com/stancld/rossum-mcp/pull/113)
 
 
 ## [0.3.5] - 2026-01-16

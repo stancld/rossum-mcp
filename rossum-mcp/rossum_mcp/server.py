@@ -17,6 +17,7 @@ from rossum_api.dtos import Token
 from rossum_mcp.logging_config import setup_logging
 from rossum_mcp.tools import (
     register_annotation_tools,
+    register_discovery_tools,
     register_document_relation_tools,
     register_email_template_tools,
     register_engine_tools,
@@ -45,6 +46,7 @@ logger.info(f"Rossum MCP Server starting in {MODE} mode")
 mcp = FastMCP("rossum-mcp-server")
 client = AsyncRossumAPIClient(base_url=BASE_URL, credentials=Token(token=API_TOKEN))
 
+register_discovery_tools(mcp)
 register_annotation_tools(mcp, client)
 register_queue_tools(mcp, client)
 register_schema_tools(mcp, client)

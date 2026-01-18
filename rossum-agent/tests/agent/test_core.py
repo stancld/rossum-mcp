@@ -28,8 +28,86 @@ from rossum_agent.agent import (
     ToolResult,
     truncate_content,
 )
-from rossum_agent.agent.core import _StreamState
+from rossum_agent.agent.core import _parse_json_encoded_strings, _StreamState
 from rossum_agent.agent.models import StepType
+
+
+class TestParseJsonEncodedStrings:
+    """Test _parse_json_encoded_strings function for handling LLM double-encoded arguments."""
+
+    def test_parses_json_encoded_list(self):
+        """Test that JSON-encoded list strings are parsed to actual lists."""
+        arguments = {"fields_to_keep": '["field_a", "field_b", "field_c"]'}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"fields_to_keep": ["field_a", "field_b", "field_c"]}
+
+    def test_parses_json_encoded_dict(self):
+        """Test that JSON-encoded dict strings are parsed to actual dicts."""
+        arguments = {"config": '{"key": "value", "count": 5}'}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"config": {"key": "value", "count": 5}}
+
+    def test_preserves_non_json_strings(self):
+        """Test that regular strings are preserved unchanged."""
+        arguments = {"name": "test_value", "path": "/some/path"}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"name": "test_value", "path": "/some/path"}
+
+    def test_preserves_actual_lists_and_dicts(self):
+        """Test that actual lists and dicts are preserved unchanged."""
+        arguments = {"items": ["a", "b"], "config": {"x": 1}}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"items": ["a", "b"], "config": {"x": 1}}
+
+    def test_handles_mixed_arguments(self):
+        """Test handling mix of JSON-encoded and normal arguments."""
+        arguments = {"schema_id": 123, "fields_to_keep": '["document_id", "date_issue"]', "name": "test"}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"schema_id": 123, "fields_to_keep": ["document_id", "date_issue"], "name": "test"}
+
+    def test_handles_invalid_json_gracefully(self):
+        """Test that invalid JSON strings are preserved unchanged."""
+        arguments = {"value": "[invalid json"}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"value": "[invalid json"}
+
+    def test_handles_nested_dicts(self):
+        """Test that nested dicts are processed recursively."""
+        arguments = {"outer": {"inner_list": '["a", "b"]'}}
+        result = _parse_json_encoded_strings(arguments)
+        assert result == {"outer": {"inner_list": ["a", "b"]}}
+
+    def test_preserves_json_primitive_strings(self):
+        """Test that JSON strings encoding primitives are preserved."""
+        arguments = {"value": '"just a string"', "number": "42"}
+        result = _parse_json_encoded_strings(arguments)
+        # Only list/dict JSON should be parsed, primitives preserved
+        assert result["number"] == "42"
+        assert result["value"] == '"just a string"'
+
+    def test_preserves_changes_parameter_as_string(self):
+        """Test that 'changes' parameter is not parsed even if it's valid JSON.
+
+        The 'changes' parameter should remain as a JSON string because some tools
+        expect it in that format (e.g., patch_schema).
+        """
+        arguments = {"changes": '[{"op": "add", "path": "/fields/-", "value": {"name": "new_field"}}]'}
+        result = _parse_json_encoded_strings(arguments)
+        # changes should stay as a string, not be parsed to a list
+        assert isinstance(result["changes"], str)
+        assert result["changes"] == arguments["changes"]
+
+    def test_parses_non_changes_json_lists(self):
+        """Test that other JSON lists are parsed but 'changes' is preserved."""
+        arguments = {
+            "changes": '["item1", "item2"]',
+            "fields_to_keep": '["field_a", "field_b"]',
+        }
+        result = _parse_json_encoded_strings(arguments)
+        # changes stays as string
+        assert isinstance(result["changes"], str)
+        # fields_to_keep is parsed
+        assert result["fields_to_keep"] == ["field_a", "field_b"]
 
 
 class TestTruncateContent:
@@ -1225,7 +1303,7 @@ class TestExecuteTool:
             arguments={"filename": "test.txt", "content": "Hello"},
         )
 
-        with patch("rossum_agent.agent.core.execute_tool", return_value="Success") as mock_execute:
+        with patch("rossum_agent.agent.core.execute_internal_tool", return_value="Success") as mock_execute:
             result = await self._get_final_result(agent, tool_call)
 
         mock_execute.assert_called_once()
@@ -2042,6 +2120,170 @@ class TestStreamState:
         assert result is not None
         assert result.step_type == StepType.INTERMEDIATE
         assert result.text_delta == "Some response text"
+
+
+class TestPreloadInjection:
+    """Test that pre-loaded tool categories are communicated to the agent."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        mock_mcp_connection.get_tools.return_value = []
+        config = AgentConfig(max_steps=1)
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_preload_result_injected_into_string_prompt(self):
+        """Test that preload result is injected into string prompt."""
+        agent = self._create_agent()
+
+        async def mock_stream_response(step_num):
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.preload_categories_for_request") as mock_preload,
+        ):
+            mock_preload.return_value = (
+                "Loaded 5 tools from ['queues']: list_queues, get_queue, create_queue, update_queue, delete_queue"
+            )
+
+            async for _ in agent.run("List all queues"):
+                pass
+
+        # Verify the prompt was modified with preload info
+        task_step = agent.memory.steps[0]
+        assert "[System: Loaded 5 tools" in task_step.task
+        assert "Use these tools directly" in task_step.task
+
+    @pytest.mark.asyncio
+    async def test_preload_result_injected_into_list_prompt(self):
+        """Test that preload result is injected into list content prompt."""
+        agent = self._create_agent()
+
+        async def mock_stream_response(step_num):
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.preload_categories_for_request") as mock_preload,
+        ):
+            mock_preload.return_value = "Loaded 3 tools from ['schemas']"
+
+            multimodal_prompt = [
+                {"type": "text", "text": "Analyze this schema"},
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "abc"}},
+            ]
+            async for _ in agent.run(multimodal_prompt):
+                pass
+
+        task_step = agent.memory.steps[0]
+        # For list prompts, should be appended as text block
+        assert isinstance(task_step.task, list)
+        assert len(task_step.task) == 3  # original 2 + injected text
+        assert "[System: Loaded 3 tools" in task_step.task[2]["text"]
+
+    @pytest.mark.asyncio
+    async def test_no_injection_when_no_preload(self):
+        """Test that prompt is unchanged when preload returns None."""
+        agent = self._create_agent()
+
+        async def mock_stream_response(step_num):
+            yield AgentStep(step_number=step_num, final_answer="Done", is_final=True)
+
+        with (
+            patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
+            patch("rossum_agent.agent.core.preload_categories_for_request") as mock_preload,
+        ):
+            mock_preload.return_value = None
+
+            async for _ in agent.run("Hello world"):
+                pass
+
+        task_step = agent.memory.steps[0]
+        assert task_step.task == "Hello world"
+        assert "[System:" not in task_step.task
+
+
+class TestCalculateRateLimitDelay:
+    """Tests for RossumAgent._calculate_rate_limit_delay method."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    def test_first_retry_uses_base_delay(self):
+        """Test that first retry uses base delay (2.0 seconds)."""
+        agent = self._create_agent()
+
+        with patch("rossum_agent.agent.core.random.uniform", return_value=0.0):
+            delay = agent._calculate_rate_limit_delay(retries=1)
+
+        # Base delay is 2.0 * (2^0) = 2.0
+        assert delay == 2.0
+
+    def test_exponential_backoff(self):
+        """Test that delay increases exponentially with retries."""
+        agent = self._create_agent()
+
+        with patch("rossum_agent.agent.core.random.uniform", return_value=0.0):
+            delay1 = agent._calculate_rate_limit_delay(retries=1)
+            delay2 = agent._calculate_rate_limit_delay(retries=2)
+            delay3 = agent._calculate_rate_limit_delay(retries=3)
+
+        # 2.0 * 2^0 = 2.0, 2.0 * 2^1 = 4.0, 2.0 * 2^2 = 8.0
+        assert delay1 == 2.0
+        assert delay2 == 4.0
+        assert delay3 == 8.0
+
+    def test_delay_capped_at_max(self):
+        """Test that delay is capped at max delay (60 seconds)."""
+        agent = self._create_agent()
+
+        with patch("rossum_agent.agent.core.random.uniform", return_value=0.0):
+            # Very high retry count should still cap at 60
+            delay = agent._calculate_rate_limit_delay(retries=10)
+
+        assert delay == 60.0
+
+    def test_includes_jitter(self):
+        """Test that delay includes jitter component."""
+        agent = self._create_agent()
+
+        # Mock jitter to be 10% of delay (0.2 for delay of 2.0)
+        with patch("rossum_agent.agent.core.random.uniform", return_value=0.2):
+            delay = agent._calculate_rate_limit_delay(retries=1)
+
+        # Base delay 2.0 + jitter 0.2 = 2.2
+        assert delay == 2.2
+
+    def test_jitter_is_bounded(self):
+        """Test that jitter is correctly bounded to 10% of delay."""
+        agent = self._create_agent()
+
+        with patch("rossum_agent.agent.core.random.uniform") as mock_uniform:
+            mock_uniform.return_value = 0.5
+            agent._calculate_rate_limit_delay(retries=2)
+
+            # Should call uniform with (0, delay * 0.1) = (0, 0.4)
+            mock_uniform.assert_called_once()
+            args = mock_uniform.call_args[0]
+            assert args[0] == 0
+            assert abs(args[1] - 0.4) < 0.01  # 4.0 * 0.1 = 0.4
 
 
 class TestRossumAgentProperties:

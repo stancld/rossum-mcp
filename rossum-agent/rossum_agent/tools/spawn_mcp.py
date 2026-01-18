@@ -157,7 +157,7 @@ def spawn_mcp_connection(connection_id: str, api_token: str, api_base_url: str, 
 
 
 @beta_tool
-def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> str:
+def call_on_connection(connection_id: str, tool_name: str, arguments: str | dict) -> str:
     """Call a tool on a spawned MCP connection.
 
     Use this to execute MCP tools on a connection that was previously spawned with spawn_mcp_connection.
@@ -165,7 +165,7 @@ def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> st
     Args:
         connection_id: The identifier of the spawned connection.
         tool_name: The name of the MCP tool to call.
-        arguments: JSON string of arguments to pass to the tool.
+        arguments: Arguments to pass to the tool (JSON string or dict).
 
     Returns:
         The result of the tool call as a JSON string, or error message.
@@ -182,7 +182,12 @@ def call_on_connection(connection_id: str, tool_name: str, arguments: str) -> st
     logger.debug(f"call_on_connection: Using connection '{connection_id}' - API URL: {record.api_base_url}")
 
     try:
-        args = json.loads(arguments) if arguments else {}
+        if isinstance(arguments, dict):
+            args = arguments
+        elif arguments:
+            args = json.loads(arguments)
+        else:
+            args = {}
     except json.JSONDecodeError as e:
         return f"Error parsing arguments JSON: {e}"
 
