@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-49-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
 
 [![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
 [![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
@@ -325,7 +325,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 
 ## 🔌 MCP Tools
 
-The MCP server provides 49 tools organized into categories:
+The MCP server provides 50 tools organized into categories:
 
 <details>
 <summary><strong>Show all tools</strong></summary>
