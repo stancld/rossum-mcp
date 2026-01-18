@@ -1,6 +1,6 @@
 # Review & Improve README
 
-**Goal**: Audit README.md from open-source maintainer perspective, then implement approved improvements.
+**Goal**: Audit all README files from open-source maintainer perspective, ensure style consistency across them, then implement approved improvements.
 
 ## Review Dimensions
 
@@ -44,7 +44,9 @@
 
 | Step | Action |
 |------|--------|
-| Audit | Read README, identify gaps across all dimensions |
+| Discover | Find all README files in the project (root, subdirectories, packages) |
+| Audit | Read each README, identify gaps across all dimensions |
+| Consistency | Compare style, formatting, structure across all READMEs; flag inconsistencies |
 | Compare | Check against top open-source READMEs in same domain |
 | Prioritize | Rank findings by impact (Critical → High → Medium → Low) |
 | Present | Show findings with specific recommendations |
@@ -76,8 +78,9 @@ After all dimensions reviewed, provide:
 
 ## Constraints
 
-- Read the file before making any suggestions
+- Find and read all README files before making any suggestions
 - Preserve existing accurate content
 - Match project's tone and voice
+- Ensure consistent style across all READMEs (headings, formatting, structure)
 - Ask before implementing changes
 - Verify all code examples are correct and runnable
