@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233F8AE2'/%3E%3Cstop offset='100%25' stop-color='%23AE33EC'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath stroke='url(%23g)' d='M1.4,10.8c0,0,1-2.2,3.8-3.8c2.8-1.6,5.2-1.4,5.2-1.4 M6.3,20.4c0,0-1.4-1.9-1.4-5.2s1.4-5.2,1.4-5.2M16.6,21.7c0,0-2.4,0.3-5.2-1.4c-2.8-1.6-3.8-3.8-3.8-3.8 M22.6,13.2c0,0-1,2.2-3.8,3.8c-2.8-1.6-5.2,1.4-5.2,1.4 M17.8,3.6c0,0,1.4,1.9,1.4,5.2c0,3.2-1.4,5.2-1.4,5.2 M7.4,2.3c0,0,2.4-0.3,5.2,1.4c2.8,1.6,3.8,3.8,3.8,3.8'/%3E%3C/svg%3E">
+  <title>From Friday Hack to Deployable Agent | Rossum MCP & Agent</title>
+  <meta name="description" content="500+ commits later, here's what we learned building a production AI agent — from sub-agents and skills to dynamic tool loading.">
+  <meta property="og:title" content="From Friday Hack to Deployable Agent">
+  <meta property="og:description" content="500+ commits later, here's what we learned building a production AI agent.">
+  <meta property="og:image" content="https://stancld.github.io/rossum-mcp/blog/images/hero-agent-orchestration.png">
+  <meta property="og:type" content="article">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="From Friday Hack to Deployable Agent">
+  <meta name="twitter:description" content="500+ commits later, here's what we learned building a production AI agent.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://stancld.github.io/rossum-mcp/blog/">
+  <style>
+    :root {
+      --primary: #3F8AE2;
+      --primary-dark: #2d6bb8;
+      --accent: #AE33EC;
+      --gradient: linear-gradient(135deg, #3F8AE2, #AE33EC);
+      --text: #1a1a2e;
+      --text-muted: #4b5563;
+      --bg: #ffffff;
+      --bg-alt: #f8fafc;
+      --border: #e5e7eb;
+      --code-bg: #1e1e2e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      line-height: 1.7;
+      background: var(--bg);
+    }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Header */
+    .skip-link {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: var(--primary);
+      color: white;
+      padding: 0.5rem 1rem;
+      z-index: 200;
+      text-decoration: none;
+      border-radius: 0 0 0.5rem;
+      transform: translateY(-100%);
+      transition: transform 0.2s;
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    body > header {
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+
+    @supports not (backdrop-filter: blur(8px)) {
+      body > header {
+        background: var(--bg);
+      }
+    }
+
+    body > header.scrolled {
+      box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-icon { width: 1.5rem; height: 1.5rem; }
+
+    .nav-links { display: flex; gap: 2rem; flex-shrink: 0; }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+      padding: 0.5rem;
+      margin: -0.5rem;
+    }
+
+    .nav-links a:hover { color: var(--primary); }
+
+    /* Focus states */
+    a:focus, button:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* Article */
+    article {
+      padding: 3rem 0 4rem;
+    }
+
+    .article-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .article-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .article-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .author-byline {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+    }
+
+    .hero-image {
+      margin: 2rem 0 3rem;
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .hero-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Content */
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 3rem 0 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 5rem;
+    }
+
+    h2:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    p {
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .pr-link {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.1), rgba(174, 51, 236, 0.1));
+      border: 1px solid rgba(63, 138, 226, 0.2);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: #cdd6f4;
+      padding: 1.25rem 1.5rem;
+      border-radius: 0.75rem;
+      overflow-x: auto;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      margin: 1.5rem 0;
+    }
+
+    code {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.9em;
+      background: var(--bg-alt);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .code-comment { color: #6c7086; }
+    .code-keyword { color: #cba6f7; }
+    .code-string { color: #a6e3a1; }
+    .code-decorator { color: #f9e2af; }
+
+    /* Badge (matches landing page) */
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.1), rgba(174, 51, 236, 0.1));
+      border: 1px solid rgba(63, 138, 226, 0.2);
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .badge.wip {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #b45309;
+    }
+
+    /* TL;DR navigation */
+    .toc {
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.03), rgba(174, 51, 236, 0.03));
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.75rem 2rem;
+      margin: 0 0 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .toc::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient);
+    }
+
+    .toc h2 {
+      font-size: 0.85rem;
+      margin: 0 0 1.25rem;
+      padding: 0;
+      border: none;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .toc ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem 2rem;
+      counter-reset: list-item;
+    }
+
+    .toc li {
+      padding: 0.4rem 0;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .toc li::before {
+      content: counter(list-item);
+      counter-increment: list-item;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: rgba(63, 138, 226, 0.1);
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .toc a {
+      color: var(--text);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .toc a:hover {
+      color: var(--primary);
+    }
+
+    @media (max-width: 600px) {
+      .toc ol { grid-template-columns: 1fr; }
+      .toc { padding: 1.25rem 1.5rem; }
+    }
+
+    /* CTA box */
+    .cta-box {
+      text-align: center;
+      margin: 3rem 0 0;
+      padding: 2rem;
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.05), rgba(174, 51, 236, 0.05));
+      border-radius: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .cta-box p {
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 1.5rem;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--gradient);
+      color: white;
+      padding: 0.9rem 2rem;
+      border-radius: 9999px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(63, 138, 226, 0.3);
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(63, 138, 226, 0.4);
+      text-decoration: none;
+    }
+
+    .cta-button svg {
+      flex-shrink: 0;
+    }
+
+    blockquote {
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.5rem;
+      margin: 2rem 0;
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.05), rgba(174, 51, 236, 0.05));
+      border-radius: 0 0.5rem 0.5rem 0;
+      font-size: 1.1rem;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    /* Takeaway boxes */
+    .takeaway {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .takeaway strong {
+      color: var(--primary);
+    }
+
+    /* Images */
+    .content-image {
+      margin: 2rem 0;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+    }
+
+    .content-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .content-image figcaption {
+      padding: 0.75rem 1rem;
+      background: var(--bg-alt);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.8;
+    }
+
+    .arch-diagram .level-1 { color: var(--primary); font-weight: 600; }
+    .arch-diagram .level-2 { color: var(--text-muted); margin-left: 1.5rem; }
+
+    /* Meta lesson */
+    .meta-lesson {
+      background: linear-gradient(135deg, rgba(63, 138, 226, 0.08), rgba(174, 51, 236, 0.08));
+      border: 1px solid rgba(63, 138, 226, 0.2);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin: 3rem 0;
+    }
+
+    .meta-lesson h2 {
+      border: none;
+      margin-top: 0;
+      padding-top: 0;
+      text-align: center;
+    }
+
+    .meta-lesson ul {
+      list-style: none;
+      padding: 0;
+      margin: 1.5rem 0;
+    }
+
+    .meta-lesson li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .meta-lesson li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    /* Footer */
+    footer {
+      padding: 3rem 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer .disclaimer {
+      font-size: 0.85rem;
+      font-style: italic;
+      margin-bottom: 0.75rem;
+      opacity: 0.8;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--primary); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .article-header h1 { font-size: 1.75rem; }
+      .article-subtitle { font-size: 1.1rem; }
+      h2 { font-size: 1.25rem; }
+      pre { font-size: 0.8rem; padding: 1rem; }
+      blockquote { padding: 0.75rem 1rem; font-size: 1rem; }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 1rem; }
+      article { padding: 2rem 0 3rem; }
+      .nav-links { gap: 1rem; font-size: 0.9rem; }
+    }
+
+    /* Print styles */
+    @media print {
+      body > header, .skip-link { display: none; }
+      body { font-size: 12pt; }
+      article { padding: 1rem 0; }
+      .hero-image, .content-image { box-shadow: none; border: 1px solid #ccc; }
+      .arch-diagram { background: none; border: 1px solid #ccc; }
+      pre { white-space: pre-wrap; word-wrap: break-word; }
+      a { text-decoration: underline; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.8em; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <header>
+    <nav>
+      <a href="../" class="logo" aria-label="Rossum MCP & Agent home">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#3F8AE2"/>
+              <stop offset="100%" stop-color="#AE33EC"/>
+            </linearGradient>
+          </defs>
+          <path stroke="url(#logo-icon-gradient)" d="M1.4,10.8c0,0,1-2.2,3.8-3.8c2.8-1.6,5.2-1.4,5.2-1.4 M6.3,20.4c0,0-1.4-1.9-1.4-5.2s1.4-5.2,1.4-5.2M16.6,21.7c0,0-2.4,0.3-5.2-1.4c-2.8-1.6-3.8-3.8-3.8-3.8 M22.6,13.2c0,0-1,2.2-3.8,3.8c-2.8,1.6-5.2,1.4-5.2,1.4 M17.8,3.6c0,0,1.4,1.9,1.4,5.2c0,3.2-1.4,5.2-1.4,5.2 M7.4,2.3c0,0,2.4-0.3,5.2,1.4c2.8,1.6,3.8,3.8,3.8,3.8"/>
+        </svg>
+        Rossum MCP & Agent
+      </a>
+      <div class="nav-links">
+        <a href="https://github.com/stancld/rossum-mcp" target="_blank" rel="noopener">GitHub</a>
+        <a href="../source/">Docs</a>
+        <a href="../">Home</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <article class="container">
+      <header class="article-header">
+        <h1>From Friday Hack to Deployable Agent</h1>
+        <p class="article-subtitle">500+ commits later, here's what we learned.</p>
+        <p class="author-byline">By Dan Stancl</p>
+        <span class="badge wip">Draft</span>
+      </header>
+
+      <figure class="hero-image">
+        <img src="./images/hero-agent-orchestration.png" alt="AI Agent orchestration diagram showing how the main agent coordinates with sub-agents, skills, and tools" loading="eager">
+      </figure>
+
+      <p>The first version of rossum-mcp was a Friday-afternoon project: a small MCP server in JavaScript, a handful of tools, and that hit of dopamine when the LLM successfully called an API. I started naively—upload a document, annotate it, maybe generate a chart from extracted data. That was the pitch.</p>
+
+      <p>Then I started showing it to people.</p>
+
+      <p>I'd test one case, get it working, and excitedly demo it to a Product Manager or Solution Architect. They'd nod, then ask: "Can it also debug this webhook?" or "What about configuring a new queue?" And it would fail—hallucinating a webhook URL, or spinning in an infinite loop trying to find a workspace ID that didn't exist. Every conversation revealed another gap. I kept talking to colleagues—PMs, engineers, support—gradually piecing together where the agent could actually help. The goal shifted from flashy demos to <strong>tangible problems</strong>: understanding and documenting workflows, configuring new workspaces, setting up extensions. The boring stuff that actually matters.</p>
+
+      <p>Making an agent work once is easy. Making it work <strong>reliably, for the next person's question</strong>—that's the actual job.</p>
+
+      <p>This post covers the lessons learned along the way. Each links to a real pull request.</p>
+
+      <nav class="toc" aria-label="Table of contents">
+        <h2>Lessons at a Glance</h2>
+        <ol>
+          <li><a href="#section-1">Declarative Tools</a></li>
+          <li><a href="#section-2">Standing on Giants</a></li>
+          <li><a href="#section-3">The API That Enabled Everything</a></li>
+          <li><a href="#section-4">Sub-Agents: Teaching AI to Delegate</a></li>
+          <li><a href="#section-5">Skills: Focused Expertise</a></li>
+          <li><a href="#section-6">Dynamic Tool Loading</a></li>
+          <li><a href="#section-7">Opus 4.5: Less Prompt, More Trust</a></li>
+          <li><a href="#section-8">Moving Fast Without Faceplanting</a></li>
+          <li><a href="#section-9">Regression Testing for Prompts</a></li>
+          <li><a href="#section-10">AI Calling AI</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="section-1">1. From Handlers to Declarative Tools</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/56" class="pr-link" target="_blank" rel="noopener">PR #56</a>
+
+      <p>Our first tool layer looked like many backend systems: handler classes inheriting from a base, scattered across 10 files, each with its own registration boilerplate. Adding a new tool meant touching multiple files and asking "where does this logic live again?"</p>
+
+      <p>We replaced it with <strong><a href="https://github.com/jlowin/fastmcp" target="_blank" rel="noopener">FastMCP</a></strong>—a declarative framework where a single decorator defines the entire tool contract:</p>
+
+<pre><span class="code-comment"># Before: manual Tool definition with hand-written JSON schema</span>
+<span class="code-keyword">class</span> QueuesHandler(BaseHandler):
+    <span class="code-decorator">@classmethod</span>
+    <span class="code-keyword">def</span> get_tool_definitions(cls) -> list[Tool]:
+        <span class="code-keyword">return</span> [
+            Tool(
+                name=<span class="code-string">"list_queues"</span>,
+                description=<span class="code-string">"List all queues with optional filters."</span>,
+                inputSchema={
+                    <span class="code-string">"type"</span>: <span class="code-string">"object"</span>,
+                    <span class="code-string">"properties"</span>: {
+                        <span class="code-string">"workspace_id"</span>: {<span class="code-string">"type"</span>: [<span class="code-string">"integer"</span>, <span class="code-string">"null"</span>]},
+                        <span class="code-string">"name"</span>: {<span class="code-string">"type"</span>: [<span class="code-string">"string"</span>, <span class="code-string">"null"</span>]},
+                    },
+                },
+            ),
+            ...
+        ]
+
+<span class="code-comment"># After: type hints ARE the schema</span>
+<span class="code-decorator">@mcp.tool</span>(description=<span class="code-string">"List all queues with optional filters."</span>)
+<span class="code-keyword">async def</span> list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
+    ...</pre>
+
+      <p>The type hints become the JSON schema the LLM sees. The description becomes the prompt that tells the agent when to use it. FastMCP turns your Python signature into a reliable API contract—without you lifting a finger.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> <b>-2,011 lines.</b> When types are the schema, there's nothing left to document.</div>
+
+      <h2 id="section-2">2. Standing on Giants: Deleting Custom Agent Code</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/57" class="pr-link" target="_blank" rel="noopener">PR #57</a>
+
+      <p>Our initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> and <strong>LiteLLM</strong>—tools that excel at getting an agent running in minutes. Our first working prototype took an afternoon.</p>
+
+      <p>But as requirements grew, we needed lower-level control: direct AWS Bedrock integration without routing workarounds, native tool calling without excessive code-execution, and full visibility into system prompts. We also realized we were maintaining 1,500+ lines of custom file and analysis tools that modern Claude models handle natively.</p>
+
+      <p>We migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Anthropic Python SDK</a></strong> with direct Bedrock integration—trading quick-start convenience for production-grade control. The SDK handled natively what we'd been maintaining by hand: streaming, tool schemas, and multi-turn context. The result: <strong>~2,800 fewer lines of code</strong> and more capabilities, not fewer.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> High-level frameworks accelerate prototyping. When your workarounds begin to outnumber your features, move closer to the provider SDK.</div>
+
+      <h2 id="section-3">3. The API That Enabled Everything</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
+
+      <p>The CLI was a power-user's dream. But for a support engineer, solution architect, account manager, or anyone chasing an ad-hoc insight for Product, "clone the repo and configure your environment variables" isn't a feature—it's a roadblock. We needed to democratize access.</p>
+
+      <p>Our first attempt was a standalone <strong><a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a></strong> app deployed behind Teleport. It gave users a UI, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the data gap between the agent and the Rossum platform. We were buried in middleware trying to sync JWTs and session states across two different domains.</p>
+
+      <p>The breakthrough was moving from a sidecar app to a <strong>native integration</strong>.</p>
+
+      <p>We built a dedicated <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend that became the backbone of the system. This added <strong>5,300+ lines</strong>, but it was necessary weight: production infrastructure, not workarounds. Most importantly, it allowed us to embed the agent directly into the Rossum UI as a chat panel.</p>
+
+      <p>Now, the agent doesn't just "run somewhere"—it lives where the work happens. It has the user's context, follows their permissions (using standard Rossum JWTs for row-level security), and eliminates the mental tax of switching interfaces.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> If the user has to leave their workflow to use your agent, they eventually won't. Real adoption happens when the AI meets the user where they already are.</div>
+
+      <figure class="content-image">
+        <img src="../images/fabry_analysis.png" alt="Mr. Fabry analyzing a document workflow, showing queue configuration and active extensions in real-time" loading="lazy">
+        <figcaption>The agent explaining queue configuration and active extensions in real-time</figcaption>
+      </figure>
+
+      <h2 id="section-4">4. Sub-Agents: Teaching AI to Delegate</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/107" class="pr-link" target="_blank" rel="noopener">PR #107</a>
+      <a href="https://code.claude.com/docs/en/sub-agents" class="pr-link" target="_blank" rel="noopener">Sub-Agents</a>
+
+      <p>Early on, we treated the agent like a single specialist locked in a room with every tool we could provide. We assumed that because Rossum is a specialized domain, one well-prompted agent could handle the entire API surface.</p>
+
+      <p>The issue wasn't domain breadth—it was <strong>context pollution</strong>.</p>
+
+      <p>Complex tasks require messy iteration: retrying a failing webhook, patching a schema multiple times, digging through documentation and reasoning over it to answer a user's question. In a monolithic architecture, every failed attempt and verbose API error accumulates in the conversation. The noise drowns out the signal—making the agent slower, more prone to hallucination, and more expensive.</p>
+
+      <p>The fix? <strong>Delegation with isolation.</strong></p>
+
+      <p>Sub-agents are separate LLM calls with their own conversation history and a restricted toolset scoped to their specialty. They iterate, fail, and retry in this sandbox, then return only the essential result—a summary or recommendation—to the main agent's context. This prevents the main agent from ever seeing (or paying for) the 50 lines of API errors it took to get there. The primary conversation stays clean:</p>
+
+      <div class="arch-diagram">
+        <div class="level-1">Main Agent (Opus 4.5)</div>
+        <div class="level-2">├── HookDebugSubAgent (serverless function failures)</div>
+        <div class="level-2">├── SchemaPatchingSubAgent (JSON schema modifications)</div>
+        <div class="level-2">└── KnowledgeBaseSubAgent (documentation retrieval)</div>
+      </div>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Sub-agents aren't just for specialization—they're garbage collection for your context window.</div>
+
+      <h2 id="section-5">5. Skills: Focused Expertise on Demand</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/73" class="pr-link" target="_blank" rel="noopener">PR #73</a>
+      <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview" class="pr-link" target="_blank" rel="noopener">Agent Skills</a>
+
+      <p>Initially, our agent's "brain" was a monolithic system prompt. We kept adding rules, edge cases, and <code>IMPORTANT:</code> blocks in all caps. It felt productive until it became brittle, unreadable, and expensive. Loading every format specification and workflow upfront meant we were paying for tokens the agent didn't even need for 90% of tasks.</p>
+
+      <p>We pivoted to a <strong>Skills Framework</strong> based on the principle of <strong>progressive disclosure</strong>—showing only what's necessary at that moment. Don't load everything at once; load expertise only when it becomes relevant.</p>
+
+      <figure class="content-image">
+        <img src="./images/skills-modular.png" alt="Skills as modular units - showing individual skill files that can be loaded on demand" loading="lazy">
+        <figcaption>Skills as modular, version-controlled prompt units</figcaption>
+      </figure>
+
+<pre>skills/
+├── hook-debugging.md       <span class="code-comment"># Debugging serverless hook issues</span>
+├── organization-setup.md   <span class="code-comment"># New customer setup with regional templates</span>
+├── rossum-deployment.md    <span class="code-comment"># Safe deployment via sandbox with diffs</span>
+├── schema-patching.md      <span class="code-comment"># Adding and updating individual fields</span>
+├── schema-pruning.md       <span class="code-comment"># Tree-based view for removing unused fields</span>
+└── ui-settings.md          <span class="code-comment"># Configuring annotation list columns</span></pre>
+
+      <p>The system operates in two distinct stages to optimize the context window:</p>
+      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+        <li><strong>Metadata (Always Loaded):</strong> Short, lightweight descriptions of each skill. These act as "triggers" so the agent knows what expertise is available.</li>
+        <li><strong>Instructions (Loaded on Demand):</strong> The full procedural knowledge—examples, patterns, and constraints—injected only when the agent identifies a matching task.</li>
+      </ul>
+
+      <p>If a user asks, "Why is my webhook failing?", the agent identifies the <code>hook-debugging</code> metadata and pulls in the full instructions. The knowledge for UI settings and schema patching stays dormant. This <strong>dynamic focus</strong> keeps the agent sharp and the context clean.</p>
+
+      <p>This approach turned capability expansion into a standard software task: create a file, version it, and ship it. It even changed our internal culture—Product Managers can now draft or refine skills in Markdown, with engineers reviewing them just like code.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Stop trying to teach the agent everything at once. Give it a table of contents and let it read the specific chapter it needs for the task at hand.</div>
+
+      <h2 id="section-6">6. Dynamic Tool Loading: Context Is Money</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/108" class="pr-link" target="_blank" rel="noopener">PR #108</a>
+
+      <p>As our toolkit expanded, we hit the "Agent Tax": every tool added to the context window costs tokens, even if it's never called. Loading all 50+ MCP tools upfront burned roughly <strong>8,000 tokens</strong> before the user even typed a word. This wasn't just a waste of money; it was a waste of cognitive load for the model, leading to slower reasoning and higher latency.</p>
+
+      <p>To solve this, we implemented a <strong>Two-Phase Dynamic Loading</strong> strategy:</p>
+
+      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+        <li><strong>Phase 1: Keyword Heuristics.</strong> When a message arrives, a simple regex scan in Python checks the user's prompt for domain-specific keywords (e.g., "webhook," "schema," "queue")—no LLM required, just pattern matching. We pre-load the corresponding tool categories to eliminate "cold-start" delays. The agent starts the conversation with the right tools already in hand.</li>
+        <li><strong>Phase 2: Just-in-Time Discovery.</strong> For complex or ambiguous requests, the agent uses two "meta-tools" to explore the rest of the library:
+          <ul style="margin: 0.5rem 0 0 1rem; list-style-type: circle;">
+            <li><code>list_tool_categories()</code> — "Show me the available tool groups."</li>
+            <li><code>get_tool_category(name)</code> — "Load the specific tools for this group."</li>
+          </ul>
+        </li>
+      </ul>
+
+      <p>Now, a simple request like "List my queues" loads only the queue-related tools (~800 tokens) instead of the entire 8,000-token library. We observed a <strong>10x reduction</strong> in baseline context usage.</p>
+
+      <p>The real surprise was the impact on quality. With a smaller, more relevant toolset to choose from, the model became significantly more decisive. By removing the "noise" of irrelevant tool definitions, we effectively improved the agent's focus and reduced the likelihood of tool-selection errors.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> A crowded context window is a distracted agent. Dynamic loading doesn't just save money—it improves reasoning by enforcing a "need-to-know" basis for tool access.</div>
+
+      <h2 id="section-7">7. Opus 4.5: Less Prompt, More Trust</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/99" class="pr-link" target="_blank" rel="noopener">PR #99</a>
+      <a href="https://github.com/anthropics/claude-code/tree/main/plugins/claude-opus-4-5-migration" class="pr-link" target="_blank" rel="noopener">Opus 4.5 Migration Plugin</a>
+
+      <p>Switching models usually feels like a simple configuration change. But moving from Sonnet to <strong>Claude Opus 4.5</strong> taught us that better models require better—and often <em>shorter</em>—instructions. Admitting your prompt has become an over-engineered legal document is a hard pill to swallow.</p>
+
+      <p>Our initial migration was rough. Opus fell into the "tool-calling inferno"—redundant loops where the model over-analyzed simple tasks, burning tokens without progress. We realized the problem wasn't the model; it was our "legacy" prompts. Building with less capable models had trained us to write exhaustive, hand-holding instructions. Because Opus 4.5 is significantly more literal and responsive, our <code>CRITICAL:</code> and <code>MUST:</code> blocks were being treated as absolute commands to act, even when unnecessary.</p>
+
+      <p>The fix required a fundamental shift: moving from <strong>procedures to goals</strong>.</p>
+
+<pre><span class="code-comment"># Before: 104 lines of step-by-step handholding</span>
+### Step 4: Hook Code Debugging with Opus
+
+**MANDATORY**: When debugging Python hook code, you MUST use `debug_hook`.
+
+**CRITICAL: Investigate ALL Issues**
+- DO NOT stop at the first issue found
+- The Opus sub-agent will exhaustively analyze for ALL issues
+- Continue investigating even after fixing one error
+
+### Step 5: Trust and Apply Opus Results
+**CRITICAL:**
+- When Opus returns fixed code, you MUST trust its findings
+- DO NOT second-guess or re-analyze what Opus has investigated
+- DO NOT simplify or modify the fixed code Opus provides
+
+<span class="code-comment"># After: 31 lines of goals + constraints</span>
+# Hook Debugging Skill
+
+**Goal**: Identify and fix hook issues.
+
+| Tool | Purpose |
+|------|---------|
+| `search_knowledge_base` | **USE FIRST** - contains extension configs |
+| `debug_hook(hook_id, annotation_id)` | Spawns sub-agent for code analysis |
+
+**Constraints**:
+- Always search knowledge base first
+- Use `debug_hook` for Python code—do not analyze yourself
+- Trust `debug_hook` results—do not re-analyze or modify</pre>
+
+      <p>Our hook-debugging skill shrunk from 104 lines to 31. We stopped telling Opus <em>how</em> to think and started telling it <em>what the desired outcome</em> looks like.</p>
+
+      <p>By softening the aggressive language and letting the model infer the best path from the available constraints, we eliminated the tool loops. The model became more efficient, more reliable, and—counter-intuitively—more predictable.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Smarter models need simpler prompts. If your agent is over-triggering tools or getting "stuck," you are likely micromanaging it. Give the model the "Why" and the "What," and let it handle the "How."</div>
+
+      <h2 id="section-8">8. Moving Fast Without Faceplanting</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/92" class="pr-link" target="_blank" rel="noopener">PR #92</a>
+
+      <p>When you're building with AI assistance, the temptation is to "ship and pray." Code is generated in seconds, and the honeymoon phase of a new feature is intoxicating. But the faster you move, the harder you hit the ground when a hallucination makes its way into production.</p>
+
+      <p>We committed to <strong>95% test coverage</strong> across the entire project. This includes every MCP tool, every API wrapper, and every complex edge case. We aren't being dogmatic about the metric—we're being pragmatic. Because we iterate daily—often after beers, occasionally sober—we need a high-fidelity safety net to tell us exactly when a model update or a prompt tweak breaks a core workflow.</p>
+
+      <p>The agent might suggest a brilliant refactor for a tool's logic. Great. But the tests are the "honest broker" that verify if that refactor actually works across all scenarios. In this new paradigm, code moves at the speed of thought, but <strong>the tests keep it honest</strong>.</p>
+
+      <p>This rigor allows us to embrace vibe-coding for rapid prototyping while maintaining the stability of a production system. We don't view testing as a bottleneck; we view it as the accelerator that makes our speed sustainable.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Speed is a liability without a safety net. Tests aren't the opposite of moving fast—they are the only thing that makes moving fast safe.</div>
+
+      <h2 id="section-9">9. Regression Testing: Prompts Need Tests Too</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/pull/82" class="pr-link" target="_blank" rel="noopener">PR #82</a>
+
+      <p>We learned this the hard way: refactoring a prompt can change system behavior just as drastically as changing business logic. In a complex agentic system, every "improvement" is a potential regression.</p>
+
+      <p>Consider a typical week: Monday, you tweak the system prompt for better clarity. Tuesday, you add a new validation tool. Wednesday, you "optimize" a tool description. By Friday, the agent is hallucinating parameters or skipping critical steps. Without a way to measure <em>precisely</em> what changed, you're debugging by intuition—and intuition doesn't scale.</p>
+
+      <p>We built an <strong>Evaluation Framework</strong> to treat prompts like code. It runs the agent through high-fidelity scenarios and validates its performance across multiple dimensions:</p>
+
+<pre>RegressionTestCase(
+    name=<span class="code-string">"setup_invoice_queue_with_validation"</span>,
+    prompt=<span class="code-string">"Set up Invoice queue with three specific business validation checks..."</span>,
+    tool_expectation=ToolExpectation(
+        expected_tools=[
+            <span class="code-string">"create_queue_from_template"</span>,
+            <span class="code-string">"search_knowledge_base"</span>,
+            <span class="code-string">"create_hook_from_template"</span>,
+        ],
+        mode=ToolMatchMode.SUBSET,
+    ),
+    token_budget=TokenBudget(
+        min_total_tokens=60000,  <span class="code-comment"># Guard against "lazy" agent shortcuts</span>
+        max_total_tokens=90000,  <span class="code-comment"># Detect infinite loops early</span>
+    ),
+    success_criteria=SuccessCriteria(
+        require_subagent=True,
+        max_steps=6,
+        custom_checks=[BUSINESS_VALIDATION_HOOK_CHECK],
+    ),
+)</pre>
+
+      <p>By tracking <strong>tool sequences</strong> and <strong>token budgets</strong>, we catch subtle regressions that a simple "check the output" test would miss. This framework caught three critical regressions during our Opus 4.5 migration and saved us from a "broken" tool description that looked correct but confused the model's selection logic.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Prompt engineering without regression testing isn't engineering—it's just vibes. If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
+
+      <h2 id="section-10">10. AI Calling AI: The Copilot Integration</h2>
+
+      <a href="https://github.com/stancld/rossum-mcp/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
+      <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
+
+      <p>A natural synergy emerged when we integrated with Rossum's existing <strong>Copilot API</strong>. Rossum already has specialized, production-hardened AI models in place—such as those designed to generate complex extraction formulas from natural language.</p>
+
+      <p>In the beginning, we thought about teaching the agent how to write these formulas. We quickly realized that was a mistake. Why reinvent the wheel when we could simply turn the existing Copilot into a tool for our agent? This created a "Recursive AI" workflow:</p>
+
+      <ol style="margin: 1rem 0 1.5rem 1.5rem;">
+        <li><strong>The User</strong> asks for a specific business rule (e.g., "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding").</li>
+        <li><strong>The Agent</strong> recognizes the need for a formula and calls the <strong>Rossum Copilot API</strong>.</li>
+        <li><strong>The Copilot</strong> generates the specific extraction formula.</li>
+        <li><strong>The Agent</strong> validates that formula against the current schema and applies it via MCP tools.</li>
+      </ol>
+
+      <figure class="content-image">
+        <img src="../images/fabry_extension.png" alt="Mr. Fabry configuring duplicate detection through natural conversation" loading="lazy">
+        <figcaption>The agent configuring duplicate detection through natural conversation</figcaption>
+      </figure>
+
+      <p>This is "Agents all the way down." Claude acts as the sophisticated coordinator, orchestrating Rossum's domain-specific ML models to achieve a final result. It leverages the precision of specialized models with the reasoning of a general-purpose frontier model.</p>
+
+      <div class="takeaway"><strong>The Lesson:</strong> Your agent shouldn't be a jack-of-all-trades; it should be a world-class conductor. If a production-ready AI capability already exists in your platform, orchestrate it—don't rebuild it.</div>
+
+      <div class="meta-lesson">
+        <h2>The Meta-Lesson</h2>
+
+        <p>Looking back at 500+ commits, the pattern is clear:</p>
+
+        <p>We didn't build a smarter agent. We built an agent that <strong>knows when to be smart and when to delegate</strong>.</p>
+
+        <ul>
+          <li>Declarative tools replaced boilerplate</li>
+          <li>Provider SDKs replaced abstractions</li>
+          <li>Native integration replaced sidecars</li>
+          <li>Sub-agents isolate messy iteration</li>
+          <li>Skills make knowledge modular</li>
+          <li>Dynamic loading controls context cost</li>
+          <li>Smarter models need simpler prompts</li>
+          <li>Tests make speed sustainable</li>
+          <li>Prompts need regression tests too</li>
+          <li>Orchestrate existing AI, don't rebuild it</li>
+        </ul>
+
+        <blockquote>Don't try to build an AI that knows everything. Build an AI that knows <em>what to do next</em>—and has the discipline to ask for help.</blockquote>
+      </div>
+
+      <div class="cta-box">
+        <p>All PRs referenced are in the <a href="https://github.com/stancld/rossum-mcp" target="_blank" rel="noopener">rossum-mcp repository</a>. Open the diffs to see the trade-offs, the backtracking, and the moments where the system finally started behaving like something you can trust.</p>
+        <a href="https://github.com/stancld/rossum-mcp" class="cta-button" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          Star on GitHub
+        </a>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p class="disclaimer">This is not an official Rossum product. It is a community-developed integration built on top of the Rossum API.</p>
+      <p>Built with 💙 for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> · <a href="https://github.com/stancld/rossum-mcp" target="_blank" rel="noopener">Source on GitHub</a> · <a href="../">Back to Home</a></p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const header = document.querySelector('body > header');
+
+      window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 10) {
+          header.classList.add('scrolled');
+        } else {
+          header.classList.remove('scrolled');
+        }
+      }, { passive: true });
+    });
+  </script>
+</body>
+</html>
