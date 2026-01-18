@@ -158,7 +158,8 @@ This repository contains three standalone Python packages:
 
 Each package can be installed and used independently or together for complete functionality.
 
-## 🚀 Installation & Usage
+<details>
+<summary><h2>🚀 Installation & Usage</h2></summary>
 
 **Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
@@ -285,7 +286,10 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-## 🧠 Agent Skills & Sub-Agents
+</details>
+
+<details>
+<summary><h2>🧠 Agent Skills & Sub-Agents</h2></summary>
 
 The Rossum Agent includes specialized capabilities for complex workflows:
 
@@ -310,7 +314,10 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 
 See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
 
-## 🔌 MCP Tools
+</details>
+
+<details>
+<summary><h2>🔌 MCP Tools</h2></summary>
 
 The MCP server provides 49 tools organized into categories:
 
@@ -418,6 +425,8 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
+
+</details>
 
 ## 📚 Documentation
 
