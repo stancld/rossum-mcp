@@ -28,10 +28,7 @@
 Conversational AI toolkit for the Rossum intelligent document processing platform. Transforms complex workflow setup, debugging, and configuration into natural language conversations through a Model Context Protocol (MCP) server and specialized AI agent.
 
 > [!NOTE]
-> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
-
-> [!WARNING]
-> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
 
 ## ✨ What Can You Do?
 
@@ -158,8 +155,18 @@ This repository contains three standalone Python packages:
 
 Each package can be installed and used independently or together for complete functionality.
 
-<details>
-<summary><h2>🚀 Installation & Usage</h2></summary>
+## 🚀 Quick Start
+
+```bash
+# Clone and run with Docker
+git clone https://github.com/stancld/rossum-mcp.git && cd rossum-mcp
+echo "ROSSUM_API_TOKEN=your-token" > .env
+echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
+docker-compose up rossum-agent
+# Open http://localhost:8501
+```
+
+## 📦 Installation & Usage
 
 **Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
@@ -285,8 +292,6 @@ uv run streamlit run rossum_agent/app.py
 > Or mount credentials in Docker: `~/.aws:/root/.aws:ro`
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
-
-</details>
 
 <details>
 <summary><h2>🧠 Agent Skills & Sub-Agents</h2></summary>
