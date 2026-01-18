@@ -439,42 +439,6 @@
     .arch-diagram .level-1 { color: var(--primary); font-weight: 600; }
     .arch-diagram .level-2 { color: var(--text-muted); margin-left: 1.5rem; }
 
-    /* Meta lesson */
-    .meta-lesson {
-      background: linear-gradient(135deg, rgba(63, 138, 226, 0.08), rgba(174, 51, 236, 0.08));
-      border: 1px solid rgba(63, 138, 226, 0.2);
-      border-radius: 1rem;
-      padding: 2rem;
-      margin: 3rem 0;
-    }
-
-    .meta-lesson h2 {
-      border: none;
-      margin-top: 0;
-      padding-top: 0;
-      text-align: center;
-    }
-
-    .meta-lesson ul {
-      list-style: none;
-      padding: 0;
-      margin: 1.5rem 0;
-    }
-
-    .meta-lesson li {
-      padding: 0.5rem 0;
-      padding-left: 1.5rem;
-      position: relative;
-    }
-
-    .meta-lesson li::before {
-      content: "→";
-      position: absolute;
-      left: 0;
-      color: var(--primary);
-      font-weight: bold;
-    }
-
     /* Footer */
     footer {
       padding: 3rem 0;
@@ -624,7 +588,7 @@
 
       <p>The type hints become the JSON schema the LLM sees. The description becomes the prompt that tells the agent when to use it. FastMCP turns your Python signature into a reliable API contract—without you lifting a finger.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> <b>-2,011 lines.</b> When types are the schema, there's nothing left to document.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> <b>-2,011 lines.</b> When types are the schema, there's nothing left to document.</div>
 
       <h2 id="section-2">2. Standing on Giants: Deleting Custom Agent Code</h2>
 
@@ -636,7 +600,7 @@
 
       <p>We migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Anthropic Python SDK</a></strong> with direct Bedrock integration—trading quick-start convenience for production-grade control. The SDK handled natively what we'd been maintaining by hand: streaming, tool schemas, and multi-turn context. The result: <strong>~2,800 fewer lines of code</strong> and more capabilities, not fewer.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> High-level frameworks accelerate prototyping. When your workarounds begin to outnumber your features, move closer to the provider SDK.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> High-level frameworks accelerate prototyping. When your workarounds outnumber your features, move closer to the provider SDK.</div>
 
       <h2 id="section-3">3. The API That Enabled Everything</h2>
 
@@ -652,7 +616,7 @@
 
       <p>Now, the agent doesn't just "run somewhere"—it lives where the work happens. It has the user's context, follows their permissions (using standard Rossum JWTs for row-level security), and eliminates the mental tax of switching interfaces.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> If the user has to leave their workflow to use your agent, they eventually won't. Real adoption happens when the AI meets the user where they already are.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> If the user has to leave their workflow to use your agent, they eventually won't.</div>
 
       <figure class="content-image">
         <img src="../images/fabry_analysis.png" alt="Mr. Fabry analyzing a document workflow, showing queue configuration and active extensions in real-time" loading="lazy">
@@ -681,7 +645,7 @@
         <div class="level-2">└── KnowledgeBaseSubAgent (documentation retrieval)</div>
       </div>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Sub-agents aren't just for specialization—they're garbage collection for your context window.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> Sub-agents aren't just for specialization—they're garbage collection for your context window.</div>
 
       <h2 id="section-5">5. Skills: Focused Expertise on Demand</h2>
 
@@ -715,7 +679,7 @@
 
       <p>This approach turned capability expansion into a standard software task: create a file, version it, and ship it. It even changed our internal culture—Product Managers can now draft or refine skills in Markdown, with engineers reviewing them just like code.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Stop trying to teach the agent everything at once. Give it a table of contents and let it read the specific chapter it needs for the task at hand.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> Stop trying to teach the agent everything at once. Give it a table of contents and let it read the chapter it needs.</div>
 
       <h2 id="section-6">6. Dynamic Tool Loading: Context Is Money</h2>
 
@@ -739,7 +703,7 @@
 
       <p>The real surprise was the impact on quality. With a smaller, more relevant toolset to choose from, the model became significantly more decisive. By removing the "noise" of irrelevant tool definitions, we effectively improved the agent's focus and reduced the likelihood of tool-selection errors.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> A crowded context window is a distracted agent. Dynamic loading doesn't just save money—it improves reasoning by enforcing a "need-to-know" basis for tool access.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> A crowded context window is a distracted agent. Dynamic loading doesn't just save money—it improves reasoning.</div>
 
       <h2 id="section-7">7. Opus 4.5: Less Prompt, More Trust</h2>
 
@@ -787,7 +751,7 @@
 
       <p>By softening the aggressive language and letting the model infer the best path from the available constraints, we eliminated the tool loops. The model became more efficient, more reliable, and—counter-intuitively—more predictable.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Smarter models need simpler prompts. If your agent is over-triggering tools or getting "stuck," you are likely micromanaging it. Give the model the "Why" and the "What," and let it handle the "How."</div>
+      <div class="takeaway"><strong>Takeaway:</strong> Smarter models need simpler prompts. If your agent is over-triggering tools or getting stuck, you're likely micromanaging it.</div>
 
       <h2 id="section-8">8. Moving Fast Without Faceplanting</h2>
 
@@ -801,7 +765,7 @@
 
       <p>This rigor allows us to embrace vibe-coding for rapid prototyping while maintaining the stability of a production system. We don't view testing as a bottleneck; we view it as the accelerator that makes our speed sustainable.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Speed is a liability without a safety net. Tests aren't the opposite of moving fast—they are the only thing that makes moving fast safe.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> Speed is a liability without a safety net.</div>
 
       <h2 id="section-9">9. Regression Testing: Prompts Need Tests Too</h2>
 
@@ -837,7 +801,7 @@
 
       <p>By tracking <strong>tool sequences</strong> and <strong>token budgets</strong>, we catch subtle regressions that a simple "check the output" test would miss. This framework caught three critical regressions during our Opus 4.5 migration and saved us from a "broken" tool description that looked correct but confused the model's selection logic.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Prompt engineering without regression testing isn't engineering—it's just vibes. If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
 
       <h2 id="section-10">10. AI Calling AI: The Copilot Integration</h2>
 
@@ -862,30 +826,7 @@
 
       <p>This is "Agents all the way down." Claude acts as the sophisticated coordinator, orchestrating Rossum's domain-specific ML models to achieve a final result. It leverages the precision of specialized models with the reasoning of a general-purpose frontier model.</p>
 
-      <div class="takeaway"><strong>The Lesson:</strong> Your agent shouldn't be a jack-of-all-trades; it should be a world-class conductor. If a production-ready AI capability already exists in your platform, orchestrate it—don't rebuild it.</div>
-
-      <div class="meta-lesson">
-        <h2>The Meta-Lesson</h2>
-
-        <p>Looking back at 500+ commits, the pattern is clear:</p>
-
-        <p>We didn't build a smarter agent. We built an agent that <strong>knows when to be smart and when to delegate</strong>.</p>
-
-        <ul>
-          <li>Declarative tools replaced boilerplate</li>
-          <li>Provider SDKs replaced abstractions</li>
-          <li>Native integration replaced sidecars</li>
-          <li>Sub-agents isolate messy iteration</li>
-          <li>Skills make knowledge modular</li>
-          <li>Dynamic loading controls context cost</li>
-          <li>Smarter models need simpler prompts</li>
-          <li>Tests make speed sustainable</li>
-          <li>Prompts need regression tests too</li>
-          <li>Orchestrate existing AI, don't rebuild it</li>
-        </ul>
-
-        <blockquote>Don't try to build an AI that knows everything. Build an AI that knows <em>what to do next</em>—and has the discipline to ask for help.</blockquote>
-      </div>
+      <div class="takeaway"><strong>Takeaway:</strong> Your agent shouldn't be a jack-of-all-trades; it should be a coordinator. If a production-ready AI capability already exists, orchestrate it—don't rebuild it.</div>
 
       <div class="cta-box">
         <p>All PRs referenced are in the <a href="https://github.com/stancld/rossum-mcp" target="_blank" rel="noopener">rossum-mcp repository</a>. Open the diffs to see the trade-offs, the backtracking, and the moments where the system finally started behaving like something you can trust.</p>
