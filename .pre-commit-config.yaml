@@ -8,7 +8,7 @@ repos:
         exclude: ^deployments/new-deployment/
       - id: check-added-large-files
         args: [--maxkb=1000]
-        exclude: ^docs/landing/images/
+        exclude: ^docs/landing/(images|blog/images)/
       - id: check-toml
       - id: debug-statements
 

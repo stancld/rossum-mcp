@@ -1,6 +1,28 @@
 # Review & Improve Landing Page
 
-**Goal**: Audit `docs/landing/index.html` from Staff UX Designer and Web Developer perspective, then implement approved improvements.
+**Goal**: Audit `docs/landing/index.html` and `docs/landing/blog/` from Staff UX Designer and Web Developer perspective, then implement approved improvements.
+
+## Scope
+
+| Path | Content |
+|------|---------|
+| `docs/landing/index.html` | Main landing page |
+| `docs/landing/blog/` | Blog posts and related assets |
+
+## Consistency Requirements
+
+Blog pages must maintain visual and structural consistency with the main landing page:
+
+| Element | Requirement |
+|---------|-------------|
+| Typography | Same font families, sizes, and weights |
+| Colors | Identical color palette and usage patterns |
+| Spacing | Consistent margins, padding, and whitespace |
+| Components | Reuse header, footer, and navigation styles |
+| Responsive | Same breakpoints and mobile behavior |
+| Tone | Consistent voice and writing style |
+
+Review blog pages against the main landing page as the source of truth for design decisions.
 
 ## Review Dimensions
 
