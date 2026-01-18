@@ -160,7 +160,7 @@ Each package can be installed and used independently or together for complete fu
 
 ## 🚀 Installation & Usage
 
-**Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://elis.rossum.ai/api/docs/#authentication)
+**Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
 ### 🐳 Docker Compose (Recommended)
 
@@ -285,7 +285,8 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-## 🧠 Agent Skills & Sub-Agents
+<details>
+<summary><strong>🧠 Agent Skills & Sub-Agents</strong></summary>
 
 The Rossum Agent includes specialized capabilities for complex workflows:
 
@@ -310,12 +311,13 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 
 See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
 
-## 🔌 MCP Tools
-
-The MCP server provides 49 tools organized into categories:
+</details>
 
 <details>
-<summary><strong>Document Processing (6 tools)</strong></summary>
+<summary><strong>🔌 MCP Tools (49 tools)</strong></summary>
+
+<details>
+<summary>Document Processing (6 tools)</summary>
 
 - `upload_document` - Upload documents for AI extraction
 - `get_annotation` - Retrieve extracted data and status
@@ -327,7 +329,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Queue Management (8 tools)</strong></summary>
+<summary>Queue Management (8 tools)</summary>
 
 - `get_queue` - Retrieve queue details
 - `list_queues` - List queues with optional filtering
@@ -341,7 +343,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Schema Management (7 tools)</strong></summary>
+<summary>Schema Management (7 tools)</summary>
 
 - `get_schema` - Retrieve schema details
 - `list_schemas` - List schemas with optional filtering
@@ -354,7 +356,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Engine Management (6 tools)</strong></summary>
+<summary>Engine Management (6 tools)</summary>
 
 - `get_engine` - Retrieve engine details by ID
 - `list_engines` - List all engines with optional filters
@@ -366,7 +368,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Extensions & Rules (9 tools)</strong></summary>
+<summary>Extensions & Rules (9 tools)</summary>
 
 - `get_hook` - Get hook/extension details
 - `list_hooks` - List webhooks and extensions
@@ -381,7 +383,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Workspace Management (3 tools)</strong></summary>
+<summary>Workspace Management (3 tools)</summary>
 
 - `get_workspace` - Retrieve workspace details
 - `list_workspaces` - List all workspaces with filtering
@@ -390,7 +392,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>User Management (3 tools)</strong></summary>
+<summary>User Management (3 tools)</summary>
 
 - `get_user` - Retrieve user details by ID
 - `list_users` - List users with optional filtering
@@ -399,7 +401,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Relations Management (4 tools)</strong></summary>
+<summary>Relations Management (4 tools)</summary>
 
 - `get_relation` - Retrieve annotation relation details
 - `list_relations` - List relations (edit, attachment, duplicate)
@@ -409,7 +411,7 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 <details>
-<summary><strong>Email Templates (3 tools)</strong></summary>
+<summary>Email Templates (3 tools)</summary>
 
 - `get_email_template` - Retrieve email template details
 - `list_email_templates` - List email templates with optional filtering
@@ -418,6 +420,8 @@ The MCP server provides 49 tools organized into categories:
 </details>
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
+
+</details>
 
 ## 📚 Documentation
 
@@ -429,7 +433,7 @@ For detailed API documentation, parameters, and workflows, see the [full documen
 
 ## 🔗 Resources
 
-- [Rossum API](https://elis.rossum.ai/api/docs/) - Official API documentation
+- [Rossum API](https://rossum.app/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
 - [Rossum SDK](https://github.com/rossumai/rossum-sdk) - Python SDK
 - [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
