@@ -325,117 +325,18 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 
 ## 🔌 MCP Tools
 
-The MCP server provides 50 tools organized into categories:
+The MCP server provides **50 tools** for document processing, queue/schema management, hooks, engines, and more.
 
-<details>
-<summary><strong>Show all tools</strong></summary>
+| Category | Tools | Description |
+|----------|-------|-------------|
+| Document Processing | 6 | Upload, retrieve, update, confirm annotations |
+| Queue Management | 8 | Create, configure, list queues |
+| Schema Management | 7 | Define and modify field structures |
+| Engine Management | 6 | Extraction and splitting engines |
+| Extensions & Rules | 9 | Webhooks, serverless functions, rules |
+| Other | 14 | Workspaces, users, relations, email templates |
 
-<details>
-<summary><strong>Document Processing (6 tools)</strong></summary>
-
-- `upload_document` - Upload documents for AI extraction
-- `get_annotation` - Retrieve extracted data and status
-- `list_annotations` - List all annotations with filtering
-- `start_annotation` - Start annotation for field updates
-- `bulk_update_annotation_fields` - Update field values with JSON Patch
-- `confirm_annotation` - Confirm and finalize annotations
-
-</details>
-
-<details>
-<summary><strong>Queue Management (8 tools)</strong></summary>
-
-- `get_queue` - Retrieve queue details
-- `list_queues` - List queues with optional filtering
-- `get_queue_schema` - Retrieve queue schema in one call
-- `get_queue_engine` - Get engine information
-- `create_queue` - Create new queues
-- `create_queue_from_template` - Create queues from predefined templates (EU/US/UK/CZ/CN)
-- `get_queue_template_names` - List available queue template names
-- `update_queue` - Configure automation thresholds
-
-</details>
-
-<details>
-<summary><strong>Schema Management (7 tools)</strong></summary>
-
-- `get_schema` - Retrieve schema details
-- `list_schemas` - List schemas with optional filtering
-- `create_schema` - Create new schemas
-- `update_schema` - Configure field-level thresholds
-- `patch_schema` - Add, update, or remove individual schema nodes
-- `get_schema_tree_structure` - Get lightweight tree structure of schema
-- `prune_schema_fields` - Remove multiple fields from schema at once
-
-</details>
-
-<details>
-<summary><strong>Engine Management (6 tools)</strong></summary>
-
-- `get_engine` - Retrieve engine details by ID
-- `list_engines` - List all engines with optional filters
-- `create_engine` - Create extraction or splitting engines
-- `update_engine` - Configure learning and training queues
-- `create_engine_field` - Define engine fields and link to schemas
-- `get_engine_fields` - Retrieve engine fields for an engine
-
-</details>
-
-<details>
-<summary><strong>Extensions & Rules (9 tools)</strong></summary>
-
-- `get_hook` - Get hook/extension details
-- `list_hooks` - List webhooks and extensions
-- `create_hook` - Create new hooks/extensions
-- `update_hook` - Update existing hook properties
-- `list_hook_templates` - List available hook templates from Rossum Store
-- `create_hook_from_template` - Create hook from a template
-- `list_hook_logs` - List hook execution logs for debugging
-- `get_rule` - Get business rule details
-- `list_rules` - List validation rules
-
-</details>
-
-<details>
-<summary><strong>Workspace Management (3 tools)</strong></summary>
-
-- `get_workspace` - Retrieve workspace details
-- `list_workspaces` - List all workspaces with filtering
-- `create_workspace` - Create new workspaces
-
-</details>
-
-<details>
-<summary><strong>User Management (3 tools)</strong></summary>
-
-- `get_user` - Retrieve user details by ID
-- `list_users` - List users with optional filtering
-- `list_user_roles` - List all user roles (permission groups)
-
-</details>
-
-<details>
-<summary><strong>Relations Management (4 tools)</strong></summary>
-
-- `get_relation` - Retrieve annotation relation details
-- `list_relations` - List relations (edit, attachment, duplicate)
-- `get_document_relation` - Retrieve document relation details
-- `list_document_relations` - List document relations (export, einvoice)
-
-</details>
-
-<details>
-<summary><strong>Email Templates (3 tools)</strong></summary>
-
-- `get_email_template` - Retrieve email template details
-- `list_email_templates` - List email templates with optional filtering
-- `create_email_template` - Create new email templates
-
-</details>
-
-For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
-
-</details>
+See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-mcp/TOOLS.md](rossum-mcp/TOOLS.md) for detailed API documentation.
 
 ## 📚 Documentation
 

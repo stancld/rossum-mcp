@@ -71,7 +71,7 @@ streamlit run app.py
 
 Once the agent is running, you can say things like:
 
-- "Upload all invoices from /Users/daniel.stancl/projects/rossum-mcp/examples/data folder to Rossum to the queue <queue_id>."
+- "Upload all invoices from examples/data folder to Rossum to queue <queue_id>."
 - "Check the status of all annotations in queue <queue_id>."
 - "List all annotations that are ready for review in queue <queue_id>."
 - "Wait until all uploaded documents finish processing in queue <queue_id>."
@@ -151,3 +151,13 @@ Make sure you have Python 3.12+ and install the agent package:
 cd rossum_agent
 uv sync --extra all
 ```
+
+## License
+
+MIT License - see [LICENSE](../LICENSE) file for details.
+
+## Resources
+
+- [Rossum Agent README](../rossum-agent/README.md)
+- [Rossum MCP README](../rossum-mcp/README.md)
+- [Full Documentation](https://stancld.github.io/rossum-mcp/)

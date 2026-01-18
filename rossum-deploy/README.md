@@ -525,8 +525,13 @@ rossum-deploy automatically uses Git when available to detect **conflicts**
 but pull/diff/push still work normally.
 
 
-## See Also
+## License
 
+MIT License - see [LICENSE](../LICENSE) file for details.
+
+## Resources
+
+- [Full Documentation](https://stancld.github.io/rossum-mcp/)
 - [deployment-manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment tool
 - [rossum-agent](../rossum-agent/) - AI agent that uses rossum-deploy
 - [rossum-mcp](../rossum-mcp/) - MCP server for Rossum API

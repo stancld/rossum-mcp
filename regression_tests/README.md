@@ -2,6 +2,13 @@
 
 Local regression testing framework for rossum-agent.
 
+## Quick Start
+
+```bash
+export ROSSUM_API_TOKEN="your_token"
+pytest regression_tests/ -v -k "list_queues"
+```
+
 ## Overview
 
 This framework tests that the agent:
@@ -161,3 +168,7 @@ RegressionTestCase(
 
 - AWS credentials configured for Bedrock access
 - Valid Rossum API token for the target environment
+
+## License
+
+MIT License - see [LICENSE](../LICENSE) file for details.

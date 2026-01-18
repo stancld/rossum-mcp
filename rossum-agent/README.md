@@ -10,11 +10,12 @@
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![Anthropic](https://img.shields.io/badge/Anthropic-Claude-blueviolet.svg)](https://www.anthropic.com/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 </div>
 
-AI agent for Rossum document processing. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
+AI agent that automates Rossum workflows through natural language. Debug hooks, deploy configs, and process documents conversationally. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
 
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
@@ -367,28 +368,29 @@ result = await run_regression_test(agent, test_case)
 
 ## Architecture
 
-```
-┌─────────────────────┐
-│    User Interface   │
-│  (Streamlit / API)  │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│   Rossum Agent      │
-│   (Claude Bedrock)  │
-├─────────────────────┤
-│ • Internal Tools    │
-│ • Deploy Tools      │
-│ • Spawn MCP Tools   │
-│ • Skills System     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐      ┌──────────────┐
-│   Rossum MCP        │─────▶│  Rossum API  │
-│     Server          │      └──────────────┘
-└─────────────────────┘
+```mermaid
+flowchart TB
+    subgraph UI["User Interface"]
+        S[Streamlit UI]
+        A[REST API]
+    end
+
+    subgraph Agent["Rossum Agent (Claude Bedrock)"]
+        IT[Internal Tools]
+        DT[Deploy Tools]
+        MT[Spawn MCP Tools]
+        SK[Skills System]
+    end
+
+    subgraph MCP["Rossum MCP Server"]
+        Tools[50 MCP Tools]
+    end
+
+    API[Rossum API]
+
+    UI --> Agent
+    Agent --> MCP
+    MCP --> API
 ```
 
 ## REST API Endpoints
