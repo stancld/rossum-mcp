@@ -2,51 +2,58 @@
 
 <div align="center">
 
+**AI agent for Rossum document processing. Debug hooks, deploy configs, and automate workflows conversationally.**
+
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/stancld/rossum-mcp)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
-[![Anthropic](https://img.shields.io/badge/Anthropic-Claude-blueviolet.svg)](https://www.anthropic.com/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![Claude Opus 4.5](https://img.shields.io/badge/Claude-Opus_4.5-blueviolet.svg)](https://www.anthropic.com/claude/opus)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 </div>
 
-AI agent that automates Rossum workflows through natural language. Debug hooks, deploy configs, and process documents conversationally. Built with Anthropic Claude and designed to work seamlessly with the Rossum MCP server.
-
 > [!NOTE]
-> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
+> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
 
-> [!WARNING]
-> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+## ✨ Features
 
-## Features
+| Capability | Description |
+|------------|-------------|
+| **Rossum MCP Integration** | Full access to 50 MCP tools for document processing |
+| **Hook Debugging** | Sandboxed execution with Opus sub-agent analysis |
+| **Deployment Tools** | Pull, push, diff, copy configs across environments |
+| **Knowledge Base Search** | AI-powered Rossum documentation search |
+| **Multi-Environment** | Spawn connections to different Rossum environments |
+| **Skills System** | Load domain-specific workflows on demand |
 
-### Agent Capabilities
-- **Rossum Integration**: Connect to Rossum MCP server for document processing
-- **File Output**: Write reports, documentation, and analysis results to files
-- **Knowledge Base Search**: Search the Rossum Knowledge Base with AI-powered analysis
-- **Hook Debugging**: Debug Python function hooks with sandboxed execution and Opus sub-agent
-- **Deployment Tools**: Pull, push, diff, and copy Rossum configurations across environments
-- **Multi-Environment Support**: Spawn MCP connections to different Rossum environments
-- **Skills System**: Load domain-specific skills for specialized workflows
+**Interfaces:** Streamlit UI, REST API, Python SDK
 
-### User Interfaces
-- **Streamlit UI**: Web-based interface for interactive agent conversations
-- **REST API**: FastAPI-based API for programmatic access and custom integrations
+## 🚀 Quick Start
 
-## Prerequisites
+```bash
+# Set environment variables
+export ROSSUM_API_TOKEN="your-api-token"
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+export AWS_PROFILE="default"  # For Bedrock
 
-- Python 3.12 or higher
-- AWS credentials configured (for Bedrock access to Claude models)
-- Rossum account with API credentials (if using Rossum features)
+# Run the agent
+pip install rossum-agent
+rossum-agent
+```
 
-## Installation
+Or with Docker:
+```bash
+docker-compose up rossum-agent
+# Open http://localhost:8501
+```
 
-### Install from source
+## 📦 Installation
 
 ```bash
 git clone https://github.com/stancld/rossum-mcp.git
@@ -54,58 +61,40 @@ cd rossum-mcp/rossum-agent
 uv sync
 ```
 
-### Install with extras
-
+**With extras:**
 ```bash
 uv sync --extra all        # All extras (api, streamlit, docs, tests)
-uv sync --extra api        # REST API (FastAPI, Redis, etc.)
+uv sync --extra api        # REST API (FastAPI, Redis)
 uv sync --extra streamlit  # Streamlit UI only
-uv sync --extra docs       # Documentation only
-uv sync --extra tests      # Testing only
 ```
 
-### Set up environment variables
+## ⚙️ Environment Variables
 
-```bash
-# Required for AWS Bedrock
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_REGION="eu-central-1"
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ROSSUM_API_TOKEN` | Yes | Rossum API authentication token |
+| `ROSSUM_API_BASE_URL` | Yes | Base URL (e.g., `https://api.elis.rossum.ai/v1`) |
+| `AWS_PROFILE` | Yes | AWS profile for Bedrock access |
+| `AWS_DEFAULT_REGION` | No | AWS region (default: `us-east-1`) |
+| `REDIS_HOST` | No | Redis host for chat persistence |
+| `REDIS_PORT` | No | Redis port (default: `6379`) |
 
-# Required for Rossum features
-export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+## 📖 Usage
 
-# Optional: Redis for chat persistence (API mode)
-export REDIS_HOST="localhost"
-export REDIS_PORT="6379"
-```
-
-## Usage
-
-### Running the Streamlit UI
+### Streamlit UI
 
 ```bash
 rossum-agent
+# Or: streamlit run rossum_agent/streamlit_app/app.py
 ```
 
-Or run directly:
-```bash
-streamlit run rossum_agent/streamlit_app/app.py
-```
-
-### Running the REST API
+### REST API
 
 ```bash
-rossum-agent-api
+rossum-agent-api --host 0.0.0.0 --port 8000
 ```
 
-With options:
-```bash
-rossum-agent-api --host 0.0.0.0 --port 8000 --reload
-```
-
-### Using in Python Scripts
+### Python SDK
 
 ```python
 import asyncio
@@ -113,260 +102,77 @@ from rossum_agent.agent import create_agent
 from rossum_agent.rossum_mcp_integration import create_mcp_connection
 
 async def main():
-    # Create MCP connection to Rossum
     mcp_connection = await create_mcp_connection()
+    agent = await create_agent(mcp_connection=mcp_connection)
 
-    # Create the agent
-    agent = await create_agent(
-        mcp_connection=mcp_connection,
-        system_prompt="You are a helpful Rossum assistant."
-    )
-
-    # Run the agent
-    async for step in agent.run("List all queues in my organization"):
-        if step.thinking:
-            print(step.thinking)
+    async for step in agent.run("List all queues"):
         if step.final_answer:
             print(step.final_answer)
 
 asyncio.run(main())
 ```
 
-## Available Tools
+## 🔧 Available Tools
 
-### File System Tools
+The agent provides internal tools and access to 50+ MCP tools via dynamic loading.
 
-#### write_file
-Write text or markdown content to a file. Use this to save documentation, reports, or analysis results.
+<details>
+<summary><strong>Internal Tools</strong></summary>
 
-**Parameters:**
-- `filename` (string): The name of the file to create (e.g., 'report.md', 'analysis.json')
-- `content` (string): The content to write to the file
+**File & Knowledge:**
+- `write_file` - Save reports, documentation, analysis results
+- `search_knowledge_base` - Search Rossum docs with AI analysis
 
-### Knowledge Base Tools
+**Hook Analysis:**
+- `evaluate_python_hook` - Execute hooks in sandboxed environment
+- `debug_hook` - Expert debugging with Opus sub-agent
 
-#### search_knowledge_base
-Search the Rossum Knowledge Base for documentation about extensions, hooks, and configurations. Results are analyzed by Claude Opus for relevance.
+**Schema:**
+- `patch_schema_with_subagent` - Safe schema modifications via Opus
 
-**Parameters:**
-- `query` (string, required): Search query. Be specific - include extension names, error messages, or feature names.
-- `user_query` (string, optional): The original user question for context.
+**Deployment:**
+- `deploy_pull` - Pull configs from organization
+- `deploy_diff` - Compare local vs remote
+- `deploy_push` - Push local changes
+- `deploy_copy_org` - Copy entire organization
+- `deploy_copy_workspace` - Copy single workspace
+- `deploy_compare_workspaces` - Compare two workspaces
+- `deploy_to_org` - Deploy to target organization
 
-### Hook Analysis Tools
+**Multi-Environment:**
+- `spawn_mcp_connection` - Connect to different Rossum environment
+- `call_on_connection` - Call tools on spawned connection
+- `close_connection` - Close spawned connection
 
-#### evaluate_python_hook
-Execute Rossum function hook Python code against test annotation/schema data in a sandboxed environment.
+**Skills:**
+- `load_skill` - Load domain-specific workflows (`rossum-deployment`, `hook-debugging`)
 
-**Parameters:**
-- `code` (string, required): Full Python source containing a `rossum_hook_request_handler(payload)` function
-- `annotation_json` (string, required): JSON string of the annotation object
-- `schema_json` (string, optional): JSON string of the schema object
+</details>
 
-**Sandbox Environment:**
-- Available modules: `collections`, `datetime`, `decimal`, `functools`, `itertools`, `json`, `math`, `re`, `string`
-- No imports or external I/O allowed
+<details>
+<summary><strong>Dynamic MCP Tool Loading</strong></summary>
 
-#### debug_hook
-Expert-level hook debugging with Claude Opus sub-agent. This is the primary tool for debugging Python function hooks.
+Tools are loaded on-demand to reduce context usage. Use `load_tool_category` to load tools by category:
 
-**Parameters:**
-- `hook_id` (string, required): The hook ID to debug
-- `annotation_id` (string, required): The annotation ID to use for testing
-- `schema_id` (string, optional): Schema ID if schema context is needed
+| Category | Description |
+|----------|-------------|
+| `annotations` | Upload, retrieve, update, confirm documents |
+| `queues` | Create, configure, list queues |
+| `schemas` | Define, modify field structures |
+| `engines` | Extraction and splitting engines |
+| `hooks` | Extensions and webhooks |
+| `email_templates` | Automated email responses |
+| `document_relations` | Export/einvoice links |
+| `relations` | Annotation relations |
+| `rules` | Schema validation rules |
+| `users` | User and role management |
+| `workspaces` | Workspace management |
 
-The tool fetches hook code and annotation data, executes the hook, and uses Opus to analyze errors and suggest fixes.
+Categories are auto-loaded based on keywords in the user's message.
 
-### Schema Tools
+</details>
 
-#### patch_schema_with_subagent
-Safely patch Rossum schemas using a Claude Opus sub-agent. The sub-agent fetches the schema, applies changes one at a time, and verifies only requested fields are present.
-
-**Parameters:**
-- `schema_id` (string, required): The schema ID to patch
-- `changes` (string, required): JSON array of changes. Each change object should have:
-  - `action`: "add" or "remove" (default: "add")
-  - `id`: Field ID (schema_id)
-  - `parent_section`: Section ID to add field to (for "add")
-  - `type`: Field type (string, number, date, enum)
-  - `label`: Field label (optional, defaults to id)
-
-**Features:**
-- Max 3 patches before re-fetching schema to ensure consistency
-- Verifies only requested fields are present after patching
-- Supports formula fields and enum options
-
-### Deployment Tools
-
-#### deploy_pull
-Pull Rossum configuration objects from an organization to local files.
-
-**Parameters:**
-- `org_id` (int, required): Organization ID to pull from
-- `workspace_path` (string, optional): Path to workspace directory
-- `api_base_url` (string, optional): API base URL for target environment
-- `token` (string, optional): API token for target environment
-
-#### deploy_diff
-Compare local workspace files with remote Rossum configuration.
-
-**Parameters:**
-- `workspace_path` (string, optional): Path to workspace directory
-
-#### deploy_push
-Push local changes to Rossum.
-
-**Parameters:**
-- `dry_run` (bool, optional): Only show what would be pushed
-- `force` (bool, optional): Push even if there are conflicts
-- `workspace_path` (string, optional): Path to workspace directory
-
-#### deploy_copy_org
-Copy all objects from source organization to target organization.
-
-**Parameters:**
-- `source_org_id` (int, required): Source organization ID
-- `target_org_id` (int, required): Target organization ID
-- `target_api_base` (string, optional): Target API base URL
-- `target_token` (string, optional): Target API token
-- `workspace_path` (string, optional): Path to workspace directory
-
-#### deploy_copy_workspace
-Copy a single workspace and all its objects to target organization.
-
-**Parameters:**
-- `source_workspace_id` (int, required): Source workspace ID
-- `target_org_id` (int, required): Target organization ID
-- `target_api_base` (string, optional): Target API base URL
-- `target_token` (string, optional): Target API token
-- `workspace_path` (string, optional): Path to workspace directory
-
-#### deploy_compare_workspaces
-Compare two local workspaces to see differences between source and target.
-
-**Parameters:**
-- `source_workspace_path` (string, required): Path to source workspace
-- `target_workspace_path` (string, required): Path to target workspace
-- `id_mapping_path` (string, optional): Path to ID mapping JSON from copy operations
-
-#### deploy_to_org
-Deploy local configuration changes to a target organization.
-
-**Parameters:**
-- `target_org_id` (int, required): Target organization ID
-- `target_api_base` (string, optional): Target API base URL
-- `target_token` (string, optional): Target API token
-- `dry_run` (bool, optional): Only show what would be deployed
-- `workspace_path` (string, optional): Path to workspace directory
-
-### Multi-Environment Tools
-
-#### spawn_mcp_connection
-Spawn a new MCP connection to a different Rossum environment.
-
-**Parameters:**
-- `connection_id` (string, required): Unique identifier for this connection
-- `api_token` (string, required): API token for the target environment
-- `api_base_url` (string, required): API base URL for the target environment
-- `mcp_mode` (string, optional): "read-only" or "read-write" (default)
-
-#### call_on_connection
-Call a tool on a spawned MCP connection.
-
-**Parameters:**
-- `connection_id` (string, required): The spawned connection identifier
-- `tool_name` (string, required): Name of the MCP tool to call
-- `arguments` (string, required): JSON string of arguments
-
-#### close_connection
-Close a spawned MCP connection.
-
-**Parameters:**
-- `connection_id` (string, required): The connection to close
-
-### Skills Tools
-
-#### load_skill
-Load a specialized skill that provides domain-specific instructions and workflows.
-
-**Parameters:**
-- `name` (string, required): The skill slug (e.g., "rossum-deployment", "hook-debugging")
-
-**Available Skills:**
-- `rossum-deployment`: Deployment workflow instructions
-- `hook-debugging`: Hook debugging best practices
-
-### Dynamic Tool Loading
-
-The agent uses dynamic tool loading to significantly reduce initial context usage. Tools are loaded on-demand based on task requirements.
-
-#### load_tool_category
-Load MCP tools from one or more categories. Once loaded, the tools become available for use.
-
-**Parameters:**
-- `categories` (array, required): Category names to load (e.g., `["queues", "schemas"]`)
-
-**Available Categories:**
-- `annotations` - Document processing (upload, retrieve, update, confirm)
-- `queues` - Queue management (create, configure, list)
-- `schemas` - Schema management (define, modify field structures)
-- `engines` - AI engine management (extraction/splitting engines)
-- `hooks` - Extensions/webhooks (automation hooks)
-- `email_templates` - Email templates (automated email responses)
-- `document_relations` - Document relations (export/einvoice links)
-- `relations` - Annotation relations (edit/attachment/duplicate links)
-- `rules` - Validation rules (schema validation)
-- `users` - User management (list users and roles)
-- `workspaces` - Workspace management (organize queues)
-
-**Returns:**
-```json
-{
-  "message": "Loaded 8 tools from ['queues']: create_queue, create_queue_from_template, get_queue, get_queue_engine, get_queue_schema, get_queue_template_names, list_queues, update_queue"
-}
-```
-
-**Automatic Pre-loading:**
-The agent automatically pre-loads tool categories based on keywords in the user's first message. For example, if the user mentions "schema", the schemas category is loaded automatically.
-
-### Rossum MCP Tools
-
-When configured with the Rossum MCP server, the agent can use all MCP tools including:
-- Upload documents to Rossum
-- Monitor processing status
-- Retrieve and parse annotation data
-- Manage queues, schemas, hooks, and engines
-
-See the [MCP Server README](../rossum-mcp/README.md) for the complete list of available MCP tools.
-
-## Testing Framework
-
-The package includes a regression testing framework for agent behavior:
-
-```python
-from rossum_agent.testing import (
-    RegressionTestCase,
-    SuccessCriteria,
-    TokenBudget,
-    ToolExpectation,
-    ToolMatchMode,
-    run_regression_test,
-)
-
-test_case = RegressionTestCase(
-    name="list_queues",
-    prompt="List all queues",
-    success_criteria=SuccessCriteria(
-        required_tools=[
-            ToolExpectation(name="list_queues", match_mode=ToolMatchMode.EXACT)
-        ]
-    ),
-    token_budget=TokenBudget(max_input=50000, max_output=10000),
-)
-
-result = await run_regression_test(agent, test_case)
-```
-
-## Architecture
+## 🏗️ Architecture
 
 ```mermaid
 flowchart TB
@@ -393,28 +199,31 @@ flowchart TB
     MCP --> API
 ```
 
-## REST API Endpoints
+<details>
+<summary><strong>REST API Endpoints</strong></summary>
 
-The API provides the following endpoints:
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/health` | Health check |
+| `GET /api/v1/chats` | List all chats |
+| `POST /api/v1/chats` | Create new chat |
+| `GET /api/v1/chats/{id}` | Get chat details |
+| `DELETE /api/v1/chats/{id}` | Delete chat |
+| `POST /api/v1/chats/{id}/messages` | Send message (SSE) |
+| `GET /api/v1/chats/{id}/files` | List files |
+| `GET /api/v1/chats/{id}/files/{name}` | Download file |
 
-- `GET /api/v1/health` - Health check
-- `GET /api/v1/chats` - List all chats
-- `POST /api/v1/chats` - Create a new chat
-- `GET /api/v1/chats/{chat_id}` - Get chat details
-- `DELETE /api/v1/chats/{chat_id}` - Delete a chat
-- `POST /api/v1/chats/{chat_id}/messages` - Send a message (SSE streaming)
-- `GET /api/v1/chats/{chat_id}/files` - List files in a chat
-- `GET /api/v1/chats/{chat_id}/files/{filename}` - Download a file
+API docs: `/api/docs` (Swagger) or `/api/redoc`
 
-API documentation is available at `/api/docs` (Swagger UI) and `/api/redoc` (ReDoc).
+</details>
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License - see [LICENSE](../LICENSE) for details.
 
-## Resources
+## 🔗 Resources
 
-- [Anthropic Claude Documentation](https://docs.anthropic.com/)
-- [Rossum API Documentation](https://elis.rossum.ai/api/docs/)
-- [Main Repository](https://github.com/stancld/rossum-mcp)
 - [Full Documentation](https://stancld.github.io/rossum-mcp/)
+- [MCP Server README](../rossum-mcp/README.md)
+- [Rossum API Documentation](https://rossum.app/api/docs/)
+- [Main Repository](https://github.com/stancld/rossum-mcp)
