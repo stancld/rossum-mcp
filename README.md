@@ -285,8 +285,7 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-<details>
-<summary><strong>🧠 Agent Skills & Sub-Agents</strong></summary>
+## 🧠 Agent Skills & Sub-Agents
 
 The Rossum Agent includes specialized capabilities for complex workflows:
 
@@ -311,13 +310,12 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 
 See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
 
-</details>
+## 🔌 MCP Tools
+
+The MCP server provides 49 tools organized into categories:
 
 <details>
-<summary><strong>🔌 MCP Tools (49 tools)</strong></summary>
-
-<details>
-<summary>Document Processing (6 tools)</summary>
+<summary><strong>Document Processing (6 tools)</strong></summary>
 
 - `upload_document` - Upload documents for AI extraction
 - `get_annotation` - Retrieve extracted data and status
@@ -329,7 +327,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Queue Management (8 tools)</summary>
+<summary><strong>Queue Management (8 tools)</strong></summary>
 
 - `get_queue` - Retrieve queue details
 - `list_queues` - List queues with optional filtering
@@ -343,7 +341,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Schema Management (7 tools)</summary>
+<summary><strong>Schema Management (7 tools)</strong></summary>
 
 - `get_schema` - Retrieve schema details
 - `list_schemas` - List schemas with optional filtering
@@ -356,7 +354,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Engine Management (6 tools)</summary>
+<summary><strong>Engine Management (6 tools)</strong></summary>
 
 - `get_engine` - Retrieve engine details by ID
 - `list_engines` - List all engines with optional filters
@@ -368,7 +366,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Extensions & Rules (9 tools)</summary>
+<summary><strong>Extensions & Rules (9 tools)</strong></summary>
 
 - `get_hook` - Get hook/extension details
 - `list_hooks` - List webhooks and extensions
@@ -383,7 +381,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Workspace Management (3 tools)</summary>
+<summary><strong>Workspace Management (3 tools)</strong></summary>
 
 - `get_workspace` - Retrieve workspace details
 - `list_workspaces` - List all workspaces with filtering
@@ -392,7 +390,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>User Management (3 tools)</summary>
+<summary><strong>User Management (3 tools)</strong></summary>
 
 - `get_user` - Retrieve user details by ID
 - `list_users` - List users with optional filtering
@@ -401,7 +399,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Relations Management (4 tools)</summary>
+<summary><strong>Relations Management (4 tools)</strong></summary>
 
 - `get_relation` - Retrieve annotation relation details
 - `list_relations` - List relations (edit, attachment, duplicate)
@@ -411,7 +409,7 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 <details>
-<summary>Email Templates (3 tools)</summary>
+<summary><strong>Email Templates (3 tools)</strong></summary>
 
 - `get_email_template` - Retrieve email template details
 - `list_email_templates` - List email templates with optional filtering
@@ -420,8 +418,6 @@ See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_sub
 </details>
 
 For detailed API documentation, parameters, and workflows, see the [full documentation](https://stancld.github.io/rossum-mcp/).
-
-</details>
 
 ## 📚 Documentation
 
