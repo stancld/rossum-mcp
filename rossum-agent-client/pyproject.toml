@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-agent-client"
-version = "1.0.0.post0"
+version = "1.1.0dev"
 description = "Python client for Rossum Agent API - AI-powered document processing assistant"
 readme = "README.md"
 requires-python = ">=3.12"
