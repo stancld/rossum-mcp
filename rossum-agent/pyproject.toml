@@ -99,8 +99,8 @@ all = [
 
 [tool.uv.sources]
 rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs" }
-rossum-deploy = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-deploy" }
-rossum-mcp = { git = "https://github.com/stancld/rossum-mcp.git", subdirectory = "rossum-mcp" }
+rossum-deploy = { git = "https://github.com/stancld/rossum-agents.git", subdirectory = "rossum-deploy" }
+rossum-mcp = { git = "https://github.com/stancld/rossum-agents.git", subdirectory = "rossum-mcp" }
 
 [tool.pytest.ini_options]
 markers = [

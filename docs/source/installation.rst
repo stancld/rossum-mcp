@@ -25,7 +25,7 @@ To install only the MCP server:
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp/rossum_mcp
    uv sync
 
@@ -44,7 +44,7 @@ To install only the agent package:
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp/rossum_agent
    uv sync
 
@@ -63,7 +63,7 @@ To install only the agent client package:
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp/rossum-agent-client
    uv sync
 
@@ -80,7 +80,7 @@ To install only the deployment package:
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp/rossum-deploy
    uv sync
 
@@ -97,7 +97,7 @@ For development work with all packages:
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp
    uv sync --extra all --no-install-project
 
@@ -111,19 +111,19 @@ Install directly from GitHub:
 .. code-block:: bash
 
    # MCP server only
-   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_mcp"
+   uv pip install "git+https://github.com/stancld/rossum-agents.git#subdirectory=rossum_mcp"
 
    # Agent only
-   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_agent"
+   uv pip install "git+https://github.com/stancld/rossum-agents.git#subdirectory=rossum_agent"
 
    # Agent client only
-   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum-agent-client"
+   uv pip install "git+https://github.com/stancld/rossum-agents.git#subdirectory=rossum-agent-client"
 
    # Deploy only
-   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum-deploy"
+   uv pip install "git+https://github.com/stancld/rossum-agents.git#subdirectory=rossum-deploy"
 
    # All packages (workspace)
-   uv pip install "git+https://github.com/stancld/rossum-mcp.git"
+   uv pip install "git+https://github.com/stancld/rossum-agents.git"
 
 Environment Variables
 ---------------------

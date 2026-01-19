@@ -37,4 +37,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Event models: `StepEvent`, `StreamDoneEvent`, `FileCreatedEvent`
 - Content models: `Message`, `TextContent`
 
-[Unreleased]: https://github.com/stancld/rossum-mcp/tree/master/rossum-agent-client
+[Unreleased]: https://github.com/stancld/rossum-agents/tree/master/rossum-agent-client

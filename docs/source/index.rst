@@ -163,7 +163,7 @@ Quick Start
 
 .. code-block:: bash
 
-   git clone https://github.com/stancld/rossum-mcp.git
+   git clone https://github.com/stancld/rossum-agents.git
    cd rossum-mcp
 
    # Install both packages with all features

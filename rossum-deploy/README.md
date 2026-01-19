@@ -4,11 +4,11 @@
 
 **Minimalistic pull/diff/push deployment tool for Rossum configurations.**
 
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
-[![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-deploy)](https://codecov.io/gh/stancld/rossum-mcp)
+[![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-deploy)](https://codecov.io/gh/stancld/rossum-agents)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -532,7 +532,7 @@ MIT License - see [LICENSE](../LICENSE) file for details.
 
 ## Resources
 
-- [Full Documentation](https://stancld.github.io/rossum-mcp/)
+- [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [deployment-manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment tool
 - [rossum-agent](../rossum-agent/) - AI agent that uses rossum-deploy
 - [rossum-mcp](../rossum-mcp/) - MCP server for Rossum API

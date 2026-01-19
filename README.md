@@ -4,16 +4,16 @@
 
 **AI-powered Rossum orchestration: Document workflows conversationally, debug pipelines automatically, and configure automation through natural language.**
 
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
 
-[![codecov](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-mcp)
-[![CodeQL](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/codeql.yaml)
-[![Snyk Security](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-mcp/actions/workflows/snyk.yaml)
-[![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-mcp/badge)](https://www.codefactor.io/repository/github/stancld/rossum-mcp)
+[![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
+[![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
+[![Snyk Security](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml)
+[![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-agents/badge)](https://www.codefactor.io/repository/github/stancld/rossum-agents)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
@@ -160,7 +160,7 @@ Each package can be installed and used independently or together for complete fu
 
 ```bash
 # Clone and run with Docker
-git clone https://github.com/stancld/rossum-mcp.git && cd rossum-mcp
+git clone https://github.com/stancld/rossum-agents.git && cd rossum-mcp
 echo "ROSSUM_API_TOKEN=your-token" > .env
 echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
 docker-compose up rossum-agent
@@ -176,7 +176,7 @@ docker-compose up rossum-agent
 **Best for**: Local development and quick testing
 
 ```bash
-git clone https://github.com/stancld/rossum-mcp.git
+git clone https://github.com/stancld/rossum-agents.git
 cd rossum-mcp
 
 # Create .env file with required variables
@@ -226,7 +226,7 @@ redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
 **Best for**: Development, customization, contributing
 
 ```bash
-git clone https://github.com/stancld/rossum-mcp.git
+git clone https://github.com/stancld/rossum-agents.git
 cd rossum-mcp
 
 # Install all packages with all features
@@ -320,7 +320,7 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 | Knowledge Base | `search_knowledge_base(query)` | Search Rossum docs with Opus-powered analysis |
 | Schema Patching | `patch_schema_with_subagent(schema_id, changes)` | Programmatic bulk schema modifications |
 
-See the [full documentation](https://stancld.github.io/rossum-mcp/skills_and_subagents.html) for details.
+See the [full documentation](https://stancld.github.io/rossum-agents/skills_and_subagents.html) for details.
 
 </details>
 
@@ -341,7 +341,7 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-m
 
 ## 📚 Documentation
 
-- **[Full Documentation](https://stancld.github.io/rossum-mcp/)** - Complete guides and API reference
+- **[Full Documentation](https://stancld.github.io/rossum-agents/)** - Complete guides and API reference
 - **[MCP Server README](rossum-mcp/README.md)** - MCP server setup and tools
 - **[Agent README](rossum-agent/README.md)** - Agent toolkit and UI usage
 - **[Deploy README](rossum-deploy/README.md)** - Deployment tool usage

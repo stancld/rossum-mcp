@@ -4,11 +4,11 @@
 
 **AI agent for Rossum document processing. Debug hooks, deploy configs, and automate workflows conversationally.**
 
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
-[![Coverage](https://codecov.io/gh/stancld/rossum-mcp/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/stancld/rossum-mcp)
+[![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/stancld/rossum-agents)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -57,7 +57,7 @@ docker-compose up rossum-agent
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/stancld/rossum-mcp.git
+git clone https://github.com/stancld/rossum-agents.git
 cd rossum-mcp/rossum-agent
 uv sync
 ```
@@ -224,7 +224,7 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 ## 🔗 Resources
 
-- [Full Documentation](https://stancld.github.io/rossum-mcp/)
+- [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [MCP Server README](../rossum-mcp/README.md)
 - [Rossum API Documentation](https://rossum.app/api/docs/)
-- [Main Repository](https://github.com/stancld/rossum-mcp)
+- [Main Repository](https://github.com/stancld/rossum-agents)

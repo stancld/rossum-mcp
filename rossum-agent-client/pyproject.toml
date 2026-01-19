@@ -43,10 +43,10 @@ dev = [
 rossum-agent-client = "rossum_agent_client.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/stancld/rossum-mcp"
-Documentation = "https://github.com/stancld/rossum-mcp/tree/master/rossum-agent-client"
-Repository = "https://github.com/stancld/rossum-mcp"
-Changelog = "https://github.com/stancld/rossum-mcp/blob/master/rossum-agent-client/CHANGELOG.md"
+Homepage = "https://github.com/stancld/rossum-agents"
+Documentation = "https://github.com/stancld/rossum-agents/tree/master/rossum-agent-client"
+Repository = "https://github.com/stancld/rossum-agents"
+Changelog = "https://github.com/stancld/rossum-agents/blob/master/rossum-agent-client/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
