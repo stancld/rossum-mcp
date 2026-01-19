@@ -2,6 +2,8 @@
 
 <div align="center">
 
+**Minimalistic pull/diff/push deployment tool for Rossum configurations.**
+
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-mcp/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,11 +12,10 @@
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 </div>
-
-Minimalistic pull/diff/push deployment for Rossum configurations.
 
 > **Note**: This is a lightweight alternative to the [deployment-manager](https://github.com/rossumai/deployment-manager) (PRD2) tool.
 > We aim to provide a simple, dependency-light solution for the [rossum-agent](../rossum-agent/) that covers core deployment workflows.

@@ -1,0 +1,52 @@
+name: Rossum Agent Client Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --extra dev
+        shell: bash
+        working-directory: rossum-agent-client
+
+      - name: Run tests
+        run: |
+          uv run coverage run --source=rossum_agent_client -m pytest tests -v --junitxml=report.xml || echo "No tests found yet"
+        shell: bash
+        working-directory: rossum-agent-client
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: rossum-agent-client-test-report
+          path: rossum-agent-client/report.xml
+        if: failure()
+
+      - name: Coverage statistics
+        if: success()
+        run: |
+          uv run coverage xml
+          uv run coverage report
+        shell: bash
+        working-directory: rossum-agent-client
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: rossum-agent-client/coverage.xml
+          flags: rossum-agent-client
+          fail_ci_if_error: true

@@ -8,10 +8,11 @@ Prerequisites
 * Rossum account with API credentials
 * A Rossum queue ID
 
-This repository contains three packages:
+This repository contains four packages:
 
 * **rossum_mcp**: MCP server for Rossum API interactions
 * **rossum_agent**: AI agent with data manipulation and visualization tools
+* **rossum_agent_client**: Typed Python client for the Rossum Agent API
 * **rossum_deploy**: Lightweight deployment tool (alternative to `deployment-manager <https://github.com/rossumai/deployment-manager>`_)
 
 Installation Methods
@@ -53,6 +54,23 @@ With extras:
 
    uv sync --extra all  # Install all extras (streamlit, docs, tests)
    uv sync --extra streamlit  # Install Streamlit UI
+   uv sync --extra tests  # Install testing dependencies
+
+Installing Agent Client Only
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install only the agent client package:
+
+.. code-block:: bash
+
+   git clone https://github.com/stancld/rossum-mcp.git
+   cd rossum-mcp/rossum-agent-client
+   uv sync
+
+With extras:
+
+.. code-block:: bash
+
    uv sync --extra tests  # Install testing dependencies
 
 Installing Deploy Package Only
@@ -97,6 +115,9 @@ Install directly from GitHub:
 
    # Agent only
    uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum_agent"
+
+   # Agent client only
+   uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum-agent-client"
 
    # Deploy only
    uv pip install "git+https://github.com/stancld/rossum-mcp.git#subdirectory=rossum-deploy"

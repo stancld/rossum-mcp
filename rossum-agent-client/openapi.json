@@ -1,0 +1,588 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Rossum Agent API",
+    "description": "REST API for Rossum Agent - AI-powered document processing assistant",
+    "version": "1.0.0dev"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Health Check",
+        "description": "Check API health and dependencies.",
+        "operationId": "health_check",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats": {
+      "post": {
+        "tags": ["chats"],
+        "summary": "Create Chat",
+        "description": "Create a new chat session.",
+        "operationId": "create_chat",
+        "parameters": [
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  { "$ref": "#/components/schemas/CreateChatRequest" },
+                  { "type": "null" }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["chats"],
+        "summary": "List Chats",
+        "description": "List chat sessions for the authenticated user.",
+        "operationId": "list_chats",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "maximum": 100, "minimum": 1, "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 0, "default": 0 }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatListResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{chat_id}": {
+      "get": {
+        "tags": ["chats"],
+        "summary": "Get Chat",
+        "description": "Get detailed information about a chat session.",
+        "operationId": "get_chat",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatDetail" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["chats"],
+        "summary": "Delete Chat",
+        "description": "Delete a chat session.",
+        "operationId": "delete_chat",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeleteResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{chat_id}/messages": {
+      "post": {
+        "tags": ["messages"],
+        "summary": "Send Message",
+        "description": "Send a message and stream the agent's response via SSE.",
+        "operationId": "send_message",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessageRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of agent events. Event types: step (StepEvent), done (StreamDoneEvent), file_created (FileCreatedEvent), sub_agent_progress (SubAgentProgressEvent), sub_agent_text (SubAgentTextEvent), error (StepEvent).",
+            "content": { "text/event-stream": {} }
+          },
+          "404": { "description": "Chat not found" },
+          "429": { "description": "Rate limit exceeded" },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{chat_id}/files": {
+      "get": {
+        "tags": ["files"],
+        "summary": "List Files",
+        "description": "List all files for a chat session.",
+        "operationId": "list_files",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FileListResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{chat_id}/files/{filename}": {
+      "get": {
+        "tags": ["files"],
+        "summary": "Download File",
+        "description": "Download a file from a chat session.",
+        "operationId": "download_file",
+        "parameters": [
+          {
+            "name": "chat_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Token",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Rossum-Api-Url",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/octet-stream": {} }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatDetail": {
+        "type": "object",
+        "required": ["chat_id", "messages", "created_at", "files"],
+        "properties": {
+          "chat_id": { "type": "string" },
+          "messages": { "type": "array", "items": { "$ref": "#/components/schemas/Message" } },
+          "created_at": { "type": "string", "format": "date-time" },
+          "files": { "type": "array", "items": { "$ref": "#/components/schemas/FileInfo" } }
+        },
+        "description": "Detailed chat session information."
+      },
+      "ChatListResponse": {
+        "type": "object",
+        "required": ["chats", "total", "limit", "offset"],
+        "properties": {
+          "chats": { "type": "array", "items": { "$ref": "#/components/schemas/ChatSummary" } },
+          "total": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "offset": { "type": "integer" }
+        },
+        "description": "Response for listing chat sessions."
+      },
+      "ChatResponse": {
+        "type": "object",
+        "required": ["chat_id", "created_at"],
+        "properties": {
+          "chat_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "description": "Response for chat creation."
+      },
+      "ChatSummary": {
+        "type": "object",
+        "required": ["chat_id", "timestamp", "message_count", "first_message"],
+        "properties": {
+          "chat_id": { "type": "string" },
+          "timestamp": { "type": "integer" },
+          "message_count": { "type": "integer" },
+          "first_message": { "type": "string" },
+          "preview": { "type": "string", "nullable": true }
+        },
+        "description": "Summary of a chat session for list responses."
+      },
+      "CreateChatRequest": {
+        "type": "object",
+        "properties": {
+          "mcp_mode": { "type": "string", "enum": ["read-only", "read-write"], "default": "read-only" }
+        },
+        "description": "Request body for creating a new chat session."
+      },
+      "DeleteResponse": {
+        "type": "object",
+        "required": ["deleted"],
+        "properties": { "deleted": { "type": "boolean" } },
+        "description": "Response for delete operations."
+      },
+      "DocumentContent": {
+        "type": "object",
+        "required": ["media_type", "data", "filename"],
+        "properties": {
+          "type": { "type": "string", "const": "document", "default": "document" },
+          "media_type": { "type": "string", "const": "application/pdf" },
+          "data": { "type": "string", "description": "Base64-encoded document data" },
+          "filename": { "type": "string", "description": "Original filename of the document" }
+        },
+        "description": "Document content in a message."
+      },
+      "FileInfo": {
+        "type": "object",
+        "required": ["filename", "size", "timestamp"],
+        "properties": {
+          "filename": { "type": "string" },
+          "size": { "type": "integer" },
+          "timestamp": { "type": "string" },
+          "mime_type": { "type": "string", "nullable": true }
+        },
+        "description": "Information about a file in a chat session."
+      },
+      "FileListResponse": {
+        "type": "object",
+        "required": ["files", "total"],
+        "properties": {
+          "files": { "type": "array", "items": { "$ref": "#/components/schemas/FileInfo" } },
+          "total": { "type": "integer" }
+        },
+        "description": "Response for listing files in a chat session."
+      },
+      "HTTPValidationError": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "array", "items": { "$ref": "#/components/schemas/ValidationError" } }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "redis_connected", "version"],
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "unhealthy"] },
+          "redis_connected": { "type": "boolean" },
+          "version": { "type": "string" }
+        },
+        "description": "Response for health check endpoint."
+      },
+      "ImageContent": {
+        "type": "object",
+        "required": ["media_type", "data"],
+        "properties": {
+          "type": { "type": "string", "const": "image", "default": "image" },
+          "media_type": { "type": "string", "enum": ["image/jpeg", "image/png", "image/gif", "image/webp"] },
+          "data": { "type": "string", "description": "Base64-encoded image data" }
+        },
+        "description": "Image content in a message."
+      },
+      "Message": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": { "type": "string", "enum": ["user", "assistant"] },
+          "content": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "anyOf": [{ "$ref": "#/components/schemas/TextContent" }, { "$ref": "#/components/schemas/ImageContent" }] } }
+            ]
+          }
+        },
+        "description": "A single chat message."
+      },
+      "MessageRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": { "type": "string", "minLength": 1, "maxLength": 50000, "description": "Text content of the message" },
+          "images": { "type": "array", "items": { "$ref": "#/components/schemas/ImageContent" }, "maxItems": 5, "nullable": true, "description": "Optional list of images (max 5)" },
+          "documents": { "type": "array", "items": { "$ref": "#/components/schemas/DocumentContent" }, "maxItems": 5, "nullable": true, "description": "Optional list of PDF documents (max 5)" },
+          "rossum_url": { "type": "string", "nullable": true, "description": "Optional Rossum app URL for context" }
+        },
+        "description": "Request body for sending a message. Supports text-only or multimodal messages."
+      },
+      "StepEvent": {
+        "type": "object",
+        "required": ["type", "step_number"],
+        "properties": {
+          "type": { "type": "string", "enum": ["thinking", "intermediate", "tool_start", "tool_result", "final_answer", "error"] },
+          "step_number": { "type": "integer" },
+          "content": { "type": "string", "nullable": true },
+          "tool_name": { "type": "string", "nullable": true },
+          "tool_arguments": { "type": "object", "nullable": true },
+          "tool_progress": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2, "nullable": true },
+          "result": { "type": "string", "nullable": true },
+          "is_error": { "type": "boolean", "default": false },
+          "is_streaming": { "type": "boolean", "default": false },
+          "is_final": { "type": "boolean", "default": false }
+        },
+        "description": "Event emitted during agent execution via SSE."
+      },
+      "StreamDoneEvent": {
+        "type": "object",
+        "required": ["total_steps", "input_tokens", "output_tokens"],
+        "properties": {
+          "total_steps": { "type": "integer" },
+          "input_tokens": { "type": "integer" },
+          "output_tokens": { "type": "integer" }
+        },
+        "description": "Final event emitted when streaming completes."
+      },
+      "SubAgentProgressEvent": {
+        "type": "object",
+        "required": ["tool_name", "iteration", "max_iterations"],
+        "properties": {
+          "type": { "type": "string", "const": "sub_agent_progress", "default": "sub_agent_progress" },
+          "tool_name": { "type": "string" },
+          "iteration": { "type": "integer" },
+          "max_iterations": { "type": "integer" },
+          "current_tool": { "type": "string", "nullable": true },
+          "tool_calls": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "status": { "type": "string", "enum": ["thinking", "searching", "analyzing", "running_tool", "completed", "running"], "default": "running" }
+        },
+        "description": "Event emitted during sub-agent execution via SSE."
+      },
+      "SubAgentTextEvent": {
+        "type": "object",
+        "required": ["tool_name", "text"],
+        "properties": {
+          "type": { "type": "string", "const": "sub_agent_text", "default": "sub_agent_text" },
+          "tool_name": { "type": "string" },
+          "text": { "type": "string" },
+          "is_final": { "type": "boolean", "default": false }
+        },
+        "description": "Event emitted when sub-agent streams text output via SSE."
+      },
+      "FileCreatedEvent": {
+        "type": "object",
+        "required": ["filename", "url"],
+        "properties": {
+          "type": { "type": "string", "const": "file_created", "default": "file_created" },
+          "filename": { "type": "string" },
+          "url": { "type": "string" }
+        },
+        "description": "Event emitted when a file is created and stored."
+      },
+      "TextContent": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "type": { "type": "string", "const": "text", "default": "text" },
+          "text": { "type": "string" }
+        },
+        "description": "Text content in a message."
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "properties": {
+          "loc": { "type": "array", "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] } },
+          "msg": { "type": "string" },
+          "type": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -172,3 +172,9 @@ RegressionTestCase(
 ## License
 
 MIT License - see [LICENSE](../LICENSE) file for details.
+
+## Resources
+
+- [Full Documentation](https://stancld.github.io/rossum-mcp/)
+- [Rossum Agent README](../rossum-agent/README.md)
+- [Main Repository](https://github.com/stancld/rossum-mcp)
