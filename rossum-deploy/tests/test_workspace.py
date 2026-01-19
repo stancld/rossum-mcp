@@ -13,6 +13,48 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def create_copy_test_mocks():
+    """Create mock objects for copy_workspace and copy_org tests.
+
+    Returns a dict with source mocks (workspace, queue, schema) and
+    target mocks (new_workspace, new_schema, new_queue).
+    """
+    mock_workspace = Mock()
+    mock_workspace.id = 100
+    mock_workspace.name = "Test Workspace"
+    mock_workspace.organization = "https://api.example.com/v1/organizations/123"
+    mock_workspace.metadata = {}
+
+    mock_queue = Mock()
+    mock_queue.id = 200
+    mock_queue.name = "Test Queue"
+    mock_queue.workspace = "https://api.example.com/v1/workspaces/100"
+    mock_queue.schema = "https://api.example.com/v1/schemas/300"
+
+    mock_schema = Mock()
+    mock_schema.id = 300
+    mock_schema.name = "Test Schema"
+    mock_schema.content = []
+
+    mock_new_workspace = Mock()
+    mock_new_workspace.id = 101
+
+    mock_new_schema = Mock()
+    mock_new_schema.id = 301
+
+    mock_new_queue = Mock()
+    mock_new_queue.id = 201
+
+    return {
+        "workspace": mock_workspace,
+        "queue": mock_queue,
+        "schema": mock_schema,
+        "new_workspace": mock_new_workspace,
+        "new_schema": mock_new_schema,
+        "new_queue": mock_new_queue,
+    }
+
+
 class TestWorkspaceConfig:
     def test_to_dict(self):
         config = WorkspaceConfig(api_base="https://api.example.com/v1", org_id=123)
@@ -250,46 +292,22 @@ class TestCopyWorkspace:
     """Tests for copy_workspace method."""
 
     def test_copy_workspace_creates_objects(self, workspace: Workspace):
-        mock_workspace = Mock()
-        mock_workspace.id = 100
-        mock_workspace.name = "Test Workspace"
-        mock_workspace.organization = "https://api.example.com/v1/organizations/123"
-        mock_workspace.metadata = {}
-
-        mock_queue = Mock()
-        mock_queue.id = 200
-        mock_queue.name = "Test Queue"
-        mock_queue.workspace = "https://api.example.com/v1/workspaces/100"
-        mock_queue.schema = "https://api.example.com/v1/schemas/300"
-
-        mock_schema = Mock()
-        mock_schema.id = 300
-        mock_schema.name = "Test Schema"
-        mock_schema.content = []
-
-        mock_new_workspace = Mock()
-        mock_new_workspace.id = 101
-
-        mock_new_schema = Mock()
-        mock_new_schema.id = 301
-
-        mock_new_queue = Mock()
-        mock_new_queue.id = 201
+        mocks = create_copy_test_mocks()
 
         with patch.object(workspace, "_client") as mock_client:
             mock_client.internal_client.base_url = "https://api.example.com/v1"
-            mock_client.retrieve_workspace.return_value = mock_workspace
-            mock_client.list_queues.return_value = [mock_queue]
-            mock_client.retrieve_schema.return_value = mock_schema
+            mock_client.retrieve_workspace.return_value = mocks["workspace"]
+            mock_client.list_queues.return_value = [mocks["queue"]]
+            mock_client.retrieve_schema.return_value = mocks["schema"]
             mock_client.list_engines.return_value = []
             mock_client.list_hooks.return_value = []
             mock_client.list_connectors.return_value = []
             mock_client.request_paginated.return_value = []
             mock_client.list_email_templates.return_value = []
             mock_client.list_rules.return_value = []
-            mock_client.create_new_workspace.return_value = mock_new_workspace
-            mock_client.create_new_schema.return_value = mock_new_schema
-            mock_client.create_new_queue.return_value = mock_new_queue
+            mock_client.create_new_workspace.return_value = mocks["new_workspace"]
+            mock_client.create_new_schema.return_value = mocks["new_schema"]
+            mock_client.create_new_queue.return_value = mocks["new_queue"]
 
             result = workspace.copy_workspace(source_workspace_id=100, target_org_id=456)
 
@@ -1079,41 +1097,17 @@ class TestCopyOrgMethod:
     """Tests for copy_org method."""
 
     def test_copy_org_creates_objects(self, workspace: Workspace):
-        mock_workspace = Mock()
-        mock_workspace.id = 100
-        mock_workspace.name = "Test Workspace"
-        mock_workspace.organization = "https://api.example.com/v1/organizations/123"
-        mock_workspace.metadata = {}
-
-        mock_queue = Mock()
-        mock_queue.id = 200
-        mock_queue.name = "Test Queue"
-        mock_queue.workspace = "https://api.example.com/v1/workspaces/100"
-        mock_queue.schema = "https://api.example.com/v1/schemas/300"
-
-        mock_schema = Mock()
-        mock_schema.id = 300
-        mock_schema.name = "Test Schema"
-        mock_schema.content = []
-
-        mock_new_workspace = Mock()
-        mock_new_workspace.id = 101
-
-        mock_new_schema = Mock()
-        mock_new_schema.id = 301
-
-        mock_new_queue = Mock()
-        mock_new_queue.id = 201
+        mocks = create_copy_test_mocks()
 
         with patch.object(workspace, "_client") as mock_client:
             mock_client.internal_client.base_url = "https://api.example.com/v1"
-            mock_client.list_workspaces.return_value = [mock_workspace]
-            mock_client.list_queues.return_value = [mock_queue]
-            mock_client.retrieve_schema.return_value = mock_schema
+            mock_client.list_workspaces.return_value = [mocks["workspace"]]
+            mock_client.list_queues.return_value = [mocks["queue"]]
+            mock_client.retrieve_schema.return_value = mocks["schema"]
             mock_client.list_hooks.return_value = []
-            mock_client.create_new_workspace.return_value = mock_new_workspace
-            mock_client.create_new_schema.return_value = mock_new_schema
-            mock_client.create_new_queue.return_value = mock_new_queue
+            mock_client.create_new_workspace.return_value = mocks["new_workspace"]
+            mock_client.create_new_schema.return_value = mocks["new_schema"]
+            mock_client.create_new_queue.return_value = mocks["new_queue"]
 
             result = workspace.copy_org(source_org_id=123, target_org_id=456)
 

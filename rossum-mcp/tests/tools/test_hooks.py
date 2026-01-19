@@ -7,38 +7,12 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_api.models.hook import Hook
+from conftest import create_mock_hook
 from rossum_mcp.tools import base
 from rossum_mcp.tools.hooks import register_hook_tools
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
-
-
-def create_mock_hook(**kwargs) -> Hook:
-    """Create a mock Hook dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/hooks/1",
-        "name": "Test Hook",
-        "type": "function",
-        "queues": [],
-        "events": [],
-        "active": True,
-        "config": {},
-        "settings": {},
-        "sideload": [],
-        "run_after": [],
-        "metadata": {},
-        "extension_source": "custom",
-        "test": {},
-        "token_owner": None,
-        "extension_image_url": None,
-        "guide": None,
-        "read_more_url": None,
-    }
-    defaults.update(kwargs)
-    return Hook(**defaults)
 
 
 @pytest.fixture

@@ -7,48 +7,13 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from conftest import create_mock_engine, create_mock_engine_field
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.engine import Engine, EngineField
 from rossum_mcp.tools import base
 from rossum_mcp.tools.engines import register_engine_tools
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch
-
-
-def create_mock_engine(**kwargs) -> Engine:
-    """Create a mock Engine dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/engines/1",
-        "name": "Test Engine",
-        "type": "extractor",
-        "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "learning_enabled": True,
-        "training_queues": [],
-        "description": "",
-        "agenda_id": "test-agenda-id",
-    }
-    defaults.update(kwargs)
-    return Engine(**defaults)
-
-
-def create_mock_engine_field(**kwargs) -> EngineField:
-    """Create a mock EngineField dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/engine_fields/1",
-        "engine": "https://api.test.rossum.ai/v1/engines/1",
-        "name": "test_field",
-        "label": "Test Field",
-        "type": "string",
-        "subtype": None,
-        "pre_trained_field_id": None,
-        "tabular": False,
-        "multiline": "no",
-    }
-    defaults.update(kwargs)
-    return EngineField(**defaults)
 
 
 @pytest.fixture

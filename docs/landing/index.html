@@ -412,11 +412,6 @@
       box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25);
     }
 
-    .arch-box.rossum-brand .arch-logo rect,
-    .arch-box.rossum-brand .arch-logo path {
-      stroke: #0891B2;
-    }
-
     .arch-box.anthropic-brand {
       background: linear-gradient(135deg, rgba(168, 85, 247, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%);
       border-color: rgba(168, 85, 247, 0.3);
@@ -478,11 +473,6 @@
     .arch-box .arch-logo circle,
     .arch-box .arch-logo rect {
       stroke: var(--primary);
-    }
-
-    .arch-box.rossum-brand .arch-logo rect,
-    .arch-box.rossum-brand .arch-logo path {
-      stroke: #0891B2;
     }
 
     .arch-arrow {
@@ -718,6 +708,8 @@
       border-radius: 0.75rem;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
       border: 1px solid var(--border);
+      cursor: zoom-in;
+      transition: opacity 0.2s;
     }
 
     .preview-item.featured img {
@@ -800,12 +792,7 @@
       a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.8em; }
     }
 
-    /* Image lightbox */
-    .preview-item img {
-      cursor: zoom-in;
-      transition: opacity 0.2s;
-    }
-
+    /* Image lightbox - cursor and transition added to original .preview-item img selector above */
     .preview-item img:hover {
       opacity: 0.9;
     }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -22,6 +23,62 @@ from rossum_agent.api.routes.messages import (
     set_agent_service_getter,
     set_chat_service_getter,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+    from unittest.mock import MagicMock as MagicMockType
+
+
+async def mock_run_agent_standard(*args, **kwargs) -> AsyncGenerator[StepEvent | StreamDoneEvent, None]:
+    """Standard mock run_agent that yields thinking, final_answer, and done events."""
+    yield StepEvent(type="thinking", step_number=1, content="Processing...")
+    yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
+    yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
+
+
+async def simulate_event_generator(
+    agent_service: MagicMockType,
+    chat_service: MagicMockType,
+    credentials: MagicMockType,
+) -> AsyncGenerator[str, None]:
+    """Simulate the event generator logic from messages.py for testing."""
+    final_response: str | None = None
+    done_event: StreamDoneEvent | None = None
+
+    async for event in agent_service.run_agent(
+        prompt="Hello",
+        conversation_history=[],
+        rossum_api_token="token",
+        rossum_api_base_url="https://api.rossum.ai",
+        rossum_url=None,
+    ):
+        if isinstance(event, StreamDoneEvent):
+            done_event = event
+        elif isinstance(event, StepEvent):
+            if event.type == "final_answer" and event.content:
+                final_response = event.content
+            yield f"event: step\ndata: {event.model_dump_json()}\n\n"
+
+    updated_history = agent_service.build_updated_history(
+        existing_history=[], user_prompt="Hello", final_response=final_response
+    )
+    chat_service.save_messages(
+        user_id=credentials.user_id,
+        chat_id="chat_123",
+        messages=updated_history,
+        output_dir=agent_service.output_dir,
+    )
+
+    if agent_service.output_dir and agent_service.output_dir.exists():
+        for file_path in agent_service.output_dir.iterdir():
+            if file_path.is_file():
+                file_event = FileCreatedEvent(
+                    filename=file_path.name, url=f"/api/v1/chats/chat_123/files/{file_path.name}"
+                )
+                yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
+
+    if done_event:
+        yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
 
 
 class TestServiceGetterDeps:
@@ -129,59 +186,13 @@ class TestEventGeneratorOrder:
         agent_service = MagicMock()
         agent_service.output_dir = tmp_path
         agent_service.build_updated_history.return_value = []
-
-        async def mock_run_agent(*args, **kwargs):
-            yield StepEvent(type="thinking", step_number=1, content="Processing...")
-            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
-            yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
-
-        agent_service.run_agent = mock_run_agent
+        agent_service.run_agent = mock_run_agent_standard
 
         credentials = MagicMock()
         credentials.user_id = "test_user"
 
-        async def event_generator():
-            """Simulate the event generator logic from messages.py."""
-            final_response: str | None = None
-            done_event: StreamDoneEvent | None = None
-
-            async for event in agent_service.run_agent(
-                prompt="Hello",
-                conversation_history=[],
-                rossum_api_token="token",
-                rossum_api_base_url="https://api.rossum.ai",
-                rossum_url=None,
-            ):
-                if isinstance(event, StreamDoneEvent):
-                    done_event = event
-                elif isinstance(event, StepEvent):
-                    if event.type == "final_answer" and event.content:
-                        final_response = event.content
-                    yield f"event: step\ndata: {event.model_dump_json()}\n\n"
-
-            updated_history = agent_service.build_updated_history(
-                existing_history=[], user_prompt="Hello", final_response=final_response
-            )
-            chat_service.save_messages(
-                user_id=credentials.user_id,
-                chat_id="chat_123",
-                messages=updated_history,
-                output_dir=agent_service.output_dir,
-            )
-
-            if agent_service.output_dir and agent_service.output_dir.exists():
-                for file_path in agent_service.output_dir.iterdir():
-                    if file_path.is_file():
-                        file_event = FileCreatedEvent(
-                            filename=file_path.name, url=f"/api/v1/chats/chat_123/files/{file_path.name}"
-                        )
-                        yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
-
-            if done_event:
-                yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
-
         events = []
-        async for chunk in event_generator():
+        async for chunk in simulate_event_generator(agent_service, chat_service, credentials):
             events.append(chunk)
 
         full_content = "".join(events)
@@ -202,59 +213,13 @@ class TestEventGeneratorOrder:
         agent_service = MagicMock()
         agent_service.output_dir = None
         agent_service.build_updated_history.return_value = []
-
-        async def mock_run_agent(*args, **kwargs):
-            yield StepEvent(type="thinking", step_number=1, content="Processing...")
-            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
-            yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
-
-        agent_service.run_agent = mock_run_agent
+        agent_service.run_agent = mock_run_agent_standard
 
         credentials = MagicMock()
         credentials.user_id = "test_user"
 
-        async def event_generator():
-            """Simulate the event generator logic from messages.py."""
-            final_response: str | None = None
-            done_event: StreamDoneEvent | None = None
-
-            async for event in agent_service.run_agent(
-                prompt="Hello",
-                conversation_history=[],
-                rossum_api_token="token",
-                rossum_api_base_url="https://api.rossum.ai",
-                rossum_url=None,
-            ):
-                if isinstance(event, StreamDoneEvent):
-                    done_event = event
-                elif isinstance(event, StepEvent):
-                    if event.type == "final_answer" and event.content:
-                        final_response = event.content
-                    yield f"event: step\ndata: {event.model_dump_json()}\n\n"
-
-            updated_history = agent_service.build_updated_history(
-                existing_history=[], user_prompt="Hello", final_response=final_response
-            )
-            chat_service.save_messages(
-                user_id=credentials.user_id,
-                chat_id="chat_123",
-                messages=updated_history,
-                output_dir=agent_service.output_dir,
-            )
-
-            if agent_service.output_dir and agent_service.output_dir.exists():
-                for file_path in agent_service.output_dir.iterdir():
-                    if file_path.is_file():
-                        file_event = FileCreatedEvent(
-                            filename=file_path.name, url=f"/api/v1/chats/chat_123/files/{file_path.name}"
-                        )
-                        yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
-
-            if done_event:
-                yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
-
         events = []
-        async for chunk in event_generator():
+        async for chunk in simulate_event_generator(agent_service, chat_service, credentials):
             events.append(chunk)
 
         full_content = "".join(events)
@@ -276,57 +241,17 @@ class TestEventGeneratorOrder:
         agent_service.output_dir = tmp_path
         agent_service.build_updated_history.return_value = []
 
-        async def mock_run_agent(*args, **kwargs):
+        async def mock_run_agent_minimal(*args, **kwargs):
             yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 
-        agent_service.run_agent = mock_run_agent
+        agent_service.run_agent = mock_run_agent_minimal
 
         credentials = MagicMock()
         credentials.user_id = "test_user"
 
-        async def event_generator():
-            """Simulate the event generator logic from messages.py."""
-            final_response: str | None = None
-            done_event: StreamDoneEvent | None = None
-
-            async for event in agent_service.run_agent(
-                prompt="Hello",
-                conversation_history=[],
-                rossum_api_token="token",
-                rossum_api_base_url="https://api.rossum.ai",
-                rossum_url=None,
-            ):
-                if isinstance(event, StreamDoneEvent):
-                    done_event = event
-                elif isinstance(event, StepEvent):
-                    if event.type == "final_answer" and event.content:
-                        final_response = event.content
-                    yield f"event: step\ndata: {event.model_dump_json()}\n\n"
-
-            updated_history = agent_service.build_updated_history(
-                existing_history=[], user_prompt="Hello", final_response=final_response
-            )
-            chat_service.save_messages(
-                user_id=credentials.user_id,
-                chat_id="chat_123",
-                messages=updated_history,
-                output_dir=agent_service.output_dir,
-            )
-
-            if agent_service.output_dir and agent_service.output_dir.exists():
-                for file_path in agent_service.output_dir.iterdir():
-                    if file_path.is_file():
-                        file_event = FileCreatedEvent(
-                            filename=file_path.name, url=f"/api/v1/chats/chat_123/files/{file_path.name}"
-                        )
-                        yield f"event: file_created\ndata: {file_event.model_dump_json()}\n\n"
-
-            if done_event:
-                yield f"event: done\ndata: {done_event.model_dump_json()}\n\n"
-
         events = []
-        async for chunk in event_generator():
+        async for chunk in simulate_event_generator(agent_service, chat_service, credentials):
             events.append(chunk)
 
         full_content = "".join(events)
