@@ -22,7 +22,7 @@
 > [!NOTE]
 > Community-developed integration (not official Rossum). Early stage - breaking changes expected.
 
-## ✨ Features
+## Features
 
 | Capability | Description |
 |------------|-------------|
@@ -35,7 +35,7 @@
 
 **Interfaces:** Streamlit UI, REST API, Python SDK
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Set environment variables
@@ -54,7 +54,7 @@ docker-compose up rossum-agent
 # Open http://localhost:8501
 ```
 
-## 📦 Installation
+## Installation
 
 ```bash
 git clone https://github.com/stancld/rossum-agents.git
@@ -69,7 +69,7 @@ uv sync --extra api        # REST API (FastAPI, Redis)
 uv sync --extra streamlit  # Streamlit UI only
 ```
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -80,7 +80,7 @@ uv sync --extra streamlit  # Streamlit UI only
 | `REDIS_HOST` | No | Redis host for chat persistence |
 | `REDIS_PORT` | No | Redis port (default: `6379`) |
 
-## 📖 Usage
+## Usage
 
 ### Streamlit UI
 
@@ -113,7 +113,7 @@ async def main():
 asyncio.run(main())
 ```
 
-## 🔧 Available Tools
+## Available Tools
 
 The agent provides internal tools and access to 50+ MCP tools via dynamic loading.
 
@@ -173,7 +173,7 @@ Categories are auto-loaded based on keywords in the user's message.
 
 </details>
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -218,11 +218,11 @@ API docs: `/api/docs` (Swagger) or `/api/redoc`
 
 </details>
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](../LICENSE) for details.
 
-## 🔗 Resources
+## Resources
 
 - [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [MCP Server README](../rossum-mcp/README.md)

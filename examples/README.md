@@ -19,11 +19,11 @@ The examples in this folder work with the `rossum-agent` package, which uses Ant
 
 ### Features
 
-- 🤖 AI-powered agent that understands natural language commands
-- 📁 Automatic detection of invoice files in the data folder
-- 🔄 Batch processing support
-- 💬 Interactive CLI interface
-- ✅ Proper error handling and user feedback
+- AI-powered agent that understands natural language commands
+- Automatic detection of invoice files in the data folder
+- Batch processing support
+- Interactive CLI interface
+- Proper error handling and user feedback
 
 ### Setup
 

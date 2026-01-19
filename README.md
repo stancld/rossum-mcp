@@ -6,21 +6,20 @@
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
+[![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
 
 [![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
 [![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
 [![Snyk Security](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml)
 [![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-agents/badge)](https://www.codefactor.io/repository/github/stancld/rossum-agents)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
+[![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![Claude Opus 4.5](https://img.shields.io/badge/Claude-Opus_4.5-blueviolet.svg)](https://www.anthropic.com/claude/opus)
 
 </div>
@@ -30,7 +29,7 @@ Conversational AI toolkit for the Rossum intelligent document processing platfor
 > [!NOTE]
 > Community-developed integration (not official Rossum). Early stage - breaking changes expected.
 
-## ✨ What Can You Do?
+## What Can You Do?
 
 <details>
 <summary><strong>Example 1: Aurora Splitting & Sorting Demo</strong></summary>
@@ -145,7 +144,7 @@ The agent automatically creates the queue, uploads documents, monitors processin
 
 </details>
 
-## 📦 Repository Structure
+## Repository Structure
 
 This repository contains four standalone Python packages:
 
@@ -156,7 +155,7 @@ This repository contains four standalone Python packages:
 
 Each package can be installed and used independently or together for complete functionality.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Clone and run with Docker
@@ -167,11 +166,11 @@ docker-compose up rossum-agent
 # Open http://localhost:8501
 ```
 
-## 📦 Installation & Usage
+## Installation & Usage
 
 **Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
-### 🐳 Docker Compose (Recommended)
+### Docker Compose (Recommended)
 
 **Best for**: Local development and quick testing
 
@@ -221,7 +220,7 @@ redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
 
 ---
 
-### 📦 From Source
+### From Source
 
 **Best for**: Development, customization, contributing
 
@@ -246,7 +245,7 @@ For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md)
 
 ---
 
-### 💬 MCP Server with Claude Desktop
+### MCP Server with Claude Desktop
 
 **Best for**: Interactive use with Claude Desktop
 
@@ -272,7 +271,7 @@ Or run standalone: `rossum-mcp`
 
 ---
 
-### 🤖 AI Agent Interfaces
+### AI Agent Interfaces
 
 ```bash
 # Docker (recommended for local)
@@ -294,7 +293,7 @@ uv run streamlit run rossum_agent/app.py
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
-## 🧠 Agent Skills & Sub-Agents
+## Agent Skills & Sub-Agents
 
 The Rossum Agent includes specialized capabilities for complex workflows:
 
@@ -324,7 +323,7 @@ See the [full documentation](https://stancld.github.io/rossum-agents/skills_and_
 
 </details>
 
-## 🔌 MCP Tools
+## MCP Tools
 
 The MCP server provides **50 tools** for document processing, queue/schema management, hooks, engines, and more.
 
@@ -339,7 +338,7 @@ The MCP server provides **50 tools** for document processing, queue/schema manag
 
 See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-mcp/TOOLS.md](rossum-mcp/TOOLS.md) for detailed API documentation.
 
-## 📚 Documentation
+## Documentation
 
 - **[Full Documentation](https://stancld.github.io/rossum-agents/)** - Complete guides and API reference
 - **[MCP Server README](rossum-mcp/README.md)** - MCP server setup and tools
@@ -347,7 +346,7 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-m
 - **[Deploy README](rossum-deploy/README.md)** - Deployment tool usage
 - **[Examples](examples/)** - Sample workflows and use cases
 
-## 🔗 Resources
+## Resources
 
 - [Rossum API](https://rossum.app/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
@@ -355,7 +354,7 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-m
 - [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
 
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Install with all development dependencies
@@ -373,10 +372,10 @@ pre-commit run --all-files
 
 See [regression_tests/README.md](regression_tests/README.md) for the agent quality evaluation framework.
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! See individual package READMEs for development guidelines.

@@ -17,7 +17,8 @@
 
 </div>
 
-> **Note**: This is a lightweight alternative to the [deployment-manager](https://github.com/rossumai/deployment-manager) (PRD2) tool.
+> [!NOTE]
+> This is a lightweight alternative to the [deployment-manager](https://github.com/rossumai/deployment-manager) (PRD2) tool.
 > We aim to provide a simple, dependency-light solution for the [rossum-agent](../rossum-agent/) that covers core deployment workflows.
 
 > [!NOTE]
@@ -52,7 +53,8 @@
 - **Templates**: EmailTemplate
 - **Rules**: Rule
 
-> **Note**: `deployment-manager` supports additional types (Organization, Annotation, Document, RuleTemplate, Workflow, WorkflowStep, Task) for production deployments.
+> [!NOTE]
+> `deployment-manager` supports additional types (Organization, Annotation, Document, RuleTemplate, Workflow, WorkflowStep, Task) for production deployments.
 
 **When to use rossum-deploy:**
 - Simple pull/push workflows within an AI agent
@@ -208,7 +210,8 @@ print(diff.summary())
 
 ### CLI (Planned)
 
-> **Note**: CLI support is planned but not yet implemented. Use the Python API for now.
+> [!NOTE]
+> CLI support is planned but not yet implemented. Use the Python API for now.
 
 ```bash
 # Future CLI commands (not yet available):
