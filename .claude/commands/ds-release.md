@@ -42,7 +42,7 @@ After all checks pass, provide:
 ## Ready to Release
 
 Suggested commit message:
-chore(<package>): release vX.Y.Z
+<package>: Release <package> X.Y.Z
 
 Git tag command:
 git tag <package>-vX.Y.Z
