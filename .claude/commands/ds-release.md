@@ -19,7 +19,7 @@
 | Version (__init__.py) | `<module>/__init__.py` `__version__` matches pyproject.toml |
 | Changelog | `[Unreleased]` section converted to `[X.Y.Z] - YYYY-MM-DD` |
 | Changelog content | Entries exist for this release |
-| New Unreleased | Empty `[Unreleased]` section added above |
+| New Unreleased | Empty `[Unreleased] - YYYY-MM-DD` section added above |
 | Pre-commit | `pre-commit run -a` passes |
 | Tests | `pytest` passes for the package |
 
