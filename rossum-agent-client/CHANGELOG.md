@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-01-19
+
 ### Added
 
 - Initial release of the Rossum Agent Python client
@@ -37,4 +39,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Event models: `StepEvent`, `StreamDoneEvent`, `FileCreatedEvent`
 - Content models: `Message`, `TextContent`
 
-[Unreleased]: https://github.com/stancld/rossum-agents/tree/master/rossum-agent-client
+[Unreleased]: https://github.com/stancld/rossum-agents/compare/rossum-agent-client-v1.0.0...HEAD
+[1.0.0]: https://github.com/stancld/rossum-agents/releases/tag/rossum-agent-client-v1.0.0
