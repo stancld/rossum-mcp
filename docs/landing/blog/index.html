@@ -616,6 +616,23 @@
 
       <p>Now, the agent doesn't just "run somewhere"—it lives where the work happens. It has the user's context, follows their permissions (using standard Rossum JWTs for row-level security), and eliminates the mental tax of switching interfaces.</p>
 
+      <p>But the API enabled more than just a UI integration. We also published <strong><a href="https://pypi.org/project/rossum-agent-client/" target="_blank" rel="noopener">rossum-agent-client</a></strong>—a Python SDK for programmatic access. Now developers can script complex workflows, build custom integrations, or simply interact via CLI:</p>
+
+<pre><span class="code-comment"># Install from PyPI</span>
+pip install rossum-agent-client
+
+<span class="code-comment"># Quick CLI interaction</span>
+rossum-agent-client -x <span class="code-string">"List all queues in workspace 12345"</span>
+
+<span class="code-comment"># Or use the Python client with streaming</span>
+<span class="code-keyword">from</span> rossum_agent_client <span class="code-keyword">import</span> RossumAgentClient
+
+client = RossumAgentClient(agent_api_url=<span class="code-string">"..."</span>, ...)
+<span class="code-keyword">for</span> event <span class="code-keyword">in</span> client.send_message_stream(chat_id, <span class="code-string">"Analyze queue performance"</span>):
+    print(event.content)</pre>
+
+      <p>The API-first approach paid dividends: native UI for everyday users, Python SDK for automation enthusiasts, and a clear contract that makes future integrations straightforward.</p>
+
       <div class="takeaway"><strong>Takeaway:</strong> If the user has to leave their workflow to use your agent, they'll eventually stop using it.</div>
 
       <figure class="content-image">
