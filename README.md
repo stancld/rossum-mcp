@@ -359,7 +359,7 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the tool list and [rossum-m
 
 ```bash
 # Install with all development dependencies
-pip install -e rossum-mcp[all] -e rossum-agent[all]
+uv pip install -e rossum-mcp[all] -e rossum-agent[all]
 
 # Run tests
 pytest

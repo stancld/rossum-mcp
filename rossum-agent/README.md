@@ -44,7 +44,7 @@ export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 export AWS_PROFILE="default"  # For Bedrock
 
 # Run the agent
-pip install rossum-agent
+uv pip install rossum-agent
 rossum-agent
 ```
 

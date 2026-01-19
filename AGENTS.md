@@ -13,7 +13,7 @@
 
 | Task | Command |
 |------|---------|
-| Setup | `pip install -e .` |
+| Setup | `uv sync` or `uv pip install -e .` |
 | Server | `python server.py` |
 | Tests | `pytest` or `pytest path/to/test.py` |
 | rossum-deploy tests | `cd rossum-deploy && pytest tests/` (required when modifying `workspace.py`) |

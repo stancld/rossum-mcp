@@ -68,7 +68,7 @@
 ## Installation
 
 ```bash
-pip install -e rossum-deploy/
+uv pip install -e rossum-deploy/
 ```
 
 ## Usage

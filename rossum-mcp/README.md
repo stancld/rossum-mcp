@@ -33,7 +33,7 @@ export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 
 # Run the MCP server
-pip install rossum-mcp
+uv pip install rossum-mcp
 rossum-mcp
 ```
 

@@ -20,7 +20,7 @@
 ## Installation
 
 ```bash
-pip install rossum-agent-client
+uv pip install rossum-agent-client
 ```
 
 ## CLI Usage

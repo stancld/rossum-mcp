@@ -160,7 +160,7 @@ def main() -> None:
     try:
         import uvicorn  # noqa: PLC0415
     except ImportError:
-        print("Error: uvicorn is required. Install with: pip install 'rossum-agent[api]'")
+        print("Error: uvicorn is required. Install with: uv pip install 'rossum-agent[api]'")
         sys.exit(1)
 
     uvicorn.run(
