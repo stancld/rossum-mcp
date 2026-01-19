@@ -1462,15 +1462,17 @@ class TestPruneSchemaFields:
         assert sorted(result["remaining_fields"]) == ["header_section", "invoice_number"]
         mock_client._http_client.update.assert_not_called()
 
-    @pytest.mark.asyncio
-    async def test_prune_schema_fields_removes_multivalue_when_tuple_removed(
-        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    def _setup_multivalue_schema(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        monkeypatch: MonkeyPatch,
+        tuple_children: list[dict],
     ) -> None:
-        """Test that removing tuple also removes parent multivalue (no stub left)."""
+        """Set up read-write mode and configure mock with a multivalue schema."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
         importlib.reload(base)
         importlib.reload(schemas)
-
         schemas.register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
@@ -1490,14 +1492,7 @@ class TestPruneSchemaFields:
                                 "id": "line_item",
                                 "label": "Line Item",
                                 "category": "tuple",
-                                "children": [
-                                    {
-                                        "id": "item_desc",
-                                        "label": "Description",
-                                        "category": "datapoint",
-                                        "type": "string",
-                                    }
-                                ],
+                                "children": tuple_children,
                             },
                         },
                     ],
@@ -1506,6 +1501,18 @@ class TestPruneSchemaFields:
         }
         mock_client._http_client.request_json.return_value = mock_schema_dict
         mock_client._http_client.update.return_value = {}
+
+    @pytest.mark.asyncio
+    async def test_prune_schema_fields_removes_multivalue_when_tuple_removed(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test that removing tuple also removes parent multivalue (no stub left)."""
+        self._setup_multivalue_schema(
+            mock_mcp,
+            mock_client,
+            monkeypatch,
+            tuple_children=[{"id": "item_desc", "label": "Description", "category": "datapoint", "type": "string"}],
+        )
 
         prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
         result = await prune_schema_fields(schema_id=50, fields_to_remove=["line_item"])
@@ -1519,46 +1526,15 @@ class TestPruneSchemaFields:
         self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
     ) -> None:
         """Test that removing all tuple children also removes multivalue."""
-        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-        importlib.reload(base)
-        importlib.reload(schemas)
-
-        schemas.register_schema_tools(mock_mcp, mock_client)
-
-        mock_schema_dict = {
-            "id": 50,
-            "content": [
-                {
-                    "id": "header_section",
-                    "label": "Header",
-                    "category": "section",
-                    "children": [
-                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
-                        {
-                            "id": "line_items",
-                            "label": "Line Items",
-                            "category": "multivalue",
-                            "children": {
-                                "id": "line_item",
-                                "label": "Line Item",
-                                "category": "tuple",
-                                "children": [
-                                    {
-                                        "id": "item_desc",
-                                        "label": "Description",
-                                        "category": "datapoint",
-                                        "type": "string",
-                                    },
-                                    {"id": "item_qty", "label": "Quantity", "category": "datapoint", "type": "number"},
-                                ],
-                            },
-                        },
-                    ],
-                }
+        self._setup_multivalue_schema(
+            mock_mcp,
+            mock_client,
+            monkeypatch,
+            tuple_children=[
+                {"id": "item_desc", "label": "Description", "category": "datapoint", "type": "string"},
+                {"id": "item_qty", "label": "Quantity", "category": "datapoint", "type": "number"},
             ],
-        }
-        mock_client._http_client.request_json.return_value = mock_schema_dict
-        mock_client._http_client.update.return_value = {}
+        )
 
         prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
         result = await prune_schema_fields(schema_id=50, fields_to_remove=["item_desc", "item_qty"])

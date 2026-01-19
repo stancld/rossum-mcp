@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_api.models.annotation import Annotation
+from conftest import create_mock_annotation
 from rossum_mcp.tools import base
 from rossum_mcp.tools.annotations import register_annotation_tools
 
@@ -15,61 +15,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from _pytest.monkeypatch import MonkeyPatch
-
-
-def create_mock_annotation(**kwargs) -> Annotation:
-    """Create a mock Annotation dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/annotations/1",
-        "status": "to_review",
-        "schema": "https://api.test.rossum.ai/v1/schemas/1",
-        "modifier": None,
-        "content": None,
-        "queue": "https://api.test.rossum.ai/v1/queues/1",
-        "creator": None,
-        "created_at": "2025-01-01T00:00:00Z",
-        "rir_poll_id": None,
-        "email": None,
-        "email_thread": None,
-        "has_email_thread_with_replies": False,
-        "has_email_thread_with_new_replies": False,
-        "suggested_edit": None,
-        "messages": [],
-        "time_spent": 0,
-        "relations": [],
-        "pages": [],
-        "document": "https://api.test.rossum.ai/v1/documents/1",
-        "confirmed_at": None,
-        "modified_at": "2025-01-01T00:00:00Z",
-        "exported_at": None,
-        "arrived_at": None,
-        "assigned_at": None,
-        "purged_at": None,
-        "rejected_at": None,
-        "deleted_at": None,
-        "export_failed_at": None,
-        "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "metadata": {},
-        "automated": False,
-        "automation_blocker": None,
-        "related_emails": [],
-        "automatically_rejected": False,
-        "prediction": None,
-        "assignees": [],
-        "labels": [],
-        "restricted_access": False,
-        "training_enabled": True,
-        "einvoice": None,
-        "purged_by": None,
-        "rejected_by": None,
-        "deleted_by": None,
-        "exported_by": None,
-        "confirmed_by": None,
-        "modified_by": None,
-    }
-    defaults.update(kwargs)
-    return Annotation(**defaults)
 
 
 @pytest.fixture
