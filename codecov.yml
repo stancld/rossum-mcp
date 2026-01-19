@@ -20,6 +20,10 @@ flags:
     paths:
       - rossum-agent/
     carryforward: true
+  rossum-agent-client:
+    paths:
+      - rossum-agent-client/
+    carryforward: true
   rossum-deploy:
     paths:
       - rossum-deploy/
