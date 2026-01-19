@@ -109,8 +109,8 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["rossum-mcp", "rossum-deploy", "rossum-agent"]
-include = ["rossum_mcp*", "rossum_deploy*", "rossum_agent*"]
+where = ["rossum-mcp", "rossum-deploy", "rossum-agent", "rossum-agent-client"]
+include = ["rossum_mcp*", "rossum_deploy*", "rossum_agent*", "rossum_agent_client*"]
 
 [project.scripts]
 rossum-mcp = "rossum_mcp.server:main"
@@ -123,7 +123,7 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: Unit tests that test individual functions/methods in isolation",
 ]
-testpaths = ["rossum-mcp/tests", "rossum-deploy/tests", "rossum-agent/tests"]
+testpaths = ["rossum-mcp/tests", "rossum-deploy/tests", "rossum-agent/tests", "rossum-agent-client/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -136,10 +136,10 @@ rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat
 
 [tool.ty.environment]
 python-version = "3.12"
-extra-paths = ["rossum-mcp", "rossum-agent", "rossum-deploy"]
+extra-paths = ["rossum-mcp", "rossum-agent", "rossum-deploy", "rossum-agent-client"]
 
 [tool.ty.src]
-include = ["rossum-mcp", "rossum-agent", "rossum-deploy"]
+include = ["rossum-mcp", "rossum-agent", "rossum-deploy", "rossum-agent-client"]
 exclude = ["**/tests/**", "**/outputs/**", "build/**"]
 
 # FastAPI/Starlette middleware and Anthropic TypedDict literals

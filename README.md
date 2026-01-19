@@ -147,10 +147,11 @@ The agent automatically creates the queue, uploads documents, monitors processin
 
 ## 📦 Repository Structure
 
-This repository contains three standalone Python packages:
+This repository contains four standalone Python packages:
 
 - **[rossum-mcp/](rossum-mcp/)** - MCP server for Rossum API integration with AI assistants
 - **[rossum-agent/](rossum-agent/)** - Specialized AI agent toolkit with Streamlit UI
+- **[rossum-agent-client/](rossum-agent-client/)** - Typed Python client for the Rossum Agent API
 - **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment tool (lightweight alternative to [deployment-manager](https://github.com/rossumai/deployment-manager))
 
 Each package can be installed and used independently or together for complete functionality.

@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rossum-agent-client"
+version = "1.0.0dev"
+description = "Python client for Rossum Agent API - AI-powered document processing assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Dan Stancl (Rossum AI)", email = "daniel.stancl@gmail.com"}
+]
+keywords = ["rossum", "agent", "api", "client", "document-processing", "ai"]
+classifiers = [
+    "Development Status :: 5 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed"
+]
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage>=7.0.0",
+    "mypy>=1.0.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-httpx>=0.30.0",
+    "ruff>=0.1.0"
+]
+
+[project.scripts]
+rossum-agent-client = "rossum_agent_client.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/stancld/rossum-mcp"
+Documentation = "https://github.com/stancld/rossum-mcp/tree/master/rossum-agent-client"
+Repository = "https://github.com/stancld/rossum-mcp"
+Changelog = "https://github.com/stancld/rossum-mcp/blob/master/rossum-agent-client/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rossum_agent_client*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

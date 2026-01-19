@@ -31,7 +31,7 @@ The examples in this folder work with the `rossum-agent` package, which uses Ant
 
 ```bash
 # From the repository root
-cd rossum_agent
+cd rossum-agent
 uv sync --extra all
 ```
 
@@ -63,7 +63,7 @@ Or run the Streamlit UI:
 
 ```bash
 # From the rossum_agent directory
-cd rossum_agent
+cd rossum-agent
 streamlit run app.py
 ```
 
@@ -148,7 +148,7 @@ rossum-mcp
 ### Package installation issues
 Make sure you have Python 3.12+ and install the agent package:
 ```bash
-cd rossum_agent
+cd rossum-agent
 uv sync --extra all
 ```
 
