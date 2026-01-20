@@ -24,8 +24,8 @@
 
 | Category | Check For |
 |----------|-----------|
-| MCP tools | New tools in `rossum_mcp/tools/` documented in README and `docs/source/mcp_reference.rst` |
-| Agent skills | New skills in `rossum_agent/skills/` documented in README and `docs/source/skills_and_subagents.rst` |
+| MCP tools | New tools in `rossum-mcp/rossum_mcp/tools/` documented in README and `docs/source/mcp_reference.rst` |
+| Agent skills | New skills in `rossum-agent/rossum_agent/skills/` documented in README and `docs/source/skills_and_subagents.rst` |
 | Changelogs | New features/fixes added to appropriate CHANGELOG.md |
 | API changes | Parameter changes, return type changes reflected in docs |
 | Examples | Code examples still valid after changes |
