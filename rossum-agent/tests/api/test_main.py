@@ -18,10 +18,9 @@ from rossum_agent.api.main import (
     get_agent_service,
     get_chat_service,
     get_file_service,
+    lifespan,
     main,
     rate_limit_exceeded_handler,
-    shutdown_event,
-    startup_event,
 )
 from rossum_agent.api.routes import health
 
@@ -134,16 +133,16 @@ class TestServiceGetters:
             assert result1 is result2
 
 
-class TestStartupShutdown:
-    """Tests for startup and shutdown events.
+class TestLifespan:
+    """Tests for lifespan context manager.
 
     Note: The autouse fixture reset_main_service_singletons handles resetting
     the singleton state before and after each test.
     """
 
     @pytest.mark.asyncio
-    async def test_startup_logs_redis_connected(self, caplog):
-        """Test startup event logs Redis connection status when connected."""
+    async def test_lifespan_logs_redis_connected(self, caplog):
+        """Test lifespan logs Redis connection status when connected."""
         mock_chat_service = MagicMock()
         mock_chat_service.is_connected.return_value = True
 
@@ -151,15 +150,16 @@ class TestStartupShutdown:
             patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
             caplog.at_level(logging.INFO),
         ):
-            await startup_event()
+            async with lifespan(app):
+                pass
 
         assert mock_chat_service.is_connected.called
         assert any("redis" in rec.message.lower() for rec in caplog.records)
         assert any(rec.levelno == logging.INFO for rec in caplog.records if "redis" in rec.message.lower())
 
     @pytest.mark.asyncio
-    async def test_startup_logs_redis_disconnected(self, caplog):
-        """Test startup event logs warning when Redis disconnected."""
+    async def test_lifespan_logs_redis_disconnected(self, caplog):
+        """Test lifespan logs warning when Redis disconnected."""
         mock_chat_service = MagicMock()
         mock_chat_service.is_connected.return_value = False
 
@@ -167,28 +167,39 @@ class TestStartupShutdown:
             patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
             caplog.at_level(logging.WARNING),
         ):
-            await startup_event()
+            async with lifespan(app):
+                pass
 
         assert mock_chat_service.is_connected.called
         assert any("redis" in rec.message.lower() for rec in caplog.records)
         assert any(rec.levelno == logging.WARNING for rec in caplog.records if "redis" in rec.message.lower())
 
     @pytest.mark.asyncio
-    async def test_shutdown_closes_storage(self):
-        """Test shutdown event closes storage when chat_service exists."""
+    async def test_lifespan_closes_storage_on_shutdown(self):
+        """Test lifespan closes storage on shutdown when chat_service exists."""
         mock_storage = MagicMock()
         mock_chat_service = MagicMock()
         mock_chat_service.storage = mock_storage
+        mock_chat_service.is_connected.return_value = True
         main_module._chat_service = mock_chat_service
 
-        await shutdown_event()
+        async with lifespan(app):
+            pass
+
         mock_storage.close.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_shutdown_handles_no_chat_service(self, caplog):
-        """Test shutdown event handles case when chat_service is None."""
-        with caplog.at_level(logging.DEBUG):
-            await shutdown_event()
+    async def test_lifespan_handles_no_chat_service(self, caplog):
+        """Test lifespan handles case when chat_service is None on shutdown."""
+        mock_chat_service = MagicMock()
+        mock_chat_service.is_connected.return_value = True
+
+        with (
+            patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
+            caplog.at_level(logging.DEBUG),
+        ):
+            async with lifespan(app):
+                main_module._chat_service = None
 
         error_records = [rec for rec in caplog.records if rec.levelno >= logging.ERROR]
         assert len(error_records) == 0

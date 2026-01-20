@@ -6,8 +6,13 @@ import argparse
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request, status
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
@@ -48,42 +53,6 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
     )
 
 
-app = FastAPI(
-    title="Rossum Agent API",
-    description="REST API for Rossum Agent - AI-powered document processing assistant",
-    version="0.2.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
-)
-
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-
-app.add_middleware(RequestSizeLimitMiddleware)
-
-
-def _build_cors_origin_regex() -> str:
-    """Build CORS origin regex including any additional allowed hosts."""
-    patterns = [r".*\.rossum\.app"]
-    additional_hosts = os.environ.get("ADDITIONAL_ALLOWED_ROSSUM_HOSTS", "")
-    if additional_hosts:
-        patterns.extend(p.strip() for p in additional_hosts.split(",") if p.strip())
-    return rf"https://({'|'.join(patterns)})"
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://elis.rossum.ai",
-        "https://elis.develop.r8.lol",
-    ],
-    allow_origin_regex=_build_cors_origin_regex(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 _chat_service: ChatService | None = None
 _agent_service: AgentService | None = None
 _file_service: FileService | None = None
@@ -113,6 +82,62 @@ def get_file_service() -> FileService:
     return _file_service
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    """Lifespan context manager for startup and shutdown events."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger.info("Rossum Agent API starting up...")
+
+    chat_service = get_chat_service()
+    if chat_service.is_connected():
+        logger.info("Redis connection established")
+    else:
+        logger.warning("Redis connection failed - some features may not work")
+
+    yield
+
+    logger.info("Rossum Agent API shutting down...")
+    if _chat_service is not None:
+        _chat_service.storage.close()
+
+
+app = FastAPI(
+    title="Rossum Agent API",
+    description="REST API for Rossum Agent - AI-powered document processing assistant",
+    version="0.2.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    lifespan=lifespan,
+)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+app.add_middleware(RequestSizeLimitMiddleware)
+
+
+def _build_cors_origin_regex() -> str:
+    """Build CORS origin regex including any additional allowed hosts."""
+    patterns = [r".*\.rossum\.app"]
+    additional_hosts = os.environ.get("ADDITIONAL_ALLOWED_ROSSUM_HOSTS", "")
+    if additional_hosts:
+        patterns.extend(p.strip() for p in additional_hosts.split(",") if p.strip())
+    return rf"https://({'|'.join(patterns)})"
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://elis.rossum.ai",
+        "https://elis.develop.r8.lol",
+    ],
+    allow_origin_regex=_build_cors_origin_regex(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 health.set_chat_service_getter(get_chat_service)
 chats.set_chat_service_getter(get_chat_service)
 messages.set_chat_service_getter(get_chat_service)
@@ -124,27 +149,6 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(chats.router, prefix="/api/v1")
 app.include_router(messages.router, prefix="/api/v1")
 app.include_router(files.router, prefix="/api/v1")
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize services on startup."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    logger.info("Rossum Agent API starting up...")
-
-    chat_service = get_chat_service()
-    if chat_service.is_connected():
-        logger.info("Redis connection established")
-    else:
-        logger.warning("Redis connection failed - some features may not work")
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Cleanup on shutdown."""
-    logger.info("Rossum Agent API shutting down...")
-    if _chat_service is not None:
-        _chat_service.storage.close()
 
 
 def main() -> None:
