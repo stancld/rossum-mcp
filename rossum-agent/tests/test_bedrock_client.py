@@ -6,14 +6,17 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.bedrock_client import OPUS_MODEL_ID, create_bedrock_client, get_model_id
+from rossum_agent.bedrock_client import (
+    HAIKU_MODEL_ID,
+    OPUS_MODEL_ID,
+    create_bedrock_client,
+    get_model_id,
+    get_small_model_id,
+)
 
 
 class TestCreateBedrockClient:
-    """Test create_bedrock_client function."""
-
     def test_creates_client_with_explicit_session(self):
-        """Test creating client with explicitly provided boto3.Session."""
         mock_credentials = MagicMock()
         mock_credentials.access_key = "test_access_key"
         mock_credentials.secret_key = "test_secret_key"
@@ -41,7 +44,6 @@ class TestCreateBedrockClient:
             )
 
     def test_creates_client_with_profile_name(self):
-        """Test creating client with AWS profile name."""
         mock_credentials = MagicMock()
         mock_frozen_credentials = MagicMock()
         mock_frozen_credentials.access_key = "profile_access_key"
@@ -67,7 +69,6 @@ class TestCreateBedrockClient:
             mock_anthropic.assert_called_once()
 
     def test_uses_default_region_from_environment(self):
-        """Test that AWS_REGION environment variable is used as default."""
         mock_credentials = MagicMock()
         mock_frozen_credentials = MagicMock()
         mock_frozen_credentials.access_key = "key"
@@ -93,7 +94,6 @@ class TestCreateBedrockClient:
             )
 
     def test_uses_none_region_when_no_env_var(self):
-        """Test that None is passed to boto3.Session when AWS_REGION is not set."""
         mock_credentials = MagicMock()
         mock_frozen_credentials = MagicMock()
         mock_frozen_credentials.access_key = "key"
@@ -121,7 +121,6 @@ class TestCreateBedrockClient:
             )
 
     def test_raises_error_when_no_credentials_found(self):
-        """Test that RuntimeError is raised when no credentials are found."""
         with patch("rossum_agent.bedrock_client.boto3.Session") as mock_session_class:
             mock_session = MagicMock()
             mock_session.get_credentials.return_value = None
@@ -131,7 +130,6 @@ class TestCreateBedrockClient:
                 create_bedrock_client()
 
     def test_explicit_region_overrides_environment(self):
-        """Test that explicit aws_region parameter overrides environment variable."""
         mock_credentials = MagicMock()
         mock_frozen_credentials = MagicMock()
         mock_frozen_credentials.access_key = "key"
@@ -158,10 +156,7 @@ class TestCreateBedrockClient:
 
 
 class TestGetModelId:
-    """Test get_model_id function."""
-
     def test_returns_default_model_id(self):
-        """Test that default model ID is returned when no env vars are set."""
         env_without_model_vars = {k: v for k, v in os.environ.items() if k != "AWS_BEDROCK_MODEL_ARN"}
 
         with patch.dict(os.environ, env_without_model_vars, clear=True):
@@ -170,10 +165,27 @@ class TestGetModelId:
             assert model_id == OPUS_MODEL_ID
 
     def test_returns_model_arn_when_set(self):
-        """Test that AWS_BEDROCK_MODEL_ARN takes precedence."""
         model_arn = "arn:aws:bedrock:us-east-1:123456789012:provisioned-model/abc123"
 
         with patch.dict(os.environ, {"AWS_BEDROCK_MODEL_ARN": model_arn}):
             result = get_model_id()
+
+            assert result == model_arn
+
+
+class TestGetSmallModelId:
+    def test_returns_default_model_id(self):
+        env_without_model_vars = {k: v for k, v in os.environ.items() if k != "AWS_BEDROCK_MODEL_ARN_SMALL"}
+
+        with patch.dict(os.environ, env_without_model_vars, clear=True):
+            model_id = get_small_model_id()
+
+            assert model_id == HAIKU_MODEL_ID
+
+    def test_returns_model_arn_when_set(self):
+        model_arn = "arn:aws:bedrock:us-east-1:123456789012:provisioned-model/haiku123"
+
+        with patch.dict(os.environ, {"AWS_BEDROCK_MODEL_ARN_SMALL": model_arn}):
+            result = get_small_model_id()
 
             assert result == model_arn

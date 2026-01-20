@@ -6,9 +6,7 @@ import json
 import re
 from typing import TYPE_CHECKING
 
-from rossum_agent.bedrock_client import create_bedrock_client
-
-from regression_tests.framework.constants import HAIKU_MODEL_ID
+from rossum_agent.bedrock_client import HAIKU_MODEL_ID, create_bedrock_client
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

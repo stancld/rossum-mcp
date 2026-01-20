@@ -8,6 +8,7 @@ import boto3
 from anthropic import AnthropicBedrock
 
 OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
+HAIKU_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 
 def create_bedrock_client(
@@ -54,14 +55,14 @@ def create_bedrock_client(
 
 
 def get_model_id() -> str:
-    """Get the Bedrock model ID from environment or return default.
-
-    The model ID can be configured via:
-    - AWS_BEDROCK_MODEL_ARN for cross-account model access
-
-    Returns:
-        Model ID string suitable for AnthropicBedrock client.
-    """
+    """Return AWS_BEDROCK_MODEL_ARN if set, otherwise default Opus model."""
     if model_arn := os.environ.get("AWS_BEDROCK_MODEL_ARN"):
         return model_arn
     return OPUS_MODEL_ID
+
+
+def get_small_model_id() -> str:
+    """Return AWS_BEDROCK_MODEL_ARN_SMALL if set, otherwise default Haiku model."""
+    if model_arn := os.environ.get("AWS_BEDROCK_MODEL_ARN_SMALL"):
+        return model_arn
+    return HAIKU_MODEL_ID

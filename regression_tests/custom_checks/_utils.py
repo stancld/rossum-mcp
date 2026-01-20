@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from rossum_agent.bedrock_client import create_bedrock_client
-
-from regression_tests.framework.constants import HAIKU_MODEL_ID
+from rossum_agent.bedrock_client import HAIKU_MODEL_ID, create_bedrock_client
 
 
 def call_haiku_check(prompt: str) -> tuple[bool, str]:
@@ -21,10 +19,7 @@ def call_haiku_check(prompt: str) -> tuple[bool, str]:
     """
     client = create_bedrock_client()
     response = client.messages.create(
-        model=HAIKU_MODEL_ID,
-        max_tokens=256,
-        temperature=0,
-        messages=[{"role": "user", "content": prompt}],
+        model=HAIKU_MODEL_ID, max_tokens=256, temperature=0, messages=[{"role": "user", "content": prompt}]
     )
 
     text = "".join(block.text for block in response.content if hasattr(block, "text"))

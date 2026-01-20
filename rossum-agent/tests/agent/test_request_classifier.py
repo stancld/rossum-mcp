@@ -5,18 +5,15 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from rossum_agent.agent.request_classifier import (
-    CLASSIFIER_MODEL_ID,
     RequestScope,
     classify_request,
     generate_rejection_response,
 )
+from rossum_agent.bedrock_client import get_small_model_id
 
 
 class TestClassifyRequest:
-    """Test the classify_request function."""
-
     def test_in_scope_request(self) -> None:
-        """Test that Rossum-related requests are classified as in-scope."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="IN_SCOPE")]
@@ -28,11 +25,10 @@ class TestClassifyRequest:
         assert result.raw_response == "IN_SCOPE"
         mock_client.messages.create.assert_called_once()
         call_kwargs = mock_client.messages.create.call_args.kwargs
-        assert call_kwargs["model"] == CLASSIFIER_MODEL_ID
+        assert call_kwargs["model"] == get_small_model_id()
         assert call_kwargs["max_tokens"] == 10
 
     def test_out_of_scope_request(self) -> None:
-        """Test that non-Rossum requests are classified as out-of-scope."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="OUT_OF_SCOPE")]
@@ -44,7 +40,6 @@ class TestClassifyRequest:
         assert result.raw_response == "OUT_OF_SCOPE"
 
     def test_handles_lowercase_response(self) -> None:
-        """Test that lowercase responses are handled correctly."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="out_of_scope")]
@@ -55,7 +50,6 @@ class TestClassifyRequest:
         assert result.scope == RequestScope.OUT_OF_SCOPE
 
     def test_handles_extra_text_in_response(self) -> None:
-        """Test that extra text around the classification is handled."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="The answer is IN_SCOPE because...")]
@@ -66,7 +60,6 @@ class TestClassifyRequest:
         assert result.scope == RequestScope.IN_SCOPE
 
     def test_defaults_to_in_scope_on_error(self) -> None:
-        """Test that API errors default to in-scope to avoid blocking valid requests."""
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = Exception("API error")
 
@@ -76,7 +69,6 @@ class TestClassifyRequest:
         assert "error" in result.raw_response
 
     def test_defaults_to_in_scope_on_empty_response(self) -> None:
-        """Test that empty responses default to in-scope."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = []
@@ -87,7 +79,6 @@ class TestClassifyRequest:
         assert result.scope == RequestScope.IN_SCOPE
 
     def test_prompt_format(self) -> None:
-        """Test that the prompt is formatted correctly with the user message."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="IN_SCOPE")]
@@ -102,10 +93,7 @@ class TestClassifyRequest:
 
 
 class TestGenerateRejectionResponse:
-    """Test the dynamic rejection response generation."""
-
     def test_generates_response_from_model(self) -> None:
-        """Test that rejection response is generated via model."""
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="I focus on Rossum platform. Can I help with hooks?")]
@@ -121,7 +109,6 @@ class TestGenerateRejectionResponse:
         mock_client.messages.create.assert_called_once()
 
     def test_falls_back_on_error(self) -> None:
-        """Test fallback response when model fails."""
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = Exception("API error")
 
