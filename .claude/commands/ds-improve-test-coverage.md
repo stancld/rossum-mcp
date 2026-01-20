@@ -38,6 +38,19 @@
 | Assertions | One logical assertion per test |
 | Mocking | Mock external dependencies, not internal logic |
 
+## Output
+
+Report summary as:
+
+```
+## Tests Added
+
+- `test_file.py::test_function_name` - covers <description>
+- ...
+
+Coverage: <N> new tests, <N> functions covered
+```
+
 ## Constraints
 
 - Ask before writing tests (use `AskUserQuestion` to confirm plan)

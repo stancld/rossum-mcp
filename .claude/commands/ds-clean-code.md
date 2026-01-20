@@ -51,3 +51,9 @@ Only refine code modified in the current branch (diff against `master`), unless 
 ## Output
 
 Report 1-3 sentence summary of changes made.
+
+## Constraints
+
+- No automatic commits
+- Preserve all existing functionality
+- Run tests before and after to verify no regressions
