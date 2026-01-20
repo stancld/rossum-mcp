@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from ddgs.exceptions import DDGSException
 from requests import RequestException
+from rossum_agent.bedrock_client import OPUS_MODEL_ID
 from rossum_agent.tools.subagents.knowledge_base import (
     _KNOWLEDGE_BASE_DOMAIN,
     _MAX_SEARCH_RESULTS,
     _WEBPAGE_FETCH_TIMEOUT,
-    OPUS_MODEL_ID,
     WebSearchError,
     _fetch_webpage_content,
     _search_and_analyze_knowledge_base,

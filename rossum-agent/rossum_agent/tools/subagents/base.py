@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-from rossum_agent.bedrock_client import create_bedrock_client
+from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.tools.core import (
     SubAgentProgress,
     SubAgentTokenUsage,
@@ -27,7 +27,6 @@ from rossum_agent.tools.core import (
     report_progress,
     report_token_usage,
 )
-from rossum_agent.tools.subagents.knowledge_base import OPUS_MODEL_ID
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ def save_iteration_context(
         context_data = {
             "iteration": iteration,
             "max_iterations": max_iterations,
-            "model": OPUS_MODEL_ID,
+            "model": get_model_id(),
             "max_tokens": max_tokens,
             "system_prompt": system_prompt,
             "messages": messages,
@@ -183,7 +182,7 @@ class SubAgent(ABC):
 
                 llm_start = time.perf_counter()
                 response = self.client.messages.create(
-                    model=OPUS_MODEL_ID,
+                    model=get_model_id(),
                     max_tokens=self.config.max_tokens,
                     system=self.config.system_prompt,
                     messages=messages,

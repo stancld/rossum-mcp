@@ -13,7 +13,7 @@ from anthropic import beta_tool
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
 
-from rossum_agent.bedrock_client import create_bedrock_client
+from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.tools.core import (
     SubAgentProgress,
     SubAgentText,
@@ -24,8 +24,6 @@ from rossum_agent.tools.core import (
 )
 
 logger = logging.getLogger(__name__)
-
-OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
 
 _WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT = """Goal: Extract actionable technical information from Rossum Knowledge Base search results.
 
@@ -121,7 +119,7 @@ When the topic involves document splitting, beware of the bug in knowledge base,
 | Multivalue parent | Required for splitting (one value per split document)."""
 
         response = client.messages.create(
-            model=OPUS_MODEL_ID,
+            model=get_model_id(),
             max_tokens=4096,
             temperature=0.25,
             system=_WEB_SEARCH_ANALYSIS_SYSTEM_PROMPT,

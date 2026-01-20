@@ -2330,8 +2330,8 @@ requires-dist = [
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "requests", specifier = ">=2.32" },
     { name = "rossum-api", git = "https://github.com/stancld/rossum-api.git?rev=ds-feat-hook-logs" },
-    { name = "rossum-deploy", git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-deploy" },
-    { name = "rossum-mcp", git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-mcp" },
+    { name = "rossum-deploy", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-deploy" },
+    { name = "rossum-mcp", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp" },
     { name = "slowapi", marker = "extra == 'all'", specifier = ">=0.1.9" },
     { name = "slowapi", marker = "extra == 'api'", specifier = ">=0.1.9" },
     { name = "sphinx", marker = "extra == 'all'", specifier = ">=7.0.0" },
@@ -2366,7 +2366,7 @@ dependencies = [
 [[package]]
 name = "rossum-deploy"
 version = "0.2.0.dev0"
-source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-deploy#e410b049936c6f4f282013d9752f863d6fe7f529" }
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-deploy#6bf68e679245a7f334c9045d3aff2a8d3bddd6c7" }
 dependencies = [
     { name = "pydantic" },
     { name = "rossum-api" },
@@ -2374,8 +2374,8 @@ dependencies = [
 
 [[package]]
 name = "rossum-mcp"
-version = "0.3.6.dev0"
-source = { git = "https://github.com/stancld/rossum-mcp.git?subdirectory=rossum-mcp#e410b049936c6f4f282013d9752f863d6fe7f529" }
+version = "1.0.0.dev0"
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#6bf68e679245a7f334c9045d3aff2a8d3bddd6c7" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },
