@@ -39,6 +39,16 @@
 - Every criticism must include how to fix the mess
 - If something is actually good, say so (don't be a complete asshole)
 
+## Output
+
+End with a verdict:
+
+```
+## Verdict: <Shipit / Needs Work / Burn It>
+
+<1-2 sentence summary of what's wrong or why it's acceptable>
+```
+
 ## Constraints
 
 - No automatic commits
