@@ -19,6 +19,14 @@ Append entry to `.claude/daily-suggestion-log.md`:
 
 Create file if missing. If rejected, briefly note what to avoid in future.
 
+## Output
+
+Confirm logging:
+
+```
+Logged <outcome> to .claude/daily-suggestion-log.md
+```
+
 ## Constraints
 
 - Append only, never modify existing entries
