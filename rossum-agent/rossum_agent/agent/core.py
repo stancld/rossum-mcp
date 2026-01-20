@@ -569,7 +569,7 @@ class RossumAgent:
         output_tokens: int,
         thinking_blocks: list[ThinkingBlockData] | None = None,
     ) -> AsyncIterator[AgentStep]:
-        """Execute tools and yield progress updates."""
+        """Execute tools in parallel and yield progress updates."""
         memory_step = MemoryStep(
             step_number=step_num,
             text=thinking_text if thinking_text else None,
@@ -579,30 +579,46 @@ class RossumAgent:
             output_tokens=output_tokens,
         )
 
-        tool_results: list[ToolResult] = []
         total_tools = len(tool_calls)
 
-        for idx, tool_call in enumerate(tool_calls, 1):
-            tool_progress = (idx, total_tools)
-            # Yield: Tool execution starting - shows which tool is about to run
-            yield AgentStep(
-                step_number=step_num,
-                thinking=thinking_text if thinking_text else None,
-                tool_calls=tool_calls,
-                is_streaming=True,
-                current_tool=tool_call.name,
-                tool_progress=tool_progress,
-                step_type=StepType.INTERMEDIATE,
-            )
+        yield AgentStep(
+            step_number=step_num,
+            thinking=thinking_text if thinking_text else None,
+            tool_calls=tool_calls,
+            is_streaming=True,
+            current_tool=None,
+            tool_progress=(0, total_tools),
+            step_type=StepType.INTERMEDIATE,
+        )
 
+        progress_queue: asyncio.Queue[AgentStep] = asyncio.Queue()
+        results_by_id: dict[str, ToolResult] = {}
+
+        async def execute_single_tool(tool_call: ToolCall, idx: int) -> None:
+            tool_progress = (idx, total_tools)
             async for progress_or_result in self._execute_tool_with_progress(
                 tool_call, step_num, tool_calls, tool_progress
             ):
-                # Yield: Sub-agent progress updates from tool execution
                 if isinstance(progress_or_result, AgentStep):
-                    yield progress_or_result
+                    await progress_queue.put(progress_or_result)
                 elif isinstance(progress_or_result, ToolResult):
-                    tool_results.append(progress_or_result)
+                    results_by_id[tool_call.id] = progress_or_result
+
+        tasks = [
+            asyncio.create_task(execute_single_tool(tool_call, idx)) for idx, tool_call in enumerate(tool_calls, 1)
+        ]
+
+        pending = set(tasks)
+        while pending:
+            _done, pending = await asyncio.wait(pending, timeout=0.05, return_when=asyncio.FIRST_COMPLETED)
+
+            while not progress_queue.empty():
+                yield progress_queue.get_nowait()
+
+        while not progress_queue.empty():
+            yield progress_queue.get_nowait()
+
+        tool_results = [results_by_id[tc.id] for tc in tool_calls if tc.id in results_by_id]
 
         step.tool_results = tool_results
         memory_step.tool_results = tool_results
