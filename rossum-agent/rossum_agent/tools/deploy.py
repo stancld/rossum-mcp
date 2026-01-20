@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,7 +15,7 @@ from anthropic import beta_tool
 from rossum_deploy.models import IdMapping
 from rossum_deploy.workspace import Workspace
 
-from rossum_agent.tools.core import get_output_dir
+from rossum_agent.tools.core import get_output_dir, require_rossum_credentials
 
 if TYPE_CHECKING:
     from anthropic._tools import BetaTool  # ty: ignore[unresolved-import] - private API
@@ -26,25 +25,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def get_workspace_credentials() -> tuple[str, str]:
-    """Get Rossum API credentials from environment.
-
-    Returns:
-        Tuple of (api_base_url, api_token).
-    """
-    if not (api_base := os.getenv("ROSSUM_API_BASE_URL")):
-        raise ValueError("ROSSUM_API_BASE_URL environment variable is required")
-    if not (token := os.getenv("ROSSUM_API_TOKEN")):
-        raise ValueError("ROSSUM_API_TOKEN environment variable is required")
-
-    return api_base, token
-
-
 def create_workspace(
     path: str | None = None, api_base_url: str | None = None, token: str | None = None
 ) -> WorkspaceType:
     """Create a Workspace instance for deployment operations."""
-    default_api_base, default_token = get_workspace_credentials()
+    default_api_base, default_token = require_rossum_credentials()
     api_base = api_base_url or default_api_base
     api_token = token or default_token
 
@@ -322,7 +307,7 @@ def deploy_compare_workspaces(
     )
 
     try:
-        api_base, token = get_workspace_credentials()
+        api_base, token = require_rossum_credentials()
 
         source_ws = Workspace(Path(source_workspace_path), api_base=api_base, token=token)
         target_ws = Workspace(Path(target_workspace_path), api_base=api_base, token=token)

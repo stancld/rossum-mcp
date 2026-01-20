@@ -9,29 +9,16 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import os
 import re
 
 import httpx
 from anthropic import beta_tool
 
+from rossum_agent.tools.core import require_rossum_credentials
+
 logger = logging.getLogger(__name__)
 
 _SUGGEST_FORMULA_TIMEOUT = 60
-
-
-def _get_credentials() -> tuple[str, str]:
-    """Get Rossum API credentials from environment.
-
-    Returns:
-        Tuple of (api_base_url, api_token).
-    """
-    if not (api_base := os.getenv("ROSSUM_API_BASE_URL")):
-        raise ValueError("ROSSUM_API_BASE_URL environment variable is required")
-    if not (token := os.getenv("ROSSUM_API_TOKEN")):
-        raise ValueError("ROSSUM_API_TOKEN environment variable is required")
-
-    return api_base, token
 
 
 def _build_suggest_formula_url(api_base_url: str) -> str:
@@ -138,7 +125,7 @@ def suggest_formula_field(
     logger.info(f"suggest_formula_field: {field_schema_id=}, {schema_id=}, {section_id=}, hint={hint[:100]}...")
 
     try:
-        api_base_url, token = _get_credentials()
+        api_base_url, token = require_rossum_credentials()
         url = _build_suggest_formula_url(api_base_url)
 
         schema_content = _fetch_schema_content(api_base_url, token, schema_id)

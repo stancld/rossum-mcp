@@ -6,6 +6,7 @@ all internal tools. Uses contextvars for thread-safe state management.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -60,6 +61,7 @@ _token_callback: ContextVar[SubAgentTokenCallback | None] = ContextVar("token_ca
 _mcp_connection: ContextVar[MCPConnection | None] = ContextVar("mcp_connection", default=None)
 _mcp_event_loop: ContextVar[asyncio.AbstractEventLoop | None] = ContextVar("mcp_event_loop", default=None)
 _output_dir: ContextVar[Path | None] = ContextVar("output_dir", default=None)
+_rossum_credentials: ContextVar[tuple[str, str] | None] = ContextVar("rossum_credentials", default=None)
 
 
 def set_progress_callback(callback: SubAgentProgressCallback | None) -> None:
@@ -123,3 +125,49 @@ def get_mcp_connection() -> MCPConnection | None:
 def get_mcp_event_loop() -> asyncio.AbstractEventLoop | None:
     """Get the current MCP event loop."""
     return _mcp_event_loop.get()
+
+
+def set_rossum_credentials(api_base_url: str | None, token: str | None) -> None:
+    """Set Rossum API credentials for internal tools.
+
+    Args:
+        api_base_url: Rossum API base URL.
+        token: Rossum API token.
+    """
+    if api_base_url and token:
+        _rossum_credentials.set((api_base_url, token))
+    else:
+        _rossum_credentials.set(None)
+
+
+def get_rossum_credentials() -> tuple[str, str] | None:
+    """Get Rossum API credentials from context or environment.
+
+    Checks context first (set by API service), then falls back to environment variables.
+
+    Returns:
+        Tuple of (api_base_url, token) or None if neither context nor env vars are set.
+    """
+    if (creds := _rossum_credentials.get()) is not None:
+        return creds
+
+    api_base = os.getenv("ROSSUM_API_BASE_URL")
+    token = os.getenv("ROSSUM_API_TOKEN")
+    if api_base and token:
+        return api_base, token
+
+    return None
+
+
+def require_rossum_credentials() -> tuple[str, str]:
+    """Get Rossum API credentials, raising if unavailable.
+
+    Returns:
+        Tuple of (api_base_url, token).
+
+    Raises:
+        ValueError: If credentials are not available.
+    """
+    if (creds := get_rossum_credentials()) is not None:
+        return creds
+    raise ValueError("Rossum API credentials not available (neither in context nor environment variables)")

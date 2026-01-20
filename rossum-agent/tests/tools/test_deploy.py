@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from rossum_agent.tools import DEPLOY_TOOLS, execute_tool, set_output_dir
+from rossum_agent.tools.core import require_rossum_credentials
 from rossum_agent.tools.deploy import (
     create_workspace,
     deploy_compare_workspaces,
@@ -19,7 +20,6 @@ from rossum_agent.tools.deploy import (
     deploy_to_org,
     get_deploy_tool_names,
     get_deploy_tools,
-    get_workspace_credentials,
 )
 from rossum_deploy.models import (
     CopyResult,
@@ -537,7 +537,7 @@ class TestDeployCompareWorkspaces:
         mock_result.source_only = [(ObjectType.HOOK, 1, "Hook1")]
         mock_result.target_only = []
 
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", return_value=("https://api.test", "token")):
+        with patch("rossum_agent.tools.deploy.require_rossum_credentials", return_value=("https://api.test", "token")):
             with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
                 mock_source_ws = MagicMock()
                 mock_source_ws.compare_workspaces.return_value = mock_result
@@ -574,7 +574,7 @@ class TestDeployCompareWorkspaces:
         mock_result.source_only = []
         mock_result.target_only = []
 
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", return_value=("https://api.test", "token")):
+        with patch("rossum_agent.tools.deploy.require_rossum_credentials", return_value=("https://api.test", "token")):
             with patch("rossum_agent.tools.deploy.Workspace") as mock_ws_class:
                 with patch("rossum_agent.tools.deploy.IdMapping.model_validate") as mock_validate:
                     mock_source_ws = MagicMock()
@@ -593,7 +593,7 @@ class TestDeployCompareWorkspaces:
 
     def test_compare_handles_error(self, tmp_path: Path):
         """Test compare error handling."""
-        with patch("rossum_agent.tools.deploy.get_workspace_credentials", side_effect=Exception("Creds error")):
+        with patch("rossum_agent.tools.deploy.require_rossum_credentials", side_effect=Exception("Creds error")):
             result_json = deploy_compare_workspaces(
                 source_workspace_path=str(tmp_path),
                 target_workspace_path=str(tmp_path),
@@ -861,8 +861,8 @@ class TestCreateWorkspaceHelper:
             assert call_kwargs["token"] == "custom_token"
 
 
-class TestGetWorkspaceCredentials:
-    """Test get_workspace_credentials helper function."""
+class TestRequireRossumCredentials:
+    """Test require_rossum_credentials helper function."""
 
     def test_returns_env_credentials(self):
         """Test that env vars are returned when set."""
@@ -870,19 +870,15 @@ class TestGetWorkspaceCredentials:
             "os.environ",
             {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"},
         ):
-            api_base, token = get_workspace_credentials()
+            api_base, token = require_rossum_credentials()
 
         assert api_base == "https://api.rossum.ai/v1"
         assert token == "test_token"
 
-    def test_raises_when_missing_env_vars(self):
-        """Test that error is raised when env vars are missing."""
+    @patch("rossum_agent.tools.core._rossum_credentials")
+    def test_raises_when_credentials_missing(self, mock_creds):
+        """Test that error is raised when neither context nor env vars have credentials."""
+        mock_creds.get.return_value = None
         with patch.dict("os.environ", {}, clear=True):
-            with pytest.raises(ValueError, match="ROSSUM_API_BASE_URL"):
-                get_workspace_credentials()
-
-    def test_raises_when_token_missing(self):
-        """Test that error is raised when token is missing."""
-        with patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1"}, clear=True):
-            with pytest.raises(ValueError, match="ROSSUM_API_TOKEN"):
-                get_workspace_credentials()
+            with pytest.raises(ValueError, match="credentials not available"):
+                require_rossum_credentials()
