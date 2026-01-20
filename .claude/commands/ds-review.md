@@ -27,6 +27,18 @@
 | Tests | If test files changed, ask whether to run `pytest` |
 | Summary | Generate short MR description of what was done |
 
+## Output
+
+Provide MR-ready summary:
+
+```
+## Summary
+- <1-2 bullets describing what was reviewed/changed>
+
+## Issues Found
+- <Critical issues addressed, or "None">
+```
+
 ## Constraints
 
 - Ask before running tests (use `AskUserQuestion`)

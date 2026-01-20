@@ -39,6 +39,18 @@
 - Every criticism must include how to fix the mess
 - If something is actually good, say so (don't be a complete asshole)
 
+## Output
+
+End with verdict:
+
+```
+## Verdict
+
+**Rating**: <"Ship it", "Fix these things first", or "Burn it and start over">
+
+<1-2 sentence summary of whether this belongs in the codebase>
+```
+
 ## Constraints
 
 - No automatic commits
