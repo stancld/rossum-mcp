@@ -26,6 +26,7 @@ from rossum_agent.tools import (
     set_mcp_connection,
     set_output_dir,
     set_progress_callback,
+    set_rossum_credentials,
     set_text_callback,
 )
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
@@ -198,6 +199,7 @@ class AgentService:
         self._output_dir = create_session_output_dir()
         set_session_output_dir(self._output_dir)
         set_output_dir(self._output_dir)
+        set_rossum_credentials(rossum_api_base_url, rossum_api_token)
         logger.info(f"Created session output directory: {self._output_dir}")
 
         if documents:
@@ -274,6 +276,7 @@ class AgentService:
             set_progress_callback(None)
             set_text_callback(None)
             set_output_dir(None)
+            set_rossum_credentials(None, None)
             self._sub_agent_queue = None
 
     def _save_documents_to_output_dir(self, documents: list[DocumentContent]) -> None:

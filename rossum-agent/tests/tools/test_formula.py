@@ -172,7 +172,9 @@ class TestSuggestFormulaField:
         assert parsed["status"] == "no_suggestions"
 
     @patch.dict("os.environ", {}, clear=True)
-    def test_missing_base_url_credential(self) -> None:
+    @patch("rossum_agent.tools.core._rossum_credentials")
+    def test_missing_credentials(self, mock_creds: MagicMock) -> None:
+        mock_creds.get.return_value = None
         result = suggest_formula_field(
             label="Test",
             hint="test",
@@ -182,20 +184,7 @@ class TestSuggestFormulaField:
 
         parsed = json.loads(result)
         assert parsed["status"] == "error"
-        assert "ROSSUM_API_BASE_URL" in parsed["error"]
-
-    @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1"}, clear=True)
-    def test_missing_token_credential(self) -> None:
-        result = suggest_formula_field(
-            label="Test",
-            hint="test",
-            schema_id=123456,
-            section_id="basic_info",
-        )
-
-        parsed = json.loads(result)
-        assert parsed["status"] == "error"
-        assert "ROSSUM_API_TOKEN" in parsed["error"]
+        assert "credentials not available" in parsed["error"]
 
 
 class TestFindFieldInSchemaEdgeCases:
