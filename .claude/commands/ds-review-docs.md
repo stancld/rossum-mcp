@@ -16,6 +16,7 @@
 | rossum-mcp | `rossum-mcp/README.md`, `rossum-mcp/CHANGELOG.md` |
 | rossum-agent | `rossum-agent/README.md`, `rossum-agent/CHANGELOG.md` |
 | rossum-deploy | `rossum-deploy/README.md`, `rossum-deploy/CHANGELOG.md` |
+| rossum-agent-client | `rossum-agent-client/README.md`, `rossum-agent-client/CHANGELOG.md` |
 | Shared docs | `docs/source/*.rst`, `README.md`, `CHANGELOG.md` |
 | Dev guidelines | `CLAUDE.md`, `AGENTS.md` |
 
