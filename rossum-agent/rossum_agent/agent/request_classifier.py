@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from rossum_agent.bedrock_client import get_small_model_id
+
 if TYPE_CHECKING:
     from anthropic import AnthropicBedrock
 
@@ -45,7 +47,6 @@ Respond with exactly one word: IN_SCOPE or OUT_OF_SCOPE
 
 User request: {message}"""
 
-CLASSIFIER_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 CLASSIFIER_MAX_TOKENS = 10
 
 
@@ -100,7 +101,7 @@ def generate_rejection_response(client: AnthropicBedrock, message: str) -> Rejec
     prompt = REJECTION_PROMPT.format(message=message)
     try:
         response = client.messages.create(
-            model=CLASSIFIER_MODEL_ID, max_tokens=REJECTION_MAX_TOKENS, messages=[{"role": "user", "content": prompt}]
+            model=get_small_model_id(), max_tokens=REJECTION_MAX_TOKENS, messages=[{"role": "user", "content": prompt}]
         )
         text = response.content[0].text.strip() if response.content else _fallback_response()
         return RejectionResult(
@@ -129,7 +130,9 @@ def classify_request(client: AnthropicBedrock, message: str) -> ClassificationRe
 
     try:
         response = client.messages.create(
-            model=CLASSIFIER_MODEL_ID, max_tokens=CLASSIFIER_MAX_TOKENS, messages=[{"role": "user", "content": prompt}]
+            model=get_small_model_id(),
+            max_tokens=CLASSIFIER_MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}],
         )
 
         raw_response = response.content[0].text.strip().upper() if response.content else ""
