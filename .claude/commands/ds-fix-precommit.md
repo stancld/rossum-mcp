@@ -1,12 +1,12 @@
 # Fix Pre-commit Issues
 
-**Goal**: All files pass `pre-commit run -a` with no remaining issues.
+**Goal**: All files pass `pre-commit run --all-files` with no remaining issues.
 
 ## Approach
 
 | Step | Action |
 |------|--------|
-| Run | `pre-commit run -a` |
+| Run | `pre-commit run --all-files` |
 | Auto-fix | `ruff check --fix` then `ruff format` on failing files |
 | Iterate | Re-run pre-commit until clean |
 

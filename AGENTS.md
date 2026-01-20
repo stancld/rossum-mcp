@@ -74,8 +74,8 @@ When adding/modifying tools, update:
 
 | Tool Type | Files to Update |
 |-----------|-----------------|
-| MCP tools | `rossum_mcp/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
-| Agent tools | `rossum_agent/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
+| MCP tools | `rossum-mcp/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
+| Agent tools | `rossum-agent/README.md`, `docs/source/index.rst`, `docs/source/usage.rst` |
 
 Include: tool name, description, parameters with types, return format with JSON examples.
 
