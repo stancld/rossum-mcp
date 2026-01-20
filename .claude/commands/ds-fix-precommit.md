@@ -10,7 +10,19 @@
 | Auto-fix | `ruff check --fix` then `ruff format` on failing files |
 | Iterate | Re-run pre-commit until clean |
 
+## Output
+
+Report summary as:
+
+```
+## Pre-commit Fixed
+
+- <N> files reformatted by ruff format
+- <N> issues auto-fixed by ruff check
+- All checks passing
+```
+
 ## Constraints
 
 - No interactive commands
-- Report summary of fixes applied
+- Maximum 3 iterations before reporting remaining issues

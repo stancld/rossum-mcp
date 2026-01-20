@@ -18,3 +18,8 @@ Append entry to `.agents/daily-suggestion-log.md`:
 ```
 
 Create file if missing. If rejected, briefly note what to avoid in future.
+
+## Constraints
+
+- Append only, never modify existing entries
+- Use ISO date format (YYYY-MM-DD)
