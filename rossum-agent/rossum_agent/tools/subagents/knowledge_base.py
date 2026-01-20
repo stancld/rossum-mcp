@@ -5,10 +5,13 @@ Provides tools for searching and analyzing the Rossum Knowledge Base.
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import json
 import logging
+from typing import TYPE_CHECKING
 
-import requests
+import httpx
 from anthropic import beta_tool
 from ddgs import DDGS
 from ddgs.exceptions import DDGSException
@@ -22,6 +25,9 @@ from rossum_agent.tools.core import (
     report_text,
     report_token_usage,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +69,17 @@ _JINA_READER_PREFIX = "https://r.jina.ai/"
 class WebSearchError(Exception):
     """Raised when web search fails."""
 
-    pass
+
+def _run_async[T](coro: Coroutine[None, None, T]) -> T:
+    """Run a coroutine, handling both sync and async caller contexts."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    # In async context: run in new thread with its own event loop
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, coro).result()  # type: ignore[return-value] - Future.result() returns Any
 
 
 def _call_opus_for_web_search_analysis(
@@ -153,7 +169,7 @@ When the topic involves document splitting, beware of the bug in knowledge base,
         return f"Error analyzing search results: {e}\n\nRaw results:\n{search_results}", 0, 0
 
 
-def _fetch_webpage_content(url: str) -> str:
+async def _fetch_webpage_content(client: httpx.AsyncClient, url: str) -> str:
     """Fetch and extract webpage content using Jina Reader for JS-rendered pages.
 
     Uses Jina Reader API to render JavaScript content from SPAs like the Rossum knowledge base.
@@ -163,16 +179,16 @@ def _fetch_webpage_content(url: str) -> str:
     """
     jina_url = f"{_JINA_READER_PREFIX}{url}"
     try:
-        response = requests.get(jina_url, timeout=_WEBPAGE_FETCH_TIMEOUT)
+        response = await client.get(jina_url, timeout=_WEBPAGE_FETCH_TIMEOUT)
         response.raise_for_status()
         content = response.text
         return content[:50000]
-    except requests.RequestException as e:
+    except httpx.HTTPError as e:
         logger.warning(f"Failed to fetch webpage {url} via Jina Reader: {e}")
         return f"[Failed to fetch content: {e}]"
 
 
-def _search_knowledge_base(query: str) -> list[dict[str, str]]:
+async def _search_knowledge_base(query: str) -> list[dict[str, str]]:
     """Search Rossum Knowledge Base using DDGS metasearch library.
 
     Args:
@@ -200,18 +216,27 @@ def _search_knowledge_base(query: str) -> list[dict[str, str]]:
 
     filtered_results = [r for r in raw_results if _KNOWLEDGE_BASE_DOMAIN in r.get("href", "")][:2]
 
+    async with httpx.AsyncClient() as client:
+        fetch_tasks = []
+        for r in filtered_results:
+            url = r.get("href", "")
+            logger.info(f"Fetching full content from: {url}")
+            fetch_tasks.append(_fetch_webpage_content(client, url))
+
+        contents = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+
     results = []
-    for r in filtered_results:
-        url = r.get("href", "")
-        logger.info(f"Fetching full content from: {url}")
-        full_content = _fetch_webpage_content(url)
-        results.append({"title": r.get("title", ""), "url": url, "content": full_content})
+    for r, content in zip(filtered_results, contents):
+        if isinstance(content, Exception):
+            logger.warning(f"Failed to fetch {r.get('href', '')}: {content}")
+            content = f"[Failed to fetch content: {content}]"
+        results.append({"title": r.get("title", ""), "url": r.get("href", ""), "content": content})
 
     logger.info(f"Found {len(results)} results for query: {query}")
     return results
 
 
-def _search_and_analyze_knowledge_base(query: str, user_query: str | None = None) -> str:
+async def _search_and_analyze_knowledge_base(query: str, user_query: str | None = None) -> str:
     """Search Rossum Knowledge Base and analyze results with Opus.
 
     Args:
@@ -224,7 +249,7 @@ def _search_and_analyze_knowledge_base(query: str, user_query: str | None = None
     Raises:
         WebSearchError: If search fails completely.
     """
-    results = _search_knowledge_base(query)
+    results = await _search_knowledge_base(query)
 
     if not results:
         logger.warning(f"No results found for query: {query}")
@@ -281,4 +306,4 @@ def search_knowledge_base(query: str, user_query: str | None = None) -> str:
     """
     if not query:
         return json.dumps({"status": "error", "message": "Query is required", "input_tokens": 0, "output_tokens": 0})
-    return _search_and_analyze_knowledge_base(query, user_query=user_query)
+    return _run_async(_search_and_analyze_knowledge_base(query, user_query=user_query))

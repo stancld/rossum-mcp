@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from ddgs.exceptions import DDGSException
-from requests import RequestException
 from rossum_agent.bedrock_client import OPUS_MODEL_ID
 from rossum_agent.tools.subagents.knowledge_base import (
     _KNOWLEDGE_BASE_DOMAIN,
@@ -15,6 +15,7 @@ from rossum_agent.tools.subagents.knowledge_base import (
     _WEBPAGE_FETCH_TIMEOUT,
     WebSearchError,
     _fetch_webpage_content,
+    _run_async,
     _search_and_analyze_knowledge_base,
     _search_knowledge_base,
     search_knowledge_base,
@@ -43,52 +44,83 @@ class TestConstants:
         assert _WEBPAGE_FETCH_TIMEOUT == 30
 
 
+class TestRunAsync:
+    """Test _run_async helper function."""
+
+    def test_runs_coroutine_from_sync_context(self):
+        """Test that _run_async works when called from sync context."""
+
+        async def simple_coro():
+            return "success"
+
+        result = _run_async(simple_coro())
+        assert result == "success"
+
+    @pytest.mark.asyncio
+    async def test_runs_coroutine_from_async_context(self):
+        """Test that _run_async works when called from within an async context."""
+
+        async def simple_coro():
+            return "success from nested"
+
+        # This would fail with plain asyncio.run() - "cannot be called from a running event loop"
+        result = _run_async(simple_coro())
+        assert result == "success from nested"
+
+
 class TestFetchWebpageContent:
     """Test _fetch_webpage_content function."""
 
-    def test_successful_fetch(self):
+    @pytest.mark.asyncio
+    async def test_successful_fetch(self):
         """Test successful webpage fetch via Jina Reader."""
         mock_response = MagicMock()
         mock_response.text = "# Sample Markdown Content\n\nThis is the page content."
         mock_response.raise_for_status = MagicMock()
 
-        with patch("rossum_agent.tools.subagents.knowledge_base.requests.get", return_value=mock_response) as mock_get:
-            result = _fetch_webpage_content("https://knowledge-base.rossum.ai/docs/test")
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = mock_response
 
-            assert result == "# Sample Markdown Content\n\nThis is the page content."
-            mock_get.assert_called_once_with(
-                "https://r.jina.ai/https://knowledge-base.rossum.ai/docs/test",
-                timeout=30,
-            )
+        result = await _fetch_webpage_content(mock_client, "https://knowledge-base.rossum.ai/docs/test")
 
-    def test_fetch_truncates_long_content(self):
+        assert result == "# Sample Markdown Content\n\nThis is the page content."
+        mock_client.get.assert_called_once_with(
+            "https://r.jina.ai/https://knowledge-base.rossum.ai/docs/test",
+            timeout=30,
+        )
+
+    @pytest.mark.asyncio
+    async def test_fetch_truncates_long_content(self):
         """Test that content longer than 50000 chars is truncated."""
         long_content = "x" * 60000
         mock_response = MagicMock()
         mock_response.text = long_content
         mock_response.raise_for_status = MagicMock()
 
-        with patch("rossum_agent.tools.subagents.knowledge_base.requests.get", return_value=mock_response):
-            result = _fetch_webpage_content("https://example.com")
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.return_value = mock_response
 
-            assert len(result) == 50000
+        result = await _fetch_webpage_content(mock_client, "https://example.com")
 
-    def test_failed_fetch_returns_error_message(self):
+        assert len(result) == 50000
+
+    @pytest.mark.asyncio
+    async def test_failed_fetch_returns_error_message(self):
         """Test that failed fetch returns error message."""
-        with patch(
-            "rossum_agent.tools.subagents.knowledge_base.requests.get",
-            side_effect=RequestException("Connection timed out"),
-        ):
-            result = _fetch_webpage_content("https://example.com/failing")
+        mock_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_client.get.side_effect = httpx.HTTPError("Connection timed out")
 
-            assert "[Failed to fetch content:" in result
-            assert "Connection timed out" in result
+        result = await _fetch_webpage_content(mock_client, "https://example.com/failing")
+
+        assert "[Failed to fetch content:" in result
+        assert "Connection timed out" in result
 
 
 class TestSearchKnowledgeBase:
     """Test _search_knowledge_base function."""
 
-    def test_reports_searching_progress(self):
+    @pytest.mark.asyncio
+    async def test_reports_searching_progress(self):
         """Test that searching status is reported before search starts."""
         mock_ddgs_instance = MagicMock()
         mock_ddgs_instance.text.return_value = []
@@ -104,13 +136,14 @@ class TestSearchKnowledgeBase:
             patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
             patch("rossum_agent.tools.subagents.knowledge_base.report_progress", side_effect=capture_progress),
         ):
-            _search_knowledge_base("test query")
+            await _search_knowledge_base("test query")
 
             assert len(progress_calls) == 1
             assert progress_calls[0].tool_name == "search_knowledge_base"
             assert progress_calls[0].status == "searching"
 
-    def test_no_results_found(self):
+    @pytest.mark.asyncio
+    async def test_no_results_found(self):
         """Test search with no results found."""
         mock_ddgs_instance = MagicMock()
         mock_ddgs_instance.text.return_value = []
@@ -118,11 +151,12 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
         with patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance):
-            result = _search_knowledge_base("nonexistent topic")
+            result = await _search_knowledge_base("nonexistent topic")
 
             assert result == []
 
-    def test_results_found(self):
+    @pytest.mark.asyncio
+    async def test_results_found(self):
         """Test search with results found."""
         mock_ddgs_instance = MagicMock()
         mock_ddgs_instance.text.return_value = [
@@ -132,14 +166,17 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
+        async def mock_fetch(client, url):
+            return "Page content here"
+
         with (
             patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
             patch(
                 "rossum_agent.tools.subagents.knowledge_base._fetch_webpage_content",
-                return_value="Page content here",
+                side_effect=mock_fetch,
             ),
         ):
-            result = _search_knowledge_base("document splitting")
+            result = await _search_knowledge_base("document splitting")
 
             assert len(result) == 1
             assert result[0]["title"] == "Document Splitting"
@@ -156,7 +193,8 @@ class TestSearchKnowledgeBase:
             with pytest.raises(WebSearchError, match="Rate limit exceeded"):
                 search_knowledge_base("test query")
 
-    def test_filters_only_knowledge_base_domain_results(self):
+    @pytest.mark.asyncio
+    async def test_filters_only_knowledge_base_domain_results(self):
         """Test that only results from knowledge-base.rossum.ai are included."""
         mock_ddgs_instance = MagicMock()
         mock_ddgs_instance.text.return_value = [
@@ -168,17 +206,60 @@ class TestSearchKnowledgeBase:
         mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
         mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
 
+        fetch_call_count = 0
+
+        async def mock_fetch(client, url):
+            nonlocal fetch_call_count
+            fetch_call_count += 1
+            return "Content"
+
         with (
             patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
             patch(
                 "rossum_agent.tools.subagents.knowledge_base._fetch_webpage_content",
-                return_value="Content",
-            ) as mock_fetch,
+                side_effect=mock_fetch,
+            ),
         ):
-            result = _search_knowledge_base("test")
+            result = await _search_knowledge_base("test")
 
             assert len(result) == 2
-            assert mock_fetch.call_count == 2
+            assert fetch_call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_handles_partial_fetch_failures(self):
+        """Test that partial fetch failures don't break the entire search."""
+        mock_ddgs_instance = MagicMock()
+        mock_ddgs_instance.text.return_value = [
+            {"title": "KB Page 1", "href": "https://knowledge-base.rossum.ai/docs/page1"},
+            {"title": "KB Page 2", "href": "https://knowledge-base.rossum.ai/docs/page2"},
+        ]
+        mock_ddgs_instance.__enter__ = MagicMock(return_value=mock_ddgs_instance)
+        mock_ddgs_instance.__exit__ = MagicMock(return_value=None)
+
+        call_count = 0
+
+        async def mock_fetch(client, url):
+            nonlocal call_count
+            call_count += 1
+            if "page1" in url:
+                raise RuntimeError("Simulated network failure")
+            return "Content for page 2"
+
+        with (
+            patch("rossum_agent.tools.subagents.knowledge_base.DDGS", return_value=mock_ddgs_instance),
+            patch(
+                "rossum_agent.tools.subagents.knowledge_base._fetch_webpage_content",
+                side_effect=mock_fetch,
+            ),
+        ):
+            result = await _search_knowledge_base("test")
+
+            # Both fetches were attempted
+            assert call_count == 2
+            # Both results returned, but first one has error message
+            assert len(result) == 2
+            assert "[Failed to fetch content:" in result[0]["content"]
+            assert result[1]["content"] == "Content for page 2"
 
 
 class TestCallOpusForWebSearchAnalysis:
@@ -213,28 +294,45 @@ class TestCallOpusForWebSearchAnalysis:
 class TestSearchAndAnalyzeKnowledgeBase:
     """Test _search_and_analyze_knowledge_base function."""
 
-    def test_no_results_found(self):
+    @pytest.mark.asyncio
+    async def test_no_results_found(self):
         """Test search with no results found."""
-        with patch("rossum_agent.tools.subagents.knowledge_base._search_knowledge_base", return_value=[]):
-            result = _search_and_analyze_knowledge_base("nonexistent topic")
+
+        async def mock_search(query):
+            return []
+
+        with patch(
+            "rossum_agent.tools.subagents.knowledge_base._search_knowledge_base",
+            side_effect=mock_search,
+        ):
+            result = await _search_and_analyze_knowledge_base("nonexistent topic")
 
             parsed = json.loads(result)
             assert parsed["status"] == "no_results"
             assert parsed["query"] == "nonexistent topic"
             assert "No results found" in parsed["message"]
 
-    def test_results_found_with_opus_analysis(self):
+    @pytest.mark.asyncio
+    async def test_results_found_with_opus_analysis(self):
         """Test search with results found and Opus analysis."""
         mock_results = [{"title": "Hook Config", "url": "https://kb.rossum.ai/hooks", "content": "Hook docs"}]
 
+        async def mock_search(query):
+            return mock_results
+
         with (
-            patch("rossum_agent.tools.subagents.knowledge_base._search_knowledge_base", return_value=mock_results),
+            patch(
+                "rossum_agent.tools.subagents.knowledge_base._search_knowledge_base",
+                side_effect=mock_search,
+            ),
             patch(
                 "rossum_agent.tools.subagents.knowledge_base._call_opus_for_web_search_analysis",
                 return_value=("Analyzed hook configuration info", 100, 50),
             ) as mock_opus,
         ):
-            result = _search_and_analyze_knowledge_base("hook configuration", user_query="How to configure hooks?")
+            result = await _search_and_analyze_knowledge_base(
+                "hook configuration", user_query="How to configure hooks?"
+            )
 
             parsed = json.loads(result)
             assert parsed["status"] == "success"

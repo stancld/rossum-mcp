@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -1289,6 +1290,173 @@ class TestExecuteTool:
         mock_execute.assert_called_once()
         assert result.content == "Deploy Success"
         assert result.is_error is False
+
+
+class TestExecuteToolsInParallel:
+    """Test RossumAgent._execute_tools_with_progress parallel execution."""
+
+    def _create_agent(self) -> RossumAgent:
+        """Helper to create an agent with mocked dependencies."""
+        mock_client = MagicMock()
+        mock_mcp_connection = AsyncMock()
+        mock_mcp_connection.get_tools.return_value = []
+        config = AgentConfig()
+        return RossumAgent(
+            client=mock_client,
+            mcp_connection=mock_mcp_connection,
+            system_prompt="Test prompt",
+            config=config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_executes_multiple_tools_in_parallel(self):
+        """Test that multiple tools are executed concurrently."""
+        agent = self._create_agent()
+
+        execution_times: list[float] = []
+
+        async def slow_tool(*args, **kwargs):
+            execution_times.append(time.monotonic())
+            await asyncio.sleep(0.1)
+            return "result"
+
+        agent.mcp_connection.call_tool = slow_tool
+
+        tool_calls = [
+            ToolCall(id="tc_1", name="tool_a", arguments={}),
+            ToolCall(id="tc_2", name="tool_b", arguments={}),
+            ToolCall(id="tc_3", name="tool_c", arguments={}),
+        ]
+
+        step = AgentStep(step_number=1, tool_calls=tool_calls)
+
+        steps = []
+        async for s in agent._execute_tools_with_progress(
+            step_num=1,
+            thinking_text="",
+            tool_calls=tool_calls,
+            step=step,
+            input_tokens=100,
+            output_tokens=50,
+        ):
+            steps.append(s)
+
+        # All tools should have started at nearly the same time (parallel execution)
+        assert len(execution_times) == 3
+        time_spread = max(execution_times) - min(execution_times)
+        # If parallel, all should start within 50ms of each other
+        assert time_spread < 0.05
+
+    @pytest.mark.asyncio
+    async def test_preserves_tool_result_order(self):
+        """Test that tool results are returned in the same order as tool calls."""
+        agent = self._create_agent()
+
+        async def varying_delay_tool(name, args):
+            # Make each tool take different time to complete
+            delays = {"fast_tool": 0.01, "medium_tool": 0.05, "slow_tool": 0.1}
+            await asyncio.sleep(delays.get(name, 0.01))
+            return f"result_{name}"
+
+        agent.mcp_connection.call_tool = varying_delay_tool
+
+        tool_calls = [
+            ToolCall(id="tc_1", name="slow_tool", arguments={}),
+            ToolCall(id="tc_2", name="fast_tool", arguments={}),
+            ToolCall(id="tc_3", name="medium_tool", arguments={}),
+        ]
+
+        step = AgentStep(step_number=1, tool_calls=tool_calls)
+
+        final_step = None
+        async for s in agent._execute_tools_with_progress(
+            step_num=1,
+            thinking_text="",
+            tool_calls=tool_calls,
+            step=step,
+            input_tokens=100,
+            output_tokens=50,
+        ):
+            final_step = s
+
+        # Results should be in same order as tool_calls, regardless of completion order
+        assert final_step is not None
+        assert len(final_step.tool_results) == 3
+        assert final_step.tool_results[0].tool_call_id == "tc_1"
+        assert final_step.tool_results[1].tool_call_id == "tc_2"
+        assert final_step.tool_results[2].tool_call_id == "tc_3"
+
+    @pytest.mark.asyncio
+    async def test_handles_tool_error_in_parallel_execution(self):
+        """Test that errors in one tool don't affect other parallel tools."""
+        agent = self._create_agent()
+
+        async def mixed_tool(name, args):
+            if name == "failing_tool":
+                raise Exception("Tool failed")
+            return f"success_{name}"
+
+        agent.mcp_connection.call_tool = mixed_tool
+
+        tool_calls = [
+            ToolCall(id="tc_1", name="good_tool", arguments={}),
+            ToolCall(id="tc_2", name="failing_tool", arguments={}),
+            ToolCall(id="tc_3", name="another_good_tool", arguments={}),
+        ]
+
+        step = AgentStep(step_number=1, tool_calls=tool_calls)
+
+        final_step = None
+        async for s in agent._execute_tools_with_progress(
+            step_num=1,
+            thinking_text="",
+            tool_calls=tool_calls,
+            step=step,
+            input_tokens=100,
+            output_tokens=50,
+        ):
+            final_step = s
+
+        assert final_step is not None
+        assert len(final_step.tool_results) == 3
+        # First tool succeeded
+        assert final_step.tool_results[0].is_error is False
+        # Second tool failed
+        assert final_step.tool_results[1].is_error is True
+        assert "Tool failed" in final_step.tool_results[1].content
+        # Third tool succeeded
+        assert final_step.tool_results[2].is_error is False
+
+    @pytest.mark.asyncio
+    async def test_yields_progress_steps_during_parallel_execution(self):
+        """Test that progress updates are yielded during parallel tool execution."""
+        agent = self._create_agent()
+
+        tool_calls = [
+            ToolCall(id="tc_1", name="tool_a", arguments={}),
+            ToolCall(id="tc_2", name="tool_b", arguments={}),
+        ]
+
+        step = AgentStep(step_number=1, tool_calls=tool_calls)
+
+        agent.mcp_connection.call_tool.return_value = "result"
+
+        steps = []
+        async for s in agent._execute_tools_with_progress(
+            step_num=1,
+            thinking_text="Test thinking",
+            tool_calls=tool_calls,
+            step=step,
+            input_tokens=100,
+            output_tokens=50,
+        ):
+            steps.append(s)
+
+        # Should have at least the initial progress step and final step
+        assert len(steps) >= 2
+        # First step should be progress indicator
+        assert steps[0].is_streaming is True
+        assert steps[0].tool_progress == (0, 2)
 
 
 class TestSerializeToolResult:
