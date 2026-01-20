@@ -1,6 +1,6 @@
 # Development Guidelines
 
-**Goal**: Maintain code quality, consistency, and documentation across rossum-mcp and rossum-agent.
+**Goal**: Maintain code quality, consistency, and documentation across rossum-agents packages (rossum-mcp, rossum-agent, rossum-deploy, rossum-agent-client).
 
 ## Critical Constraints
 
