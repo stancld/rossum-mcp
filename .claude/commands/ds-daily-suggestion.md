@@ -1,6 +1,6 @@
 # Daily Suggestion
 
-**Goal**: Generate one small, reviewable improvement (3-5 min human review) and open MR.
+**Goal**: Generate 1-5 small, related improvements (3-5 min total human review) and open MR.
 
 ## Improvement Categories
 
@@ -15,7 +15,7 @@
 
 | Constraint | Rationale |
 |------------|-----------|
-| Single focused change | Coffee-time reviewable |
+| 1-5 related changes | Justify reviewer's context-switch; single trivial changes waste time |
 | No feature additions | Features need planning |
 | No breaking changes | Safe to merge quickly |
 | Self-contained | No follow-up work required |
@@ -27,7 +27,7 @@
 | Sync | `git checkout master && git pull` |
 | Branch | `git checkout -b cc-daily-suggestion-YYYY-MM-DD` |
 | Analyze | Check recent commits (last 2 weeks) for patterns worth capturing in commands |
-| Find | Identify one improvement from categories above |
+| Find | Identify 1-5 related improvements from categories above |
 | Implement | Make the change |
 | Verify | Run `pre-commit run --all-files` on changed files |
 | Commit | Commit with descriptive message |
@@ -63,7 +63,7 @@ Return MR URL when complete.
 
 ## Constraints
 
-- One improvement per run
+- 1-5 improvements per run
 - Skip if no meaningful improvements found (report "Nothing today")
 - Prefer self-improvement of `.claude/commands/` when patterns emerge from recent commits
 
