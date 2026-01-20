@@ -69,4 +69,4 @@ Return MR URL when complete.
 
 ## Feedback Integration
 
-When user runs `/ds-daily-suggestion-feedback`, outcomes are logged to `.agents/daily-suggestion-log.md`. Before suggesting, review this log for rejection patterns to avoid.
+When user runs `/ds-daily-suggestion-feedback`, outcomes are logged to `.claude/daily-suggestion-log.md`. Before suggesting, review this log for rejection patterns to avoid.

@@ -8,7 +8,7 @@
 
 ## Action
 
-Append entry to `.agents/daily-suggestion-log.md`:
+Append entry to `.claude/daily-suggestion-log.md`:
 
 ```markdown
 ## YYYY-MM-DD
