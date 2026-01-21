@@ -360,16 +360,15 @@ class Workspace:
 
         return value
 
-    def _pull_workspaces(self, client: SyncRossumAPIClient, org_id: int, result: PullResult) -> PullResult:
+    def _pull_workspaces(self, client: SyncRossumAPIClient, org_id: int, result: PullResult) -> None:
         for ws in client.list_workspaces():
             if ws.organization and str(org_id) in ws.organization:
                 data = dataclasses.asdict(ws)
                 modified_at = getattr(ws, "modified_at", None)
                 self._save_object(ObjectType.WORKSPACE, ws.id, ws.name, data, modified_at)
                 result.pulled.append((ObjectType.WORKSPACE, ws.id, ws.name))
-        return result
 
-    def _pull_queues(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_queues(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         ws_ids = self._get_workspace_ids()
         for queue in client.list_queues():
             if queue.workspace:
@@ -384,9 +383,8 @@ class Workspace:
                         None,
                     )
                     result.pulled.append((ObjectType.QUEUE, queue.id, queue.name))
-        return result
 
-    def _pull_inboxes(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_inboxes(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         queue_urls = self._get_queue_urls()
         for inbox in client.request_paginated("inboxes"):
             inbox_queues = set(inbox.get("queues", []))
@@ -397,9 +395,8 @@ class Workspace:
                     modified_at = datetime.fromisoformat(inbox["modified_at"].replace("Z", "+00:00"))
                 self._save_object(ObjectType.INBOX, inbox["id"], name, inbox, modified_at)
                 result.pulled.append((ObjectType.INBOX, inbox["id"], name))
-        return result
 
-    def _pull_schemas(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_schemas(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         schema_ids = self._get_schema_ids_from_queues()
         for schema_id in schema_ids:
             schema = client.retrieve_schema(schema_id)
@@ -407,7 +404,6 @@ class Workspace:
             modified_at = getattr(schema, "modified_at", None)
             self._save_object(ObjectType.SCHEMA, schema.id, schema.name, data, modified_at)
             result.pulled.append((ObjectType.SCHEMA, schema.id, schema.name))
-        return result
 
     def _pull_queue_linked_objects[T](
         self,
@@ -416,7 +412,7 @@ class Workspace:
         queue_urls: set[str],
         result: PullResult,
         get_queues: Callable[[T], set[str]],
-    ) -> PullResult:
+    ) -> None:
         """Pull objects linked to queues via a queues field."""
         for item in items:
             if get_queues(item) & queue_urls:
@@ -424,15 +420,14 @@ class Workspace:
                 modified_at = getattr(item, "modified_at", None)
                 self._save_object(obj_type, item.id, item.name, data, modified_at)  # type: ignore[attr-defined]
                 result.pulled.append((obj_type, item.id, item.name))  # type: ignore[attr-defined]
-        return result
 
-    def _pull_hooks(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
-        return self._pull_queue_linked_objects(
+    def _pull_hooks(self, client: SyncRossumAPIClient, result: PullResult) -> None:
+        self._pull_queue_linked_objects(
             list(client.list_hooks()), ObjectType.HOOK, self._get_queue_urls(), result, lambda h: set(h.queues or [])
         )
 
-    def _pull_connectors(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
-        return self._pull_queue_linked_objects(
+    def _pull_connectors(self, client: SyncRossumAPIClient, result: PullResult) -> None:
+        self._pull_queue_linked_objects(
             list(client.list_connectors()),
             ObjectType.CONNECTOR,
             self._get_queue_urls(),
@@ -462,7 +457,7 @@ class Workspace:
                     engine_urls.add(engine_url)
         return engine_urls
 
-    def _pull_engines(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_engines(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         queue_urls = self._get_queue_urls()
         engine_urls_to_pull = self._collect_engine_urls_from_queues(client, queue_urls)
 
@@ -473,9 +468,8 @@ class Workspace:
             modified_at = getattr(engine, "modified_at", None)
             self._save_object(ObjectType.ENGINE, engine.id, engine.name, data, modified_at)
             result.pulled.append((ObjectType.ENGINE, engine.id, engine.name))
-        return result
 
-    def _pull_email_templates(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_email_templates(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         queue_urls = self._get_queue_urls()
         for template in client.list_email_templates():
             # EmailTemplate has singular 'queue' field, not 'queues'
@@ -487,9 +481,8 @@ class Workspace:
                 modified_at = getattr(template, "modified_at", None)
                 self._save_object(ObjectType.EMAIL_TEMPLATE, template.id, template.name, data, modified_at)
                 result.pulled.append((ObjectType.EMAIL_TEMPLATE, template.id, template.name))
-        return result
 
-    def _pull_rules(self, client: SyncRossumAPIClient, result: PullResult) -> PullResult:
+    def _pull_rules(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         """Pull rules linked to schemas of local queues."""
         schema_urls = self._get_schema_urls_from_queues()
         for rule in client.list_rules():
@@ -498,7 +491,6 @@ class Workspace:
                 modified_at = getattr(rule, "modified_at", None)
                 self._save_object(ObjectType.RULE, rule.id, rule.name, data, modified_at)
                 result.pulled.append((ObjectType.RULE, rule.id, rule.name))
-        return result
 
     def diff(self) -> DiffResult:
         """Compare local workspace with remote Rossum.
