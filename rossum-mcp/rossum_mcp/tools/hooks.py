@@ -56,15 +56,11 @@ async def _list_hooks(
     if active is not None:
         filters["active"] = active
 
-    if first_n is not None:
-        hooks_iter = client.list_hooks(**filters)
-        hooks_list: list[Hook] = []
-        n = 0
-        while n < first_n:
-            hooks_list.append(await anext(hooks_iter))
-            n += 1
-    else:
-        hooks_list = [hook async for hook in client.list_hooks(**filters)]
+    hooks_list: list[Hook] = []
+    async for hook in client.list_hooks(**filters):
+        hooks_list.append(hook)
+        if first_n is not None and len(hooks_list) >= first_n:
+            break
 
     return hooks_list
 
@@ -256,7 +252,7 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         return await _list_hooks(client, queue_id, active, first_n)
 
     @mcp.tool(
-        description="Create a new hook. If token_owner is provided, organization_group_admin users CANNOT be used (API will reject)."
+        description="Create a new hook. For function hooks: 'source' in config is auto-renamed to 'function', runtime defaults to 'python3.12', timeout_s is capped at 60s. If token_owner is provided, organization_group_admin users CANNOT be used."
     )
     async def create_hook(
         name: str,

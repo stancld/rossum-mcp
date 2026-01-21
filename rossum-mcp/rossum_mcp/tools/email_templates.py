@@ -38,15 +38,11 @@ async def _list_email_templates(
     if name is not None:
         filters["name"] = name
 
-    if first_n is not None:
-        templates_iter = client.list_email_templates(**filters)
-        templates_list: list[EmailTemplate] = []
-        n = 0
-        while n < first_n:
-            templates_list.append(await anext(templates_iter))
-            n += 1
-    else:
-        templates_list = [template async for template in client.list_email_templates(**filters)]
+    templates_list: list[EmailTemplate] = []
+    async for template in client.list_email_templates(**filters):
+        templates_list.append(template)
+        if first_n is not None and len(templates_list) >= first_n:
+            break
 
     return templates_list
 

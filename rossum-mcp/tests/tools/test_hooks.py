@@ -139,6 +139,41 @@ class TestListHooks:
 
         assert len(result) == 2
 
+    @pytest.mark.asyncio
+    async def test_list_hooks_with_first_n_greater_than_available(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test hooks listing when first_n exceeds available items (should not crash)."""
+        register_hook_tools(mock_mcp, mock_client)
+
+        mock_hook1 = create_mock_hook(id=1, name="Hook 1")
+
+        async def async_iter():
+            yield mock_hook1
+
+        mock_client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_hooks = mock_mcp._tools["list_hooks"]
+        result = await list_hooks(first_n=10)
+
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_with_first_n_empty_result(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test hooks listing when no hooks exist but first_n is specified."""
+        register_hook_tools(mock_mcp, mock_client)
+
+        async def async_iter():
+            return
+            yield
+
+        mock_client.list_hooks = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_hooks = mock_mcp._tools["list_hooks"]
+        result = await list_hooks(first_n=5)
+
+        assert len(result) == 0
+
 
 @pytest.mark.unit
 class TestCreateHook:

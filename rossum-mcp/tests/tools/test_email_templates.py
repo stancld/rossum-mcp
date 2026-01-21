@@ -179,6 +179,43 @@ class TestListEmailTemplates:
 
         assert len(result) == 2
 
+    @pytest.mark.asyncio
+    async def test_list_email_templates_with_first_n_greater_than_available(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test email templates listing when first_n exceeds available items (should not crash)."""
+        register_email_template_tools(mock_mcp, mock_client)
+
+        mock_template1 = create_mock_email_template(id=1, name="Template 1")
+
+        async def async_iter():
+            yield mock_template1
+
+        mock_client.list_email_templates = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_email_templates = mock_mcp._tools["list_email_templates"]
+        result = await list_email_templates(first_n=10)
+
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_list_email_templates_with_first_n_empty_result(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test email templates listing when no templates exist but first_n is specified."""
+        register_email_template_tools(mock_mcp, mock_client)
+
+        async def async_iter():
+            return
+            yield
+
+        mock_client.list_email_templates = Mock(side_effect=lambda **kwargs: async_iter())
+
+        list_email_templates = mock_mcp._tools["list_email_templates"]
+        result = await list_email_templates(first_n=5)
+
+        assert len(result) == 0
+
 
 @pytest.mark.unit
 class TestCreateEmailTemplate:
