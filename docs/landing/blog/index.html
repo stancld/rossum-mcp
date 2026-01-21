@@ -810,23 +810,25 @@
       <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
 
-      <p>A natural synergy emerged when we integrated with Rossum's existing <strong>Copilot API</strong>. Rossum already has specialized, production-hardened AI models in place&mdash;such as those designed to generate complex extraction formulas from natural language.</p>
+      <p>Rossum already has specialized, production-hardened AI models&mdash;including LLMs trained to generate complex extraction formulas from natural language descriptions. We initially considered teaching our agent to write these formulas directly. That was a mistake waiting to happen.</p>
 
-      <p>In the beginning, we thought about teaching the agent how to write these formulas. We quickly realized that was a mistake. Why reinvent the wheel when we could simply expose the existing Copilot as a tool callable by our agent? This created the following "Recursive AI" workflow:</p>
+      <p>Instead, we exposed Rossum's <strong>Formula Field Copilot</strong>&mdash;a specialized LLM fluent in Rossum's formula syntax&mdash;as a tool callable by our agent:</p>
 
       <ol style="margin: 1rem 0 1.5rem 1.5rem;">
-        <li><strong>The User</strong> asks for a specific business rule (e.g., "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding").</li>
-        <li><strong>The Agent</strong> recognizes the need for a formula and calls the <strong>Rossum Copilot API</strong>.</li>
-        <li><strong>The Copilot</strong> generates the specific extraction formula.</li>
-        <li><strong>The Agent</strong> validates that formula against the current schema and applies it via MCP tools.</li>
+        <li><strong>The User</strong> asks for a business rule in plain English: "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding."</li>
+        <li><strong>Opus</strong> interprets the intent and derives a structured <code>hint</code> for the Formula Field Copilot.</li>
+        <li><strong>The Formula Field Copilot</strong> generates the precise extraction formula in Rossum's syntax.</li>
+        <li><strong>Opus</strong> validates the formula against the current schema and applies it via MCP tools.</li>
       </ol>
+
+      <p>Two LLMs, each doing what it does best: Opus handles orchestration, intent parsing, and validation; the Formula Field Copilot handles domain-specific formula generation. Neither could do the other's job as well.</p>
 
       <figure class="content-image">
         <img src="../images/fabry_extension.png" alt="Mr. Fabry configuring duplicate detection through natural conversation" loading="lazy">
         <figcaption>The agent configuring duplicate detection through natural conversation</figcaption>
       </figure>
 
-      <p>This is "Agents all the way down." Claude acts as the sophisticated coordinator, orchestrating Rossum's domain-specific ML models to achieve a final result. It leverages the precision of specialized models with the reasoning of a general-purpose frontier model.</p>
+      <p>It's LLMs all the way down&mdash;and that's exactly the point. The frontier model reasons; the specialist executes.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Your agent shouldn't be a jack-of-all-trades; it should be a coordinator. If a production-ready AI capability already exists, orchestrate it&mdash;don't rebuild it.</div>
 
