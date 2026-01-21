@@ -56,15 +56,11 @@ async def _list_hooks(
     if active is not None:
         filters["active"] = active
 
-    if first_n is not None:
-        hooks_iter = client.list_hooks(**filters)
-        hooks_list: list[Hook] = []
-        n = 0
-        while n < first_n:
-            hooks_list.append(await anext(hooks_iter))
-            n += 1
-    else:
-        hooks_list = [hook async for hook in client.list_hooks(**filters)]
+    hooks_list: list[Hook] = []
+    async for hook in client.list_hooks(**filters):
+        hooks_list.append(hook)
+        if first_n is not None and len(hooks_list) >= first_n:
+            break
 
     return hooks_list
 
