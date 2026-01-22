@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
     from rossum_agent.agent import AgentStep
+    from rossum_agent.tools.core import SubAgentProgress
 
 
 class OutputRenderer(Protocol):
@@ -220,7 +221,7 @@ class ChatResponse:
         elif step.thinking:
             self.current_step_markdown = f"#### Step {step.step_number}\n\n🧠 **Thinking:**\n\n{step.thinking}\n"
 
-    def _format_sub_agent_progress(self, progress: Any) -> str:
+    def _format_sub_agent_progress(self, progress: SubAgentProgress) -> str:
         """Format sub-agent progress for display."""
         iteration = progress.iteration
         max_iterations = progress.max_iterations
