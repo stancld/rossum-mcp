@@ -177,12 +177,98 @@ class SubAgentTextEvent(BaseModel):
     is_final: bool = False
 
 
+class TokenUsageBySource(BaseModel):
+    """Token usage for a specific source (main agent or sub-agent)."""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+
+    @classmethod
+    def from_counts(cls, input_tokens: int, output_tokens: int) -> TokenUsageBySource:
+        """Create from input/output counts, computing total."""
+        return cls(input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=input_tokens + output_tokens)
+
+
+class SubAgentTokenUsageDetail(BaseModel):
+    """Token usage breakdown for sub-agents."""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    by_tool: dict[str, TokenUsageBySource]
+
+    @classmethod
+    def from_counts(
+        cls, input_tokens: int, output_tokens: int, by_tool: dict[str, tuple[int, int]]
+    ) -> SubAgentTokenUsageDetail:
+        """Create from input/output counts, computing total."""
+        return cls(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=input_tokens + output_tokens,
+            by_tool={name: TokenUsageBySource.from_counts(inp, out) for name, (inp, out) in by_tool.items()},
+        )
+
+
+class TokenUsageBreakdown(BaseModel):
+    """Token usage breakdown by agent vs sub-agents."""
+
+    total: TokenUsageBySource
+    main_agent: TokenUsageBySource
+    sub_agents: SubAgentTokenUsageDetail
+
+    @classmethod
+    def from_raw_counts(
+        cls,
+        total_input: int,
+        total_output: int,
+        main_input: int,
+        main_output: int,
+        sub_input: int,
+        sub_output: int,
+        sub_by_tool: dict[str, tuple[int, int]],
+    ) -> TokenUsageBreakdown:
+        """Create breakdown from raw token counts."""
+        return cls(
+            total=TokenUsageBySource.from_counts(total_input, total_output),
+            main_agent=TokenUsageBySource.from_counts(main_input, main_output),
+            sub_agents=SubAgentTokenUsageDetail.from_counts(sub_input, sub_output, sub_by_tool),
+        )
+
+    def format_summary_lines(self) -> list[str]:
+        """Format token usage as human-readable lines."""
+        lines = [
+            "",
+            "=" * 60,
+            "TOKEN USAGE SUMMARY",
+            "=" * 60,
+            f"{'Category':<25} {'Input':>12} {'Output':>12} {'Total':>12}",
+            "-" * 60,
+            f"{'Main Agent':<25} {self.main_agent.input_tokens:>12,} {self.main_agent.output_tokens:>12,} {self.main_agent.total_tokens:>12,}",
+            f"{'Sub-agents (total)':<25} {self.sub_agents.input_tokens:>12,} {self.sub_agents.output_tokens:>12,} {self.sub_agents.total_tokens:>12,}",
+        ]
+        for tool_name, usage in self.sub_agents.by_tool.items():
+            lines.append(
+                f"  └─ {tool_name:<21} {usage.input_tokens:>12,} {usage.output_tokens:>12,} {usage.total_tokens:>12,}"
+            )
+        lines.extend(
+            [
+                "-" * 60,
+                f"{'TOTAL':<25} {self.total.input_tokens:>12,} {self.total.output_tokens:>12,} {self.total.total_tokens:>12,}",
+                "=" * 60,
+            ]
+        )
+        return lines
+
+
 class StreamDoneEvent(BaseModel):
     """Final event emitted when streaming completes."""
 
     total_steps: int
     input_tokens: int
     output_tokens: int
+    token_usage_breakdown: TokenUsageBreakdown | None = None
 
 
 class FileCreatedEvent(BaseModel):

@@ -113,6 +113,59 @@ class SubAgentTextEvent(BaseModel):
     is_final: bool = False
 
 
+class TokenUsageBySource(BaseModel):
+    """Token usage for a specific source."""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+
+
+class SubAgentTokenUsageDetail(BaseModel):
+    """Token usage breakdown for sub-agents."""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    by_tool: dict[str, TokenUsageBySource]
+
+
+class TokenUsageBreakdown(BaseModel):
+    """Token usage breakdown by agent vs sub-agents."""
+
+    total: TokenUsageBySource
+    main_agent: TokenUsageBySource
+    sub_agents: SubAgentTokenUsageDetail
+
+    def format_summary_lines(self) -> list[str]:
+        """Format token usage as human-readable lines."""
+        main = self.main_agent
+        subs = self.sub_agents
+        total = self.total
+        lines = [
+            "",
+            "=" * 60,
+            "TOKEN USAGE SUMMARY",
+            "=" * 60,
+            f"{'Category':<25} {'Input':>12} {'Output':>12} {'Total':>12}",
+            "-" * 60,
+            f"{'Main Agent':<25} {main.input_tokens:>12,} {main.output_tokens:>12,} {main.total_tokens:>12,}",
+            f"{'Sub-agents (total)':<25} {subs.input_tokens:>12,} {subs.output_tokens:>12,} {subs.total_tokens:>12,}",
+        ]
+        for tool_name, usage in subs.by_tool.items():
+            lines.append(
+                f"  └─ {tool_name:<21} {usage.input_tokens:>12,} {usage.output_tokens:>12,} {usage.total_tokens:>12,}"
+            )
+        lines.extend(
+            [
+                "-" * 60,
+                f"{'TOTAL':<25} {total.input_tokens:>12,} {total.output_tokens:>12,} {total.total_tokens:>12,}",
+                "=" * 60,
+            ]
+        )
+        return lines
+
+
 class StreamDoneEvent(BaseModel):
     """Final event emitted when streaming completes."""
 
@@ -120,6 +173,7 @@ class StreamDoneEvent(BaseModel):
     total_steps: int
     input_tokens: int
     output_tokens: int
+    token_usage_breakdown: TokenUsageBreakdown | None = None
 
 
 class FileCreatedEvent(BaseModel):

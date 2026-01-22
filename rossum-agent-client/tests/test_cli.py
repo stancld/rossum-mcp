@@ -15,6 +15,7 @@ from rossum_agent_client.cli import (
     _handle_thinking,
     _handle_tool_result,
     _handle_tool_start,
+    _print_token_summary,
     _require,
     _resolve_config,
     _StreamState,
@@ -24,7 +25,13 @@ from rossum_agent_client.cli import (
     main,
     run_chat,
 )
-from rossum_agent_client.models import StepEvent
+from rossum_agent_client.models import (
+    StepEvent,
+    StreamDoneEvent,
+    SubAgentTokenUsageDetail,
+    TokenUsageBreakdown,
+    TokenUsageBySource,
+)
 
 
 class TestGetEnvOrArg:
@@ -601,3 +608,47 @@ class TestMain:
 
         captured = capsys.readouterr()
         assert "Let me analyze..." in captured.err
+
+
+class TestPrintTokenSummary:
+    def test_prints_simple_summary_when_no_breakdown(self, capsys: pytest.CaptureFixture[str]) -> None:
+        event = StreamDoneEvent(total_steps=5, input_tokens=100, output_tokens=50)
+        _print_token_summary(event)
+
+        captured = capsys.readouterr()
+        assert "(100 in, 50 out)" in captured.err
+
+    def test_prints_detailed_breakdown_when_available(self, capsys: pytest.CaptureFixture[str]) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=3000, output_tokens=1500, total_tokens=4500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(
+                input_tokens=2000,
+                output_tokens=1000,
+                total_tokens=3000,
+                by_tool={"debug_hook": TokenUsageBySource(input_tokens=2000, output_tokens=1000, total_tokens=3000)},
+            ),
+        )
+        event = StreamDoneEvent(total_steps=5, input_tokens=3000, output_tokens=1500, token_usage_breakdown=breakdown)
+        _print_token_summary(event)
+
+        captured = capsys.readouterr()
+        assert "TOKEN USAGE SUMMARY" in captured.err
+        assert "Main Agent" in captured.err
+        assert "Sub-agents (total)" in captured.err
+        assert "debug_hook" in captured.err
+        assert "TOTAL" in captured.err
+
+    def test_prints_breakdown_without_sub_agents(self, capsys: pytest.CaptureFixture[str]) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(input_tokens=0, output_tokens=0, total_tokens=0, by_tool={}),
+        )
+        event = StreamDoneEvent(total_steps=3, input_tokens=1000, output_tokens=500, token_usage_breakdown=breakdown)
+        _print_token_summary(event)
+
+        captured = capsys.readouterr()
+        assert "TOKEN USAGE SUMMARY" in captured.err
+        assert "Main Agent" in captured.err
+        assert "1,000" in captured.err

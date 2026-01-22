@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Added `TokenUsageBySource`, `SubAgentTokenUsageDetail`, and `TokenUsageBreakdown` models for token usage visibility in `StreamDoneEvent`
+
+### Changed
+- CLI now displays detailed token usage breakdown (main agent vs sub-agents) after each response
+
 ## [1.0.0] - 2026-01-19
 
 ### Added

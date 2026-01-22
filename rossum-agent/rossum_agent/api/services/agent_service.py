@@ -261,8 +261,12 @@ class AgentService:
                     self._last_memory = agent.memory
 
                     yield StreamDoneEvent(
-                        total_steps=total_steps, input_tokens=total_input_tokens, output_tokens=total_output_tokens
+                        total_steps=total_steps,
+                        input_tokens=total_input_tokens,
+                        output_tokens=total_output_tokens,
+                        token_usage_breakdown=agent.get_token_usage_breakdown(),
                     )
+                    agent.log_token_usage_summary()
 
                 except Exception as e:
                     logger.error(f"Agent execution failed: {e}", exc_info=True)

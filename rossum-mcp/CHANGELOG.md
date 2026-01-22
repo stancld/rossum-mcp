@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 - Added `delete_rule` tool for rule deletion [#141](https://github.com/stancld/rossum-agents/pull/141)
 
 ### Changed
-- Added `id` parameter to `list_queues` tool for filtering by queue ID
+- Added `id` parameter to `list_queues` tool for filtering by queue ID [#136](https://github.com/stancld/rossum-agents/pull/136)
 - Documented `create_hook` config transformations: `source`→`function` rename, `runtime` default, `timeout_s` cap [#134](https://github.com/stancld/rossum-agents/pull/134)
 
 ### Fixed

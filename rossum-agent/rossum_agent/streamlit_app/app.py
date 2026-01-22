@@ -113,6 +113,8 @@ async def run_agent_turn(
         async for step in agent.run(prompt):
             on_step(step)
 
+        agent.log_token_usage_summary()
+
 
 def _initialize_user_and_storage() -> None:
     """Initialize user ID and Redis storage in session state."""

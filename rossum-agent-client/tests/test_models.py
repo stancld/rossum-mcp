@@ -26,7 +26,10 @@ from rossum_agent_client.models import (
     StreamDoneEvent,
     SubAgentProgressEvent,
     SubAgentTextEvent,
+    SubAgentTokenUsageDetail,
     TextContent,
+    TokenUsageBreakdown,
+    TokenUsageBySource,
 )
 
 
@@ -294,3 +297,137 @@ class TestFileListResponse:
     def test_empty_response(self) -> None:
         resp = FileListResponse(files=[], total=0)
         assert len(resp.files) == 0
+
+
+class TestTokenUsageBySource:
+    def test_valid_usage(self) -> None:
+        usage = TokenUsageBySource(input_tokens=100, output_tokens=50, total_tokens=150)
+        assert usage.input_tokens == 100
+        assert usage.output_tokens == 50
+        assert usage.total_tokens == 150
+
+    def test_zero_tokens(self) -> None:
+        usage = TokenUsageBySource(input_tokens=0, output_tokens=0, total_tokens=0)
+        assert usage.total_tokens == 0
+
+
+class TestSubAgentTokenUsageDetail:
+    def test_valid_detail(self) -> None:
+        detail = SubAgentTokenUsageDetail(
+            input_tokens=500,
+            output_tokens=250,
+            total_tokens=750,
+            by_tool={"debug_hook": TokenUsageBySource(input_tokens=500, output_tokens=250, total_tokens=750)},
+        )
+        assert detail.input_tokens == 500
+        assert detail.total_tokens == 750
+        assert "debug_hook" in detail.by_tool
+        assert detail.by_tool["debug_hook"].input_tokens == 500
+
+    def test_empty_by_tool(self) -> None:
+        detail = SubAgentTokenUsageDetail(input_tokens=0, output_tokens=0, total_tokens=0, by_tool={})
+        assert detail.by_tool == {}
+
+    def test_multiple_tools(self) -> None:
+        detail = SubAgentTokenUsageDetail(
+            input_tokens=1000,
+            output_tokens=500,
+            total_tokens=1500,
+            by_tool={
+                "debug_hook": TokenUsageBySource(input_tokens=600, output_tokens=300, total_tokens=900),
+                "patch_schema": TokenUsageBySource(input_tokens=400, output_tokens=200, total_tokens=600),
+            },
+        )
+        assert len(detail.by_tool) == 2
+
+
+class TestTokenUsageBreakdown:
+    def test_valid_breakdown(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=1500, output_tokens=750, total_tokens=2250),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(
+                input_tokens=500,
+                output_tokens=250,
+                total_tokens=750,
+                by_tool={"debug_hook": TokenUsageBySource(input_tokens=500, output_tokens=250, total_tokens=750)},
+            ),
+        )
+        assert breakdown.total.total_tokens == 2250
+        assert breakdown.main_agent.total_tokens == 1500
+        assert breakdown.sub_agents.total_tokens == 750
+
+    def test_format_summary_lines_includes_header(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(input_tokens=0, output_tokens=0, total_tokens=0, by_tool={}),
+        )
+        lines = breakdown.format_summary_lines()
+        output = "\n".join(lines)
+
+        assert "TOKEN USAGE SUMMARY" in output
+        assert "=" * 60 in output
+
+    def test_format_summary_lines_includes_main_agent(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(input_tokens=0, output_tokens=0, total_tokens=0, by_tool={}),
+        )
+        lines = breakdown.format_summary_lines()
+        output = "\n".join(lines)
+
+        assert "Main Agent" in output
+        assert "1,000" in output
+        assert "1,500" in output
+
+    def test_format_summary_lines_includes_sub_agents(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=3000, output_tokens=1500, total_tokens=4500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(
+                input_tokens=2000,
+                output_tokens=1000,
+                total_tokens=3000,
+                by_tool={
+                    "debug_hook": TokenUsageBySource(input_tokens=1500, output_tokens=700, total_tokens=2200),
+                    "patch_schema": TokenUsageBySource(input_tokens=500, output_tokens=300, total_tokens=800),
+                },
+            ),
+        )
+        lines = breakdown.format_summary_lines()
+        output = "\n".join(lines)
+
+        assert "Sub-agents (total)" in output
+        assert "debug_hook" in output
+        assert "patch_schema" in output
+
+    def test_format_summary_lines_includes_total(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=3000, output_tokens=1500, total_tokens=4500),
+            main_agent=TokenUsageBySource(input_tokens=1000, output_tokens=500, total_tokens=1500),
+            sub_agents=SubAgentTokenUsageDetail(input_tokens=2000, output_tokens=1000, total_tokens=3000, by_tool={}),
+        )
+        lines = breakdown.format_summary_lines()
+        output = "\n".join(lines)
+
+        assert "TOTAL" in output
+        assert "3,000" in output
+        assert "4,500" in output
+
+
+class TestStreamDoneEventWithBreakdown:
+    def test_done_event_without_breakdown(self) -> None:
+        event = StreamDoneEvent(total_steps=5, input_tokens=100, output_tokens=50)
+        assert event.token_usage_breakdown is None
+
+    def test_done_event_with_breakdown(self) -> None:
+        breakdown = TokenUsageBreakdown(
+            total=TokenUsageBySource(input_tokens=100, output_tokens=50, total_tokens=150),
+            main_agent=TokenUsageBySource(input_tokens=100, output_tokens=50, total_tokens=150),
+            sub_agents=SubAgentTokenUsageDetail(input_tokens=0, output_tokens=0, total_tokens=0, by_tool={}),
+        )
+        event = StreamDoneEvent(total_steps=5, input_tokens=100, output_tokens=50, token_usage_breakdown=breakdown)
+        assert event.token_usage_breakdown is not None
+        assert event.token_usage_breakdown.total.total_tokens == 150
