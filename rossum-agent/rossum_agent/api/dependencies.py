@@ -16,7 +16,9 @@ from fastapi import Header, HTTPException, status
 logger = logging.getLogger(__name__)
 
 # Base allowed hosts pattern
-_BASE_ALLOWED_HOSTS = r"elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|(elis|api\.elis)\.develop\.r8\.lol"
+_BASE_ALLOWED_HOSTS = (
+    r"elis\.rossum\.ai|api\.elis\.rossum\.ai|api\.rossum\.ai|.*\.rossum\.app|(elis|api\.elis)\.develop\.r8\.lol"
+)
 
 # Additional hosts from environment variable (comma-separated regex patterns)
 # Example: ADDITIONAL_ALLOWED_ROSSUM_HOSTS=".*\.review\.r8\.lol,.*\.staging\.example\.com"
