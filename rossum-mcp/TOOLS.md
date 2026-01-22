@@ -147,9 +147,10 @@ Retrieves queue details including the schema_id.
 
 ### list_queues
 
-Lists all queues with optional filtering by workspace or name.
+Lists all queues with optional filtering by ID, workspace, or name.
 
 **Parameters:**
+- `id` (integer, optional): Filter by queue ID
 - `workspace_id` (integer, optional): Filter by workspace ID
 - `name` (string, optional): Filter by queue name
 

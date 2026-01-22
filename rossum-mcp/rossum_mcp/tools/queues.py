@@ -46,10 +46,15 @@ async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
 
 
 async def _list_queues(
-    client: AsyncRossumAPIClient, workspace_id: int | None = None, name: str | None = None
+    client: AsyncRossumAPIClient,
+    id: int | None = None,
+    workspace_id: int | None = None,
+    name: str | None = None,
 ) -> list[Queue]:
-    logger.debug(f"Listing queues: workspace_id={workspace_id}, name={name}")
+    logger.debug(f"Listing queues: id={id}, workspace_id={workspace_id}, name={name}")
     filters: dict[str, int | str] = {}
+    if id is not None:
+        filters["id"] = id
     if workspace_id is not None:
         filters["workspace"] = workspace_id
     if name is not None:
@@ -228,8 +233,10 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         return await _get_queue(client, queue_id)
 
     @mcp.tool(description="List all queues with optional filters.")
-    async def list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
-        return await _list_queues(client, workspace_id, name)
+    async def list_queues(
+        id: int | None = None, workspace_id: int | None = None, name: str | None = None
+    ) -> list[Queue]:
+        return await _list_queues(client, id, workspace_id, name)
 
     @mcp.tool(description="Retrieve queue schema.")
     async def get_queue_schema(queue_id: int) -> Schema:
