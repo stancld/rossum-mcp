@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @beta_tool
-def write_file(filename: str, content: str) -> str:
+def write_file(filename: str, content: str | dict | list) -> str:
     """Write content to a file in the agent's output directory.
 
     Use this tool to save analysis results, export data, or create reports.
@@ -25,7 +25,7 @@ def write_file(filename: str, content: str) -> str:
 
     Args:
         filename: The name of the file to write (e.g., 'report.md', 'analysis.json').
-        content: The content to write to the file.
+        content: The content to write to the file. Can be a string, dict, or list.
 
     Returns:
         JSON with status, message, and file path.
@@ -35,6 +35,10 @@ def write_file(filename: str, content: str) -> str:
 
     if not content:
         return json.dumps({"status": "error", "message": "Error: content is required"})
+
+    # Convert dict/list to JSON string
+    if isinstance(content, dict | list):
+        content = json.dumps(content, indent=2, ensure_ascii=False)
 
     try:
         output_dir = get_output_dir()

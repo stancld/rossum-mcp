@@ -45,6 +45,7 @@ All notable changes to this project will be documented in this file.
 - Removed test front-end from rossum-agent API as it doesn't fit the repo scope [#83](https://github.com/stancld/rossum-agents/pull/83)
 
 ### Fixed
+- Fixed `write_file` tool to accept dict/list content by auto-converting to JSON
 - Fixed displaying generated files in Streamlit UI [#73](https://github.com/stancld/rossum-agents/pull/73)
 
 
