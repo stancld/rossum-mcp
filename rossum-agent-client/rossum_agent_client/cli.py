@@ -127,17 +127,18 @@ def _print_token_summary(event: StreamDoneEvent) -> None:
 
 def _handle_step_event(event: StepEvent, state: _StreamState, show_thinking: bool) -> None:
     """Dispatch step event to appropriate handler."""
-    if event.type == "thinking" and event.content and show_thinking:
-        _handle_thinking(event, state)
-    elif event.type == "tool_start" and event.tool_name and event.step_number != state.last_tool_step:
-        _handle_tool_start(event, state, show_thinking)
-    elif event.type == "tool_result":
-        _handle_tool_result(event)
-    elif event.type == "final_answer" and event.content:
-        _handle_final_answer(event, state)
-    elif event.type == "error":
-        print(f"\nError: {event.content}", file=sys.stderr)
-        sys.exit(1)
+    match event.type:
+        case "thinking" if event.content and show_thinking:
+            _handle_thinking(event, state)
+        case "tool_start" if event.tool_name and event.step_number != state.last_tool_step:
+            _handle_tool_start(event, state, show_thinking)
+        case "tool_result":
+            _handle_tool_result(event)
+        case "final_answer" if event.content:
+            _handle_final_answer(event, state)
+        case "error":
+            print(f"\nError: {event.content}", file=sys.stderr)
+            sys.exit(1)
 
 
 def run_chat(
