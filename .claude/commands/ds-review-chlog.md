@@ -1,50 +1,68 @@
 # Review Changelog Completeness
 
-Review a changelog for completeness, ensuring major changes are documented while avoiding excessive detail on minor items.
+**Goal**: Review a changelog for completeness, ensuring major changes are documented while avoiding excessive detail on minor items.
 
-## Instructions
+## Scope
 
-1. First, ask the user which changelog file to review. Use AskUserQuestion if the changelog path wasn't provided as an argument.
+| Context | What to Review |
+|---------|----------------|
+| No argument | Ask user which changelog to review |
+| Path provided | Review specified changelog file |
 
-2. Read the changelog file.
+## Valid Packages
 
-3. Analyze the git history to identify changes since the last changelog entry. If the timeframe is unclear, default to changes since the last git tag or the last 30 days.
+| Package | Changelog Path |
+|---------|---------------|
+| rossum-mcp | `rossum-mcp/CHANGELOG.md` |
+| rossum-agent | `rossum-agent/CHANGELOG.md` |
+| rossum-deploy | `rossum-deploy/CHANGELOG.md` |
+| rossum-agent-client | `rossum-agent-client/CHANGELOG.md` |
 
-4. Compare the changelog against the actual changes and evaluate:
-   - **Major changes that should be documented:**
-     - New features or capabilities
-     - Breaking changes or API modifications
-     - Significant bug fixes affecting user experience
-     - Security updates
-     - Dependency upgrades with notable impact
-     - Performance improvements
-     - Configuration changes
+## Change Categories
 
-   - **Minor changes that can be omitted:**
-     - Code refactoring without behavior changes
-     - Internal tooling updates
-     - Minor typo fixes
-     - Test additions/modifications
-     - Documentation formatting
-     - Dependency version bumps (patch level)
+| Should Document | Can Omit |
+|-----------------|----------|
+| New features or capabilities | Code refactoring without behavior changes |
+| Breaking changes or API modifications | Internal tooling updates |
+| Significant bug fixes affecting users | Minor typo fixes |
+| Security updates | Test additions/modifications |
+| Dependency upgrades with notable impact | Documentation formatting |
+| Performance improvements | Dependency version bumps (patch level) |
+| Configuration changes | |
 
-5. Check version alignment: verify the changelog's latest version matches the package version (e.g., in `pyproject.toml`).
+## Approach
 
-6. Provide a summary:
-   - List any major changes that appear to be missing from the changelog
-   - Note if the changelog includes too much minor detail
-   - Suggest improvements to changelog entries if wording is unclear
-   - Flag any version mismatches
-
-## Arguments
-
-$ARGUMENTS - Optional: Path to the changelog file to review
+| Step | Action |
+|------|--------|
+| Identify | Ask user for changelog path if not provided |
+| Read | Load changelog and pyproject.toml |
+| Analyze | Check git history since last changelog entry (or last tag, or 30 days) |
+| Compare | Match commits against documented changes |
+| Version check | Verify changelog version matches pyproject.toml |
+| Report | List gaps and suggestions |
 
 ## Output
 
-Provide a structured markdown summary:
+Provide a structured summary:
 
-- **Missing entries**: Major changes not in the changelog
-- **Excessive detail**: Minor items that could be removed
-- **Wording improvements**: Unclear or inconsistent entries
-- **Version check**: Whether changelog version matches package version
+```
+## Changelog Review
+
+### Missing entries
+- [ ] Major change X not documented
+
+### Excessive detail
+- [ ] Minor item Y could be removed
+
+### Wording improvements
+- [ ] Entry Z is unclear
+
+### Version check
+- [x] Changelog version matches pyproject.toml
+```
+
+## Constraints
+
+- No automatic file modifications
+- Use `AskUserQuestion` if changelog path not provided
+- Focus on user-facing changes, not internal refactors

@@ -27,3 +27,7 @@
 ## 2026-01-21
 - **Outcome**: accepted
 - **MR**: https://github.com/stancld/rossum-agents/pull/132
+
+## 2026-01-22
+- **Outcome**: accepted
+- **MR**: https://github.com/stancld/rossum-agents/pull/136
