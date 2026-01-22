@@ -41,6 +41,34 @@ class TestWriteFile:
         finally:
             set_output_dir(None)
 
+    def test_write_file_dict_content(self, tmp_path: Path) -> None:
+        """Test writing dict content - automatically converted to JSON."""
+        set_output_dir(tmp_path)
+        try:
+            dict_content = {"key": "value", "number": 42}
+            result_json = write_file(filename="data.json", content=dict_content)
+            result = json.loads(result_json)
+
+            assert result["status"] == "success"
+            written = json.loads((tmp_path / "data.json").read_text())
+            assert written == dict_content
+        finally:
+            set_output_dir(None)
+
+    def test_write_file_list_content(self, tmp_path: Path) -> None:
+        """Test writing list content - automatically converted to JSON."""
+        set_output_dir(tmp_path)
+        try:
+            list_content = [{"id": 1, "name": "foo"}, {"id": 2, "name": "bar"}]
+            result_json = write_file(filename="data.json", content=list_content)
+            result = json.loads(result_json)
+
+            assert result["status"] == "success"
+            written = json.loads((tmp_path / "data.json").read_text())
+            assert written == list_content
+        finally:
+            set_output_dir(None)
+
     def test_write_file_empty_filename_error(self, tmp_path: Path) -> None:
         """Test error when filename is empty."""
         set_output_dir(tmp_path)
