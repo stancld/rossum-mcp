@@ -686,6 +686,98 @@ list_tool_categories
        if "schema" in cat["keywords"]:
            print(f"{cat['name']}: {cat['tool_count']} tools")
 
+Delete Operations
+-----------------
+
+All delete tools follow a consistent pattern using the ``delete_resource`` helper
+from ``rossum_mcp.tools.base``. They check read-only mode and return standardized
+success/error messages.
+
+delete_annotation
+^^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_annotation(annotation_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_annotation(annotation_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/annotations/{annotation_id}``
+
+**Implementation:**
+  Soft delete - moves annotation to 'deleted' status rather than permanent removal.
+
+delete_queue
+^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_queue(queue_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_queue(queue_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/queues/{queue_id}``
+
+**Implementation:**
+  Schedules queue for deletion after 24-hour delay. Also deletes all related
+  objects (annotations, documents).
+
+delete_schema
+^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_schema(schema_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_schema(schema_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/schemas/{schema_id}``
+
+**Implementation:**
+  Fails with HTTP 409 if schema is linked to a queue or annotation.
+
+delete_hook
+^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_hook(hook_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_hook(hook_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/hooks/{hook_id}``
+
+delete_rule
+^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_rule(rule_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_rule(rule_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/rules/{rule_id}``
+
+delete_workspace
+^^^^^^^^^^^^^^^^
+
+**MCP Tool:**
+  ``delete_workspace(workspace_id: int)``
+
+**Rossum SDK Method:**
+  ``AsyncRossumAPIClient.delete_workspace(workspace_id)``
+
+**API Endpoint:**
+  ``DELETE /v1/workspaces/{workspace_id}``
+
+**Implementation:**
+  Fails if workspace contains queues.
+
 Async Wrapper Pattern
 ----------------------
 

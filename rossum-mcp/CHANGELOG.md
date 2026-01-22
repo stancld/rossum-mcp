@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Added `delete_queue` tool for queue deletion (24h delayed start) [#141](https://github.com/stancld/rossum-agents/pull/141)
+- Added `delete_workspace` tool for workspace deletion [#141](https://github.com/stancld/rossum-agents/pull/141)
+- Added `delete_schema` tool for schema deletion [#141](https://github.com/stancld/rossum-agents/pull/141)
+- Added `delete_hook` tool for hook deletion [#141](https://github.com/stancld/rossum-agents/pull/141)
+- Added `delete_annotation` tool for annotation deletion (soft delete) [#141](https://github.com/stancld/rossum-agents/pull/141)
+- Added `delete_rule` tool for rule deletion [#141](https://github.com/stancld/rossum-agents/pull/141)
+
 ### Changed
 - Added `id` parameter to `list_queues` tool for filtering by queue ID
 - Documented `create_hook` config transformations: `source`→`function` rename, `runtime` default, `timeout_s` cap [#134](https://github.com/stancld/rossum-agents/pull/134)

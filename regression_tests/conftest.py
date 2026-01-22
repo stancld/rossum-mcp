@@ -14,7 +14,7 @@ from rossum_agent.agent.models import AgentConfig
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.prompts import get_system_prompt
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
-from rossum_agent.tools.core import set_output_dir
+from rossum_agent.tools.core import set_output_dir, set_rossum_credentials
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 
 if TYPE_CHECKING:
@@ -171,6 +171,7 @@ def create_live_agent(
             rossum_api_token=token, rossum_api_base_url=case.api_base_url, mcp_mode="read-write"
         ) as mcp_connection:
             set_output_dir(temp_output_dir)
+            set_rossum_credentials(case.api_base_url, token)
             client = create_bedrock_client()
             system_prompt = get_system_prompt()
 
@@ -188,5 +189,6 @@ def create_live_agent(
                 yield LiveAgentContext(agent=agent, api_token=token)
             finally:
                 set_output_dir(None)
+                set_rossum_credentials(None, None)
 
     return _create_agent

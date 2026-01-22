@@ -72,3 +72,10 @@ rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat
 
 [tool.coverage.run]
 omit = ["rossum_mcp/server.py"]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests (require API access)",
+]
+asyncio_mode = "auto"

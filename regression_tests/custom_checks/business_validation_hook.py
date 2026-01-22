@@ -13,11 +13,14 @@ if TYPE_CHECKING:
 
 # Expected checks defined by: required fields, operator type, and check type
 # Operator types: "inequality" (<, >, <=, >=), "sum_equality" (sum() with ==), "mult_equality" (* with ==)
+# For fields with alternatives, use frozensets within a set to indicate "any of these"
 EXPECTED_CHECKS = [
     {"fields": {"amount_total"}, "operator": "inequality", "type": "error"},
     {"fields": {"item_amount_total", "amount_total"}, "operator": "sum_equality", "type": "error"},
     {
-        "fields": {"item_quantity", "item_amount_base", "item_amount_total"},
+        # item_amount and item_amount_base are interchangeable (both represent unit price in schema)
+        "fields": {"item_quantity", "item_amount_total"},
+        "alternative_fields": {"item_amount", "item_amount_base"},
         "operator": "mult_equality",
         "type": "error",
     },
@@ -89,4 +92,24 @@ def _get_operator_type(rule: str) -> str:
 def _check_matches(check: dict, expected: dict) -> bool:
     """Check if a rule matches expected fields and operator type."""
     rule = check.get("rule", "")
-    return _extract_fields(rule) == expected["fields"] and _get_operator_type(rule) == expected["operator"]
+    actual_fields = _extract_fields(rule)
+
+    if _get_operator_type(rule) != expected["operator"]:
+        return False
+
+    # Handle alternative fields (e.g., item_amount_base OR item_unit_price)
+    if "alternative_fields" in expected:
+        required_fields = expected["fields"]
+        alternatives = expected["alternative_fields"]
+        # Check that all required fields are present
+        if not required_fields.issubset(actual_fields):
+            return False
+        # Check that exactly one alternative is present
+        present_alternatives = actual_fields & alternatives
+        if len(present_alternatives) != 1:
+            return False
+        # Check no extra fields
+        expected_total = required_fields | present_alternatives
+        return actual_fields == expected_total
+
+    return actual_fields == expected["fields"]

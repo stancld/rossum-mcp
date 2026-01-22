@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -80,10 +82,68 @@ class TestIsReadWriteMode:
     def test_read_write_mode_case_insensitive(self, monkeypatch: MonkeyPatch) -> None:
         """Test that mode check is case-insensitive."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "READ-WRITE")
-        import importlib
-
         from rossum_mcp.tools import base
 
         importlib.reload(base)
 
         assert base.is_read_write_mode() is True
+
+
+@pytest.mark.unit
+class TestDeleteResource:
+    """Tests for delete_resource function."""
+
+    @pytest.mark.asyncio
+    async def test_delete_resource_success(self, monkeypatch: MonkeyPatch) -> None:
+        """Test successful resource deletion."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        mock_delete_fn = AsyncMock()
+        result = await base.delete_resource("queue", 123, mock_delete_fn)
+
+        assert result == {"message": "Queue 123 deleted successfully"}
+        mock_delete_fn.assert_called_once_with(123)
+
+    @pytest.mark.asyncio
+    async def test_delete_resource_custom_message(self, monkeypatch: MonkeyPatch) -> None:
+        """Test deletion with custom success message."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        mock_delete_fn = AsyncMock()
+        result = await base.delete_resource("queue", 123, mock_delete_fn, "Queue 123 scheduled for deletion")
+
+        assert result == {"message": "Queue 123 scheduled for deletion"}
+
+    @pytest.mark.asyncio
+    async def test_delete_resource_read_only_mode(self, monkeypatch: MonkeyPatch) -> None:
+        """Test deletion is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        mock_delete_fn = AsyncMock()
+        result = await base.delete_resource("queue", 123, mock_delete_fn)
+
+        assert result == {"error": "delete_queue is not available in read-only mode"}
+        mock_delete_fn.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_resource_propagates_exception(self, monkeypatch: MonkeyPatch) -> None:
+        """Test that API exceptions are propagated."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        mock_delete_fn = AsyncMock(side_effect=ValueError("Not Found"))
+        with pytest.raises(ValueError) as exc_info:
+            await base.delete_resource("queue", 99999, mock_delete_fn)
+
+        assert str(exc_info.value) == "Not Found"

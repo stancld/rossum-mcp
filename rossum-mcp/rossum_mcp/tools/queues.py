@@ -14,7 +14,7 @@ from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 
-from rossum_mcp.tools.base import build_resource_url, is_read_write_mode, truncate_dict_fields
+from rossum_mcp.tools.base import build_resource_url, delete_resource, is_read_write_mode, truncate_dict_fields
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -160,6 +160,12 @@ async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data:
     return cast("Queue", client._deserializer(Resource.Queue, updated_queue_data))
 
 
+async def _delete_queue(client: AsyncRossumAPIClient, queue_id: int) -> dict:
+    return await delete_resource(
+        "queue", queue_id, client.delete_queue, f"Queue {queue_id} scheduled for deletion (starts after 24 hours)"
+    )
+
+
 # Available template names for create_queue_from_template
 QueueTemplateName = Literal[
     "EU Demo Template",
@@ -278,6 +284,12 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     @mcp.tool(description="Update queue settings.")
     async def update_queue(queue_id: int, queue_data: dict) -> Queue | dict:
         return await _update_queue(client, queue_id, queue_data)
+
+    @mcp.tool(
+        description="Delete a queue. Deletion starts after 24 hours. Also deletes all related objects (annotations, documents)."
+    )
+    async def delete_queue(queue_id: int) -> dict:
+        return await _delete_queue(client, queue_id)
 
     @mcp.tool(description="Get available queue template names for create_queue_from_template.")
     async def get_queue_template_names() -> list[str]:
