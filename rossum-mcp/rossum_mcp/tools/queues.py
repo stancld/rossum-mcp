@@ -47,7 +47,7 @@ async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
 
 async def _list_queues(
     client: AsyncRossumAPIClient,
-    id: int | None = None,
+    id: str | None = None,
     workspace_id: int | None = None,
     name: str | None = None,
 ) -> list[Queue]:
@@ -232,9 +232,9 @@ def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     async def get_queue(queue_id: int) -> Queue:
         return await _get_queue(client, queue_id)
 
-    @mcp.tool(description="List all queues with optional filters.")
+    @mcp.tool(description="List all queues with optional filters. id accepts comma-separated values (e.g. '1,2,3').")
     async def list_queues(
-        id: int | None = None, workspace_id: int | None = None, name: str | None = None
+        id: str | None = None, workspace_id: int | None = None, name: str | None = None
     ) -> list[Queue]:
         return await _list_queues(client, id, workspace_id, name)
 
