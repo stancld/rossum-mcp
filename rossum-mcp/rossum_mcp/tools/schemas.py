@@ -7,6 +7,7 @@ import logging
 from dataclasses import asdict, dataclass, is_dataclass, replace
 from typing import TYPE_CHECKING, Any, Literal
 
+from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.schema import Schema
 
@@ -427,9 +428,14 @@ def apply_schema_patch(
     return content
 
 
-async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
-    schema: Schema = await client.retrieve_schema(schema_id)
-    return schema
+async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema | dict:
+    try:
+        schema: Schema = await client.retrieve_schema(schema_id)
+        return schema
+    except APIClientError as e:
+        if e.status_code == 404:
+            return {"error": f"Schema {schema_id} not found"}
+        raise
 
 
 @dataclass
@@ -666,8 +672,10 @@ async def _patch_schema(
     return updated_schema
 
 
-async def _get_schema_tree_structure(client: AsyncRossumAPIClient, schema_id: int) -> list[dict]:
+async def _get_schema_tree_structure(client: AsyncRossumAPIClient, schema_id: int) -> list[dict] | dict:
     schema = await _get_schema(client, schema_id)
+    if isinstance(schema, dict):
+        return schema
     content_dicts: list[dict[str, Any]] = [
         asdict(section) if is_dataclass(section) else dict(section)  # type: ignore[arg-type]
         for section in schema.content
@@ -719,7 +727,7 @@ def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register schema-related tools with the FastMCP server."""
 
     @mcp.tool(description="Retrieve schema details.")
-    async def get_schema(schema_id: int) -> Schema:
+    async def get_schema(schema_id: int) -> Schema | dict:
         return await _get_schema(client, schema_id)
 
     @mcp.tool(description="List all schemas with optional filters.")
@@ -764,7 +772,7 @@ Important: Datapoints inside a tuple MUST have an "id" field. Section-level data
         return await _patch_schema(client, schema_id, operation, node_id, node_data, parent_id, position)
 
     @mcp.tool(description="Get lightweight tree structure of schema with only ids, labels, categories, and types.")
-    async def get_schema_tree_structure(schema_id: int) -> list[dict]:
+    async def get_schema_tree_structure(schema_id: int) -> list[dict] | dict:
         return await _get_schema_tree_structure(client, schema_id)
 
     @mcp.tool(
