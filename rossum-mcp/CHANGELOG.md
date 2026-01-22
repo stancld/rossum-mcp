@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed `StopAsyncIteration` crash in `list_hooks` and `list_email_templates` when `first_n` exceeds available items [#134](https://github.com/stancld/rossum-agents/pull/134)
+- Fixed `get_schema` and `get_schema_tree_structure` tools crashing with unhandled exception when schema not found (404); now returns error dict
 
 
 ## [0.4.0] - 2026-01-18

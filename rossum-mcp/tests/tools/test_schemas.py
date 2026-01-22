@@ -103,6 +103,28 @@ class TestGetSchema:
         assert len(result.content) == 1
         mock_client.retrieve_schema.assert_called_once_with(50)
 
+    @pytest.mark.asyncio
+    async def test_get_schema_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test schema not found returns error dict instead of raising exception."""
+        from rossum_api import APIClientError
+
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_client.retrieve_schema.side_effect = APIClientError(
+            method="GET",
+            url="https://api.test/schemas/999",
+            status_code=404,
+            error=Exception("Not found"),
+        )
+
+        get_schema = mock_mcp._tools["get_schema"]
+        result = await get_schema(schema_id=999)
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "999" in result["error"]
+        assert "not found" in result["error"]
+
 
 @pytest.mark.unit
 class TestListSchemas:
@@ -1181,6 +1203,28 @@ class TestGetSchemaTreeStructure:
         assert result[0]["children"][0]["type"] == "string"
         assert result[1]["children"][0]["id"] == "line_items"
         assert result[1]["children"][0]["children"][0]["id"] == "line_item"
+
+    @pytest.mark.asyncio
+    async def test_get_schema_tree_structure_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test tree structure returns error dict when schema not found."""
+        from rossum_api import APIClientError
+
+        register_schema_tools(mock_mcp, mock_client)
+
+        mock_client.retrieve_schema.side_effect = APIClientError(
+            method="GET",
+            url="https://api.test/schemas/999",
+            status_code=404,
+            error=Exception("Not found"),
+        )
+
+        get_schema_tree_structure = mock_mcp._tools["get_schema_tree_structure"]
+        result = await get_schema_tree_structure(schema_id=999)
+
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "999" in result["error"]
+        assert "not found" in result["error"]
 
 
 @pytest.mark.unit
