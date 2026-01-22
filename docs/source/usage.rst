@@ -459,6 +459,26 @@ and defining the default confidence score threshold.
      "message": "Queue 'Updated Queue' (ID 12345) updated successfully"
    }
 
+delete_queue
+^^^^^^^^^^^^
+
+Schedules a queue for deletion. The queue will be deleted after a 24-hour delay,
+allowing time to recover if needed.
+
+**Parameters:**
+
+- ``queue_id`` (integer, required): Queue ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Queue 12345 scheduled for deletion (starts after 24 hours)"
+   }
+
+**Note:** This operation is only available in read-write mode.
+
 update_schema
 ^^^^^^^^^^^^^
 
@@ -654,6 +674,25 @@ Creates a new schema with sections and datapoints.
      "content": [...],
      "message": "Schema 'My Schema' created successfully with ID 12345"
    }
+
+delete_schema
+^^^^^^^^^^^^^
+
+Deletes a schema. Schemas can only be deleted if they are not currently assigned to any queue.
+
+**Parameters:**
+
+- ``schema_id`` (integer, required): Schema ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Schema 12345 deleted successfully"
+   }
+
+**Note:** This operation is only available in read-write mode.
 
 get_engine
 ^^^^^^^^^^
@@ -919,6 +958,26 @@ Confirms an annotation to move it to 'confirmed' status. Can be called after
      "annotation_id": 12345,
      "message": "Annotation 12345 confirmed successfully. Status changed to 'confirmed'."
    }
+
+delete_annotation
+^^^^^^^^^^^^^^^^^
+
+Deletes an annotation by moving it to 'deleted' status. The annotation is not
+permanently removed but marked as deleted.
+
+**Parameters:**
+
+- ``annotation_id`` (integer, required): Rossum annotation ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Annotation 12345 deleted successfully"
+   }
+
+**Note:** This operation is only available in read-write mode.
 
 get_hook
 ^^^^^^^^
@@ -1246,6 +1305,25 @@ Logs are retained for 7 days and at most 100 logs are returned per call.
    # Search logs by message content
    search_logs = list_hook_logs(search="validation failed")
 
+delete_hook
+^^^^^^^^^^^
+
+Deletes a hook/extension.
+
+**Parameters:**
+
+- ``hook_id`` (integer, required): Hook ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Hook 12345 deleted successfully"
+   }
+
+**Note:** This operation is only available in read-write mode.
+
 get_rule
 ^^^^^^^^
 
@@ -1355,6 +1433,117 @@ logic with trigger conditions (TxScript formulas) and actions that execute when 
 
    # List only enabled rules
    enabled_rules = list_rules(enabled=True)
+
+delete_rule
+^^^^^^^^^^^
+
+Deletes a business rule.
+
+**Parameters:**
+
+- ``rule_id`` (integer, required): Rule ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Rule 12345 deleted successfully"
+   }
+
+**Note:** This operation is only available in read-write mode.
+
+Workspace Management
+--------------------
+
+get_workspace
+^^^^^^^^^^^^^
+
+Retrieves details of a specific workspace by its ID.
+
+**Parameters:**
+
+- ``workspace_id`` (integer, required): Workspace ID to retrieve
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "My Workspace",
+     "url": "https://elis.rossum.ai/api/v1/workspaces/12345",
+     "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+     "queues": ["https://elis.rossum.ai/api/v1/queues/200"]
+   }
+
+list_workspaces
+^^^^^^^^^^^^^^^
+
+Lists all workspaces with optional filtering.
+
+**Parameters:**
+
+- ``organization_id`` (integer, optional): Filter by organization ID
+- ``name`` (string, optional): Filter by workspace name
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "count": 2,
+     "results": [
+       {
+         "id": 12345,
+         "name": "Production Workspace",
+         "url": "https://elis.rossum.ai/api/v1/workspaces/12345",
+         "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+         "queues": ["https://elis.rossum.ai/api/v1/queues/200"]
+       }
+     ]
+   }
+
+create_workspace
+^^^^^^^^^^^^^^^^
+
+Creates a new workspace in an organization.
+
+**Parameters:**
+
+- ``name`` (string, required): Workspace name
+- ``organization_id`` (integer, required): Organization ID where the workspace should be created
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "id": 12345,
+     "name": "My New Workspace",
+     "url": "https://elis.rossum.ai/api/v1/workspaces/12345",
+     "organization": "https://elis.rossum.ai/api/v1/organizations/100",
+     "message": "Workspace 'My New Workspace' created successfully with ID 12345"
+   }
+
+delete_workspace
+^^^^^^^^^^^^^^^^
+
+Deletes a workspace. The workspace must be empty (no queues) before deletion.
+
+**Parameters:**
+
+- ``workspace_id`` (integer, required): Workspace ID to delete
+
+**Returns:**
+
+.. code-block:: json
+
+   {
+     "message": "Workspace 12345 deleted successfully"
+   }
+
+**Note:** This operation is only available in read-write mode.
 
 User Management
 ---------------

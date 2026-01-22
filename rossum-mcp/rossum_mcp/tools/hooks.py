@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from rossum_api.models.hook import Hook, HookRunData, HookType
 
-from rossum_mcp.tools.base import TRUNCATED_MARKER, is_read_write_mode
+from rossum_mcp.tools.base import TRUNCATED_MARKER, delete_resource, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -234,6 +234,10 @@ async def _create_hook_from_template(
     return {"error": "Hook wasn't likely created. Hook ID not available."}
 
 
+async def _delete_hook(client: AsyncRossumAPIClient, hook_id: int) -> dict:
+    return await delete_resource("hook", hook_id, client.delete_hook)
+
+
 def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register hook-related tools with the FastMCP server."""
 
@@ -337,3 +341,7 @@ def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         token_owner: str | None = None,
     ) -> Hook | dict:
         return await _create_hook_from_template(client, name, hook_template_id, queues, events, token_owner)
+
+    @mcp.tool(description="Delete a hook.")
+    async def delete_hook(hook_id: int) -> dict:
+        return await _delete_hook(client, hook_id)

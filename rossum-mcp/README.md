@@ -2,14 +2,14 @@
 
 <div align="center">
 
-**MCP server for AI-powered Rossum document processing. 50 tools for queues, schemas, hooks, engines, and more.**
+**MCP server for AI-powered Rossum document processing. 56 tools for queues, schemas, hooks, engines, and more.**
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-agents)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-50-blue.svg)](#available-tools)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-56-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -80,16 +80,16 @@ Set `ROSSUM_MCP_MODE=read-only` to disable all CREATE, UPDATE, and UPLOAD operat
 
 ## Available Tools
 
-The server provides **50 tools** organized into categories:
+The server provides **56 tools** organized into categories:
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| **Document Processing** | 6 | Upload documents, retrieve/update/confirm annotations |
-| **Queue Management** | 8 | Create, configure, and list queues |
-| **Schema Management** | 7 | Define and modify field structures |
+| **Document Processing** | 7 | Upload documents, retrieve/update/confirm/delete annotations |
+| **Queue Management** | 9 | Create, configure, delete, and list queues |
+| **Schema Management** | 8 | Define, modify, and delete field structures |
 | **Engine Management** | 6 | Configure extraction and splitting engines |
-| **Extensions & Rules** | 9 | Webhooks, serverless functions, business rules |
-| **Workspace Management** | 3 | Organize queues into workspaces |
+| **Extensions & Rules** | 11 | Webhooks, serverless functions, business rules |
+| **Workspace Management** | 4 | Organize and delete workspaces |
 | **User Management** | 3 | List users and roles |
 | **Relations** | 4 | Annotation and document relations |
 | **Email Templates** | 3 | Automated email responses |
@@ -99,22 +99,22 @@ The server provides **50 tools** organized into categories:
 <summary><strong>Tool List by Category</strong></summary>
 
 **Document Processing:**
-`upload_document`, `get_annotation`, `list_annotations`, `start_annotation`, `bulk_update_annotation_fields`, `confirm_annotation`
+`upload_document`, `get_annotation`, `list_annotations`, `start_annotation`, `bulk_update_annotation_fields`, `confirm_annotation`, `delete_annotation`
 
 **Queue Management:**
-`get_queue`, `list_queues`, `get_queue_schema`, `get_queue_engine`, `create_queue`, `create_queue_from_template`, `get_queue_template_names`, `update_queue`
+`get_queue`, `list_queues`, `get_queue_schema`, `get_queue_engine`, `create_queue`, `create_queue_from_template`, `get_queue_template_names`, `update_queue`, `delete_queue`
 
 **Schema Management:**
-`get_schema`, `list_schemas`, `create_schema`, `update_schema`, `patch_schema`, `get_schema_tree_structure`, `prune_schema_fields`
+`get_schema`, `list_schemas`, `create_schema`, `update_schema`, `patch_schema`, `get_schema_tree_structure`, `prune_schema_fields`, `delete_schema`
 
 **Engine Management:**
 `get_engine`, `list_engines`, `create_engine`, `update_engine`, `create_engine_field`, `get_engine_fields`
 
 **Extensions & Rules:**
-`get_hook`, `list_hooks`, `create_hook`, `update_hook`, `list_hook_templates`, `create_hook_from_template`, `list_hook_logs`, `get_rule`, `list_rules`
+`get_hook`, `list_hooks`, `create_hook`, `update_hook`, `list_hook_templates`, `create_hook_from_template`, `list_hook_logs`, `delete_hook`, `get_rule`, `list_rules`, `delete_rule`
 
 **Workspace Management:**
-`get_workspace`, `list_workspaces`, `create_workspace`
+`get_workspace`, `list_workspaces`, `create_workspace`, `delete_workspace`
 
 **User Management:**
 `get_user`, `list_users`, `list_user_roles`

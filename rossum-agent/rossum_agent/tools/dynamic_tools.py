@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -21,9 +22,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class CatalogData:
+    """Cached catalog data from MCP server."""
+
+    catalog: dict[str, set[str]] = field(default_factory=dict)
+    keywords: dict[str, list[str]] = field(default_factory=dict)
+    destructive_tools: set[str] = field(default_factory=set)
+
+
 # Cached catalog from MCP (fetched once per process)
-_catalog_cache: dict[str, set[str]] | None = None
-_keywords_cache: dict[str, list[str]] | None = None
+_catalog_cache: CatalogData | None = None
 
 # Discovery tool that's always loaded
 DISCOVERY_TOOL_NAME = "list_tool_categories"
@@ -74,23 +84,19 @@ def get_dynamic_tools() -> list[ToolParam]:
     return get_global_state().tools
 
 
-def _fetch_catalog_from_mcp() -> tuple[dict[str, set[str]], dict[str, list[str]]]:
-    """Fetch tool catalog from MCP server.
+def _fetch_catalog_from_mcp() -> CatalogData:
+    """Fetch tool catalog from MCP server."""
+    global _catalog_cache
 
-    Returns:
-        Tuple of (category_tool_names, category_keywords)
-    """
-    global _catalog_cache, _keywords_cache
-
-    if _catalog_cache is not None and _keywords_cache is not None:
-        return _catalog_cache, _keywords_cache
+    if _catalog_cache is not None:
+        return _catalog_cache
 
     mcp_connection = get_mcp_connection()
     loop = get_mcp_event_loop()
 
     if mcp_connection is None or loop is None:
         logger.warning("MCP connection not available, returning empty catalog")
-        return {}, {}
+        return CatalogData()
 
     # Call list_tool_categories MCP tool to get catalog
     try:
@@ -113,36 +119,45 @@ def _fetch_catalog_from_mcp() -> tuple[dict[str, set[str]], dict[str, list[str]]
 
         catalog: dict[str, set[str]] = {}
         keywords: dict[str, list[str]] = {}
+        destructive_tools: set[str] = set()
 
         for category in result:
             name = category["name"]
             catalog[name] = {tool["name"] for tool in category["tools"]}
             keywords[name] = category.get("keywords", [])
+            for tool in category["tools"]:
+                if tool.get("destructive", False):
+                    destructive_tools.add(tool["name"])
 
-        _catalog_cache = catalog
-        _keywords_cache = keywords
+        _catalog_cache = CatalogData(catalog=catalog, keywords=keywords, destructive_tools=destructive_tools)
         logger.info(f"Fetched catalog with {len(catalog)} categories from MCP")
-        return catalog, keywords
+        return _catalog_cache
 
     except Exception as e:
         logger.error(f"Failed to fetch catalog from MCP: {e}")
-        return {}, {}
+        return CatalogData()
 
 
 def get_category_tool_names() -> dict[str, set[str]]:
     """Get mapping of category names to tool names (fetched from MCP)."""
-    catalog, _ = _fetch_catalog_from_mcp()
-    return catalog
+    return _fetch_catalog_from_mcp().catalog
 
 
 def get_category_keywords() -> dict[str, list[str]]:
     """Get mapping of category names to keywords (fetched from MCP)."""
-    _, keywords = _fetch_catalog_from_mcp()
-    return keywords
+    return _fetch_catalog_from_mcp().keywords
+
+
+def get_destructive_tools() -> set[str]:
+    """Get set of destructive tool names (fetched from MCP)."""
+    return _fetch_catalog_from_mcp().destructive_tools
 
 
 def suggest_categories_for_request(request_text: str) -> list[str]:
-    """Suggest tool categories based on keywords in the request."""
+    """Suggest tool categories based on keywords in the request.
+
+    Uses word boundary matching to avoid false positives (e.g., "credit" matching "edit").
+    """
     keywords = get_category_keywords()
     if not keywords:
         return []
@@ -152,7 +167,8 @@ def suggest_categories_for_request(request_text: str) -> list[str]:
 
     for category, category_keywords in keywords.items():
         for keyword in category_keywords:
-            if keyword in request_lower:
+            pattern = rf"\b{re.escape(keyword)}\b"
+            if re.search(pattern, request_lower):
                 suggestions.append(category)
                 break
 
@@ -169,12 +185,18 @@ def _filter_discovery_tools(mcp_tools: list[MCPTool]) -> list[MCPTool]:
     return [tool for tool in mcp_tools if tool.name == DISCOVERY_TOOL_NAME]
 
 
-def _load_categories_impl(categories: list[str], state: DynamicToolsState | None = None) -> str:
+def _load_categories_impl(
+    categories: list[str],
+    state: DynamicToolsState | None = None,
+    exclude_destructive: bool = True,
+) -> str:
     """Load multiple tool categories at once.
 
     Args:
         categories: List of category names to load
         state: Optional state container. Uses global state if not provided.
+        exclude_destructive: If True (default), skip destructive tools (delete operations).
+            Destructive tools can only be loaded via explicit load_tool call.
 
     Returns:
         Message indicating which tools were loaded or an error message.
@@ -209,6 +231,11 @@ def _load_categories_impl(categories: list[str], state: DynamicToolsState | None
     for category in to_load:
         tool_names_to_load.update(catalog[category])
 
+    # Exclude destructive tools if requested (e.g., during automatic pre-loading)
+    if exclude_destructive:
+        destructive_tools = get_destructive_tools()
+        tool_names_to_load -= destructive_tools
+
     # Get all MCP tools and filter
     mcp_tools = asyncio.run_coroutine_threadsafe(mcp_connection.get_tools(), loop).result()
     tools_to_add = _filter_mcp_tools_by_names(mcp_tools, tool_names_to_load)
@@ -234,6 +261,8 @@ def preload_categories_for_request(request_text: str) -> str | None:
     """Pre-load tool categories based on keywords in the user's request.
 
     Called automatically on first user message to reduce tool discovery friction.
+    Destructive tools (delete operations) are excluded - they can only be loaded
+    via explicit load_tool call.
 
     Returns:
         Message about loaded categories, or None if nothing was loaded.
@@ -277,3 +306,68 @@ def get_load_tool_category_definition() -> ToolParam:
 def load_tool_category(categories: list[str]) -> str:
     """Load MCP tools from specified categories."""
     return _load_categories_impl(categories)
+
+
+def get_load_tool_definition() -> ToolParam:
+    """Get the tool definition for load_tool."""
+    return {
+        "name": "load_tool",
+        "description": (
+            "Load specific MCP tools by name. Use this to load destructive tools "
+            "(delete operations) which are excluded from load_tool_category. "
+            "Example: load_tool(['delete_hook']) to enable hook deletion."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "tool_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Tool names to load (e.g., ['delete_hook', 'delete_queue'])",
+                }
+            },
+            "required": ["tool_names"],
+        },
+    }
+
+
+def load_tool(tool_names: list[str], state: DynamicToolsState | None = None) -> str:
+    """Load specific MCP tools by name.
+
+    Use this to load destructive tools (delete operations) that are excluded
+    from category loading for safety.
+    """
+    if state is None:
+        state = get_global_state()
+
+    mcp_connection = get_mcp_connection()
+    if mcp_connection is None:
+        return "Error: MCP connection not available"
+
+    loop = get_mcp_event_loop()
+    if loop is None:
+        return "Error: Event loop not available"
+
+    # Get all MCP tools
+    mcp_tools = asyncio.run_coroutine_threadsafe(mcp_connection.get_tools(), loop).result()
+    available_tool_names = {t.name for t in mcp_tools}
+
+    # Validate requested tool names
+    invalid = [name for name in tool_names if name not in available_tool_names]
+    if invalid:
+        return f"Error: Unknown tools {invalid}"
+
+    # Filter to already-loaded tools
+    already_loaded = {t["name"] for t in state.tools}
+    to_load = [name for name in tool_names if name not in already_loaded]
+
+    if not to_load:
+        return f"Tools already loaded: {tool_names}"
+
+    # Filter MCP tools and convert to Anthropic format
+    tools_to_add = _filter_mcp_tools_by_names(mcp_tools, set(to_load))
+    anthropic_tools = mcp_tools_to_anthropic_format(tools_to_add)
+    state.tools.extend(anthropic_tools)
+
+    logger.info(f"Loaded {len(to_load)} tools by name: {to_load}")
+    return f"Loaded tools: {', '.join(sorted(to_load))}"

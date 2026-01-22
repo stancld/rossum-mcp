@@ -44,10 +44,14 @@ from rossum_agent.tools.deploy import (
 )
 from rossum_agent.tools.dynamic_tools import (
     DISCOVERY_TOOL_NAME,
+    CatalogData,
     DynamicToolsState,
+    get_destructive_tools,
     get_dynamic_tools,
     get_load_tool_category_definition,
+    get_load_tool_definition,
     get_loaded_categories,
+    load_tool,
     load_tool_category,
     preload_categories_for_request,
     reset_dynamic_tools,
@@ -94,12 +98,12 @@ _BETA_TOOLS: list[BetaTool[..., str]] = [
 
 def get_internal_tools() -> list[ToolParam]:
     """Get all internal tools in Anthropic format."""
-    return [tool.to_dict() for tool in _BETA_TOOLS] + [get_load_tool_category_definition()]
+    return [tool.to_dict() for tool in _BETA_TOOLS] + [get_load_tool_category_definition(), get_load_tool_definition()]
 
 
 def get_internal_tool_names() -> set[str]:
     """Get the names of all internal tools."""
-    return {tool.name for tool in _BETA_TOOLS} | {"load_tool_category"}
+    return {tool.name for tool in _BETA_TOOLS} | {"load_tool_category", "load_tool"}
 
 
 def execute_internal_tool(name: str, arguments: dict[str, object]) -> str:
@@ -119,6 +123,11 @@ def execute_internal_tool(name: str, arguments: dict[str, object]) -> str:
         raw_categories = arguments.get("categories", [])
         categories = [str(c) for c in raw_categories] if isinstance(raw_categories, list) else [str(raw_categories)]
         return load_tool_category(categories)
+
+    if name == "load_tool":
+        raw_tool_names = arguments.get("tool_names", [])
+        tool_names = [str(t) for t in raw_tool_names] if isinstance(raw_tool_names, list) else [str(raw_tool_names)]
+        return load_tool(tool_names)
 
     for tool in _BETA_TOOLS:
         if tool.name == name:
@@ -146,6 +155,7 @@ __all__ = [
     "DISCOVERY_TOOL_NAME",
     "INTERNAL_TOOLS",
     "OPUS_MODEL_ID",
+    "CatalogData",
     "DynamicToolsState",
     "SpawnedConnection",
     "SubAgentProgress",
@@ -173,16 +183,19 @@ __all__ = [
     "execute_tool",
     "get_deploy_tool_names",
     "get_deploy_tools",
+    "get_destructive_tools",
     "get_dynamic_tools",
     "get_internal_tool_names",
     "get_internal_tools",
     "get_load_tool_category_definition",
+    "get_load_tool_definition",
     "get_loaded_categories",
     "get_mcp_connection",
     "get_mcp_event_loop",
     "get_output_dir",
     "get_rossum_credentials",
     "load_skill",
+    "load_tool",
     "load_tool_category",
     "patch_schema_with_subagent",
     "preload_categories_for_request",

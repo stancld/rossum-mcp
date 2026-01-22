@@ -6,15 +6,19 @@ from unittest.mock import MagicMock, patch
 
 from rossum_agent.tools.dynamic_tools import (
     DISCOVERY_TOOL_NAME,
+    CatalogData,
     DynamicToolsState,
     _fetch_catalog_from_mcp,
     _filter_discovery_tools,
     _filter_mcp_tools_by_names,
     _load_categories_impl,
+    get_destructive_tools,
     get_dynamic_tools,
     get_global_state,
     get_load_tool_category_definition,
+    get_load_tool_definition,
     get_loaded_categories,
+    load_tool,
     load_tool_category,
     preload_categories_for_request,
     reset_dynamic_tools,
@@ -46,40 +50,54 @@ class TestDynamicToolState:
 class TestSuggestCategories:
     """Tests for suggest_categories_for_request function."""
 
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
     @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
     def test_suggests_queues_for_queue_keyword(self, mock_fetch: MagicMock) -> None:
-        mock_fetch.return_value = (
-            {"queues": {"get_queue", "list_queues"}},
-            {"queues": ["queue", "inbox"]},
+        mock_fetch.return_value = CatalogData(
+            catalog={"queues": {"get_queue", "list_queues"}},
+            keywords={"queues": ["queue", "inbox"]},
         )
-        suggestions = suggest_categories_for_request("Show me all queues")
+        # Word boundary matching requires exact word - "queue" won't match "queues"
+        suggestions = suggest_categories_for_request("Show me the queue")
         assert "queues" in suggestions
 
     @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
     def test_suggests_schemas_for_schema_keyword(self, mock_fetch: MagicMock) -> None:
-        mock_fetch.return_value = (
-            {"schemas": {"get_schema", "list_schemas"}},
-            {"schemas": ["schema", "field"]},
+        mock_fetch.return_value = CatalogData(
+            catalog={"schemas": {"get_schema", "list_schemas"}},
+            keywords={"schemas": ["schema", "field"]},
         )
         suggestions = suggest_categories_for_request("Modify the schema")
         assert "schemas" in suggestions
 
     @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
     def test_returns_empty_for_unrelated_text(self, mock_fetch: MagicMock) -> None:
-        mock_fetch.return_value = (
-            {"queues": {"get_queue"}},
-            {"queues": ["queue"]},
+        mock_fetch.return_value = CatalogData(
+            catalog={"queues": {"get_queue"}},
+            keywords={"queues": ["queue"]},
         )
         suggestions = suggest_categories_for_request("Hello, how are you?")
         assert suggestions == []
 
     @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
     def test_case_insensitive(self, mock_fetch: MagicMock) -> None:
-        mock_fetch.return_value = (
-            {"queues": {"get_queue"}},
-            {"queues": ["queue"]},
+        mock_fetch.return_value = CatalogData(
+            catalog={"queues": {"get_queue"}},
+            keywords={"queues": ["queue"]},
         )
-        suggestions = suggest_categories_for_request("LIST ALL QUEUES")
+        # Word boundary matching requires exact word - use singular "queue"
+        suggestions = suggest_categories_for_request("LIST THE QUEUE")
         assert "queues" in suggestions
 
 
@@ -248,6 +266,7 @@ class TestPreloadCategoriesForRequest:
 
         result = preload_categories_for_request("Show me all queues and schemas")
 
+        # exclude_destructive defaults to True now, so no explicit param
         mock_load.assert_called_once_with(["queues", "schemas"])
         assert result is not None
 
@@ -338,14 +357,12 @@ class TestFetchCatalogFromMcp:
         import rossum_agent.tools.dynamic_tools as dt
 
         dt._catalog_cache = None
-        dt._keywords_cache = None
 
     def teardown_method(self) -> None:
         """Clear cache after each test."""
         import rossum_agent.tools.dynamic_tools as dt
 
         dt._catalog_cache = None
-        dt._keywords_cache = None
 
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
@@ -353,10 +370,11 @@ class TestFetchCatalogFromMcp:
         mock_get_conn.return_value = None
         mock_get_loop.return_value = MagicMock()
 
-        catalog, keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert catalog == {}
-        assert keywords == {}
+        assert result.catalog == {}
+        assert result.keywords == {}
+        assert result.destructive_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
@@ -364,10 +382,11 @@ class TestFetchCatalogFromMcp:
         mock_get_conn.return_value = MagicMock()
         mock_get_loop.return_value = None
 
-        catalog, keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert catalog == {}
-        assert keywords == {}
+        assert result.catalog == {}
+        assert result.keywords == {}
+        assert result.destructive_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -389,11 +408,12 @@ class TestFetchCatalogFromMcp:
         ]
         mock_run_coro.return_value = mock_future
 
-        catalog, keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert "queues" in catalog
-        assert catalog["queues"] == {"get_queue", "list_queues"}
-        assert keywords["queues"] == ["queue", "inbox"]
+        assert "queues" in result.catalog
+        assert result.catalog["queues"] == {"get_queue", "list_queues"}
+        assert result.keywords["queues"] == ["queue", "inbox"]
+        assert result.destructive_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -419,10 +439,10 @@ class TestFetchCatalogFromMcp:
         )
         mock_run_coro.return_value = mock_future
 
-        catalog, _keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert "schemas" in catalog
-        assert catalog["schemas"] == {"get_schema"}
+        assert "schemas" in result.catalog
+        assert result.catalog["schemas"] == {"get_schema"}
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -446,10 +466,10 @@ class TestFetchCatalogFromMcp:
         }
         mock_run_coro.return_value = mock_future
 
-        catalog, _keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert "hooks" in catalog
-        assert catalog["hooks"] == {"get_hook"}
+        assert "hooks" in result.catalog
+        assert result.catalog["hooks"] == {"get_hook"}
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -474,9 +494,9 @@ class TestFetchCatalogFromMcp:
         mock_future.result.return_value = {"result": json.dumps(inner_list)}
         mock_run_coro.return_value = mock_future
 
-        catalog, _keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert "users" in catalog
+        assert "users" in result.catalog
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -493,14 +513,13 @@ class TestFetchCatalogFromMcp:
             {
                 "name": "rules",
                 "tools": [{"name": "get_rule"}],
-                # No keywords field
             }
         ]
         mock_run_coro.return_value = mock_future
 
-        _catalog, keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert keywords["rules"] == []
+        assert result.keywords["rules"] == []
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -536,7 +555,271 @@ class TestFetchCatalogFromMcp:
         mock_future.result.side_effect = Exception("Network error")
         mock_run_coro.return_value = mock_future
 
-        catalog, keywords = _fetch_catalog_from_mcp()
+        result = _fetch_catalog_from_mcp()
 
-        assert catalog == {}
-        assert keywords == {}
+        assert result.catalog == {}
+        assert result.keywords == {}
+        assert result.destructive_tools == set()
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_parses_destructive_tools(
+        self, mock_get_conn: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
+    ) -> None:
+        """Test that destructive tools are extracted from catalog."""
+        mock_get_conn.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_future = MagicMock()
+        mock_future.result.return_value = [
+            {
+                "name": "queues",
+                "tools": [
+                    {"name": "get_queue", "destructive": False},
+                    {"name": "delete_queue", "destructive": True},
+                ],
+                "keywords": ["queue"],
+            }
+        ]
+        mock_run_coro.return_value = mock_future
+
+        result = _fetch_catalog_from_mcp()
+
+        assert "queues" in result.catalog
+        assert result.catalog["queues"] == {"get_queue", "delete_queue"}
+        assert result.destructive_tools == {"delete_queue"}
+
+
+class TestGetDestructiveTools:
+    """Tests for get_destructive_tools function."""
+
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
+    def test_returns_destructive_tools_from_catalog(self, mock_fetch: MagicMock) -> None:
+        """Test that get_destructive_tools returns the set from CatalogData."""
+        mock_fetch.return_value = CatalogData(
+            catalog={"queues": {"get_queue", "delete_queue"}},
+            keywords={"queues": ["queue"]},
+            destructive_tools={"delete_queue", "delete_schema"},
+        )
+
+        result = get_destructive_tools()
+
+        assert result == {"delete_queue", "delete_schema"}
+
+    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
+    def test_returns_empty_set_when_no_destructive_tools(self, mock_fetch: MagicMock) -> None:
+        """Test returns empty set when catalog has no destructive tools."""
+        mock_fetch.return_value = CatalogData(
+            catalog={"queues": {"get_queue", "list_queues"}},
+            keywords={"queues": ["queue"]},
+            destructive_tools=set(),
+        )
+
+        result = get_destructive_tools()
+
+        assert result == set()
+
+
+class TestLoadCategoriesImplExcludeDestructive:
+    """Tests for _load_categories_impl with exclude_destructive parameter."""
+
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    @patch("rossum_agent.tools.dynamic_tools.get_destructive_tools")
+    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
+    def test_excludes_destructive_tools_when_flag_set(
+        self,
+        mock_get_catalog: MagicMock,
+        mock_get_destructive: MagicMock,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+    ) -> None:
+        """Test that destructive tools are excluded when exclude_destructive=True."""
+        reset_dynamic_tools()
+        mock_get_catalog.return_value = {"queues": {"get_queue", "list_queues", "delete_queue"}}
+        mock_get_destructive.return_value = {"delete_queue"}
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        # Create mock tools including destructive one
+        mock_tool1 = MagicMock()
+        mock_tool1.name = "get_queue"
+        mock_tool2 = MagicMock()
+        mock_tool2.name = "list_queues"
+        mock_tool3 = MagicMock()
+        mock_tool3.name = "delete_queue"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool1, mock_tool2, mock_tool3]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "get_queue"}, {"name": "list_queues"}]
+
+        result = _load_categories_impl(["queues"], exclude_destructive=True)
+
+        assert "Loaded" in result
+        # Check that only non-destructive tools were requested for conversion
+        # The filter should have excluded delete_queue
+        call_args = mock_convert.call_args[0][0]
+        tool_names_loaded = {t.name for t in call_args}
+        assert "delete_queue" not in tool_names_loaded
+        assert "get_queue" in tool_names_loaded
+        assert "list_queues" in tool_names_loaded
+
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    @patch("rossum_agent.tools.dynamic_tools.get_destructive_tools")
+    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
+    def test_includes_destructive_tools_when_flag_false(
+        self,
+        mock_get_catalog: MagicMock,
+        mock_get_destructive: MagicMock,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+    ) -> None:
+        """Test that destructive tools are included when exclude_destructive=False."""
+        reset_dynamic_tools()
+        mock_get_catalog.return_value = {"queues": {"get_queue", "delete_queue"}}
+        mock_get_destructive.return_value = {"delete_queue"}
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool1 = MagicMock()
+        mock_tool1.name = "get_queue"
+        mock_tool2 = MagicMock()
+        mock_tool2.name = "delete_queue"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool1, mock_tool2]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "get_queue"}, {"name": "delete_queue"}]
+
+        result = _load_categories_impl(["queues"], exclude_destructive=False)
+
+        assert "Loaded" in result
+        # Both tools should be loaded
+        call_args = mock_convert.call_args[0][0]
+        tool_names_loaded = {t.name for t in call_args}
+        assert "delete_queue" in tool_names_loaded
+        assert "get_queue" in tool_names_loaded
+
+
+class TestGetLoadToolDefinition:
+    """Tests for get_load_tool_definition function."""
+
+    def test_returns_valid_tool_definition(self) -> None:
+        definition = get_load_tool_definition()
+        assert definition["name"] == "load_tool"
+        assert "description" in definition
+        assert "input_schema" in definition
+        assert definition["input_schema"]["properties"]["tool_names"]["type"] == "array"
+
+
+class TestLoadTool:
+    """Tests for load_tool function."""
+
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_returns_error_when_no_mcp_connection(self, mock_get_connection: MagicMock) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = None
+        result = load_tool(["delete_hook"])
+        assert result == "Error: MCP connection not available"
+
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_returns_error_when_no_event_loop(self, mock_get_connection: MagicMock, mock_get_loop: MagicMock) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = None
+        result = load_tool(["delete_hook"])
+        assert result == "Error: Event loop not available"
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_returns_error_for_unknown_tool(
+        self, mock_get_connection: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool = MagicMock()
+        mock_tool.name = "get_queue"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool]
+        mock_run_coro.return_value = mock_future
+
+        result = load_tool(["nonexistent_tool"])
+        assert "Error: Unknown tools" in result
+
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_loads_tool_by_name(
+        self,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool = MagicMock()
+        mock_tool.name = "delete_hook"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "delete_hook"}]
+
+        result = load_tool(["delete_hook"])
+
+        assert "Loaded tools: delete_hook" in result
+        assert len(get_dynamic_tools()) == 1
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_returns_already_loaded_message(
+        self, mock_get_connection: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool = MagicMock()
+        mock_tool.name = "delete_hook"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool]
+        mock_run_coro.return_value = mock_future
+
+        # Manually add tool to loaded state
+        state = get_global_state()
+        state.tools.append({"name": "delete_hook"})
+
+        result = load_tool(["delete_hook"])
+        assert result == "Tools already loaded: ['delete_hook']"

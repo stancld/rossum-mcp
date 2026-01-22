@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from rossum_api.models.workspace import Workspace
 
-from rossum_mcp.tools.base import build_resource_url, is_read_write_mode
+from rossum_mcp.tools.base import build_resource_url, delete_resource, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -59,6 +59,10 @@ async def _create_workspace(
     return workspace
 
 
+async def _delete_workspace(client: AsyncRossumAPIClient, workspace_id: int) -> dict:
+    return await delete_resource("workspace", workspace_id, client.delete_workspace)
+
+
 def register_workspace_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register workspace-related tools with the FastMCP server."""
 
@@ -73,3 +77,7 @@ def register_workspace_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None
     @mcp.tool(description="Create a new workspace.")
     async def create_workspace(name: str, organization_id: int, metadata: dict | None = None) -> Workspace | dict:
         return await _create_workspace(client, name, organization_id, metadata)
+
+    @mcp.tool(description="Delete a workspace. Fails if workspace contains queues.")
+    async def delete_workspace(workspace_id: int) -> dict:
+        return await _delete_workspace(client, workspace_id)

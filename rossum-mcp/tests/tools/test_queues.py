@@ -770,3 +770,63 @@ class TestCreateQueueFromTemplate:
 
         assert result["error"] == "create_queue_from_template is not available in read-only mode"
         mock_client._http_client.request_json.assert_not_called()
+
+
+@pytest.mark.unit
+class TestDeleteQueue:
+    """Tests for delete_queue tool."""
+
+    @pytest.mark.asyncio
+    async def test_delete_queue_success(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test successful queue deletion."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_client.delete_queue.return_value = None
+
+        delete_queue = mock_mcp._tools["delete_queue"]
+        result = await delete_queue(queue_id=100)
+
+        assert "scheduled for deletion" in result["message"]
+        assert "100" in result["message"]
+        mock_client.delete_queue.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_delete_queue_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test delete_queue is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        delete_queue = mock_mcp._tools["delete_queue"]
+        result = await delete_queue(queue_id=100)
+
+        assert result["error"] == "delete_queue is not available in read-only mode"
+        mock_client.delete_queue.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_queue_not_found(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test delete_queue raises error when queue doesn't exist."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_queue_tools(mock_mcp, mock_client)
+
+        mock_client.delete_queue.side_effect = APIClientError(
+            method="DELETE",
+            url="https://api.test.rossum.ai/v1/queues/99999",
+            status_code=404,
+            error=Exception("Not Found"),
+        )
+
+        delete_queue = mock_mcp._tools["delete_queue"]
+        with pytest.raises(APIClientError) as exc_info:
+            await delete_queue(queue_id=99999)
+
+        assert exc_info.value.status_code == 404

@@ -49,6 +49,7 @@ class TestToolCatalog:
             "start_annotation",
             "bulk_update_annotation_fields",
             "confirm_annotation",
+            "delete_annotation",
         }
         assert tool_names == expected
 
@@ -64,8 +65,23 @@ class TestToolCatalog:
             "update_queue",
             "get_queue_template_names",
             "create_queue_from_template",
+            "delete_queue",
         }
         assert tool_names == expected
+
+    def test_destructive_tools_are_marked(self) -> None:
+        destructive_tools = [
+            (cat_name, t.name) for cat_name, cat in TOOL_CATALOG.items() for t in cat.tools if t.destructive
+        ]
+        expected_destructive = {
+            ("annotations", "delete_annotation"),
+            ("queues", "delete_queue"),
+            ("schemas", "delete_schema"),
+            ("hooks", "delete_hook"),
+            ("rules", "delete_rule"),
+            ("workspaces", "delete_workspace"),
+        }
+        assert set(destructive_tools) == expected_destructive
 
 
 class TestCatalogSummary:

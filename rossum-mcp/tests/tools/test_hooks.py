@@ -604,3 +604,39 @@ class TestListHookTemplates:
         assert result[1].description == ""  # default
         assert result[1].use_token_owner is True
         mock_client.request_paginated.assert_called_once_with("hook_templates")
+
+
+@pytest.mark.unit
+class TestDeleteHook:
+    """Tests for delete_hook tool."""
+
+    @pytest.mark.asyncio
+    async def test_delete_hook_success(self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch) -> None:
+        """Test successful hook deletion."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        register_hook_tools(mock_mcp, mock_client)
+
+        mock_client.delete_hook.return_value = None
+
+        delete_hook = mock_mcp._tools["delete_hook"]
+        result = await delete_hook(hook_id=123)
+
+        assert "deleted successfully" in result["message"]
+        assert "123" in result["message"]
+        mock_client.delete_hook.assert_called_once_with(123)
+
+    @pytest.mark.asyncio
+    async def test_delete_hook_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test delete_hook is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        register_hook_tools(mock_mcp, mock_client)
+
+        delete_hook = mock_mcp._tools["delete_hook"]
+        result = await delete_hook(hook_id=123)
+
+        assert result["error"] == "delete_hook is not available in read-only mode"
+        mock_client.delete_hook.assert_not_called()

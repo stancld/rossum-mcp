@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from rossum_api.models.rule import Rule
 
+from rossum_mcp.tools.base import delete_resource
+
 if TYPE_CHECKING:
     from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
@@ -39,6 +41,10 @@ async def _list_rules(
     return rules_list
 
 
+async def _delete_rule(client: AsyncRossumAPIClient, rule_id: int) -> dict:
+    return await delete_resource("rule", rule_id, client.delete_rule)
+
+
 def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register rule-related tools with the FastMCP server."""
 
@@ -51,3 +57,7 @@ def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
         schema_id: int | None = None, organization_id: int | None = None, enabled: bool | None = None
     ) -> list[Rule]:
         return await _list_rules(client, schema_id, organization_id, enabled)
+
+    @mcp.tool(description="Delete a rule.")
+    async def delete_rule(rule_id: int) -> dict:
+        return await _delete_rule(client, rule_id)

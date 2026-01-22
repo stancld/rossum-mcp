@@ -17,6 +17,7 @@ from regression_tests.custom_checks import (
     check_knowledge_base_hidden_multivalue_warning,
     check_net_terms_formula_field_added,
     check_no_misleading_training_suggestions,
+    check_queue_deleted,
     check_queue_ui_settings,
 )
 from regression_tests.framework.models import (
@@ -53,6 +54,11 @@ BUSINESS_VALIDATION_HOOK_CHECK = CustomCheck(
 QUEUE_UI_SETTINGS_CHECK = CustomCheck(
     name="Queue UI has correct column settings",
     check_fn=check_queue_ui_settings,
+)
+
+QUEUE_DELETED_CHECK = CustomCheck(
+    name="Queue was scheduled for deletion",
+    check_fn=check_queue_deleted,
 )
 
 
@@ -149,13 +155,37 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=50000, max_total_tokens=90000),
+        token_budget=TokenBudget(min_total_tokens=50000, max_total_tokens=75000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=[],
             max_steps=4,
             file_expectation=FileExpectation(expected_files=["roast.md"]),
             custom_checks=[HIDDEN_MULTIVALUE_CHECK],
+        ),
+    ),
+    RegressionTestCase(
+        name="create_and_delete_credit_note_queue",
+        description="Create a credit note queue from template and then delete it",
+        api_base_url="https://api.elis.develop.r8.lol/v1",
+        rossum_url=None,
+        prompt=(
+            "# Create and delete a Credit Note queue\n\n"
+            "Workspace: 1782601\n\n"
+            "## Tasks:\n\n"
+            "1. Create a new queue from EU Credit Note template with name: Test Credit Note Queue\n"
+            "2. Delete the queue you just created\n\n"
+            "Return the queue_id that was deleted."
+        ),
+        tool_expectation=ToolExpectation(
+            expected_tools=["create_queue_from_template", "delete_queue"], mode=ToolMatchMode.SUBSET
+        ),
+        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=90000),
+        success_criteria=SuccessCriteria(
+            required_keywords=["deleted"],
+            max_steps=6,
+            file_expectation=FileExpectation(),
+            custom_checks=[QUEUE_DELETED_CHECK],
         ),
     ),
     RegressionTestCase(
@@ -286,7 +316,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=60000, max_total_tokens=90000),
+        token_budget=TokenBudget(min_total_tokens=70000, max_total_tokens=100000),
         success_criteria=SuccessCriteria(
             require_subagent=True,
             required_keywords=[],
@@ -321,7 +351,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             expected_tools=["create_queue_from_template", "load_skill", "update_queue"],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=70000),
+        token_budget=TokenBudget(min_total_tokens=35000, max_total_tokens=60000),
         success_criteria=SuccessCriteria(
             required_keywords=[],
             max_steps=4,

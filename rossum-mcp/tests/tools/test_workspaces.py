@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
@@ -151,8 +152,6 @@ class TestCreateWorkspace:
         monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
 
-        import importlib
-
         from rossum_mcp.tools import base
 
         importlib.reload(base)
@@ -177,8 +176,6 @@ class TestCreateWorkspace:
         """Test workspace creation with metadata."""
         monkeypatch.setenv("ROSSUM_API_BASE_URL", "https://api.test.rossum.ai/v1")
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
-
-        import importlib
 
         from rossum_mcp.tools import base
 
@@ -209,8 +206,6 @@ class TestCreateWorkspace:
         """Test create_workspace is blocked in read-only mode."""
         monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
 
-        import importlib
-
         from rossum_mcp.tools import base
 
         importlib.reload(base)
@@ -224,3 +219,53 @@ class TestCreateWorkspace:
 
         assert result["error"] == "create_workspace is not available in read-only mode"
         mock_client.create_new_workspace.assert_not_called()
+
+
+@pytest.mark.unit
+class TestDeleteWorkspace:
+    """Tests for delete_workspace tool."""
+
+    @pytest.mark.asyncio
+    async def test_delete_workspace_success(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test successful workspace deletion."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        from rossum_mcp.tools.workspaces import register_workspace_tools
+
+        register_workspace_tools(mock_mcp, mock_client)
+
+        mock_client.delete_workspace.return_value = None
+
+        delete_workspace = mock_mcp._tools["delete_workspace"]
+        result = await delete_workspace(workspace_id=100)
+
+        assert "deleted successfully" in result["message"]
+        assert "100" in result["message"]
+        mock_client.delete_workspace.assert_called_once_with(100)
+
+    @pytest.mark.asyncio
+    async def test_delete_workspace_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test delete_workspace is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+
+        from rossum_mcp.tools import base
+
+        importlib.reload(base)
+
+        from rossum_mcp.tools.workspaces import register_workspace_tools
+
+        register_workspace_tools(mock_mcp, mock_client)
+
+        delete_workspace = mock_mcp._tools["delete_workspace"]
+        result = await delete_workspace(workspace_id=100)
+
+        assert result["error"] == "delete_workspace is not available in read-only mode"
+        mock_client.delete_workspace.assert_not_called()

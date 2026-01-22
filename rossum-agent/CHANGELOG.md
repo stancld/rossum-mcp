@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Added dynamic tool loading to reduce initial context usage (~8K → ~800 tokens) [#113](https://github.com/stancld/rossum-agents/pull/113)
 - Added `load_tool_category(["queues", "schemas"])` internal tool to load MCP tools on-demand [#113](https://github.com/stancld/rossum-agents/pull/113)
 - Added automatic pre-loading of tool categories based on keywords in user's first message [#113](https://github.com/stancld/rossum-agents/pull/113)
+- Added destructive tool filtering - delete operations are excluded from automatic pre-loading and marked in catalog [#141](https://github.com/stancld/rossum-agents/pull/141)
 - Added PDF document upload support for both REST API and Streamlit UI. Documents are stored in session output directory for agent use (e.g., upload to Rossum) [#102](https://github.com/stancld/rossum-agents/pull/102)
 - Added lightweight request classifier using Claude Haiku to filter out-of-scope requests before invoking the main agent
 - Added skills system for dynamic skill loading from markdown files [#73](https://github.com/stancld/rossum-agents/pull/73)

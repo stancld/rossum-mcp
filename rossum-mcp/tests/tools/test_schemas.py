@@ -2248,3 +2248,45 @@ class TestSchemaValidation:
         }
         with pytest.raises(schemas.SchemaValidationError, match="exceeds 50 characters"):
             schemas._validate_node(node)
+
+
+@pytest.mark.unit
+class TestDeleteSchema:
+    """Tests for delete_schema tool."""
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_success(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test successful schema deletion."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-write")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        mock_client.delete_schema.return_value = None
+
+        delete_schema = mock_mcp._tools["delete_schema"]
+        result = await delete_schema(schema_id=50)
+
+        assert "deleted successfully" in result["message"]
+        assert "50" in result["message"]
+        mock_client.delete_schema.assert_called_once_with(50)
+
+    @pytest.mark.asyncio
+    async def test_delete_schema_read_only_mode(
+        self, mock_mcp: Mock, mock_client: AsyncMock, monkeypatch: MonkeyPatch
+    ) -> None:
+        """Test delete_schema is blocked in read-only mode."""
+        monkeypatch.setenv("ROSSUM_MCP_MODE", "read-only")
+        importlib.reload(base)
+        importlib.reload(schemas)
+
+        schemas.register_schema_tools(mock_mcp, mock_client)
+
+        delete_schema = mock_mcp._tools["delete_schema"]
+        result = await delete_schema(schema_id=50)
+
+        assert result["error"] == "delete_schema is not available in read-only mode"
+        mock_client.delete_schema.assert_not_called()

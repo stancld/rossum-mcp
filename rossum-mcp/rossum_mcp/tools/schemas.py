@@ -11,7 +11,7 @@ from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.schema import Schema
 
-from rossum_mcp.tools.base import TRUNCATED_MARKER, is_read_write_mode
+from rossum_mcp.tools.base import TRUNCATED_MARKER, delete_resource, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -723,6 +723,10 @@ async def _prune_schema_fields(
     return {"removed_fields": sorted(removed), "remaining_fields": sorted(remaining_ids)}
 
 
+async def _delete_schema(client: AsyncRossumAPIClient, schema_id: int) -> dict:
+    return await delete_resource("schema", schema_id, client.delete_schema)
+
+
 def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register schema-related tools with the FastMCP server."""
 
@@ -790,3 +794,7 @@ Returns dict with removed_fields and remaining_fields lists. Sections cannot be 
         fields_to_remove: list[str] | None = None,
     ) -> dict:
         return await _prune_schema_fields(client, schema_id, fields_to_keep, fields_to_remove)
+
+    @mcp.tool(description="Delete a schema. Fails if schema is linked to a queue or annotation (HTTP 409).")
+    async def delete_schema(schema_id: int) -> dict:
+        return await _delete_schema(client, schema_id)

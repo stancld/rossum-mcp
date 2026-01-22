@@ -16,6 +16,7 @@ class ToolInfo:
 
     name: str
     description: str
+    destructive: bool = False
 
 
 @dataclass
@@ -41,6 +42,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("start_annotation", "Start annotation (to_review -> reviewing)"),
             ToolInfo("bulk_update_annotation_fields", "Bulk update annotation fields"),
             ToolInfo("confirm_annotation", "Confirm annotation (-> confirmed)"),
+            ToolInfo("delete_annotation", "Delete annotation (soft delete)", destructive=True),
         ],
         keywords=["annotation", "document", "upload", "extract", "confirm", "review"],
     ),
@@ -56,6 +58,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("update_queue", "Update queue settings"),
             ToolInfo("get_queue_template_names", "List available queue templates"),
             ToolInfo("create_queue_from_template", "Create queue from template"),
+            ToolInfo("delete_queue", "Delete queue (24h delayed)", destructive=True),
         ],
         keywords=["queue", "inbox", "connector"],
     ),
@@ -70,6 +73,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("patch_schema", "Add/update/remove schema fields"),
             ToolInfo("get_schema_tree_structure", "Get lightweight schema tree"),
             ToolInfo("prune_schema_fields", "Bulk remove schema fields"),
+            ToolInfo("delete_schema", "Delete schema", destructive=True),
         ],
         keywords=["schema", "field", "datapoint", "section", "multivalue", "tuple"],
     ),
@@ -97,6 +101,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("list_hook_logs", "View hook execution logs"),
             ToolInfo("list_hook_templates", "List Rossum Store templates"),
             ToolInfo("create_hook_from_template", "Create hook from template"),
+            ToolInfo("delete_hook", "Delete hook", destructive=True),
         ],
         keywords=["hook", "extension", "webhook", "automation", "function", "serverless"],
     ),
@@ -126,7 +131,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("get_relation", "Retrieve relation details"),
             ToolInfo("list_relations", "List annotation relations"),
         ],
-        keywords=["relation", "duplicate", "attachment", "edit"],
+        keywords=["relation", "duplicate", "attachment"],
     ),
     "rules": ToolCategory(
         name="rules",
@@ -134,6 +139,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_rule", "Retrieve rule details"),
             ToolInfo("list_rules", "List validation rules"),
+            ToolInfo("delete_rule", "Delete rule", destructive=True),
         ],
         keywords=["rule", "validation", "constraint"],
     ),
@@ -154,6 +160,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("get_workspace", "Retrieve workspace details"),
             ToolInfo("list_workspaces", "List all workspaces"),
             ToolInfo("create_workspace", "Create new workspace"),
+            ToolInfo("delete_workspace", "Delete workspace", destructive=True),
         ],
         keywords=["workspace", "organization"],
     ),

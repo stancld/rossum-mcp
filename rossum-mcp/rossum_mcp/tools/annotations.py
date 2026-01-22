@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal
 
 from rossum_api.models.annotation import Annotation
 
-from rossum_mcp.tools.base import is_read_write_mode
+from rossum_mcp.tools.base import delete_resource, is_read_write_mode
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -130,6 +130,12 @@ async def _confirm_annotation(client: AsyncRossumAPIClient, annotation_id: int) 
     }
 
 
+async def _delete_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> dict:
+    return await delete_resource(
+        "annotation", annotation_id, client.delete_annotation, f"Annotation {annotation_id} moved to 'deleted' status"
+    )
+
+
 def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     """Register annotation-related tools with the FastMCP server."""
 
@@ -165,3 +171,7 @@ def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> Non
     )
     async def confirm_annotation(annotation_id: int) -> dict:
         return await _confirm_annotation(client, annotation_id)
+
+    @mcp.tool(description="Delete an annotation. Moves to 'deleted' status (soft delete).")
+    async def delete_annotation(annotation_id: int) -> dict:
+        return await _delete_annotation(client, annotation_id)
