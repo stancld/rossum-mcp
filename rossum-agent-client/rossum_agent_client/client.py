@@ -66,6 +66,9 @@ class BaseClient:
         status = response.status_code
         body = response.text
 
+        if 300 <= status < 400:
+            location = response.headers.get("Location", "unknown")
+            raise RossumAgentError(f"Unexpected redirect to {location}", status, body)
         if status == 401:
             raise AuthenticationError("Authentication failed", status, body)
         if status == 404:
