@@ -116,6 +116,15 @@ def _handle_final_answer(event: StepEvent, state: _StreamState) -> None:
     state.last_content = event.content or ""
 
 
+def _print_token_summary(event: StreamDoneEvent) -> None:
+    """Print token usage summary to stderr."""
+    breakdown = event.token_usage_breakdown
+    if not breakdown:
+        print(f"\n({event.input_tokens} in, {event.output_tokens} out)", file=sys.stderr)
+        return
+    print("\n".join(breakdown.format_summary_lines()), file=sys.stderr)
+
+
 def _handle_step_event(event: StepEvent, state: _StreamState, show_thinking: bool) -> None:
     """Dispatch step event to appropriate handler."""
     if event.type == "thinking" and event.content and show_thinking:
@@ -151,7 +160,7 @@ def run_chat(
             state.created_files.append(event.filename)
         elif isinstance(event, StreamDoneEvent):
             print()  # Final newline
-            print(f"\n({event.input_tokens} in, {event.output_tokens} out)", file=sys.stderr)
+            _print_token_summary(event)
 
     # Download and save created files
     for filename in state.created_files:

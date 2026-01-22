@@ -657,7 +657,7 @@ class TestAgentServiceRunAgent:
     @pytest.mark.asyncio
     async def test_run_agent_yields_events(self, tmp_path):
         """Test that run_agent yields step events."""
-        from rossum_agent.api.models.schemas import StreamDoneEvent
+        from rossum_agent.api.models.schemas import StreamDoneEvent, TokenUsageBreakdown
 
         service = AgentService()
 
@@ -665,6 +665,9 @@ class TestAgentServiceRunAgent:
         mock_agent = MagicMock()
         mock_agent._total_input_tokens = 100
         mock_agent._total_output_tokens = 50
+        mock_agent.get_token_usage_breakdown.return_value = TokenUsageBreakdown.from_raw_counts(
+            total_input=100, total_output=50, main_input=100, main_output=50, sub_input=0, sub_output=0, sub_by_tool={}
+        )
 
         async def mock_run(prompt):
             yield AgentStep(step_number=1, thinking="Processing...", is_streaming=True)

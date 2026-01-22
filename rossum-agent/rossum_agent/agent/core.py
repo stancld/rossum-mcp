@@ -76,6 +76,7 @@ from rossum_agent.agent.models import (
     truncate_content,
 )
 from rossum_agent.agent.request_classifier import RequestScope, classify_request, generate_rejection_response
+from rossum_agent.api.models.schemas import TokenUsageBreakdown
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.rossum_mcp_integration import MCPConnection, mcp_tools_to_anthropic_format
 from rossum_agent.tools import (
@@ -234,6 +235,12 @@ class RossumAgent:
         self._tools_cache: list[ToolParam] | None = None
         self._total_input_tokens: int = 0
         self._total_output_tokens: int = 0
+        # Token breakdown tracking
+        self._main_agent_input_tokens: int = 0
+        self._main_agent_output_tokens: int = 0
+        self._sub_agent_input_tokens: int = 0
+        self._sub_agent_output_tokens: int = 0
+        self._sub_agent_usage: dict[str, tuple[int, int]] = {}  # tool_name -> (input, output)
 
     @property
     def messages(self) -> list[MessageParam]:
@@ -245,7 +252,44 @@ class RossumAgent:
         self.memory.reset()
         self._total_input_tokens = 0
         self._total_output_tokens = 0
+        self._main_agent_input_tokens = 0
+        self._main_agent_output_tokens = 0
+        self._sub_agent_input_tokens = 0
+        self._sub_agent_output_tokens = 0
+        self._sub_agent_usage = {}
         reset_dynamic_tools()
+
+    def _accumulate_sub_agent_tokens(self, usage: SubAgentTokenUsage) -> None:
+        """Accumulate token usage from a sub-agent call."""
+        self._total_input_tokens += usage.input_tokens
+        self._total_output_tokens += usage.output_tokens
+        self._sub_agent_input_tokens += usage.input_tokens
+        self._sub_agent_output_tokens += usage.output_tokens
+        # Track per sub-agent
+        prev_in, prev_out = self._sub_agent_usage.get(usage.tool_name, (0, 0))
+        self._sub_agent_usage[usage.tool_name] = (prev_in + usage.input_tokens, prev_out + usage.output_tokens)
+        logger.info(
+            f"Sub-agent '{usage.tool_name}' token usage (iter {usage.iteration}): "
+            f"in={usage.input_tokens}, out={usage.output_tokens}, "
+            f"cumulative total: in={self._total_input_tokens}, out={self._total_output_tokens}"
+        )
+
+    def get_token_usage_breakdown(self) -> TokenUsageBreakdown:
+        """Get token usage breakdown by agent vs sub-agents."""
+        return TokenUsageBreakdown.from_raw_counts(
+            total_input=self._total_input_tokens,
+            total_output=self._total_output_tokens,
+            main_input=self._main_agent_input_tokens,
+            main_output=self._main_agent_output_tokens,
+            sub_input=self._sub_agent_input_tokens,
+            sub_output=self._sub_agent_output_tokens,
+            sub_by_tool=self._sub_agent_usage,
+        )
+
+    def log_token_usage_summary(self) -> None:
+        """Log a human-readable token usage summary."""
+        breakdown = self.get_token_usage_breakdown()
+        logger.info("\n".join(breakdown.format_summary_lines()))
 
     def add_user_message(self, content: UserContent) -> None:
         """Add a user message to the conversation history."""
@@ -524,6 +568,8 @@ class RossumAgent:
         output_tokens = state.final_message.usage.output_tokens
         self._total_input_tokens += input_tokens
         self._total_output_tokens += output_tokens
+        self._main_agent_input_tokens += input_tokens
+        self._main_agent_output_tokens += output_tokens
         logger.info(
             f"Step {step_num}: input_tokens={input_tokens}, output_tokens={output_tokens}, "
             f"total_input={self._total_input_tokens}, total_output={self._total_output_tokens}"
@@ -673,13 +719,7 @@ class RossumAgent:
                     try:
                         while True:
                             usage = token_queue.get_nowait()
-                            self._total_input_tokens += usage.input_tokens
-                            self._total_output_tokens += usage.output_tokens
-                            logger.info(
-                                f"Sub-agent '{usage.tool_name}' token usage (iter {usage.iteration}): "
-                                f"in={usage.input_tokens}, out={usage.output_tokens}, "
-                                f"cumulative total: in={self._total_input_tokens}, out={self._total_output_tokens}"
-                            )
+                            self._accumulate_sub_agent_tokens(usage)
                     except queue.Empty:
                         pass
 
@@ -688,13 +728,7 @@ class RossumAgent:
                 try:
                     while True:
                         usage = token_queue.get_nowait()
-                        self._total_input_tokens += usage.input_tokens
-                        self._total_output_tokens += usage.output_tokens
-                        logger.info(
-                            f"Sub-agent '{usage.tool_name}' token usage (iter {usage.iteration}): "
-                            f"in={usage.input_tokens}, out={usage.output_tokens}, "
-                            f"cumulative total: in={self._total_input_tokens}, out={self._total_output_tokens}"
-                        )
+                        self._accumulate_sub_agent_tokens(usage)
                 except queue.Empty:
                     pass
 
@@ -742,12 +776,16 @@ class RossumAgent:
         result = classify_request(self.client, text)
         self._total_input_tokens += result.input_tokens
         self._total_output_tokens += result.output_tokens
+        self._main_agent_input_tokens += result.input_tokens
+        self._main_agent_output_tokens += result.output_tokens
         if result.scope == RequestScope.OUT_OF_SCOPE:
             rejection = generate_rejection_response(self.client, text)
             total_input = result.input_tokens + rejection.input_tokens
             total_output = result.output_tokens + rejection.output_tokens
             self._total_input_tokens += rejection.input_tokens
             self._total_output_tokens += rejection.output_tokens
+            self._main_agent_input_tokens += rejection.input_tokens
+            self._main_agent_output_tokens += rejection.output_tokens
             return AgentStep(
                 step_number=1,
                 final_answer=rejection.response,

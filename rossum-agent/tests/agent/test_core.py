@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -2414,3 +2415,162 @@ class TestRossumAgentProperties:
 
         messages = mock_agent.messages
         assert len(messages) == 2
+
+
+class TestRossumAgentTokenTracking:
+    """Tests for RossumAgent token usage tracking and breakdown."""
+
+    @pytest.fixture
+    def mock_agent(self):
+        """Create a mock RossumAgent for token tracking tests."""
+        with (
+            patch("rossum_agent.agent.core.mcp_tools_to_anthropic_format", return_value=[]),
+            patch("rossum_agent.agent.core.get_internal_tools", return_value=[]),
+            patch("rossum_agent.agent.core.get_deploy_tools", return_value=[]),
+        ):
+            mock_client = MagicMock()
+            mock_mcp = MagicMock()
+            mock_mcp.list_tools.return_value = MagicMock(tools=[])
+
+            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt", config=None)
+            yield agent
+
+    def test_initial_token_counters_are_zero(self, mock_agent):
+        """Test that all token counters start at zero."""
+        assert mock_agent._total_input_tokens == 0
+        assert mock_agent._total_output_tokens == 0
+        assert mock_agent._main_agent_input_tokens == 0
+        assert mock_agent._main_agent_output_tokens == 0
+        assert mock_agent._sub_agent_input_tokens == 0
+        assert mock_agent._sub_agent_output_tokens == 0
+        assert mock_agent._sub_agent_usage == {}
+
+    def test_reset_clears_all_token_counters(self, mock_agent):
+        """Test reset clears all token tracking state."""
+        mock_agent._total_input_tokens = 1000
+        mock_agent._total_output_tokens = 500
+        mock_agent._main_agent_input_tokens = 600
+        mock_agent._main_agent_output_tokens = 300
+        mock_agent._sub_agent_input_tokens = 400
+        mock_agent._sub_agent_output_tokens = 200
+        mock_agent._sub_agent_usage = {"debug_hook": (400, 200)}
+
+        mock_agent.reset()
+
+        assert mock_agent._total_input_tokens == 0
+        assert mock_agent._total_output_tokens == 0
+        assert mock_agent._main_agent_input_tokens == 0
+        assert mock_agent._main_agent_output_tokens == 0
+        assert mock_agent._sub_agent_input_tokens == 0
+        assert mock_agent._sub_agent_output_tokens == 0
+        assert mock_agent._sub_agent_usage == {}
+
+    def test_get_token_usage_breakdown_with_no_usage(self, mock_agent):
+        """Test get_token_usage_breakdown returns zeros when no tokens used."""
+        breakdown = mock_agent.get_token_usage_breakdown()
+
+        assert breakdown.total.input_tokens == 0
+        assert breakdown.total.output_tokens == 0
+        assert breakdown.total.total_tokens == 0
+        assert breakdown.main_agent.input_tokens == 0
+        assert breakdown.sub_agents.input_tokens == 0
+        assert breakdown.sub_agents.by_tool == {}
+
+    def test_get_token_usage_breakdown_with_main_agent_only(self, mock_agent):
+        """Test breakdown when only main agent has used tokens."""
+        mock_agent._total_input_tokens = 1000
+        mock_agent._total_output_tokens = 500
+        mock_agent._main_agent_input_tokens = 1000
+        mock_agent._main_agent_output_tokens = 500
+
+        breakdown = mock_agent.get_token_usage_breakdown()
+
+        assert breakdown.total.input_tokens == 1000
+        assert breakdown.total.output_tokens == 500
+        assert breakdown.total.total_tokens == 1500
+        assert breakdown.main_agent.input_tokens == 1000
+        assert breakdown.main_agent.output_tokens == 500
+        assert breakdown.main_agent.total_tokens == 1500
+        assert breakdown.sub_agents.total_tokens == 0
+
+    def test_get_token_usage_breakdown_with_sub_agents(self, mock_agent):
+        """Test breakdown when sub-agents have been used."""
+        mock_agent._total_input_tokens = 3000
+        mock_agent._total_output_tokens = 1500
+        mock_agent._main_agent_input_tokens = 1000
+        mock_agent._main_agent_output_tokens = 500
+        mock_agent._sub_agent_input_tokens = 2000
+        mock_agent._sub_agent_output_tokens = 1000
+        mock_agent._sub_agent_usage = {
+            "debug_hook": (1500, 700),
+            "patch_schema_with_subagent": (500, 300),
+        }
+
+        breakdown = mock_agent.get_token_usage_breakdown()
+
+        assert breakdown.total.total_tokens == 4500
+        assert breakdown.main_agent.total_tokens == 1500
+        assert breakdown.sub_agents.total_tokens == 3000
+        assert breakdown.sub_agents.by_tool["debug_hook"].input_tokens == 1500
+        assert breakdown.sub_agents.by_tool["debug_hook"].total_tokens == 2200
+        assert breakdown.sub_agents.by_tool["patch_schema_with_subagent"].total_tokens == 800
+
+    def test_accumulate_sub_agent_tokens(self, mock_agent):
+        """Test _accumulate_sub_agent_tokens accumulates properly."""
+        from rossum_agent.tools import SubAgentTokenUsage
+
+        usage1 = SubAgentTokenUsage(tool_name="debug_hook", input_tokens=100, output_tokens=50, iteration=1)
+        mock_agent._accumulate_sub_agent_tokens(usage1)
+
+        assert mock_agent._total_input_tokens == 100
+        assert mock_agent._total_output_tokens == 50
+        assert mock_agent._sub_agent_input_tokens == 100
+        assert mock_agent._sub_agent_output_tokens == 50
+        assert mock_agent._sub_agent_usage["debug_hook"] == (100, 50)
+
+        usage2 = SubAgentTokenUsage(tool_name="debug_hook", input_tokens=200, output_tokens=100, iteration=2)
+        mock_agent._accumulate_sub_agent_tokens(usage2)
+
+        assert mock_agent._total_input_tokens == 300
+        assert mock_agent._total_output_tokens == 150
+        assert mock_agent._sub_agent_input_tokens == 300
+        assert mock_agent._sub_agent_output_tokens == 150
+        assert mock_agent._sub_agent_usage["debug_hook"] == (300, 150)
+
+    def test_accumulate_sub_agent_tokens_multiple_tools(self, mock_agent):
+        """Test accumulating tokens from multiple sub-agent tools."""
+        from rossum_agent.tools import SubAgentTokenUsage
+
+        usage1 = SubAgentTokenUsage(tool_name="debug_hook", input_tokens=100, output_tokens=50, iteration=1)
+        usage2 = SubAgentTokenUsage(
+            tool_name="patch_schema_with_subagent", input_tokens=200, output_tokens=100, iteration=1
+        )
+        mock_agent._accumulate_sub_agent_tokens(usage1)
+        mock_agent._accumulate_sub_agent_tokens(usage2)
+
+        assert mock_agent._sub_agent_usage["debug_hook"] == (100, 50)
+        assert mock_agent._sub_agent_usage["patch_schema_with_subagent"] == (200, 100)
+        assert mock_agent._sub_agent_input_tokens == 300
+        assert mock_agent._sub_agent_output_tokens == 150
+
+    def test_log_token_usage_summary(self, mock_agent, caplog):
+        """Test log_token_usage_summary logs formatted summary."""
+        mock_agent._total_input_tokens = 3000
+        mock_agent._total_output_tokens = 1500
+        mock_agent._main_agent_input_tokens = 1000
+        mock_agent._main_agent_output_tokens = 500
+        mock_agent._sub_agent_input_tokens = 2000
+        mock_agent._sub_agent_output_tokens = 1000
+        mock_agent._sub_agent_usage = {"debug_hook": (2000, 1000)}
+
+        with caplog.at_level(logging.INFO):
+            mock_agent.log_token_usage_summary()
+
+        log_output = caplog.text
+        assert "TOKEN USAGE SUMMARY" in log_output
+        assert "Main Agent" in log_output
+        assert "Sub-agents (total)" in log_output
+        assert "debug_hook" in log_output
+        assert "TOTAL" in log_output
+        assert "1,000" in log_output
+        assert "3,000" in log_output
