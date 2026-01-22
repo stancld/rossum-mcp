@@ -7,10 +7,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Fixed
-- Fixed `StopAsyncIteration` crash in `list_hooks` and `list_email_templates` when `first_n` exceeds available items [#TBD](https://github.com/stancld/rossum-agents/pull/TBD)
+- Fixed `StopAsyncIteration` crash in `list_hooks` and `list_email_templates` when `first_n` exceeds available items [#134](https://github.com/stancld/rossum-agents/pull/134)
 
 ### Changed
-- Documented `create_hook` config transformations: `source`→`function` rename, `runtime` default, `timeout_s` cap [#TBD](https://github.com/stancld/rossum-agents/pull/TBD)
+- Documented `create_hook` config transformations: `source`→`function` rename, `runtime` default, `timeout_s` cap [#134](https://github.com/stancld/rossum-agents/pull/134)
 
 
 ## [0.4.0] - 2026-01-18
