@@ -361,6 +361,16 @@ class TestValidateRossumApiUrl:
         result = validate_rossum_api_url("https://us.rossum.app")
         assert result == "https://us.rossum.app"
 
+    def test_allows_us_api_rossum_ai(self):
+        """Test that us.api.rossum.ai (US region) is allowed."""
+        result = validate_rossum_api_url("https://us.api.rossum.ai/v1")
+        assert result == "https://us.api.rossum.ai"
+
+    def test_allows_api_rossum_ai(self):
+        """Test that api.rossum.ai (base API) is allowed."""
+        result = validate_rossum_api_url("https://api.rossum.ai")
+        assert result == "https://api.rossum.ai"
+
     def test_allows_elis_develop_r8_lol(self):
         """Test that elis.develop.r8.lol is allowed."""
         result = validate_rossum_api_url("https://elis.develop.r8.lol")
