@@ -46,4 +46,4 @@ markers = [
 testpaths = ["tests"]
 
 [tool.uv.sources]
-rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-hooks-fix"}

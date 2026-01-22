@@ -132,7 +132,7 @@ python_functions = ["test_*"]
 rossum_agent = ["assets/*.png"]
 
 [tool.uv.sources]
-rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-feat-hook-logs"}
+rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-hooks-fix"}
 
 [tool.ty.environment]
 python-version = "3.12"
