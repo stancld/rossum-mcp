@@ -527,17 +527,15 @@
         <img src="./images/hero-agent-orchestration.png" alt="AI Agent orchestration diagram showing how the main agent coordinates with sub-agents, skills, and tools" loading="eager">
       </figure>
 
-      <p>You've built an AI agent that works. It calls APIs, follows instructions, and looks good in demos. Then someone asks a slightly different question, and it hallucinates a URL, loops forever, or burns through your token budget trying to find a resource that doesn't exist.</p>
+      <p>You've built an AI agent that works. It calls APIs, follows instructions, and nails your cherry-picked example. Then someone asks a slightly different question, and it gets stuck on the same step until it gives up or hallucinates.</p>
 
-      <p>This post is about the gap between "working prototype" and "something I'd trust in production." I built an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> (a document processing platform), but the lessons apply everywhere. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
+      <p>It started as a Friday hack: a small MCP server, a handful of tools, and that dopamine hit when the LLM successfully called an API for the first time. I showed it to colleagues. They'd nod and ask: "Can it also debug this crashing webhook?" And it would fail. Every conversation revealed another gap. The goal shifted from flashy demos to the tedious stuff that actually ships, such as configuring extensions or analyzing failing webhooks.</p>
 
-      <p>If you're building agents with tool calling, <a href="https://modelcontextprotocol.io/docs/getting-started/intro" target="_blank" rel="noopener">Model Context Protocol (MCP)</a> servers, or multi-model orchestration, this is the stuff I wish I'd known earlier. The biggest surprise? When I upgraded to a smarter model, my prompts got 70% shorter.</p>
+      <p>This post is about the gap between "toy demo" and "something that survives user testing." I've been building an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a>, but the lessons apply everywhere. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
 
-      <p>It started as a Friday-afternoon hack: a small MCP server, a handful of tools, and that dopamine hit when the LLM successfully called an API. I showed it to colleagues (product managers, engineers, support). They'd nod, then ask: "Can it also debug this webhook?" And it would fail. Every conversation revealed another gap. The goal shifted from flashy demos to tangible problems: understanding workflows, configuring systems, debugging extensions. The boring stuff that actually matters.</p>
+      <p>If you're building agents with tool calling, <a href="https://modelcontextprotocol.io/docs/getting-started/intro" target="_blank" rel="noopener">Model Context Protocol (MCP)</a> servers, or multi-model orchestration, this is the stuff I wish I'd known earlier. The biggest surprise? When I upgraded to a smarter model, my prompts got 70% shorter and the agent got much more clever.</p>
 
-      <p>Making an agent work once is easy. Making it work <strong>reliably, for the next person's question</strong>? That's the actual job.</p>
-
-      <p>Each section below links to a real pull request.</p>
+      <p>Making an agent work once is easy. Making it work <strong>reliably for the next person's question</strong>? That's the actual job.</p>
 
       <nav class="toc" aria-label="Table of contents">
         <h2>Lessons at a Glance</h2>
@@ -549,7 +547,7 @@
           <li><a href="#section-5">Skills: Load Knowledge Just-in-Time</a></li>
           <li><a href="#section-6">Dynamic Tool Loading</a></li>
           <li><a href="#section-7">Smarter Models Need Simpler Prompts</a></li>
-          <li><a href="#section-8">Regression Testing for Prompts</a></li>
+          <li><a href="#section-8">Regression Testing: Prompts Need Tests Too</a></li>
           <li><a href="#section-9">Orchestrate Specialists</a></li>
         </ol>
       </nav>
@@ -558,7 +556,7 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/56" class="pr-link" target="_blank" rel="noopener">PR #56</a>
 
-      <p>My first tool layer looked like many backend systems: handler classes inheriting from a base, scattered across 10 files, each with its dedicated registration boilerplate. Adding a new tool meant touching multiple files and asking "where does this logic live again?"</p>
+      <p>My first tool layer looked like many backend systems: handler classes inheriting from a base, scattered across 10 files, each with its own registration boilerplate. Adding a new tool meant touching multiple files and trying to remember where the logic lived.</p>
 
       <p>I replaced it with <strong><a href="https://github.com/jlowin/fastmcp" target="_blank" rel="noopener">FastMCP</a></strong>, a declarative framework where a single decorator defines the entire tool contract:</p>
 
@@ -586,7 +584,7 @@
 <span class="code-keyword">async def</span> list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
     ...</pre>
 
-      <p>The type hints become the JSON schema the LLM sees. The description tells the agent when to use it. FastMCP turns a Python signature into an API contract automatically.</p>
+      <p><strong>The type hints become the JSON schema the LLM sees.</strong> The description tells the agent when to use it. FastMCP turns a Python signature into an API contract automatically.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> -2,011 lines. When types are the schema, there's nothing left to document.</div>
 
@@ -594,11 +592,15 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/57" class="pr-link" target="_blank" rel="noopener">PR #57</a>
 
-      <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> (Hugging Face's library for building agents in a few lines of code) and <strong>LiteLLM</strong> (a unified API for multiple LLM providers). My first working prototype took an afternoon.</p>
+      <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> (Hugging Face's library for building agents in a few lines of code) and <strong><a href="https://www.litellm.ai/" target="_blank" rel="noopener">LiteLLM</a></strong> (a unified interface for swapping between OpenAI, Anthropic, and other providers). My first working prototype took an afternoon.</p>
 
-      <p>However, as my requirements grew, I needed lower-level control: direct AWS Bedrock integration without routing workarounds, native tool calling without excessive code-execution, and full visibility into system prompts. I also realized I was maintaining 1,500+ lines of custom file and analysis tools that modern Claude models handle natively.</p>
-
-      <p>I migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Claude Agent SDK</a></strong> with direct Bedrock integration. The SDK handles streaming, tool schemas, and multi-turn context natively. I deleted <strong>~2,800 lines</strong> and ended up with more capabilities, not fewer.</p>
+      <p>But "afternoon prototype" and "production-ready" live in different zip codes. As requirements grew, I needed lower-level control:</p>
+      <ul style="margin: 0.5rem 0 1.25rem 1.5rem;">
+        <li><strong>Native async/await</strong> for cleaner streaming to the FastAPI frontend</li>
+        <li><strong>Direct tool calling</strong>—smolagents defaults to "code-agent" mode, where the LLM writes Python to invoke tools. That's powerful for complex orchestration, but my use case was simpler: wrap API calls and validate inputs. When the model generates code, you're debugging Python. When it emits structured JSON that maps to function signatures, you're validating data. For straightforward API wrappers, the latter is easier to constrain and test.</li>
+        <li><strong>Full visibility into system prompts</strong> for debugging and iteration</li>
+      </ul>
+      <p>I migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Claude Agent SDK</a></strong> with direct Bedrock integration (AWS's managed Claude service). The SDK handles streaming, tool schemas, and multi-turn context natively. Along the way, I deleted 1,500+ lines of custom file and analysis tools—things like Mermaid diagram generation—that modern Claude models now handle out of the box. More capabilities, less code.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> High-level frameworks accelerate prototyping. When workarounds outnumber features, move closer to the provider SDK.</div>
 
@@ -606,19 +608,17 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
 
-      <p>The CLI worked great for engineers. But for a support engineer, solution architect, or account manager, "clone the repo and configure your environment variables" isn't a feature. It's a roadblock.</p>
+      <p>The agent started as a <strong>CLI script</strong>. It worked great for engineers, but for a support engineer, solution architect, or account manager, "clone the repo and configure your environment variables" isn't a feature. It's a roadblock.</p>
 
-      <p>My first attempt was a standalone <strong><a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a></strong> app. It gave users a UI, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the gap between the agent and the Rossum platform.</p>
+      <p>So I built a <strong>dedicated chat app</strong> (using <a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a>). It lowered the barrier, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the gap between the agent and the Rossum platform.</p>
 
-      <p>What actually worked was moving from a sidecar app to a <strong>native integration</strong>.</p>
-
-      <p>I built a <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend and embedded the agent directly into the Rossum UI as a chat panel. Now the agent has the user's context and follows their permissions (standard Rossum JWTs for row-level security). No more switching tabs.</p>
+      <p>What actually worked was <strong>embedding the chat</strong> directly into the Rossum UI as a native panel. The agent now inherits the user's context and permissions. No more switching tabs, no re-authentication. The technical implementation—a <a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a> backend—was the easy part. The insight was realizing that proximity to the user's workflow matters more than feature completeness.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> If the user has to leave their workflow to use your agent, they'll eventually stop using it.</div>
 
       <figure class="content-image">
         <img src="../images/fabry_analysis.png" alt="Mr. Fabry analyzing a document workflow, showing queue configuration and active extensions in real-time" loading="lazy">
-        <figcaption>The agent explaining queue configuration and active extensions in real-time</figcaption>
+        <figcaption>Mr. Fabry—named after the engineer in Karel Čapek's <em>R.U.R.</em>, the play that gave us the word "robot"—explaining queue configuration and active extensions in real-time</figcaption>
       </figure>
 
       <h2 id="section-4">4. Sub-Agents for Context Isolation</h2>
@@ -803,7 +803,7 @@
       <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
 
-      <p><a href="#section-4">Section 4</a> introduced sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to a <strong>specialized LLM</strong>.</p>
+      <p><a href="#section-4">Section 4</a> introduced sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to an <strong>existing production system</strong>.</p>
 
       <p>Rossum uses <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" target="_blank" rel="noopener">Formula Fields</a> for computing derived values during document extraction. Formulas are written in <strong><a href="https://pypi.org/project/txscript/" target="_blank" rel="noopener">TxScript</a></strong>, a language based on Python but extended with Rossum-specific functions, variables, and field references. Rossum already has a production <strong>Formula Field Copilot</strong>: an LLM prompted to translate natural language into precise TxScript.</p>
 
@@ -811,7 +811,7 @@
 
       <p>TxScript has nuanced conventions: field access patterns, required vs. non-required handling, multivalue iteration, related object access. I could incorporate this as a skill, but why maintain a parallel implementation when the Formula Field Copilot already exists?</p>
 
-      <p>The solution was obvious: <strong>let each model do what it's trained for</strong>.</p>
+      <p>The solution was obvious: <strong>re-use what already works in production</strong>.</p>
 
       <ol style="margin: 1rem 0 1.5rem 1.5rem;">
         <li><strong>The User</strong> asks for a business rule in plain English: "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding."</li>
@@ -827,9 +827,9 @@
         <figcaption>The agent configuring duplicate detection through natural conversation</figcaption>
       </figure>
 
-      <p>It's LLMs all the way down. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
+      <p>It's LLMs all the way down. The frontier model reasons; the production-tested Copilot executes. Neither tries to be something it isn't.</p>
 
-      <div class="takeaway"><strong>Takeaway:</strong> Frontier models are generalists. When a specialized model already exists for a task, orchestrate it rather than forcing your generalist to learn a new trick.</div>
+      <div class="takeaway"><strong>Takeaway:</strong> Don't rebuild what already works. If you have a production system that solves a problem, expose it as a tool rather than teaching your agent from scratch.</div>
 
       <h2 id="section-conclusion">What's Next</h2>
 
