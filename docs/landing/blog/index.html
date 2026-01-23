@@ -528,32 +528,34 @@
         <img src="./images/hero-agent-orchestration.png" alt="AI Agent orchestration diagram showing how the main agent coordinates with sub-agents, skills, and tools" loading="eager">
       </figure>
 
-      <p><a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> is an intelligent document processing platform (invoice capture, purchase orders, structured data extraction). The first version of rossum-agents was a Friday-afternoon project: a small MCP server in JavaScript, a handful of tools, and that hit of dopamine when the LLM successfully called an API. I started naively: upload a document, annotate it, maybe generate a chart from extracted data. That was the pitch.</p>
+      <p>You've built an AI agent that works. It calls APIs, follows instructions, and impresses in demos. Then someone asks a slightly different question, and it hallucinates a URL, loops forever, or burns through your token budget trying to find a resource that doesn't exist.</p>
 
-      <p>Then I started showing it to people.</p>
+      <p>This post is about the gap between "working prototype" and "something I'd trust in production." I spent 500+ commits on an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> (a document processing platform), but the lessons aren't domain-specific. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
 
-      <p>I'd test one case, get it working, and excitedly demo it to a Product Manager or Solution Architect. They'd nod, then ask: "Can it also debug this webhook?" or "What about configuring a new queue?" And it would fail, hallucinating a webhook URL or spinning in an infinite loop trying to find a workspace ID that didn't exist. Every conversation revealed another gap. I kept talking to colleagues (PMs, engineers, support), gradually piecing together where the agent could actually help. The goal shifted from flashy demos to <strong>tangible problems</strong>: understanding and documenting workflows, configuring new workspaces, setting up extensions. The boring stuff that actually matters.</p>
+      <p>If you're building agents with tool calling, MCP servers, or multi-model orchestration, this is the stuff I wish I'd known earlier.</p>
 
-      <p>Making an agent work once is easy. Making it work <strong>reliably, for the next person's question</strong>, that's the actual job.</p>
+      <p>It started as a Friday-afternoon hack: a small MCP server, a handful of tools, and that dopamine hit when the LLM successfully called an API. I showed it to colleagues (product managers, engineers, support). They'd nod, then ask: "Can it also debug this webhook?" And it would fail. Every conversation revealed another gap. The goal shifted from flashy demos to tangible problems: understanding workflows, configuring systems, debugging extensions. The boring stuff that actually matters.</p>
 
-      <p>This post covers the lessons I learned along the way. Each links to a real pull request.</p>
+      <p>Making an agent work once is easy. Making it work <strong>reliably, for the next person's question</strong>? That's the actual job.</p>
+
+      <p>Each section below links to a real pull request.</p>
 
       <nav class="toc" aria-label="Table of contents">
         <h2>Lessons at a Glance</h2>
         <ol>
-          <li><a href="#section-1">Declarative Tools</a></li>
+          <li><a href="#section-1">Let Type Hints Define Your Tools</a></li>
           <li><a href="#section-2">From Smolagents to Claude Agent SDK</a></li>
-          <li><a href="#section-3">The API that made it usable</a></li>
-          <li><a href="#section-4">Sub-Agents: Teaching AI to Delegate</a></li>
-          <li><a href="#section-5">Skills: Focused Expertise</a></li>
+          <li><a href="#section-3">Embed Agent's UI Where the Work Happens</a></li>
+          <li><a href="#section-4">Sub-Agents for Context Isolation</a></li>
+          <li><a href="#section-5">Skills: Load Knowledge Just-in-Time</a></li>
           <li><a href="#section-6">Dynamic Tool Loading</a></li>
           <li><a href="#section-7">Smarter Models Need Simpler Prompts</a></li>
           <li><a href="#section-8">Regression Testing for Prompts</a></li>
-          <li><a href="#section-9">AI Calling AI</a></li>
+          <li><a href="#section-9">Orchestrate Specialists</a></li>
         </ol>
       </nav>
 
-      <h2 id="section-1">1. From Handlers to Declarative Tools</h2>
+      <h2 id="section-1">1. Let Type Hints Define Your Tools</h2>
 
       <a href="https://github.com/stancld/rossum-agents/pull/56" class="pr-link" target="_blank" rel="noopener">PR #56</a>
 
@@ -601,7 +603,7 @@
 
       <div class="takeaway"><strong>Takeaway:</strong> High-level frameworks accelerate prototyping. When workarounds outnumber features, move closer to the provider SDK.</div>
 
-      <h2 id="section-3">3. The API that made it usable</h2>
+      <h2 id="section-3">3. Embed Agent's UI Where the Work Happens</h2>
 
       <a href="https://github.com/stancld/rossum-agents/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
 
@@ -611,7 +613,7 @@
 
       <p>What actually worked was moving from a sidecar app to a <strong>native integration</strong>.</p>
 
-      <p>I built a dedicated <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend that became the backbone of the system. It was real engineering work: building production infrastructure, not workarounds. Most importantly, it allowed me to embed the agent directly into the Rossum UI as a chat panel.</p>
+      <p>I built a dedicated <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend. Real engineering work: building production infrastructure, not workarounds. More importantly, it let me embed the agent directly into the Rossum UI as a chat panel.</p>
 
       <p>At that point, the agent didn't just "run somewhere." It lived where the work happened. It had the user's context, followed their permissions (using standard Rossum JWTs for row-level security), and eliminated the mental tax of switching interfaces.</p>
 
@@ -622,7 +624,7 @@
         <figcaption>The agent explaining queue configuration and active extensions in real-time</figcaption>
       </figure>
 
-      <h2 id="section-4">4. Sub-Agents: Teaching AI to Delegate</h2>
+      <h2 id="section-4">4. Sub-Agents for Context Isolation</h2>
 
       <a href="https://github.com/stancld/rossum-agents/pull/107" class="pr-link" target="_blank" rel="noopener">PR #107</a>
       <a href="https://code.claude.com/docs/en/sub-agents" class="pr-link" target="_blank" rel="noopener">Sub-Agents</a>
@@ -650,7 +652,7 @@
 
       <div class="takeaway"><strong>Takeaway:</strong> Sub-agents aren't just for specialization. They're garbage collection for your context window.</div>
 
-      <h2 id="section-5">5. Skills: Focused Expertise on Demand</h2>
+      <h2 id="section-5">5. Skills: Load Knowledge Just-in-Time</h2>
 
       <a href="https://github.com/stancld/rossum-agents/pull/73" class="pr-link" target="_blank" rel="noopener">PR #73</a>
       <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview" class="pr-link" target="_blank" rel="noopener">Agent Skills</a>
@@ -704,7 +706,7 @@
 
       <p>Now a simple request like "List my queues" loads only the queue-related tools (~800 tokens) instead of the entire 8,000-token library. I observed a <strong>10x reduction</strong> in baseline context usage.</p>
 
-      <p>The real surprise was the impact on quality. With a smaller, more relevant toolset to choose from, the model became significantly more decisive. By removing the "noise" of irrelevant tool definitions, I effectively improved the agent's focus and reduced the likelihood of tool-selection errors.</p>
+      <p>The real surprise was quality. With fewer tools to choose from, the model stopped second-guessing itself. Turns out, removing noise from the toolset was as effective as better prompting.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> A crowded context window is a distracted agent. Dynamic loading saves money and improves reasoning.</div>
 
@@ -717,7 +719,7 @@
 
       <p>The initial migration was rough. Opus fell into the "tool-calling inferno": redundant loops where the model over-analyzed simple tasks, burning tokens without progress. I realized the problem wasn't the model; it was my "legacy" prompts. Building with less capable models had trained me to write exhaustive, hand-holding instructions. Because Opus 4.5 is more literal and responsive, my <code>CRITICAL:</code> and <code>MUST:</code> blocks were being treated as absolute commands to act, even when unnecessary.</p>
 
-      <p>The fix required a fundamental shift: moving from <strong>procedures to goals</strong>.</p>
+      <p>The fix: stop writing procedures, start writing goals.</p>
 
 <pre><span class="code-comment"># Before: 104 lines of step-by-step handholding</span>
 ### Step 4: Hook Code Debugging with Opus
@@ -792,7 +794,7 @@
 
       <div class="takeaway"><strong>Takeaway:</strong> If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
 
-      <h2 id="section-9">9. AI Calling AI: The Copilot Integration</h2>
+      <h2 id="section-9">9. Orchestrate Specialists, Don't Replicate Them</h2>
 
       <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
@@ -824,6 +826,16 @@
       <p>It's LLMs all the way down, and that's exactly the point. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Frontier models are generalists. When a specialized model already exists for a task, orchestrate it rather than forcing your generalist to learn a new trick.</div>
+
+      <h2 id="section-conclusion">What's Next</h2>
+
+      <p>The agent is moving from prototype to pilot. After testing with a small circle of engineers and product managers, it's about to roll out as an internal feature at Rossum. More users means more edge cases, more feedback, and more commits.</p>
+
+      <p>But the most interesting development wasn't planned. The same agent that debugs webhooks and configures schemas is now generating executive reports: structured summaries of how customers use Rossum, with use-case classification, integration detection, and geographic coverage. Point it at a list of queue IDs, and it produces analysis designed for C-level stakeholders. The MCP tools built for configuration became tools for insight.</p>
+
+      <p>That's what happens when you build architecture instead of hacks. Sub-agents, skills, and dynamic tool loading weren't just solutions to immediate problems. They became infrastructure for problems I hadn't anticipated. The agent that started as a Friday hack is turning into a platform.</p>
+
+      <p>Whether it stays useful depends on what happens next: real users, real pressure, real failures. That's where the next lessons will come from.</p>
 
       <div class="cta-box">
         <p>All PRs referenced are in the <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs, the backtracking, and the moments where the system finally started behaving like something you can trust.</p>
