@@ -530,9 +530,9 @@
 
       <p>You've built an AI agent that works. It calls APIs, follows instructions, and looks good in demos. Then someone asks a slightly different question, and it hallucinates a URL, loops forever, or burns through your token budget trying to find a resource that doesn't exist.</p>
 
-      <p>This post is about the gap between "working prototype" and "something I'd trust in production." I spent 500+ commits on an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> (a document processing platform), but the lessons aren't domain-specific. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
+      <p>This post is about the gap between "working prototype" and "something I'd trust in production." I spent 500+ commits on an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> (a document processing platform), but the lessons apply everywhere. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
 
-      <p>If you're building agents with tool calling, MCP servers, or multi-model orchestration, this is the stuff I wish I'd known earlier.</p>
+      <p>If you're building agents with tool calling, <a href="https://modelcontextprotocol.io/docs/getting-started/intro" target="_blank" rel="noopener">Model Context Protocol (MCP)</a> servers, or multi-model orchestration, this is the stuff I wish I'd known earlier. The biggest surprise? When I upgraded to a smarter model, my prompts got 70% shorter.</p>
 
       <p>It started as a Friday-afternoon hack: a small MCP server, a handful of tools, and that dopamine hit when the LLM successfully called an API. I showed it to colleagues (product managers, engineers, support). They'd nod, then ask: "Can it also debug this webhook?" And it would fail. Every conversation revealed another gap. The goal shifted from flashy demos to tangible problems: understanding workflows, configuring systems, debugging extensions. The boring stuff that actually matters.</p>
 
@@ -595,7 +595,7 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/57" class="pr-link" target="_blank" rel="noopener">PR #57</a>
 
-      <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> and <strong>LiteLLM</strong>, tools that get an agent running fast. My first working prototype took an afternoon.</p>
+      <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> (Hugging Face's library for building agents in a few lines of code) and <strong>LiteLLM</strong> (a unified API for multiple LLM providers). My first working prototype took an afternoon.</p>
 
       <p>However, as my requirements grew, I needed lower-level control: direct AWS Bedrock integration without routing workarounds, native tool calling without excessive code-execution, and full visibility into system prompts. I also realized I was maintaining 1,500+ lines of custom file and analysis tools that modern Claude models handle natively.</p>
 
@@ -635,7 +635,7 @@
 
       <p>Complex tasks require messy iteration: retrying a failing webhook, patching a schema multiple times, digging through documentation to answer a user's question. In a monolithic architecture, every failed attempt and verbose API error accumulates in the conversation. The noise drowns out the signal, making the agent slower, more prone to hallucination, and more expensive.</p>
 
-      <p>The fix? <strong>Delegation with isolation.</strong></p>
+      <p>The solution: <strong>delegation with isolation.</strong></p>
 
       <p>Sub-agents are separate LLM calls with their own conversation history and a restricted toolset scoped to their specialty. They iterate, fail, and retry in this sandbox while returning only the essential result to the main agent's context, for instance, a summary or a recommendation. This prevents the main agent from ever seeing (or paying for) the 50 lines of API errors it took to get there.</p>
 
@@ -841,6 +841,8 @@
       <p>That's the compound interest of getting the architecture right. Sub-agents, dynamic tool loading, and skills weren't just about making the agent reliable—they made it extensible in ways I couldn't predict. When your infrastructure is modular, new capabilities emerge from recombination, not rewriting.</p>
 
       <p>The agent has been tested with a small circle of engineers and product managers. Next: a broader internal rollout at Rossum. Real users, real pressure, real failures. I expect to learn as much in the next 500 commits as I did in the first 500.</p>
+
+      <p>The gap between "works in a demo" and "works for real users" isn't closed by better models. It's closed by better engineering: isolation, testing, modularity. And sometimes better engineering means writing less, not more—even for your prompts. The models will keep getting smarter. The question is whether your architecture can keep up.</p>
 
       <p>If you're building agents and want to compare notes—or tell me where I'm wrong—find me on <a href="https://github.com/stancld" target="_blank" rel="noopener">GitHub</a> or <a href="https://x.com/stancld" target="_blank" rel="noopener">X</a>.</p>
 
