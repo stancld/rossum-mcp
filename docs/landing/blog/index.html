@@ -579,9 +579,9 @@
                 },
             ),
             ...
-        ]
+        ]</pre>
 
-<span class="code-comment"># After: type hints ARE the schema</span>
+<pre><span class="code-comment"># After: type hints ARE the schema</span>
 <span class="code-decorator">@mcp.tool</span>(description=<span class="code-string">"List all queues with optional filters."</span>)
 <span class="code-keyword">async def</span> list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
     ...</pre>
