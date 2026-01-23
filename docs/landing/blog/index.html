@@ -586,7 +586,7 @@
 <span class="code-keyword">async def</span> list_queues(workspace_id: int | None = None, name: str | None = None) -> list[Queue]:
     ...</pre>
 
-      <p>The type hints became the JSON schema the LLM saw. The description became the prompt that told the agent when to use it. FastMCP turned my Python signature into a reliable API contract without me lifting a finger.</p>
+      <p>The type hints become the JSON schema the LLM sees. The description tells the agent when to use it. FastMCP turns a Python signature into an API contract automatically.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> -2,011 lines. When types are the schema, there's nothing left to document.</div>
 
@@ -598,7 +598,7 @@
 
       <p>However, as my requirements grew, I needed lower-level control: direct AWS Bedrock integration without routing workarounds, native tool calling without excessive code-execution, and full visibility into system prompts. I also realized I was maintaining 1,500+ lines of custom file and analysis tools that modern Claude models handle natively.</p>
 
-      <p>I migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Claude Agent SDK</a></strong> with direct Bedrock integration, trading quick-start convenience for lower-level control. The SDK handled natively what I'd been maintaining by hand: streaming, tool schemas, and multi-turn context. The result: <strong>~2,800 fewer lines of code</strong> and more capabilities, not fewer.</p>
+      <p>I migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Claude Agent SDK</a></strong> with direct Bedrock integration. The SDK handles streaming, tool schemas, and multi-turn context natively. I deleted <strong>~2,800 lines</strong> and ended up with more capabilities, not fewer.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> High-level frameworks accelerate prototyping. When workarounds outnumber features, move closer to the provider SDK.</div>
 
@@ -612,9 +612,7 @@
 
       <p>What actually worked was moving from a sidecar app to a <strong>native integration</strong>.</p>
 
-      <p>I built a dedicated <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend. Real engineering work: building production infrastructure, not workarounds. More importantly, it let me embed the agent directly into the Rossum UI as a chat panel.</p>
-
-      <p>At that point, the agent didn't just "run somewhere." It lived where the work happened. It had the user's context, followed their permissions (using standard Rossum JWTs for row-level security), and eliminated the mental tax of switching interfaces.</p>
+      <p>I built a <strong><a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a></strong> backend and embedded the agent directly into the Rossum UI as a chat panel. Now the agent has the user's context and follows their permissions (standard Rossum JWTs for row-level security). No more switching tabs.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> If the user has to leave their workflow to use your agent, they'll eventually stop using it.</div>
 
@@ -630,13 +628,13 @@
 
       <p>Early on, I treated the agent like a single specialist locked in a room with every tool I could provide. I assumed that because Rossum is a specialized domain, one well-prompted agent could handle the entire API surface.</p>
 
-      <p>The real issue wasn't domain breadth but <strong>context pollution</strong>. Rossum workflows are defined by large, configurable schemas (tens to hundreds of fields across multiple schemas) which can quickly overwhelm a context window.</p>
+      <p>The real issue was <strong>context pollution</strong>. Rossum workflows use large schemas, tens to hundreds of fields, which quickly overwhelm a context window.</p>
 
-      <p>Complex tasks require messy iteration: retrying a failing webhook, patching a schema multiple times, digging through documentation to answer a user's question. In a monolithic architecture, every failed attempt and verbose API error accumulates in the conversation. The noise drowns out the signal, making the agent slower, more prone to hallucination, and more expensive.</p>
+      <p>Complex tasks require messy iteration: retrying a failing webhook, patching a schema multiple times, digging through documentation. In a monolithic architecture, every failed attempt and verbose API error accumulates in the conversation. The noise drowns out the signal.</p>
 
       <p>The solution: <strong>delegation with isolation.</strong></p>
 
-      <p>Sub-agents are separate LLM calls with their own conversation history and a restricted toolset scoped to their specialty. They iterate, fail, and retry in this sandbox while returning only the essential result to the main agent's context, for instance, a summary or a recommendation. This prevents the main agent from ever seeing (or paying for) the 50 lines of API errors it took to get there.</p>
+      <p>Sub-agents are separate LLM calls with their own conversation history and a restricted toolset. They iterate, fail, and retry in a sandbox, then return only the result to the main agent. The main agent never sees the 50 lines of API errors it took to get there.</p>
 
       <p>I chose sub-agents for tasks that either required many retries (like debugging webhooks) or produced verbose intermediate outputs (like knowledge base searches). The primary conversation stays clean:</p>
 
@@ -647,7 +645,7 @@
         <div class="level-2">└── KnowledgeBaseSubAgent (documentation retrieval)</div>
       </figure>
 
-      <p>The implementation is straightforward: sub-agents are exposed as regular tools. Calling <code>debug_hook</code> doesn't run some logic; it spawns an entirely separate LLM session with its own conversation history, a restricted toolset, and a focused system prompt. An abstract base class handles the iteration loop; concrete implementations just define their tools and execution logic. The main agent sees only the final summary; the 15 iterations of trial-and-error stay quarantined.</p>
+      <p>Implementation: sub-agents are exposed as regular tools. Calling <code>debug_hook</code> spawns a separate LLM session with its own history, restricted toolset, and focused system prompt. An abstract base class handles the iteration loop; concrete implementations define their tools and execution logic. The 15 iterations of trial-and-error stay quarantined.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Sub-agents aren't just for specialization. They're garbage collection for your context window.</div>
 
@@ -658,7 +656,7 @@
 
       <p>Initially, the agent's "brain" was a monolithic system prompt. I kept adding rules, edge cases, and <code>IMPORTANT:</code> blocks in all caps. It felt productive until it became brittle, unreadable, and expensive. Loading every format specification and workflow upfront meant I was paying for tokens the agent didn't even need for 90% of tasks.</p>
 
-      <p>I pivoted to a <strong>Skills Framework</strong> based on <strong>progressive disclosure</strong>: show only what's necessary at that moment. Rossum's documentation alone spans hundreds of pages; loading it all upfront would consume half the context window. Instead, the system loads expertise only when it becomes relevant.</p>
+      <p>I pivoted to a <strong>Skills Framework</strong>: show only what's necessary. Rossum's documentation spans hundreds of pages; loading it upfront would consume half the context window. Instead, the system loads expertise when it becomes relevant.</p>
 
       <figure class="content-image">
         <img src="./images/skills-modular.png" alt="Skills as modular units - showing individual skill files that can be loaded on demand" loading="lazy">
@@ -679,9 +677,9 @@
         <li>Instructions (loaded on demand): the full procedural knowledge injected only when the agent identifies a matching task, i.e., examples, patterns, and constraints.</li>
       </ul>
 
-      <p>If a user asked, "Why is my webhook failing?", the agent identified the <code>hook-debugging</code> metadata and pulled in the full instructions. The knowledge for UI settings and schema patching stayed dormant. This <strong>dynamic focus</strong> kept the agent sharp and the context clean.</p>
+      <p>If a user asks "Why is my webhook failing?", the agent identifies the <code>hook-debugging</code> metadata and pulls in the full instructions. Knowledge for UI settings and schema patching stays dormant.</p>
 
-      <p>This approach turned capability expansion into a standard software task: create a file, version it, and ship it. It even changed internal culture. Product Managers can now draft or refine skills in Markdown, with engineers reviewing them just like code.</p>
+      <p>Adding a capability is now a standard software task: create a file, version it, ship it. Product managers draft skills in Markdown; engineers review them like code.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Stop trying to teach the agent everything at once. Give it a table of contents and let it read the chapter it needs.</div>
 
@@ -689,7 +687,7 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/108" class="pr-link" target="_blank" rel="noopener">PR #108</a>
 
-      <p>As the toolkit expanded, I hit the "Agent Tax": every tool added to the context window cost tokens, even if it was never called. Loading all 50+ MCP tools upfront burned roughly <strong>8,000 tokens</strong> before the user even typed a word. This was a waste of money and a waste of cognitive load for the model, leading to slower reasoning and higher latency.</p>
+      <p>As the toolkit expanded, I hit the "Agent Tax": every tool costs tokens even if never called. Loading 50+ MCP tools upfront burned <strong>8,000 tokens</strong> before the user typed a word.</p>
 
       <p>To solve this, I implemented a <strong>Two-Phase Dynamic Loading</strong> strategy:</p>
 
@@ -703,7 +701,7 @@
         </li>
       </ul>
 
-      <p>Now a simple request like "List my queues" loads only the queue-related tools (~800 tokens) instead of the entire 8,000-token library. I observed a <strong>10x reduction</strong> in baseline context usage.</p>
+      <p>"List my queues" now loads only queue-related tools (~800 tokens) instead of the full 8,000-token library. <strong>10x reduction</strong> in baseline context.</p>
 
       <p>The real surprise was quality. With fewer tools to choose from, the model stopped second-guessing itself. Turns out, removing noise from the toolset was as effective as better prompting.</p>
 
@@ -761,11 +759,11 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/82" class="pr-link" target="_blank" rel="noopener">PR #82</a>
 
-      <p>I learned this the hard way: refactoring a prompt can change system behavior just as drastically as changing business logic. In a complex agentic system, every "improvement" is a potential regression.</p>
+      <p>Refactoring a prompt can change system behavior as much as changing business logic. Every "improvement" is a potential regression.</p>
 
       <p>Consider a typical week: Monday, you tweak the system prompt for better clarity. Tuesday, you add a new validation tool. Wednesday, you "optimize" a tool description. By Friday, the agent is hallucinating parameters or skipping critical steps. Without a way to measure <em>precisely</em> what changed, you're debugging by intuition.</p>
 
-      <p>Since intuition doesn't scale, I built an <strong>Evaluation Framework</strong> to treat prompts like code. It ran the agent through realistic scenarios and validated its behavior across multiple dimensions:</p>
+      <p>Intuition doesn't scale, so I built an <strong>Evaluation Framework</strong>. It runs the agent through realistic scenarios and validates behavior:</p>
 
 <pre>RegressionTestCase(
     name=<span class="code-string">"setup_invoice_queue_with_validation"</span>,
@@ -796,7 +794,7 @@
         <li><strong>The infinite loop:</strong> A "clarified" tool description caused the agent to call <code>get_schema</code> repeatedly, convinced each response was incomplete. Token budget alerts flagged it before I burned through $50 in a single test run.</li>
       </ul>
 
-      <p>None of these failures were obvious from reading the output. The agent completed its task each time; it just took a worse path to get there. Without quantitative checks, I would have shipped regressions disguised as improvements.</p>
+      <p>Neither failure was obvious from reading the output. The agent completed its task; it just took a worse path. Without quantitative checks, I'd have shipped regressions disguised as improvements.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
 
@@ -805,13 +803,13 @@
       <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
 
-      <p><a href="#section-4">Section 4</a> introduced sub-agents as a way to delegate complex tasks while keeping the main context clean. This section takes delegation one step further: instead of spawning another instance of the same frontier model, the agent hands off work to an entirely different, <strong>specialized LLM</strong>.</p>
+      <p><a href="#section-4">Section 4</a> introduced sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to a <strong>specialized LLM</strong>.</p>
 
       <p>Rossum uses <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" target="_blank" rel="noopener">Formula Fields</a> for computing derived values during document extraction. Formulas are written in <strong><a href="https://pypi.org/project/txscript/" target="_blank" rel="noopener">TxScript</a></strong>, a language based on Python but extended with Rossum-specific functions, variables, and field references. Rossum already has a production <strong>Formula Field Copilot</strong>: an LLM prompted to translate natural language into precise TxScript.</p>
 
       <p>So why not have Opus generate formulas directly? Since TxScript is Python-based, Opus can write syntactically valid code. But "valid Python" isn't the same as "correct TxScript".</p>
 
-      <p>TxScript has nuanced conventions (different field access patterns, required vs. non-required field handling, multivalue iteration, related object access) that require tens of lines of prompts to explain. I could incorporate this as a skill, but that means maintaining a parallel implementation. The Formula Field Copilot is already maintained by the responsible team. Why duplicate the effort?</p>
+      <p>TxScript has nuanced conventions: field access patterns, required vs. non-required handling, multivalue iteration, related object access. I could incorporate this as a skill, but why maintain a parallel implementation when the Formula Field Copilot already exists?</p>
 
       <p>The solution was obvious: <strong>let each model do what it's trained for</strong>.</p>
 
@@ -822,14 +820,14 @@
         <li><strong>Opus</strong> validates the formula against the schema and applies it via MCP tools.</li>
       </ol>
 
-      <p>This mirrors the sub-agent pattern from <a href="#section-4">Section 4</a>, but with a key difference: sub-agents delegate for <em>context isolation</em>; here, the delegation is for <em>capability</em>. Opus is the better reasoner and orchestrator; the Copilot is the better formula writer. Trying to make Opus do both would mean worse results at higher cost.</p>
+      <p>This mirrors <a href="#section-4">Section 4</a>'s sub-agent pattern, but with a difference: sub-agents delegate for context isolation; here, delegation is for capability. Opus reasons and orchestrates; the Copilot writes formulas. Trying to make Opus do both would mean worse results at higher cost.</p>
 
       <figure class="content-image">
         <img src="../images/fabry_extension.png" alt="Mr. Fabry configuring duplicate detection through natural conversation" loading="lazy">
         <figcaption>The agent configuring duplicate detection through natural conversation</figcaption>
       </figure>
 
-      <p>It's LLMs all the way down (a nod to the old "turtles all the way down" joke), and that's exactly the point. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
+      <p>It's LLMs all the way down. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Frontier models are generalists. When a specialized model already exists for a task, orchestrate it rather than forcing your generalist to learn a new trick.</div>
 
@@ -837,16 +835,16 @@
 
       <p>Remember that 70% prompt reduction from the intro? It wasn't a one-time win. It was the pattern.</p>
 
-      <p>Every improvement in this post—sub-agents, skills, dynamic loading—followed the same arc: I added complexity to solve a problem, then removed most of it once I understood what actually mattered. The system got more capable as it got smaller. That's not a coincidence; it's the lesson.</p>
+      <p>Every improvement in this post followed the same arc: I added complexity to solve a problem, then removed most of it once I understood what mattered. The system got more capable as it got smaller.</p>
 
-      <p>The gap between "works in a demo" and "works for real users" isn't closed by better models. It's closed by subtraction: fewer tools in the context, fewer instructions in the prompt, fewer responsibilities per agent. The hard part isn't adding features. It's knowing which ones to take away.</p>
+      <p>The gap between "works in a demo" and "works for real users" isn't closed by better models. It's closed by subtraction: fewer tools, fewer instructions, fewer responsibilities per agent.</p>
 
-      <p>Next: a broader internal rollout at Rossum. More users, more edge cases, more opportunities to learn what I still got wrong. I expect to delete as much code in the next 500 commits as I write.</p>
+      <p>Next: broader internal rollout at Rossum. More users, more edge cases. I expect to delete as much code in the next 500 commits as I write.</p>
 
-      <p>If you're building agents and want to compare notes—or tell me where I'm wrong—find me on <a href="https://github.com/stancld" target="_blank" rel="noopener">GitHub</a> or <a href="https://x.com/stancld" target="_blank" rel="noopener">X</a>. The lessons are in the diffs. Most of them are deletions.</p>
+      <p>If you're building agents and want to compare notes, or tell me where I'm wrong, find me on <a href="https://github.com/stancld" target="_blank" rel="noopener">GitHub</a> or <a href="https://x.com/stancld" target="_blank" rel="noopener">X</a>. The lessons are in the diffs. Most are deletions.</p>
 
       <div class="cta-box">
-        <p>All PRs referenced are in the <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs, the backtracking, and the moments where the system finally started behaving like something you can trust.</p>
+        <p>All PRs are in the <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs and the backtracking.</p>
         <a href="https://github.com/stancld/rossum-agents" class="cta-button" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           Star on GitHub
