@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233F8AE2'/%3E%3Cstop offset='100%25' stop-color='%23AE33EC'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath stroke='url(%23g)' d='M1.4,10.8c0,0,1-2.2,3.8-3.8c2.8-1.6,5.2-1.4,5.2-1.4 M6.3,20.4c0,0-1.4-1.9-1.4-5.2s1.4-5.2,1.4-5.2M16.6,21.7c0,0-2.4,0.3-5.2-1.4c-2.8-1.6-3.8-3.8-3.8-3.8 M22.6,13.2c0,0-1,2.2-3.8,3.8c-2.8-1.6-5.2,1.4-5.2,1.4 M17.8,3.6c0,0,1.4,1.9,1.4,5.2c0,3.2-1.4,5.2-1.4,5.2 M7.4,2.3c0,0,2.4-0.3,5.2,1.4c2.8,1.6,3.8,3.8,3.8,3.8'/%3E%3C/svg%3E">
   <title>From Friday Hack to Deployable Agent | Rossum MCP & Agent</title>
-  <meta name="description" content="500+ commits later, here's what I learned building a production AI agent&mdash;from sub-agents and skills to dynamic tool loading.">
+  <meta name="description" content="500+ commits later, here's what I learned building a production AI agent: sub-agents, skills, and dynamic tool loading.">
   <meta property="og:title" content="From Friday Hack to Deployable Agent">
   <meta property="og:description" content="500+ commits later, here's what I learned building a production AI agent.">
   <meta property="og:image" content="https://stancld.github.io/rossum-agents/blog/images/hero-agent-orchestration.png">
@@ -597,7 +597,7 @@
       <p>But "afternoon prototype" and "production-ready" live in different zip codes. As requirements grew, I needed lower-level control:</p>
       <ul style="margin: 0.5rem 0 1.25rem 1.5rem;">
         <li><strong>Native async/await</strong> for cleaner streaming to the FastAPI frontend</li>
-        <li><strong>Direct tool calling</strong>—smolagents defaults to "code-agent" mode, where the LLM writes Python to invoke tools. That's powerful for complex orchestration, but my use case was simpler: wrap API calls and validate inputs. When the model generates code, you're debugging Python. When it emits structured JSON that maps to function signatures, you're validating data. For straightforward API wrappers, the latter is easier to constrain and test.</li>
+        <li><strong>Direct tool calling</strong>: smolagents defaults to "code-agent" mode, where the LLM writes Python to invoke tools. That's powerful for complex orchestration, but my use case was simpler: wrap API calls and validate inputs. When the model generates code, you're debugging Python. When it emits structured JSON that maps to function signatures, you're validating data. For straightforward API wrappers, the latter is easier to constrain and test.</li>
         <li><strong>Full visibility into system prompts</strong> for debugging and iteration</li>
       </ul>
       <p>I migrated to the <strong><a href="https://platform.claude.com/docs/en/agent-sdk/overview" target="_blank" rel="noopener">Claude Agent SDK</a></strong> with direct Bedrock integration (AWS's managed Claude service). The SDK handles streaming, tool schemas, and multi-turn context natively. Along the way, I deleted 1,500+ lines of custom file and analysis tools—things like Mermaid diagram generation—that modern Claude models now handle out of the box. More capabilities, less code.</p>
@@ -612,7 +612,7 @@
 
       <p>So I built a <strong>dedicated chat app</strong> (using <a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a>). It lowered the barrier, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the gap between the agent and the Rossum platform.</p>
 
-      <p>What actually worked was <strong>embedding the chat</strong> directly into the Rossum UI as a native panel. The agent now inherits the user's context and permissions. No more switching tabs, no re-authentication. The technical implementation—a <a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a> backend—was the easy part. The insight was realizing that proximity to the user's workflow matters more than feature completeness.</p>
+      <p>What actually worked was <strong>embedding the chat</strong> directly into the Rossum UI as a native panel. The agent now inherits the user's context and permissions. No more switching tabs, no re-authentication. The technical implementation (a <a href="https://fastapi.tiangolo.com/" target="_blank" rel="noopener">FastAPI</a> backend) was the easy part. Proximity to the user's workflow matters more than feature completeness.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> If the user has to leave their workflow to use your agent, they'll eventually stop using it.</div>
 
@@ -628,7 +628,7 @@
 
       <p>Early on, I treated the agent like a single specialist locked in a room with every tool I could provide. I assumed that because Rossum is a specialized domain, one well-prompted agent could handle the entire API surface.</p>
 
-      <p>The real issue was <strong>context pollution</strong>. Rossum workflows use large schemas, tens to hundreds of fields, which quickly overwhelm a context window.</p>
+      <p>The problem was <strong>context pollution</strong>. Rossum workflows use large schemas, tens to hundreds of fields, which quickly overwhelm a context window.</p>
 
       <p>Complex tasks require messy iteration: retrying a failing webhook, patching a schema multiple times, digging through documentation. In a monolithic architecture, every failed attempt and verbose API error accumulates in the conversation. The noise drowns out the signal.</p>
 
@@ -656,7 +656,7 @@
 
       <p>Initially, the agent's "brain" was a monolithic system prompt. I kept adding rules, edge cases, and <code>IMPORTANT:</code> blocks in all caps. It felt productive until it became brittle, unreadable, and expensive. Loading every format specification and workflow upfront meant I was paying for tokens the agent didn't even need for 90% of tasks.</p>
 
-      <p>I pivoted to a <strong>Skills Framework</strong>: show only what's necessary. Rossum's documentation spans hundreds of pages; loading it upfront would consume half the context window. Instead, the system loads expertise when it becomes relevant.</p>
+      <p>I pivoted to a <strong>Skills Framework</strong>: show only what's necessary. Rossum's documentation spans hundreds of pages; loading it upfront would consume half the context window. So the system loads expertise when it becomes relevant.</p>
 
       <figure class="content-image">
         <img src="./images/skills-modular.png" alt="Skills as modular units - showing individual skill files that can be loaded on demand" loading="lazy">
@@ -703,7 +703,7 @@
 
       <p>"List my queues" now loads only queue-related tools (~800 tokens) instead of the full 8,000-token library. <strong>10x reduction</strong> in baseline context.</p>
 
-      <p>The real surprise was quality. With fewer tools to choose from, the model stopped second-guessing itself. Turns out, removing noise from the toolset was as effective as better prompting.</p>
+      <p>The surprise was quality. With fewer tools to choose from, the model stopped second-guessing itself. Removing noise from the toolset was as effective as better prompting.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> A crowded context window is a distracted agent. Dynamic loading saves money and improves reasoning.</div>
 
@@ -803,7 +803,7 @@
       <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
 
-      <p><a href="#section-4">Section 4</a> introduced sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to an <strong>existing production system</strong>.</p>
+      <p><a href="#section-4">Section 4</a> covered sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to an <strong>existing production system</strong>.</p>
 
       <p>Rossum uses <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" target="_blank" rel="noopener">Formula Fields</a> for computing derived values during document extraction. Formulas are written in <strong><a href="https://pypi.org/project/txscript/" target="_blank" rel="noopener">TxScript</a></strong>, a language based on Python but extended with Rossum-specific functions, variables, and field references. Rossum already has a production <strong>Formula Field Copilot</strong>: an LLM prompted to translate natural language into precise TxScript.</p>
 
@@ -811,7 +811,7 @@
 
       <p>TxScript has nuanced conventions: field access patterns, required vs. non-required handling, multivalue iteration, related object access. I could incorporate this as a skill, but why maintain a parallel implementation when the Formula Field Copilot already exists?</p>
 
-      <p>The solution was obvious: <strong>re-use what already works in production</strong>.</p>
+      <p>So I just called the existing Copilot.</p>
 
       <ol style="margin: 1rem 0 1.5rem 1.5rem;">
         <li><strong>The User</strong> asks for a business rule in plain English: "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding."</li>
@@ -820,7 +820,7 @@
         <li><strong>Opus</strong> validates the formula against the schema and applies it via MCP tools.</li>
       </ol>
 
-      <p>This mirrors <a href="#section-4">Section 4</a>'s sub-agent pattern, but with a difference: sub-agents delegate for context isolation; here, delegation is for capability. Opus reasons and orchestrates; the Copilot writes formulas. Trying to make Opus do both would mean worse results at higher cost.</p>
+      <p>This mirrors <a href="#section-4">Section 4</a>'s sub-agent pattern, but sub-agents delegate for context isolation; here, delegation is for capability. Opus reasons and orchestrates; the Copilot writes formulas. Trying to make Opus do both would mean worse results at higher cost.</p>
 
       <figure class="content-image">
         <img src="../images/fabry_extension.png" alt="Mr. Fabry configuring duplicate detection through natural conversation" loading="lazy">
@@ -837,7 +837,7 @@
 
       <p>Every improvement in this post followed the same arc: I added complexity to solve a problem, then removed most of it once I understood what mattered. The system got more capable as it got smaller.</p>
 
-      <p>The gap between "works in a demo" and "works for real users" isn't closed by better models. It's closed by subtraction: fewer tools, fewer instructions, fewer responsibilities per agent.</p>
+      <p>The gap between "works in a demo" and "works for real users" isn't closed by better models. It's closed by subtraction: fewer tools and fewer instructions.</p>
 
       <p>Next: broader internal rollout at Rossum. More users, more edge cases. I expect to delete as much code in the next 500 commits as I write.</p>
 
