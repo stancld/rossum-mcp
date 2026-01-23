@@ -528,7 +528,7 @@
         <img src="./images/hero-agent-orchestration.png" alt="AI Agent orchestration diagram showing how the main agent coordinates with sub-agents, skills, and tools" loading="eager">
       </figure>
 
-      <p>You've built an AI agent that works. It calls APIs, follows instructions, and impresses in demos. Then someone asks a slightly different question, and it hallucinates a URL, loops forever, or burns through your token budget trying to find a resource that doesn't exist.</p>
+      <p>You've built an AI agent that works. It calls APIs, follows instructions, and looks good in demos. Then someone asks a slightly different question, and it hallucinates a URL, loops forever, or burns through your token budget trying to find a resource that doesn't exist.</p>
 
       <p>This post is about the gap between "working prototype" and "something I'd trust in production." I spent 500+ commits on an agent for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> (a document processing platform), but the lessons aren't domain-specific. They're about sub-agents, dynamic tool loading, prompt regression testing, and the dozen decisions that separate a demo from a deployable system.</p>
 
@@ -607,9 +607,9 @@
 
       <a href="https://github.com/stancld/rossum-agents/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
 
-      <p>The CLI was a power-user's dream. But for a support engineer, solution architect, account manager, or anyone chasing an ad-hoc insight for Product, "clone the repo and configure your environment variables" isn't a feature. It's a roadblock. I needed to make it accessible.</p>
+      <p>The CLI worked great for engineers. But for a support engineer, solution architect, or account manager, "clone the repo and configure your environment variables" isn't a feature. It's a roadblock.</p>
 
-      <p>My first attempt was a standalone <strong><a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a></strong> app deployed behind Teleport (Rossum's internal access gateway). It gave users a UI, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the data gap between the agent and the Rossum platform. I was buried in middleware trying to sync JSON Web Tokens (JWTs) and session states across two different domains.</p>
+      <p>My first attempt was a standalone <strong><a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a></strong> app. It gave users a UI, but introduced new friction: context-switching. Users had to jump between tabs, re-authenticate, and manually bridge the gap between the agent and the Rossum platform.</p>
 
       <p>What actually worked was moving from a sidecar app to a <strong>native integration</strong>.</p>
 
@@ -641,12 +641,12 @@
 
       <p>I chose sub-agents for tasks that either required many retries (like debugging webhooks) or produced verbose intermediate outputs (like knowledge base searches). The primary conversation stays clean:</p>
 
-      <div class="arch-diagram">
+      <figure class="arch-diagram" role="img" aria-label="Architecture diagram showing Main Agent (Opus 4.5) delegating to three sub-agents: HookDebugSubAgent for serverless function failures, SchemaPatchingSubAgent for JSON schema modifications, and KnowledgeBaseSubAgent for documentation retrieval">
         <div class="level-1">Main Agent (Opus 4.5)</div>
         <div class="level-2">├── HookDebugSubAgent (serverless function failures)</div>
         <div class="level-2">├── SchemaPatchingSubAgent (JSON schema modifications)</div>
         <div class="level-2">└── KnowledgeBaseSubAgent (documentation retrieval)</div>
-      </div>
+      </figure>
 
       <p>The implementation is straightforward: sub-agents are exposed as regular tools. Calling <code>debug_hook</code> doesn't run some logic; it spawns an entirely separate LLM session with its own conversation history, a restricted toolset, and a focused system prompt. An abstract base class handles the iteration loop; concrete implementations just define their tools and execution logic. The main agent sees only the final summary; the 15 iterations of trial-and-error stay quarantined.</p>
 
@@ -715,7 +715,7 @@
       <a href="https://github.com/stancld/rossum-agents/pull/99" class="pr-link" target="_blank" rel="noopener">PR #99</a>
       <a href="https://github.com/anthropics/claude-code/tree/main/plugins/claude-opus-4-5-migration" class="pr-link" target="_blank" rel="noopener">Opus 4.5 Migration Plugin</a>
 
-      <p>Switching models usually feels like a simple configuration change. But moving from Sonnet to <strong>Claude Opus 4.5</strong> taught me that better models require better, and often <em>shorter</em>, instructions. Admitting my prompt had become an over-engineered legal document was a hard pill to swallow.</p>
+      <p>Switching models usually feels like a simple configuration change. But moving from Sonnet to <strong>Claude Opus 4.5</strong> taught me that better models require better, and often <em>shorter</em>, instructions. My prompt had become an over-engineered legal document, and I had to admit it.</p>
 
       <p>The initial migration was rough. Opus fell into the "tool-calling inferno": redundant loops where the model over-analyzed simple tasks, burning tokens without progress. I realized the problem wasn't the model; it was my "legacy" prompts. Building with less capable models had trained me to write exhaustive, hand-holding instructions. Because Opus 4.5 is more literal and responsive, my <code>CRITICAL:</code> and <code>MUST:</code> blocks were being treated as absolute commands to act, even when unnecessary.</p>
 
@@ -790,7 +790,14 @@
     ),
 )</pre>
 
-      <p>By tracking <strong>tool sequences</strong> and <strong>token budgets</strong>, I caught subtle regressions that a simple "check the output" test would miss. This framework caught three critical regressions during the Opus 4.5 migration and saved me from a "broken" tool description that looked correct but confused the model's selection logic.</p>
+      <p>By tracking <strong>tool sequences</strong> and <strong>token budgets</strong>, I caught subtle regressions that a simple "check the output" test would miss:</p>
+
+      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+        <li><strong>The silent skip:</strong> After refactoring a skill prompt, the agent stopped calling <code>search_knowledge_base</code> before debugging hooks. The output looked fine, but the agent was guessing instead of consulting documentation. The test caught the missing tool in the expected sequence.</li>
+        <li><strong>The infinite loop:</strong> A "clarified" tool description caused the agent to call <code>get_schema</code> repeatedly, convinced each response was incomplete. Token budget alerts flagged it before I burned through $50 in a single test run.</li>
+      </ul>
+
+      <p>None of these failures were obvious from reading the output. The agent completed its task each time; it just took a worse path to get there. Without quantitative checks, I would have shipped regressions disguised as improvements.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> If you can't measure the impact of a prompt change, you shouldn't ship it.</div>
 
@@ -823,19 +830,19 @@
         <figcaption>The agent configuring duplicate detection through natural conversation</figcaption>
       </figure>
 
-      <p>It's LLMs all the way down, and that's exactly the point. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
+      <p>It's LLMs all the way down (a nod to the old "turtles all the way down" joke), and that's exactly the point. The frontier model reasons; the specialist executes. Neither tries to be something it isn't.</p>
 
       <div class="takeaway"><strong>Takeaway:</strong> Frontier models are generalists. When a specialized model already exists for a task, orchestrate it rather than forcing your generalist to learn a new trick.</div>
 
       <h2 id="section-conclusion">What's Next</h2>
 
-      <p>The agent is moving from prototype to pilot. After testing with a small circle of engineers and product managers, it's about to roll out as an internal feature at Rossum. More users means more edge cases, more feedback, and more commits.</p>
+      <p>The most interesting development wasn't planned. The same agent that debugs webhooks is now generating executive reports—use-case classification, integration detection, geographic coverage. The MCP tools built for configuration became tools for insight.</p>
 
-      <p>But the most interesting development wasn't planned. The same agent that debugs webhooks and configures schemas is now generating executive reports: structured summaries of how customers use Rossum, with use-case classification, integration detection, and geographic coverage. Point it at a list of queue IDs, and it produces analysis designed for C-level stakeholders. The MCP tools built for configuration became tools for insight.</p>
+      <p>That's the compound interest of getting the architecture right. Sub-agents, dynamic tool loading, and skills weren't just about making the agent reliable—they made it extensible in ways I couldn't predict. When your infrastructure is modular, new capabilities emerge from recombination, not rewriting.</p>
 
-      <p>That's what happens when you build architecture instead of hacks. Sub-agents, skills, and dynamic tool loading weren't just solutions to immediate problems. They became infrastructure for problems I hadn't anticipated. The agent that started as a Friday hack is turning into a platform.</p>
+      <p>The agent has been tested with a small circle of engineers and product managers. Next: a broader internal rollout at Rossum. Real users, real pressure, real failures. I expect to learn as much in the next 500 commits as I did in the first 500.</p>
 
-      <p>Whether it stays useful depends on what happens next: real users, real pressure, real failures. That's where the next lessons will come from.</p>
+      <p>If you're building agents and want to compare notes—or tell me where I'm wrong—find me on <a href="https://github.com/stancld" target="_blank" rel="noopener">GitHub</a> or <a href="https://x.com/stancld" target="_blank" rel="noopener">X</a>.</p>
 
       <div class="cta-box">
         <p>All PRs referenced are in the <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs, the backtracking, and the moments where the system finally started behaving like something you can trust.</p>
