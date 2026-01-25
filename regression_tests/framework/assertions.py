@@ -40,19 +40,18 @@ def assert_tools_match(run: RegressionRun, expectation: ToolExpectation) -> None
     if not expected:
         return
 
-    if expectation.mode == ToolMatchMode.EXACT_SEQUENCE:
-        # For exact sequence, flatten tuples to first option for comparison
-        flat_expected = [e[0] if isinstance(e, tuple) else e for e in expected]
-        if actual != flat_expected:
-            raise AssertionError(f"Tool sequence mismatch: expected exactly {flat_expected}, got {actual}")
-
-    elif expectation.mode == ToolMatchMode.SUBSET:
-        missing = [e for e in expected if not _tool_matches(e, actual)]
-        if missing:
-            raise AssertionError(f"Tool subset mismatch: missing expected tools {missing}, got {actual}")
-
-    else:
-        raise ValueError(f"Unknown tool match mode: {expectation.mode}")
+    match expectation.mode:
+        case ToolMatchMode.EXACT_SEQUENCE:
+            # For exact sequence, flatten tuples to first option for comparison
+            flat_expected = [e[0] if isinstance(e, tuple) else e for e in expected]
+            if actual != flat_expected:
+                raise AssertionError(f"Tool sequence mismatch: expected exactly {flat_expected}, got {actual}")
+        case ToolMatchMode.SUBSET:
+            missing = [e for e in expected if not _tool_matches(e, actual)]
+            if missing:
+                raise AssertionError(f"Tool subset mismatch: missing expected tools {missing}, got {actual}")
+        case _:
+            raise ValueError(f"Unknown tool match mode: {expectation.mode}")
 
 
 def assert_tokens_within_budget(run: RegressionRun, budget: TokenBudget) -> None:
