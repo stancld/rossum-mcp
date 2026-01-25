@@ -234,18 +234,19 @@ class ChatResponse:
         else:
             lines = [f"> 🤖 **Sub-agent ({progress.tool_name})**"]
 
-        if status == "thinking":
-            lines.append("> ⏳ _Thinking..._")
-        elif status == "searching":
-            lines.append("> 🔍 _Searching Knowledge Base..._")
-        elif status == "analyzing":
-            lines.append("> 🧠 _Analyzing results..._")
-        elif status == "running_tool" and current_tool:
-            lines.append(f"> 🔧 Running: `{current_tool}`")
-            if tool_calls:
-                lines.append(f"> Tools this iteration: {', '.join(f'`{t}`' for t in tool_calls)}")
-        elif status == "completed":
-            lines.append("> ✅ _Completed_")
+        match status:
+            case "thinking":
+                lines.append("> ⏳ _Thinking..._")
+            case "searching":
+                lines.append("> 🔍 _Searching Knowledge Base..._")
+            case "analyzing":
+                lines.append("> 🧠 _Analyzing results..._")
+            case "running_tool" if current_tool:
+                lines.append(f"> 🔧 Running: `{current_tool}`")
+                if tool_calls:
+                    lines.append(f"> Tools this iteration: {', '.join(f'`{t}`' for t in tool_calls)}")
+            case "completed":
+                lines.append("> ✅ _Completed_")
 
         return "\n".join(lines)
 
