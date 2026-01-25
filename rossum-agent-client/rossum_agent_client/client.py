@@ -66,27 +66,28 @@ class BaseClient:
         status = response.status_code
         body = response.text
 
-        if 300 <= status < 400:
-            location = response.headers.get("Location", "unknown")
-            raise RossumAgentError(f"Unexpected redirect to {location}", status, body)
-        if status == 401:
-            raise AuthenticationError("Authentication failed", status, body)
-        if status == 404:
-            raise NotFoundError("Resource not found", status, body)
-        if status == 422:
-            raise ValidationError("Validation error", status, body)
-        if status == 429:
-            retry_after = response.headers.get("Retry-After")
-            raise RateLimitError(
-                "Rate limit exceeded",
-                status,
-                body,
-                int(retry_after) if retry_after else None,
-            )
-        if status >= 500:
-            raise ServerError(f"Server error: {status}", status, body)
-        if status >= 400:
-            raise RossumAgentError(f"Request failed: {status}", status, body)
+        match status:
+            case s if 300 <= s < 400:
+                location = response.headers.get("Location", "unknown")
+                raise RossumAgentError(f"Unexpected redirect to {location}", status, body)
+            case 401:
+                raise AuthenticationError("Authentication failed", status, body)
+            case 404:
+                raise NotFoundError("Resource not found", status, body)
+            case 422:
+                raise ValidationError("Validation error", status, body)
+            case 429:
+                retry_after = response.headers.get("Retry-After")
+                raise RateLimitError(
+                    "Rate limit exceeded",
+                    status,
+                    body,
+                    int(retry_after) if retry_after else None,
+                )
+            case s if s >= 500:
+                raise ServerError(f"Server error: {status}", status, body)
+            case s if s >= 400:
+                raise RossumAgentError(f"Request failed: {status}", status, body)
 
     def _parse_sse_event(self, event_type: str, data: str) -> SSEEvent | None:
         """Parse an SSE event into the appropriate model."""
