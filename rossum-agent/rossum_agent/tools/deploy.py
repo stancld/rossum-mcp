@@ -149,7 +149,6 @@ def deploy_push(dry_run: bool = False, force: bool = False, workspace_path: str 
             )
 
         result = ws.push(force=force)
-
         return json.dumps(
             {
                 "status": "success",

@@ -85,11 +85,7 @@ def _run_async[T](coro: Coroutine[None, None, T]) -> T:
 def _call_opus_for_web_search_analysis(
     query: str, search_results: str, user_query: str | None = None
 ) -> tuple[str, int, int]:
-    """Call Opus model to analyze web search results.
-
-    Returns:
-        Tuple of (analysis_text, input_tokens, output_tokens).
-    """
+    """Call Opus model to analyze web search results."""
     try:
         report_progress(
             SubAgentProgress(tool_name="search_knowledge_base", iteration=1, max_iterations=1, status="analyzing")

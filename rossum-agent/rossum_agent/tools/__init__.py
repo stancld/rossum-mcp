@@ -81,7 +81,6 @@ if TYPE_CHECKING:
     from anthropic._tools import BetaTool  # ty: ignore[unresolved-import] - private API
     from anthropic.types import ToolParam
 
-# Tools using @beta_tool decorator
 _BETA_TOOLS: list[BetaTool[..., str]] = [
     write_file,
     search_knowledge_base,
@@ -137,17 +136,14 @@ def execute_internal_tool(name: str, arguments: dict[str, object]) -> str:
     raise ValueError(f"Unknown internal tool: {name}")
 
 
-# Legacy alias for backwards compatibility
 def execute_tool(name: str, arguments: dict[str, object], tools: list[BetaTool[..., str]]) -> str:
-    """Execute a tool by name from the given tool set (legacy API)."""
+    """Execute a tool by name from the given tool set."""
     for tool in tools:
         if tool.name == name:
-            result: str = tool(**arguments)
-            return result
+            return tool(**arguments)
     raise ValueError(f"Unknown tool: {name}")
 
 
-# Legacy export for deploy tools execution
 INTERNAL_TOOLS = _BETA_TOOLS
 
 __all__ = [

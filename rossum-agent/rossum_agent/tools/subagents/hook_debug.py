@@ -350,23 +350,17 @@ def _make_evaluate_response(
 
 
 def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
-    """Execute a tool for the Opus sub-agent.
-
-    Returns:
-        Tool result as a string.
-    """
+    """Execute a tool for the Opus sub-agent."""
     if tool_name == "evaluate_python_hook":
-        result: str = evaluate_python_hook(
+        return evaluate_python_hook(
             code=tool_input.get("code", ""),
             annotation_json=tool_input.get("annotation_json", ""),
             schema_json=tool_input.get("schema_json"),
         )
-        return result
     if tool_name == "search_knowledge_base":
         if not (query := tool_input.get("query", "")):
             return json.dumps({"status": "error", "message": "Query is required"})
-        kb_result: str = search_knowledge_base(query)
-        return kb_result
+        return search_knowledge_base(query)
     if tool_name in ("get_hook", "get_annotation", "get_schema"):
         mcp_result = call_mcp_tool(tool_name, tool_input)
         return json.dumps(mcp_result, indent=2, default=str) if mcp_result else "No data returned"

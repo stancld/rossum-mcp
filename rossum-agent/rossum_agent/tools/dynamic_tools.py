@@ -218,13 +218,9 @@ def _load_categories_impl(
     if not to_load:
         return f"Categories already loaded: {categories}"
 
-    mcp_connection = get_mcp_connection()
-    if mcp_connection is None:
+    mcp_connection, loop = get_mcp_connection(), get_mcp_event_loop()
+    if mcp_connection is None or loop is None:
         return "Error: MCP connection not available"
-
-    loop = get_mcp_event_loop()
-    if loop is None:
-        return "Error: Event loop not available"
 
     # Collect all tool names to load
     tool_names_to_load: set[str] = set()
@@ -340,13 +336,9 @@ def load_tool(tool_names: list[str], state: DynamicToolsState | None = None) -> 
     if state is None:
         state = get_global_state()
 
-    mcp_connection = get_mcp_connection()
-    if mcp_connection is None:
+    mcp_connection, loop = get_mcp_connection(), get_mcp_event_loop()
+    if mcp_connection is None or loop is None:
         return "Error: MCP connection not available"
-
-    loop = get_mcp_event_loop()
-    if loop is None:
-        return "Error: Event loop not available"
 
     # Get all MCP tools
     mcp_tools = asyncio.run_coroutine_threadsafe(mcp_connection.get_tools(), loop).result()
