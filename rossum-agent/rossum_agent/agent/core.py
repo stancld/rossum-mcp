@@ -203,7 +203,7 @@ class _StreamState:
 
     @property
     def contains_thinking(self) -> bool:
-        return self.thinking_text != ""
+        return bool(self.thinking_text)
 
 
 class RossumAgent:
@@ -586,7 +586,7 @@ class RossumAgent:
         )
 
         if not state.tool_calls:
-            step.final_answer = state.response_text if state.response_text else None
+            step.final_answer = state.response_text or None
             step.is_final = True
             memory_step = MemoryStep(
                 step_number=step_num,
@@ -618,7 +618,7 @@ class RossumAgent:
         """Execute tools in parallel and yield progress updates."""
         memory_step = MemoryStep(
             step_number=step_num,
-            text=thinking_text if thinking_text else None,
+            text=thinking_text or None,
             tool_calls=tool_calls,
             thinking_blocks=thinking_blocks or [],
             input_tokens=input_tokens,
@@ -629,7 +629,7 @@ class RossumAgent:
 
         yield AgentStep(
             step_number=step_num,
-            thinking=thinking_text if thinking_text else None,
+            thinking=thinking_text or None,
             tool_calls=tool_calls,
             is_streaming=True,
             current_tool=None,
@@ -672,6 +672,15 @@ class RossumAgent:
         self.memory.add_step(memory_step)
 
         yield step
+
+    def _drain_token_queue(self, token_queue: queue.Queue[SubAgentTokenUsage]) -> None:
+        """Drain all pending token usage from the queue."""
+        while True:
+            try:
+                usage = token_queue.get_nowait()
+                self._accumulate_sub_agent_tokens(usage)
+            except queue.Empty:
+                break
 
     async def _execute_tool_with_progress(
         self, tool_call: ToolCall, step_num: int, tool_calls: list[ToolCall], tool_progress: tuple[int, int]
@@ -716,21 +725,10 @@ class RossumAgent:
                     except queue.Empty:
                         pass
 
-                    try:
-                        while True:
-                            usage = token_queue.get_nowait()
-                            self._accumulate_sub_agent_tokens(usage)
-                    except queue.Empty:
-                        pass
-
+                    self._drain_token_queue(token_queue)
                     await asyncio.sleep(0.1)
 
-                try:
-                    while True:
-                        usage = token_queue.get_nowait()
-                        self._accumulate_sub_agent_tokens(usage)
-                except queue.Empty:
-                    pass
+                self._drain_token_queue(token_queue)
 
                 result = future.result()
                 content = str(result)

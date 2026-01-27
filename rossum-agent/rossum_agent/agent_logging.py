@@ -35,7 +35,7 @@ def log_agent_result(
     }
 
     if result.thinking:
-        extra_fields["thinking"] = result.thinking[:500] if len(result.thinking) > 500 else result.thinking
+        extra_fields["thinking"] = result.thinking[:500]
 
     if result.tool_calls:
         extra_fields["tool_calls"] = json.dumps(
@@ -48,9 +48,7 @@ def log_agent_result(
         )
 
     if result.final_answer:
-        extra_fields["final_answer"] = (
-            result.final_answer[:500] if len(result.final_answer) > 500 else result.final_answer
-        )
+        extra_fields["final_answer"] = result.final_answer[:500]
 
     if result.error:
         extra_fields["error"] = result.error

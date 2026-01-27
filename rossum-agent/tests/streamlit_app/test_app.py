@@ -262,7 +262,7 @@ class TestInitializeUserAndStorage:
         """Set up mock dependencies."""
         with (
             patch("rossum_agent.streamlit_app.app.RedisStorage") as mock_redis,
-            patch("rossum_agent.streamlit_app.app.detect_user_id") as mock_detect,
+            patch("rossum_agent.streamlit_app.app.get_user_from_jwt") as mock_detect,
             patch("rossum_agent.streamlit_app.app.normalize_user_id") as mock_norm,
             patch.dict("os.environ", {}, clear=True),
         ):
@@ -674,7 +674,7 @@ class TestMainFunction:
             patch("rossum_agent.streamlit_app.app.get_generated_files") as mock_get_files,
             patch("rossum_agent.streamlit_app.app.get_generated_files_with_metadata") as mock_get_meta,
             patch("rossum_agent.streamlit_app.app.render_chat_history"),
-            patch("rossum_agent.streamlit_app.app.detect_user_id") as mock_detect_user,
+            patch("rossum_agent.streamlit_app.app.get_user_from_jwt") as mock_detect_user,
             patch("rossum_agent.streamlit_app.app.normalize_user_id") as mock_norm_user,
             patch.dict("os.environ", {}, clear=True),
         ):
@@ -696,7 +696,7 @@ class TestMainFunction:
                 "generate_chat_id": mock_gen_chat,
                 "create_session_output_dir": mock_create_dir,
                 "st": mock_streamlit,
-                "detect_user_id": mock_detect_user,
+                "get_user_from_jwt": mock_detect_user,
                 "normalize_user_id": mock_norm_user,
             }
 
@@ -729,7 +729,7 @@ class TestMainFunction:
 
         main()
 
-        mock_dependencies["detect_user_id"].assert_called_once_with(jwt_token="jwt-token-here")
+        mock_dependencies["get_user_from_jwt"].assert_called_once_with("jwt-token-here")
 
     def test_main_enables_user_isolation_with_jwt_config(self, mock_dependencies):
         """Test that user isolation is enabled when JWT config is present."""

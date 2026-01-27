@@ -326,7 +326,6 @@ _schema_content_cache: dict[int, list[dict[str, Any]]] = {}
 
 
 def _execute_opus_tool(tool_name: str, tool_input: dict[str, Any]) -> str:
-    """Execute a tool for the Opus sub-agent."""
     schema_id = tool_input.get("schema_id")
 
     if tool_name == "get_schema_tree_structure":

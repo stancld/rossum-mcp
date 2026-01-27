@@ -19,36 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str:
-    """Extract text from message content which can be a string or multimodal list.
-
-    Args:
-        content: Message content - either a string or list of content blocks.
-
-    Returns:
-        Extracted text as a string.
-    """
+    """Extract text from message content which can be a string or multimodal list."""
     if content is None:
         return ""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
-        text_parts = []
-        for block in content:
-            if isinstance(block, dict) and block.get("type") == "text":
-                text_parts.append(block.get("text", ""))
-        return " ".join(text_parts)
+        return " ".join(
+            block.get("text", "") for block in content if isinstance(block, dict) and block.get("type") == "text"
+        )
     return ""
 
 
 def get_commit_sha() -> str | None:
-    """Get the current git commit SHA.
-
-    Returns:
-        Short commit SHA or None if not in a git repository.
-    """
+    """Get short commit SHA or None if not in a git repository."""
     try:
-        git_executable = shutil.which("git")
-        if not git_executable:
+        if not (git_executable := shutil.which("git")):
             return None
         result = subprocess.run(
             [git_executable, "rev-parse", "--short", "HEAD"],
@@ -57,11 +43,10 @@ def get_commit_sha() -> str | None:
             timeout=5,
             check=False,
         )
-        if result.returncode == 0:
-            return result.stdout.strip()
+        return result.stdout.strip() if result.returncode == 0 else None
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         logger.debug("Failed to get git commit SHA")
-    return None
+        return None
 
 
 @dataclass
@@ -228,31 +213,12 @@ class RedisStorage:
             return False
 
     def _get_chat_key(self, user_id: str | None, chat_id: str) -> str:
-        """Generate Redis key for a chat.
-
-        Args:
-            user_id: Optional user identifier
-            chat_id: Chat identifier
-
-        Returns:
-            Redis key string
-        """
-        if user_id:
-            return f"user:{user_id}:chat:{chat_id}"
-        return f"chat:{chat_id}"
+        """Generate Redis key for a chat."""
+        return f"user:{user_id}:chat:{chat_id}" if user_id else f"chat:{chat_id}"
 
     def _get_chat_pattern(self, user_id: str | None = None) -> str:
-        """Generate Redis key pattern for listing chats.
-
-        Args:
-            user_id: Optional user identifier
-
-        Returns:
-            Redis key pattern string
-        """
-        if user_id:
-            return f"user:{user_id}:chat:*"
-        return "chat:*"
+        """Generate Redis key pattern for listing chats."""
+        return f"user:{user_id}:chat:*" if user_id else "chat:*"
 
     def list_all_chats(self, user_id: str | None = None) -> list[dict[str, Any]]:
         """List all chat conversations with metadata.

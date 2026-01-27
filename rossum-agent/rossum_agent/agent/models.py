@@ -127,7 +127,7 @@ class AgentStep:
 
     def has_tool_calls(self) -> bool:
         """Check if this step contains tool calls."""
-        return len(self.tool_calls) > 0
+        return bool(self.tool_calls)
 
 
 @dataclass

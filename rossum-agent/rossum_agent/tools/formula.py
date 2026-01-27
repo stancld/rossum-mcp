@@ -119,9 +119,7 @@ def suggest_formula_field(
     Returns:
         JSON with formula suggestion and field_definition for use with patch_schema.
     """
-    if not field_schema_id:
-        field_schema_id = label.lower().replace(" ", "_")
-
+    field_schema_id = field_schema_id or label.lower().replace(" ", "_")
     logger.info(f"suggest_formula_field: {field_schema_id=}, {schema_id=}, {section_id=}, hint={hint[:100]}...")
 
     try:

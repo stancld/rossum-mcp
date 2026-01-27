@@ -181,15 +181,15 @@ def call_on_connection(connection_id: str, tool_name: str, arguments: str | dict
 
     logger.debug(f"call_on_connection: Using connection '{connection_id}' - API URL: {record.api_base_url}")
 
-    try:
-        if isinstance(arguments, dict):
-            args = arguments
-        elif arguments:
+    if isinstance(arguments, dict):
+        args = arguments
+    elif arguments:
+        try:
             args = json.loads(arguments)
-        else:
-            args = {}
-    except json.JSONDecodeError as e:
-        return f"Error parsing arguments JSON: {e}"
+        except json.JSONDecodeError as e:
+            return f"Error parsing arguments JSON: {e}"
+    else:
+        args = {}
 
     try:
         future = asyncio.run_coroutine_threadsafe(record.connection.call_tool(tool_name, args), mcp_event_loop)

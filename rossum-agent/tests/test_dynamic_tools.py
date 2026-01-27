@@ -191,7 +191,7 @@ class TestLoadCategoriesImpl:
         mock_get_connection.return_value = MagicMock()
         mock_get_loop.return_value = None
         result = _load_categories_impl(["queues"])
-        assert result == "Error: Event loop not available"
+        assert result == "Error: MCP connection not available"
 
     @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
@@ -752,7 +752,7 @@ class TestLoadTool:
         mock_get_connection.return_value = MagicMock()
         mock_get_loop.return_value = None
         result = load_tool(["delete_hook"])
-        assert result == "Error: Event loop not available"
+        assert result == "Error: MCP connection not available"
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")

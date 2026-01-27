@@ -33,7 +33,7 @@ from rossum_agent.streamlit_app.render_modules import (
 from rossum_agent.streamlit_app.response_formatting import ChatResponse, parse_and_format_final_answer
 from rossum_agent.tools import set_mcp_connection, set_output_dir
 from rossum_agent.url_context import RossumUrlContext, extract_url_context, format_context_for_prompt
-from rossum_agent.user_detection import detect_user_id, normalize_user_id
+from rossum_agent.user_detection import get_user_from_jwt, normalize_user_id
 from rossum_agent.utils import (
     cleanup_session_output_dir,
     create_session_output_dir,
@@ -124,7 +124,7 @@ def _initialize_user_and_storage() -> None:
     if "user_id" not in st.session_state:
         headers = dict(st.context.headers) if hasattr(st.context, "headers") else None
         jwt_token = headers.get("Teleport-Jwt-Assertion") if headers else None
-        user_id = detect_user_id(jwt_token=jwt_token)
+        user_id = get_user_from_jwt(jwt_token)
         st.session_state.user_id = normalize_user_id(user_id)
 
     if "redis_storage" not in st.session_state:

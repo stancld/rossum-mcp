@@ -114,3 +114,8 @@ include = ["rossum_mcp*", "rossum_agent*", "rossum_deploy*"]
 
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png", "skills/*.md"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
