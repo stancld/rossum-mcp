@@ -1055,8 +1055,8 @@
           </div>
           <div class="card">
             <div class="card-icon" aria-hidden="true">🛡️</div>
-            <h3>Access Control</h3>
-            <p>Configurable read-only or read-write mode, always explicitly specified. Built for security and compliance.</p>
+            <h3>Read-Only Mode</h3>
+            <p>Enable read-only mode to explore and analyze your setup without any risk of changes. Browse freely, zero destructive access.</p>
           </div>
           <div class="card">
             <div class="card-icon" aria-hidden="true">🖼️</div>
@@ -1163,7 +1163,14 @@
           </details>
           <details class="faq-item">
             <summary class="faq-question">Is it safe to let the agent modify my Rossum configuration?</summary>
-            <div class="faq-answer">Yes, with safeguards. The agent operates in configurable read-only or read-write mode, always explicitly specified. Sandbox testing is available to validate changes before production. All actions are logged and traceable.</div>
+            <div class="faq-answer">
+              Yes. You control what the agent can do:
+              <ul class="faq-list">
+                <li><strong>Read-only mode</strong>: Browse and analyze your setup freely — no changes possible</li>
+                <li><strong>Read-write mode</strong>: The agent can create and update queues, schemas, hooks, and more</li>
+              </ul>
+              Every action is logged and visible in real-time, so you always know what's happening.
+            </div>
           </details>
           <details class="faq-item">
             <summary class="faq-question">What data is sent to the LLM?</summary>
