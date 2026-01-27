@@ -88,18 +88,6 @@ def get_user_from_jwt(jwt_token: str | None) -> str | None:
         return None
 
 
-def detect_user_id(jwt_token: str | None = None) -> str | None:
-    """Detect user ID from JWT token.
-
-    Args:
-        jwt_token: JWT token string
-
-    Returns:
-        User ID string or None if not found
-    """
-    return get_user_from_jwt(jwt_token)
-
-
 def normalize_user_id(user_id: str | None) -> str:
     """Normalize user ID for use in Redis keys.
 

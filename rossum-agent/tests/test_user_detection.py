@@ -9,7 +9,6 @@ import pytest
 import requests
 from rossum_agent.user_detection import (
     decode_jwt_username,
-    detect_user_id,
     fetch_jwt_public_key,
     get_user_from_jwt,
     normalize_user_id,
@@ -153,29 +152,6 @@ class TestGetUserFromJwt:
         mock_fetch.side_effect = ValueError("Invalid key format")
 
         result = get_user_from_jwt("some.token")
-
-        assert result is None
-
-
-class TestDetectUserId:
-    """Test detect_user_id function."""
-
-    @patch("rossum_agent.user_detection.get_user_from_jwt")
-    def test_delegates_to_get_user_from_jwt(self, mock_get_user: MagicMock):
-        """Test that detect_user_id delegates to get_user_from_jwt."""
-        mock_get_user.return_value = "detected-user"
-
-        result = detect_user_id(jwt_token="test.token")
-
-        assert result == "detected-user"
-        mock_get_user.assert_called_once_with("test.token")
-
-    @patch("rossum_agent.user_detection.get_user_from_jwt")
-    def test_returns_none_when_no_user_found(self, mock_get_user: MagicMock):
-        """Test None is returned when no user is detected."""
-        mock_get_user.return_value = None
-
-        result = detect_user_id(jwt_token=None)
 
         assert result is None
 
