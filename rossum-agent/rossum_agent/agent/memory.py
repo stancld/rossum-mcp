@@ -50,33 +50,30 @@ class MemoryStep:
         messages: list[MessageParam] = []
 
         if self.tool_calls:
-            assistant_content: list[TextBlockParam | ToolUseBlockParam | ThinkingBlockParam] = []
-
-            for tb in self.thinking_blocks:
-                assistant_content.append(tb.to_dict())
+            assistant_content: list[TextBlockParam | ToolUseBlockParam | ThinkingBlockParam] = [
+                tb.to_dict() for tb in self.thinking_blocks
+            ]
 
             if self.text:
                 assistant_content.append(TextBlockParam(type="text", text=self.text))
 
-            for tc in self.tool_calls:
-                assistant_content.append(
-                    ToolUseBlockParam(type="tool_use", id=tc.id, name=tc.name, input=tc.arguments)
-                )
+            assistant_content.extend(
+                ToolUseBlockParam(type="tool_use", id=tc.id, name=tc.name, input=tc.arguments)
+                for tc in self.tool_calls
+            )
 
             messages.append(MessageParam(role="assistant", content=assistant_content))
 
             if self.tool_results:
-                tool_result_blocks: list[ToolResultBlockParam] = []
-                for tr in self.tool_results:
-                    tool_result_blocks.append(
-                        ToolResultBlockParam(
-                            type="tool_result",
-                            tool_use_id=tr.tool_call_id,
-                            content=tr.content,
-                            is_error=tr.is_error,
-                        )
+                tool_result_blocks = [
+                    ToolResultBlockParam(
+                        type="tool_result",
+                        tool_use_id=tr.tool_call_id,
+                        content=tr.content,
+                        is_error=tr.is_error,
                     )
-
+                    for tr in self.tool_results
+                ]
                 messages.append(MessageParam(role="user", content=tool_result_blocks))
 
         elif self.text:
@@ -160,13 +157,7 @@ class AgentMemory:
         Returns:
             List of message dicts ready for Anthropic API.
         """
-        messages: list[MessageParam] = []
-
-        for step in self.steps:
-            step_messages = step.to_messages()
-            messages.extend(step_messages)
-
-        return messages
+        return [msg for step in self.steps for msg in step.to_messages()]
 
     def to_dict(self) -> list[dict[str, Any]]:
         """Serialize all steps to a list of dictionaries for storage."""
