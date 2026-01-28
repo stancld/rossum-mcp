@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - YYYY-MM-DD
+## [1.1.0] - 2026-01-28
 
 ### Added
 - Added `TokenUsageBySource`, `SubAgentTokenUsageDetail`, and `TokenUsageBreakdown` models for token usage visibility in `StreamDoneEvent`
@@ -44,6 +44,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Response models: `ChatResponse`, `ChatDetail`, `ChatListResponse`, `ChatSummary`, `HealthResponse`, `DeleteResponse`, `FileListResponse`, `FileInfo`
 - Event models: `StepEvent`, `StreamDoneEvent`, `FileCreatedEvent`
 - Content models: `Message`, `TextContent`
-
-[Unreleased]: https://github.com/stancld/rossum-agents/compare/rossum-agent-client-v1.0.0...HEAD
-[1.0.0]: https://github.com/stancld/rossum-agents/releases/tag/rossum-agent-client-v1.0.0

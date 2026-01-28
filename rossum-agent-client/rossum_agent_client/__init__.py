@@ -10,7 +10,7 @@ from rossum_agent_client.exceptions import (
     ValidationError,
 )
 
-__version__ = "1.1.0dev"
+__version__ = "1.1.0"
 
 __all__ = [
     "RossumAgentClient",
