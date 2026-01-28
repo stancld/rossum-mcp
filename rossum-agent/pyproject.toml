@@ -49,7 +49,7 @@ rossum-agent-api = "rossum_agent.api.main:main"
 api = [
     "fastapi>=0.115.0",
     "pydantic>2.0.0",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "redis>=7.0.0",
     "slowapi>=0.1.9",
     "sse-starlette>=2.0.0",
@@ -86,7 +86,7 @@ all = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "redis>=7.0.0",
     "slowapi>=0.1.9",
     "sphinx>=7.0.0",

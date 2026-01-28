@@ -39,7 +39,7 @@ agent = [
 # Agent API server
 api = [
     "fastapi>=0.115.0",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "redis>=7.0.0",
     "slowapi>=0.1.9",
     "sse-starlette>=2.0.0",
@@ -88,7 +88,7 @@ all = [
     "myst-parser>=2.0.0",
     "PyJWT>=2.8",
     "python-dotenv",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
