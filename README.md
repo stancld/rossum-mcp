@@ -159,7 +159,17 @@ Each package can be installed and used independently or together for complete fu
 ## Quick Start
 
 ```bash
-# Clone and run with Docker
+# Install and run (fastest)
+uv pip install rossum-agent[streamlit]
+uv cache clean rossum-agent  # Re-init if upgrading
+export ROSSUM_API_TOKEN="your-token"
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+rossum-agent
+```
+
+Or with Docker:
+
+```bash
 git clone https://github.com/stancld/rossum-agents.git && cd rossum-mcp
 echo "ROSSUM_API_TOKEN=your-token" > .env
 echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
