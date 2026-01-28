@@ -20,7 +20,7 @@
 </div>
 
 > [!NOTE]
-> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
+> Community-developed integration (not official Rossum). Follows semantic versioning from 1.0.0.
 
 ## Features
 

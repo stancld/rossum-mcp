@@ -24,8 +24,8 @@
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
 
-> [!WARNING]
-> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+> [!NOTE]
+> Follows semantic versioning from 1.0.0.
 
 ## Comparison with deployment-manager
 

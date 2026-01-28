@@ -28,7 +28,7 @@
 Conversational AI toolkit for the Rossum intelligent document processing platform. Transforms complex workflow setup, debugging, and configuration into natural language conversations through a Model Context Protocol (MCP) server and specialized AI agent.
 
 > [!NOTE]
-> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
+> Community-developed integration (not official Rossum). Follows semantic versioning from 1.0.0.
 
 ## What Can You Do?
 
