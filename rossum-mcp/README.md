@@ -22,8 +22,8 @@
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API.
 
-> [!WARNING]
-> This project is in early stage development. Breaking changes to both implementation and agent behavior are expected.
+> [!NOTE]
+> API is stable starting from 1.0.0. Breaking changes will follow SemVer (released as 2.0.0+).
 
 ## Quick Start
 
@@ -181,7 +181,7 @@ confirm_annotation(annotation_id=12345)
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Resources
 

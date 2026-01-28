@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.0.0] - 2026-01-28
 
 ### Added
 - Added `delete_queue` tool for queue deletion (24h delayed start) [#141](https://github.com/stancld/rossum-agents/pull/141)

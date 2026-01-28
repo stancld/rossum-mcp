@@ -1,6 +1,6 @@
 # Rossum MCP Tools Reference
 
-Complete API reference for all 50 MCP tools. For quick start and setup, see [README.md](README.md).
+Complete API reference for all 56 MCP tools. For quick start and setup, see [README.md](README.md).
 
 ## Document Processing (6 tools)
 
@@ -134,9 +134,16 @@ Confirms an annotation to move it to 'confirmed' status. Can be called after `bu
 }
 ```
 
+### delete_annotation
+
+Soft deletes an annotation (moves to 'deleted' status, can be restored).
+
+**Parameters:**
+- `annotation_id` (integer, required): Rossum annotation ID to delete
+
 ---
 
-## Queue Management (8 tools)
+## Queue Management (9 tools)
 
 ### get_queue
 
@@ -330,6 +337,13 @@ Get lightweight tree view of schema with only ids, labels, categories, and types
 
 Efficiently remove multiple fields from schema at once (for organization setup).
 
+### delete_schema
+
+Deletes a schema by ID.
+
+**Parameters:**
+- `schema_id` (integer, required): Schema ID to delete
+
 ---
 
 ## Engine Management (6 tools)
@@ -486,9 +500,23 @@ Lists all business rules.
 - `organization_id` (integer, optional): Filter by organization ID
 - `enabled` (boolean, optional): Filter by enabled status
 
+### delete_hook
+
+Deletes a hook by ID.
+
+**Parameters:**
+- `hook_id` (integer, required): Hook ID to delete
+
+### delete_rule
+
+Deletes a rule by ID.
+
+**Parameters:**
+- `rule_id` (integer, required): Rule ID to delete
+
 ---
 
-## Workspace Management (3 tools)
+## Workspace Management (4 tools)
 
 ### get_workspace
 
@@ -504,6 +532,13 @@ Lists all workspaces with optional filtering.
 ### create_workspace
 
 Creates a new workspace.
+
+### delete_workspace
+
+Deletes a workspace by ID.
+
+**Parameters:**
+- `workspace_id` (integer, required): Workspace ID to delete
 
 ---
 
@@ -618,17 +653,17 @@ Creates a new email template.
 Lists all available tool categories with descriptions, tool names, and keywords for dynamic tool loading.
 
 **Available Categories:**
-- `annotations` - Document processing (6 tools)
-- `queues` - Queue management (8 tools)
-- `schemas` - Schema management (7 tools)
+- `annotations` - Document processing (7 tools)
+- `queues` - Queue management (9 tools)
+- `schemas` - Schema management (8 tools)
 - `engines` - AI engine management (6 tools)
-- `hooks` - Extensions/webhooks (7 tools)
+- `hooks` - Extensions/webhooks (8 tools)
 - `email_templates` - Email templates (3 tools)
 - `document_relations` - Document relations (2 tools)
 - `relations` - Annotation relations (2 tools)
-- `rules` - Validation rules (2 tools)
+- `rules` - Validation rules (3 tools)
 - `users` - User management (3 tools)
-- `workspaces` - Workspace management (3 tools)
+- `workspaces` - Workspace management (4 tools)
 
 ---
 
