@@ -5,7 +5,7 @@
 **Python client for Rossum Agent API - AI-powered document processing assistant.**
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
-[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/pypi/pyversions/rossum-agent-client.svg)](https://pypi.org/project/rossum-agent-client/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent-client)](https://codecov.io/gh/stancld/rossum-agents)
