@@ -1461,13 +1461,17 @@ wheels = [
 
 [[package]]
 name = "rossum-api"
-version = "3.7.1"
-source = { git = "https://github.com/stancld/rossum-api.git?rev=ds-hooks-fix#f6b76b6d471357c1b8906065ff195a35c59f8fee" }
+version = "3.8.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "dacite" },
     { name = "httpx" },
     { name = "tenacity" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/bf/7a6157d4df68de5668040986eb701ab0d27ae3aedeaa37af42276f63a61d/rossum_api-3.8.0.tar.gz", hash = "sha256:69fb56a691a077f69709474f9157015ff71d3cf0412794b61359bce241a602af", size = 159733, upload-time = "2026-01-27T16:24:53.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/cb/341e1ea18cbb4e658bcb198659bd50253bfeb5152e5e5a73acc27d50ab22/rossum_api-3.8.0-py3-none-any.whl", hash = "sha256:a5a0176aa1fae84bc6d6caa974cbad5dafb821583a0b0c8a8a385d61d9a85347", size = 70707, upload-time = "2026-01-27T16:24:51.616Z" },
 ]
 
 [[package]]
@@ -1527,8 +1531,8 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=4.0.0" },
     { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
-    { name = "rossum-api", git = "https://github.com/stancld/rossum-api.git?rev=ds-hooks-fix" },
-    { name = "rossum-api", marker = "extra == 'all'", git = "https://github.com/stancld/rossum-api.git?rev=ds-hooks-fix" },
+    { name = "rossum-api", specifier = ">=3.8.0" },
+    { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.8.0" },
     { name = "sphinx", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=7.0.0" },
     { name = "sphinx-autodoc-typehints", marker = "extra == 'all'", specifier = ">=1.25.0" },

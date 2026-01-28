@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.0.0",
-    "rossum-api>=3.7.0",
+    "rossum-api>=3.8.0",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +44,3 @@ markers = [
     "unit: marks tests as unit tests",
 ]
 testpaths = ["tests"]
-
-[tool.uv.sources]
-rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-hooks-fix"}
