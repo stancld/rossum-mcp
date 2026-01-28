@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.0.0rc0] - 2025-01-28
 
 ### Added
 - Added token usage visibility with breakdown by main agent vs sub-agents in API responses and Streamlit UI

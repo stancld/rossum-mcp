@@ -2,9 +2,9 @@ name: Pre-commit
 
 on:
   push:
-    branches: [ master ]
+    branches: [master, ds-rossum-agent-release-branch]
   pull_request:
-    branches: [ master ]
+    branches: [master, ds-rossum-agent-release-branch]
 
 jobs:
   pre-commit:
