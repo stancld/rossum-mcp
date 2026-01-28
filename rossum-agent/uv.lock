@@ -2373,18 +2373,22 @@ dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 [[package]]
 name = "rossum-api"
 version = "3.8.0"
-source = { git = "https://github.com/stancld/rossum-api.git?rev=ds-hooks-fix#e69e2b6fc53af22109a7354b05dbb7ed9174ba9e" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "dacite" },
     { name = "httpx" },
     { name = "tenacity" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/bf/7a6157d4df68de5668040986eb701ab0d27ae3aedeaa37af42276f63a61d/rossum_api-3.8.0.tar.gz", hash = "sha256:69fb56a691a077f69709474f9157015ff71d3cf0412794b61359bce241a602af", size = 159733, upload-time = "2026-01-27T16:24:53.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/cb/341e1ea18cbb4e658bcb198659bd50253bfeb5152e5e5a73acc27d50ab22/rossum_api-3.8.0-py3-none-any.whl", hash = "sha256:a5a0176aa1fae84bc6d6caa974cbad5dafb821583a0b0c8a8a385d61d9a85347", size = 70707, upload-time = "2026-01-27T16:24:51.616Z" },
+]
 
 [[package]]
 name = "rossum-deploy"
 version = "0.2.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-deploy#90c538cbac7113159f6560dd459f14405650768e" }
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-deploy#92c3b8447e901de5c7857a65ddbaf288d24fe25e" }
 dependencies = [
     { name = "pydantic" },
     { name = "rossum-api" },
@@ -2392,8 +2396,8 @@ dependencies = [
 
 [[package]]
 name = "rossum-mcp"
-version = "1.0.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#90c538cbac7113159f6560dd459f14405650768e" }
+version = "1.1.0.dev0"
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#92c3b8447e901de5c7857a65ddbaf288d24fe25e" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },

@@ -38,7 +38,7 @@ dependencies = [
     "requests>=2.32",
     "rossum-api>=3.8.0",
     "rossum-deploy>=0.1.0",
-    "rossum-mcp>=0.3.2",
+    "rossum-mcp>=1.0.0",
 ]
 
 [project.scripts]
