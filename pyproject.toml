@@ -19,7 +19,7 @@ keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
 dependencies = [
     "fastmcp>=2.0.0",
     "mcp>=1.0.0",
-    "rossum-api>=3.7.0",
+    "rossum-api>=3.8.0",
 ]
 
 [project.optional-dependencies]
@@ -39,7 +39,7 @@ agent = [
 # Agent API server
 api = [
     "fastapi>=0.115.0",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "redis>=7.0.0",
     "slowapi>=0.1.9",
     "sse-starlette>=2.0.0",
@@ -88,7 +88,7 @@ all = [
     "myst-parser>=2.0.0",
     "PyJWT>=2.8",
     "python-dotenv",
-    "python-multipart>=0.0.12",
+    "python-multipart>=0.0.22",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
@@ -96,7 +96,7 @@ all = [
     "pyyaml>=6.0",
     "redis>=7.0.0",
     "requests>=2.32",
-    "rossum-api>=3.7.0",
+    "rossum-api>=3.8.0",
     "slowapi>=0.1.9",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
@@ -131,8 +131,7 @@ python_functions = ["test_*"]
 [tool.setuptools.package-data]
 rossum_agent = ["assets/*.png"]
 
-[tool.uv.sources]
-rossum-api = { git = "https://github.com/stancld/rossum-api.git", rev = "ds-hooks-fix"}
+
 
 [tool.ty.environment]
 python-version = "3.12"
