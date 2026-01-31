@@ -100,7 +100,7 @@ async def run_agent_turn(
     async with connect_mcp_server(
         rossum_api_token=rossum_api_token, rossum_api_base_url=rossum_api_base_url, mcp_mode=mcp_mode
     ) as mcp_connection:
-        set_mcp_connection(mcp_connection, asyncio.get_event_loop())
+        set_mcp_connection(mcp_connection, asyncio.get_event_loop(), mcp_mode)
 
         agent = await create_agent(mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig())
 

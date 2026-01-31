@@ -14,7 +14,9 @@ from rossum_agent.tools.core import (
     SubAgentTokenUsage,
     get_mcp_connection,
     get_mcp_event_loop,
+    get_mcp_mode,
     get_output_dir,
+    is_read_only_mode,
     report_progress,
     report_text,
     report_token_usage,
@@ -314,6 +316,7 @@ class TestMCPConnection:
             set_mcp_connection(mock_connection, loop)
             assert get_mcp_connection() is mock_connection
             assert get_mcp_event_loop() is loop
+            assert get_mcp_mode() == "read-only"  # Default mode
         finally:
             loop.close()
             set_mcp_connection(None, None)  # type: ignore[arg-type]
@@ -340,6 +343,44 @@ class TestMCPConnection:
         try:
             set_mcp_connection(mock_connection, loop)
             assert get_mcp_event_loop() is loop
+        finally:
+            loop.close()
+            set_mcp_connection(None, None)  # type: ignore[arg-type]
+
+    def test_set_mcp_connection_with_mode(self) -> None:
+        mock_connection = MagicMock()
+        loop = asyncio.new_event_loop()
+
+        try:
+            set_mcp_connection(mock_connection, loop, "read-write")
+            assert get_mcp_mode() == "read-write"
+            assert not is_read_only_mode()
+        finally:
+            loop.close()
+            set_mcp_connection(None, None)  # type: ignore[arg-type]
+
+    def test_get_mcp_mode_defaults_to_read_only(self) -> None:
+        set_mcp_connection(None, None)  # type: ignore[arg-type]
+        assert get_mcp_mode() == "read-only"
+
+    def test_is_read_only_mode_returns_true_for_read_only(self) -> None:
+        mock_connection = MagicMock()
+        loop = asyncio.new_event_loop()
+
+        try:
+            set_mcp_connection(mock_connection, loop, "read-only")
+            assert is_read_only_mode() is True
+        finally:
+            loop.close()
+            set_mcp_connection(None, None)  # type: ignore[arg-type]
+
+    def test_is_read_only_mode_returns_false_for_read_write(self) -> None:
+        mock_connection = MagicMock()
+        loop = asyncio.new_event_loop()
+
+        try:
+            set_mcp_connection(mock_connection, loop, "read-write")
+            assert is_read_only_mode() is False
         finally:
             loop.close()
             set_mcp_connection(None, None)  # type: ignore[arg-type]

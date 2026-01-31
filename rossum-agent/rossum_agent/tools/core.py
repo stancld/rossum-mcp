@@ -60,6 +60,7 @@ _text_callback: ContextVar[SubAgentTextCallback | None] = ContextVar("text_callb
 _token_callback: ContextVar[SubAgentTokenCallback | None] = ContextVar("token_callback", default=None)
 _mcp_connection: ContextVar[MCPConnection | None] = ContextVar("mcp_connection", default=None)
 _mcp_event_loop: ContextVar[asyncio.AbstractEventLoop | None] = ContextVar("mcp_event_loop", default=None)
+_mcp_mode: ContextVar[str] = ContextVar("mcp_mode", default="read-only")
 _output_dir: ContextVar[Path | None] = ContextVar("output_dir", default=None)
 _rossum_credentials: ContextVar[tuple[str, str] | None] = ContextVar("rossum_credentials", default=None)
 
@@ -111,10 +112,15 @@ def get_output_dir() -> Path:
     return fallback
 
 
-def set_mcp_connection(connection: MCPConnection | None, loop: asyncio.AbstractEventLoop | None) -> None:
+def set_mcp_connection(
+    connection: MCPConnection | None,
+    loop: asyncio.AbstractEventLoop | None,
+    mcp_mode: str = "read-only",
+) -> None:
     """Set the MCP connection for use by internal tools (pass None to clear)."""
     _mcp_connection.set(connection)
     _mcp_event_loop.set(loop)
+    _mcp_mode.set(mcp_mode)
 
 
 def get_mcp_connection() -> MCPConnection | None:
@@ -125,6 +131,16 @@ def get_mcp_connection() -> MCPConnection | None:
 def get_mcp_event_loop() -> asyncio.AbstractEventLoop | None:
     """Get the current MCP event loop."""
     return _mcp_event_loop.get()
+
+
+def get_mcp_mode() -> str:
+    """Get the current MCP mode ('read-only' or 'read-write')."""
+    return _mcp_mode.get()
+
+
+def is_read_only_mode() -> bool:
+    """Check if MCP is in read-only mode."""
+    return _mcp_mode.get() != "read-write"
 
 
 def set_rossum_credentials(api_base_url: str | None, token: str | None) -> None:

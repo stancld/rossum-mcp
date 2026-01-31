@@ -16,7 +16,7 @@ class ToolInfo:
 
     name: str
     description: str
-    destructive: bool = False
+    read_only: bool = True
 
 
 @dataclass
@@ -36,13 +36,13 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         name="annotations",
         description="Document processing: upload, retrieve, update, and confirm annotations",
         tools=[
-            ToolInfo("upload_document", "Upload document to queue"),
+            ToolInfo("upload_document", "Upload document to queue", read_only=False),
             ToolInfo("get_annotation", "Retrieve annotation with extracted data"),
             ToolInfo("list_annotations", "List annotations for a queue"),
-            ToolInfo("start_annotation", "Start annotation (to_review -> reviewing)"),
-            ToolInfo("bulk_update_annotation_fields", "Bulk update annotation fields"),
-            ToolInfo("confirm_annotation", "Confirm annotation (-> confirmed)"),
-            ToolInfo("delete_annotation", "Delete annotation (soft delete)", destructive=True),
+            ToolInfo("start_annotation", "Start annotation (to_review -> reviewing)", read_only=False),
+            ToolInfo("bulk_update_annotation_fields", "Bulk update annotation fields", read_only=False),
+            ToolInfo("confirm_annotation", "Confirm annotation (-> confirmed)", read_only=False),
+            ToolInfo("delete_annotation", "Delete annotation (soft delete)", read_only=False),
         ],
         keywords=["annotation", "document", "upload", "extract", "confirm", "review"],
     ),
@@ -54,11 +54,11 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
             ToolInfo("list_queues", "List all queues"),
             ToolInfo("get_queue_schema", "Get queue's schema"),
             ToolInfo("get_queue_engine", "Get queue's AI engine"),
-            ToolInfo("create_queue", "Create a queue"),
-            ToolInfo("update_queue", "Update queue settings"),
+            ToolInfo("create_queue", "Create a queue", read_only=False),
+            ToolInfo("update_queue", "Update queue settings", read_only=False),
             ToolInfo("get_queue_template_names", "List available queue templates"),
-            ToolInfo("create_queue_from_template", "Create queue from template"),
-            ToolInfo("delete_queue", "Delete queue (24h delayed)", destructive=True),
+            ToolInfo("create_queue_from_template", "Create queue from template", read_only=False),
+            ToolInfo("delete_queue", "Delete queue (24h delayed)", read_only=False),
         ],
         keywords=["queue", "inbox", "connector"],
     ),
@@ -68,12 +68,12 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_schema", "Retrieve schema details"),
             ToolInfo("list_schemas", "List all schemas"),
-            ToolInfo("update_schema", "Update schema"),
-            ToolInfo("create_schema", "Create new schema"),
-            ToolInfo("patch_schema", "Add/update/remove schema fields"),
+            ToolInfo("update_schema", "Update schema", read_only=False),
+            ToolInfo("create_schema", "Create new schema", read_only=False),
+            ToolInfo("patch_schema", "Add/update/remove schema fields", read_only=False),
             ToolInfo("get_schema_tree_structure", "Get lightweight schema tree"),
-            ToolInfo("prune_schema_fields", "Bulk remove schema fields"),
-            ToolInfo("delete_schema", "Delete schema", destructive=True),
+            ToolInfo("prune_schema_fields", "Bulk remove schema fields", read_only=False),
+            ToolInfo("delete_schema", "Delete schema", read_only=False),
         ],
         keywords=["schema", "field", "datapoint", "section", "multivalue", "tuple"],
     ),
@@ -83,9 +83,9 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_engine", "Retrieve engine details"),
             ToolInfo("list_engines", "List all engines"),
-            ToolInfo("update_engine", "Update engine settings"),
-            ToolInfo("create_engine", "Create new engine"),
-            ToolInfo("create_engine_field", "Create engine field mapping"),
+            ToolInfo("update_engine", "Update engine settings", read_only=False),
+            ToolInfo("create_engine", "Create new engine", read_only=False),
+            ToolInfo("create_engine_field", "Create engine field mapping", read_only=False),
             ToolInfo("get_engine_fields", "List engine fields"),
         ],
         keywords=["engine", "ai", "extractor", "splitter", "training"],
@@ -96,12 +96,12 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_hook", "Retrieve hook details with code"),
             ToolInfo("list_hooks", "List all hooks for a queue"),
-            ToolInfo("create_hook", "Create new hook"),
-            ToolInfo("update_hook", "Update hook configuration"),
+            ToolInfo("create_hook", "Create new hook", read_only=False),
+            ToolInfo("update_hook", "Update hook configuration", read_only=False),
             ToolInfo("list_hook_logs", "View hook execution logs"),
             ToolInfo("list_hook_templates", "List Rossum Store templates"),
-            ToolInfo("create_hook_from_template", "Create hook from template"),
-            ToolInfo("delete_hook", "Delete hook", destructive=True),
+            ToolInfo("create_hook_from_template", "Create hook from template", read_only=False),
+            ToolInfo("delete_hook", "Delete hook", read_only=False),
         ],
         keywords=["hook", "extension", "webhook", "automation", "function", "serverless"],
     ),
@@ -111,7 +111,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_email_template", "Retrieve email template"),
             ToolInfo("list_email_templates", "List email templates"),
-            ToolInfo("create_email_template", "Create email template"),
+            ToolInfo("create_email_template", "Create email template", read_only=False),
         ],
         keywords=["email", "template", "notification", "rejection"],
     ),
@@ -139,7 +139,7 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_rule", "Retrieve rule details"),
             ToolInfo("list_rules", "List validation rules"),
-            ToolInfo("delete_rule", "Delete rule", destructive=True),
+            ToolInfo("delete_rule", "Delete rule", read_only=False),
         ],
         keywords=["rule", "validation", "constraint"],
     ),
@@ -159,8 +159,8 @@ TOOL_CATALOG: dict[str, ToolCategory] = {
         tools=[
             ToolInfo("get_workspace", "Retrieve workspace details"),
             ToolInfo("list_workspaces", "List all workspaces"),
-            ToolInfo("create_workspace", "Create new workspace"),
-            ToolInfo("delete_workspace", "Delete workspace", destructive=True),
+            ToolInfo("create_workspace", "Create new workspace", read_only=False),
+            ToolInfo("delete_workspace", "Delete workspace", read_only=False),
         ],
         keywords=["workspace", "organization"],
     ),

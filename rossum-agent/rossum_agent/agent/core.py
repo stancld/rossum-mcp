@@ -91,6 +91,7 @@ from rossum_agent.tools import (
     get_dynamic_tools,
     get_internal_tool_names,
     get_internal_tools,
+    get_mcp_mode,
     preload_categories_for_request,
     reset_dynamic_tools,
     set_mcp_connection,
@@ -824,7 +825,8 @@ class RossumAgent:
             return
 
         loop = asyncio.get_event_loop()
-        set_mcp_connection(self.mcp_connection, loop)
+        mcp_mode = get_mcp_mode()
+        set_mcp_connection(self.mcp_connection, loop, mcp_mode)
 
         # Pre-load tool categories based on keywords in the user's request
         # Run in thread pool to avoid blocking the event loop (preload uses sync MCP calls)

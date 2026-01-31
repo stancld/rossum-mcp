@@ -12,12 +12,12 @@ from rossum_agent.tools.dynamic_tools import (
     _filter_discovery_tools,
     _filter_mcp_tools_by_names,
     _load_categories_impl,
-    get_destructive_tools,
     get_dynamic_tools,
     get_global_state,
     get_load_tool_category_definition,
     get_load_tool_definition,
     get_loaded_categories,
+    get_write_tools,
     load_tool,
     load_tool_category,
     preload_categories_for_request,
@@ -266,7 +266,6 @@ class TestPreloadCategoriesForRequest:
 
         result = preload_categories_for_request("Show me all queues and schemas")
 
-        # exclude_destructive defaults to True now, so no explicit param
         mock_load.assert_called_once_with(["queues", "schemas"])
         assert result is not None
 
@@ -374,7 +373,7 @@ class TestFetchCatalogFromMcp:
 
         assert result.catalog == {}
         assert result.keywords == {}
-        assert result.destructive_tools == set()
+        assert result.write_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
@@ -386,7 +385,7 @@ class TestFetchCatalogFromMcp:
 
         assert result.catalog == {}
         assert result.keywords == {}
-        assert result.destructive_tools == set()
+        assert result.write_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -413,7 +412,7 @@ class TestFetchCatalogFromMcp:
         assert "queues" in result.catalog
         assert result.catalog["queues"] == {"get_queue", "list_queues"}
         assert result.keywords["queues"] == ["queue", "inbox"]
-        assert result.destructive_tools == set()
+        assert result.write_tools == set()
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
@@ -559,169 +558,7 @@ class TestFetchCatalogFromMcp:
 
         assert result.catalog == {}
         assert result.keywords == {}
-        assert result.destructive_tools == set()
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
-    def test_parses_destructive_tools(
-        self, mock_get_conn: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
-    ) -> None:
-        """Test that destructive tools are extracted from catalog."""
-        mock_get_conn.return_value = MagicMock()
-        mock_get_loop.return_value = MagicMock()
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = [
-            {
-                "name": "queues",
-                "tools": [
-                    {"name": "get_queue", "destructive": False},
-                    {"name": "delete_queue", "destructive": True},
-                ],
-                "keywords": ["queue"],
-            }
-        ]
-        mock_run_coro.return_value = mock_future
-
-        result = _fetch_catalog_from_mcp()
-
-        assert "queues" in result.catalog
-        assert result.catalog["queues"] == {"get_queue", "delete_queue"}
-        assert result.destructive_tools == {"delete_queue"}
-
-
-class TestGetDestructiveTools:
-    """Tests for get_destructive_tools function."""
-
-    def setup_method(self) -> None:
-        """Clear cache before each test."""
-        import rossum_agent.tools.dynamic_tools as dt
-
-        dt._catalog_cache = None
-
-    def teardown_method(self) -> None:
-        """Clear cache after each test."""
-        import rossum_agent.tools.dynamic_tools as dt
-
-        dt._catalog_cache = None
-
-    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
-    def test_returns_destructive_tools_from_catalog(self, mock_fetch: MagicMock) -> None:
-        """Test that get_destructive_tools returns the set from CatalogData."""
-        mock_fetch.return_value = CatalogData(
-            catalog={"queues": {"get_queue", "delete_queue"}},
-            keywords={"queues": ["queue"]},
-            destructive_tools={"delete_queue", "delete_schema"},
-        )
-
-        result = get_destructive_tools()
-
-        assert result == {"delete_queue", "delete_schema"}
-
-    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
-    def test_returns_empty_set_when_no_destructive_tools(self, mock_fetch: MagicMock) -> None:
-        """Test returns empty set when catalog has no destructive tools."""
-        mock_fetch.return_value = CatalogData(
-            catalog={"queues": {"get_queue", "list_queues"}},
-            keywords={"queues": ["queue"]},
-            destructive_tools=set(),
-        )
-
-        result = get_destructive_tools()
-
-        assert result == set()
-
-
-class TestLoadCategoriesImplExcludeDestructive:
-    """Tests for _load_categories_impl with exclude_destructive parameter."""
-
-    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
-    @patch("rossum_agent.tools.dynamic_tools.get_destructive_tools")
-    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
-    def test_excludes_destructive_tools_when_flag_set(
-        self,
-        mock_get_catalog: MagicMock,
-        mock_get_destructive: MagicMock,
-        mock_get_connection: MagicMock,
-        mock_get_loop: MagicMock,
-        mock_run_coro: MagicMock,
-        mock_convert: MagicMock,
-    ) -> None:
-        """Test that destructive tools are excluded when exclude_destructive=True."""
-        reset_dynamic_tools()
-        mock_get_catalog.return_value = {"queues": {"get_queue", "list_queues", "delete_queue"}}
-        mock_get_destructive.return_value = {"delete_queue"}
-        mock_get_connection.return_value = MagicMock()
-        mock_get_loop.return_value = MagicMock()
-
-        # Create mock tools including destructive one
-        mock_tool1 = MagicMock()
-        mock_tool1.name = "get_queue"
-        mock_tool2 = MagicMock()
-        mock_tool2.name = "list_queues"
-        mock_tool3 = MagicMock()
-        mock_tool3.name = "delete_queue"
-        mock_future = MagicMock()
-        mock_future.result.return_value = [mock_tool1, mock_tool2, mock_tool3]
-        mock_run_coro.return_value = mock_future
-
-        mock_convert.return_value = [{"name": "get_queue"}, {"name": "list_queues"}]
-
-        result = _load_categories_impl(["queues"], exclude_destructive=True)
-
-        assert "Loaded" in result
-        # Check that only non-destructive tools were requested for conversion
-        # The filter should have excluded delete_queue
-        call_args = mock_convert.call_args[0][0]
-        tool_names_loaded = {t.name for t in call_args}
-        assert "delete_queue" not in tool_names_loaded
-        assert "get_queue" in tool_names_loaded
-        assert "list_queues" in tool_names_loaded
-
-    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
-    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
-    @patch("rossum_agent.tools.dynamic_tools.get_destructive_tools")
-    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
-    def test_includes_destructive_tools_when_flag_false(
-        self,
-        mock_get_catalog: MagicMock,
-        mock_get_destructive: MagicMock,
-        mock_get_connection: MagicMock,
-        mock_get_loop: MagicMock,
-        mock_run_coro: MagicMock,
-        mock_convert: MagicMock,
-    ) -> None:
-        """Test that destructive tools are included when exclude_destructive=False."""
-        reset_dynamic_tools()
-        mock_get_catalog.return_value = {"queues": {"get_queue", "delete_queue"}}
-        mock_get_destructive.return_value = {"delete_queue"}
-        mock_get_connection.return_value = MagicMock()
-        mock_get_loop.return_value = MagicMock()
-
-        mock_tool1 = MagicMock()
-        mock_tool1.name = "get_queue"
-        mock_tool2 = MagicMock()
-        mock_tool2.name = "delete_queue"
-        mock_future = MagicMock()
-        mock_future.result.return_value = [mock_tool1, mock_tool2]
-        mock_run_coro.return_value = mock_future
-
-        mock_convert.return_value = [{"name": "get_queue"}, {"name": "delete_queue"}]
-
-        result = _load_categories_impl(["queues"], exclude_destructive=False)
-
-        assert "Loaded" in result
-        # Both tools should be loaded
-        call_args = mock_convert.call_args[0][0]
-        tool_names_loaded = {t.name for t in call_args}
-        assert "delete_queue" in tool_names_loaded
-        assert "get_queue" in tool_names_loaded
+        assert result.write_tools == set()
 
 
 class TestGetLoadToolDefinition:
@@ -823,3 +660,268 @@ class TestLoadTool:
 
         result = load_tool(["delete_hook"])
         assert result == "Tools already loaded: ['delete_hook']"
+
+    @patch("rossum_agent.tools.dynamic_tools.is_read_only_mode")
+    @patch("rossum_agent.tools.dynamic_tools.get_write_tools")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_blocks_write_tools_in_read_only_mode(
+        self,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_get_write: MagicMock,
+        mock_is_read_only: MagicMock,
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+        mock_is_read_only.return_value = True
+        mock_get_write.return_value = {"create_schema", "delete_schema"}
+
+        mock_tool1 = MagicMock()
+        mock_tool1.name = "create_schema"
+        mock_tool2 = MagicMock()
+        mock_tool2.name = "get_schema"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool1, mock_tool2]
+        mock_run_coro.return_value = mock_future
+
+        result = load_tool(["create_schema"])
+
+        assert "Error: Write tools not available in read-only mode" in result
+        assert "create_schema" in result
+
+    @patch("rossum_agent.tools.dynamic_tools.is_read_only_mode")
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_allows_write_tools_in_read_write_mode(
+        self,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+        mock_is_read_only: MagicMock,
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+        mock_is_read_only.return_value = False
+
+        mock_tool = MagicMock()
+        mock_tool.name = "create_schema"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "create_schema"}]
+
+        result = load_tool(["create_schema"])
+
+        assert "Loaded tools: create_schema" in result
+
+
+class TestGetWriteTools:
+    """Tests for get_write_tools function."""
+
+    def setup_method(self) -> None:
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    def teardown_method(self) -> None:
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
+    def test_returns_write_tools_from_catalog(self, mock_fetch: MagicMock) -> None:
+        mock_fetch.return_value = CatalogData(
+            catalog={"schemas": {"get_schema", "create_schema", "update_schema"}},
+            keywords={"schemas": ["schema"]},
+            write_tools={"create_schema", "update_schema"},
+        )
+
+        result = get_write_tools()
+
+        assert result == {"create_schema", "update_schema"}
+
+    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
+    def test_returns_empty_set_when_no_write_tools(self, mock_fetch: MagicMock) -> None:
+        mock_fetch.return_value = CatalogData(
+            catalog={"schemas": {"get_schema", "list_schemas"}},
+            keywords={"schemas": ["schema"]},
+            write_tools=set(),
+        )
+
+        result = get_write_tools()
+
+        assert result == set()
+
+
+class TestFetchCatalogParsesWriteTools:
+    """Tests for _fetch_catalog_from_mcp parsing read_only field."""
+
+    def setup_method(self) -> None:
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    def teardown_method(self) -> None:
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_parses_write_tools_from_read_only_field(
+        self, mock_get_conn: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
+    ) -> None:
+        mock_get_conn.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_future = MagicMock()
+        mock_future.result.return_value = [
+            {
+                "name": "schemas",
+                "tools": [
+                    {"name": "get_schema", "read_only": True},
+                    {"name": "create_schema", "read_only": False},
+                    {"name": "update_schema", "read_only": False},
+                ],
+                "keywords": ["schema"],
+            }
+        ]
+        mock_run_coro.return_value = mock_future
+
+        result = _fetch_catalog_from_mcp()
+
+        assert "schemas" in result.catalog
+        assert result.catalog["schemas"] == {"get_schema", "create_schema", "update_schema"}
+        assert result.write_tools == {"create_schema", "update_schema"}
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    def test_defaults_to_read_only_when_field_missing(
+        self, mock_get_conn: MagicMock, mock_get_loop: MagicMock, mock_run_coro: MagicMock
+    ) -> None:
+        mock_get_conn.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_future = MagicMock()
+        mock_future.result.return_value = [
+            {
+                "name": "schemas",
+                "tools": [
+                    {"name": "get_schema"},
+                    {"name": "list_schemas"},
+                ],
+                "keywords": ["schema"],
+            }
+        ]
+        mock_run_coro.return_value = mock_future
+
+        result = _fetch_catalog_from_mcp()
+
+        assert result.write_tools == set()
+
+
+class TestLoadCategoriesImplReadOnlyMode:
+    """Tests for _load_categories_impl filtering write tools in read-only mode."""
+
+    @patch("rossum_agent.tools.dynamic_tools.is_read_only_mode")
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    @patch("rossum_agent.tools.dynamic_tools.get_write_tools")
+    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
+    def test_excludes_write_tools_in_read_only_mode(
+        self,
+        mock_get_catalog: MagicMock,
+        mock_get_write: MagicMock,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+        mock_is_read_only: MagicMock,
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_catalog.return_value = {"schemas": {"get_schema", "list_schemas", "create_schema", "update_schema"}}
+        mock_get_write.return_value = {"create_schema", "update_schema"}
+        mock_is_read_only.return_value = True
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool1 = MagicMock()
+        mock_tool1.name = "get_schema"
+        mock_tool2 = MagicMock()
+        mock_tool2.name = "list_schemas"
+        mock_tool3 = MagicMock()
+        mock_tool3.name = "create_schema"
+        mock_tool4 = MagicMock()
+        mock_tool4.name = "update_schema"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool1, mock_tool2, mock_tool3, mock_tool4]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "get_schema"}, {"name": "list_schemas"}]
+
+        result = _load_categories_impl(["schemas"])
+
+        assert "Loaded" in result
+        assert "(read-only mode)" in result
+        call_args = mock_convert.call_args[0][0]
+        tool_names_loaded = {t.name for t in call_args}
+        assert "create_schema" not in tool_names_loaded
+        assert "update_schema" not in tool_names_loaded
+        assert "get_schema" in tool_names_loaded
+        assert "list_schemas" in tool_names_loaded
+
+    @patch("rossum_agent.tools.dynamic_tools.is_read_only_mode")
+    @patch("rossum_agent.tools.dynamic_tools.mcp_tools_to_anthropic_format")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_event_loop")
+    @patch("rossum_agent.tools.dynamic_tools.get_mcp_connection")
+    @patch("rossum_agent.tools.dynamic_tools.get_write_tools")
+    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
+    def test_includes_write_tools_in_read_write_mode(
+        self,
+        mock_get_catalog: MagicMock,
+        mock_get_write: MagicMock,
+        mock_get_connection: MagicMock,
+        mock_get_loop: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_convert: MagicMock,
+        mock_is_read_only: MagicMock,
+    ) -> None:
+        reset_dynamic_tools()
+        mock_get_catalog.return_value = {"schemas": {"get_schema", "create_schema"}}
+        mock_get_write.return_value = {"create_schema"}
+        mock_is_read_only.return_value = False
+        mock_get_connection.return_value = MagicMock()
+        mock_get_loop.return_value = MagicMock()
+
+        mock_tool1 = MagicMock()
+        mock_tool1.name = "get_schema"
+        mock_tool2 = MagicMock()
+        mock_tool2.name = "create_schema"
+        mock_future = MagicMock()
+        mock_future.result.return_value = [mock_tool1, mock_tool2]
+        mock_run_coro.return_value = mock_future
+
+        mock_convert.return_value = [{"name": "get_schema"}, {"name": "create_schema"}]
+
+        result = _load_categories_impl(["schemas"])
+
+        assert "Loaded" in result
+        assert "(read-only mode)" not in result
+        call_args = mock_convert.call_args[0][0]
+        tool_names_loaded = {t.name for t in call_args}
+        assert "create_schema" in tool_names_loaded
+        assert "get_schema" in tool_names_loaded

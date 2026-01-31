@@ -225,7 +225,7 @@ class AgentService:
                     mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig()
                 )
 
-                set_mcp_connection(mcp_connection, asyncio.get_event_loop())
+                set_mcp_connection(mcp_connection, asyncio.get_event_loop(), mcp_mode)
 
                 self._restore_conversation_history(agent, conversation_history)
 
