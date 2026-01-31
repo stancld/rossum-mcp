@@ -21,8 +21,8 @@ def register_discovery_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         description="List all available tool categories with descriptions, tool names, and keywords. "
         "Use this to discover what tools are available, then use load_tool_category to load "
-        "tools from specific categories before using them. Tools with destructive=true require "
-        "explicit user request to use (delete operations)."
+        "tools from specific categories before using them. Tools with read_only=false are write "
+        "operations (create, update, delete)."
     )
     async def list_tool_categories() -> list[dict]:
         return [
