@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+
+
 ## [1.0.1] - 2026-01-31
 
 ### Changed
