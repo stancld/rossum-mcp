@@ -7,6 +7,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 
+## [1.0.1] - 2026-01-31
+
+### Changed
+- Renamed `destructive` field to `read_only` in tool catalog for clearer semantics (tools with `read_only=false` are write operations)
+
+
 ## [1.0.0] - 2026-01-28
 
 ### Added

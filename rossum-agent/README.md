@@ -5,7 +5,7 @@
 **AI agent for Rossum document processing. Debug hooks, deploy configs, and automate workflows conversationally.**
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
-[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/pypi/pyversions/rossum-agent.svg)](https://pypi.org/project/rossum-agent/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/stancld/rossum-agents)
@@ -20,7 +20,7 @@
 </div>
 
 > [!NOTE]
-> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
+> Community-developed integration (not official Rossum). Follows semantic versioning from 1.0.0.
 
 ## Features
 
@@ -44,7 +44,8 @@ export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
 export AWS_PROFILE="default"  # For Bedrock
 
 # Run the agent
-uv pip install rossum-agent
+uv pip install rossum-agent[streamlit]
+uv cache clean rossum-agent  # Re-init if upgrading
 rossum-agent
 ```
 

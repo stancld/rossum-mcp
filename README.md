@@ -5,10 +5,11 @@
 **AI-powered Rossum orchestration: Document workflows conversationally, debug pipelines automatically, and configure automation through natural language.**
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
-[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/pypi/pyversions/rossum-mcp.svg)](https://pypi.org/project/rossum-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
+[![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
 
@@ -27,7 +28,7 @@
 Conversational AI toolkit for the Rossum intelligent document processing platform. Transforms complex workflow setup, debugging, and configuration into natural language conversations through a Model Context Protocol (MCP) server and specialized AI agent.
 
 > [!NOTE]
-> Community-developed integration (not official Rossum). Early stage - breaking changes expected.
+> Community-developed integration (not official Rossum). Follows semantic versioning from 1.0.0.
 
 ## What Can You Do?
 
@@ -158,7 +159,17 @@ Each package can be installed and used independently or together for complete fu
 ## Quick Start
 
 ```bash
-# Clone and run with Docker
+# Install and run (fastest)
+uv pip install rossum-agent[streamlit]
+uv cache clean rossum-agent  # Re-init if upgrading
+export ROSSUM_API_TOKEN="your-token"
+export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+rossum-agent
+```
+
+Or with Docker:
+
+```bash
 git clone https://github.com/stancld/rossum-agents.git && cd rossum-mcp
 echo "ROSSUM_API_TOKEN=your-token" > .env
 echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env

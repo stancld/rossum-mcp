@@ -17,4 +17,4 @@ EXPOSE 8501
 
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app/rossum-agent
-CMD ["uv", "run", "streamlit", "run", "rossum_agent/app.py"]
+CMD ["uv", "run", "rossum-agent"]

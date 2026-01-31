@@ -69,19 +69,38 @@ class TestToolCatalog:
         }
         assert tool_names == expected
 
-    def test_destructive_tools_are_marked(self) -> None:
-        destructive_tools = [
-            (cat_name, t.name) for cat_name, cat in TOOL_CATALOG.items() for t in cat.tools if t.destructive
+    def test_write_tools_are_marked(self) -> None:
+        write_tools = [
+            (cat_name, t.name) for cat_name, cat in TOOL_CATALOG.items() for t in cat.tools if not t.read_only
         ]
-        expected_destructive = {
+        expected_write = {
+            ("annotations", "upload_document"),
+            ("annotations", "start_annotation"),
+            ("annotations", "bulk_update_annotation_fields"),
+            ("annotations", "confirm_annotation"),
             ("annotations", "delete_annotation"),
+            ("queues", "create_queue"),
+            ("queues", "update_queue"),
+            ("queues", "create_queue_from_template"),
             ("queues", "delete_queue"),
+            ("schemas", "update_schema"),
+            ("schemas", "create_schema"),
+            ("schemas", "patch_schema"),
+            ("schemas", "prune_schema_fields"),
             ("schemas", "delete_schema"),
+            ("engines", "update_engine"),
+            ("engines", "create_engine"),
+            ("engines", "create_engine_field"),
+            ("hooks", "create_hook"),
+            ("hooks", "update_hook"),
+            ("hooks", "create_hook_from_template"),
             ("hooks", "delete_hook"),
+            ("email_templates", "create_email_template"),
             ("rules", "delete_rule"),
+            ("workspaces", "create_workspace"),
             ("workspaces", "delete_workspace"),
         }
-        assert set(destructive_tools) == expected_destructive
+        assert set(write_tools) == expected_write
 
 
 class TestCatalogSummary:
