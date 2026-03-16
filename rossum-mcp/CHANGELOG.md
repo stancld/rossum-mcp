@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.0.1] - 2026-03-16
 
 ### Fixed
 - Added `matching` and `enum_value_type` fields to `SchemaDatapoint` and `SchemaNodeUpdate` — lookup fields can now be created and updated via `patch_schema` without losing their matching configuration
