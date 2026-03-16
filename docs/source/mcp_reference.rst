@@ -645,7 +645,7 @@ create_engine
 
 - ``name`` (str): Engine name
 - ``organization_id`` (int): Organization to create the engine in
-- ``engine_type`` (Literal["extractor", "splitter"]): Type of engine
+- ``engine_type`` (EngineType: "extractor", "splitter"): Type of engine
 
 **Returns:**
   ``Engine`` object
@@ -673,7 +673,7 @@ create_engine_field
 - ``engine_id`` (int): Engine to add the field to
 - ``name`` (str): Field name (should match schema field id)
 - ``label`` (str): Human-readable label
-- ``field_type`` (Literal["string", "number", "date", "enum"]): Data type
+- ``field_type`` (DatapointType: "string", "number", "date", "enum", "button"): Data type
 - ``schema_ids`` (list[int]): Schemas this field is linked to (at least one required)
 - ``tabular`` (bool): Whether the field is inside a table (default: False)
 - ``multiline`` (bool): Whether the field spans multiple lines (default: False)
@@ -831,7 +831,7 @@ create_email_template
 - ``queue`` (int): Queue ID to attach the template to
 - ``subject`` (str): Email subject line
 - ``message`` (str): Email body (supports HTML)
-- ``type`` (Literal["rejection", "rejection_default", "email_with_no_processable_attachments", "custom"]): Template type (default: "custom")
+- ``type`` (EmailTemplateType: "rejection", "rejection_default", "email_with_no_processable_attachments", "custom"): Template type (default: "custom")
 - ``automate`` (bool): Send automatically when triggered (default: False)
 - ``to`` (list[EmailRecipient], optional): To recipients
 - ``cc`` (list[EmailRecipient], optional): CC recipients

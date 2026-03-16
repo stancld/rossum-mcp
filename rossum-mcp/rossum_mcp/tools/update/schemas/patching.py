@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import copy
-from typing import Literal
+from enum import StrEnum
 
-PatchOperation = Literal["add", "update", "remove"]
+
+class PatchOperation(StrEnum):
+    ADD = "add"
+    UPDATE = "update"
+    REMOVE = "remove"
 
 
 def _find_node_in_children(

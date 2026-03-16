@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING
 
 from fastmcp.exceptions import ToolError
 
@@ -16,7 +16,7 @@ def register_delete_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     registry = build_delete_registry(client)
 
     # Fail fast at startup if DeleteEntityType drifts from the registry
-    for _entity in get_args(DeleteEntityType):
+    for _entity in DeleteEntityType:
         if _entity not in registry:
             raise RuntimeError(
                 f"DeleteEntityType member '{_entity}' is missing from registry — "

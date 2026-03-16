@@ -12,6 +12,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
+from rossum_mcp.tools.models import EmailTemplateType, EngineType, LogLevel
+
 
 class QueueSearch(BaseModel):
     entity: Literal["queue"] = "queue"
@@ -38,7 +40,7 @@ class HookSearch(BaseModel):
 class EngineSearch(BaseModel):
     entity: Literal["engine"] = "engine"
     id: int | None = None
-    engine_type: Literal["extractor", "splitter"] | None = None
+    engine_type: EngineType | None = None
     agenda_id: str | None = None
 
 
@@ -69,7 +71,7 @@ class WorkspaceSearch(BaseModel):
 class EmailTemplateSearch(BaseModel):
     entity: Literal["email_template"] = "email_template"
     queue_id: int | None = None
-    type: Literal["rejection", "rejection_default", "email_with_no_processable_attachments", "custom"] | None = None
+    type: EmailTemplateType | None = None
     name: str | None = None
     first_n: int | None = None
     use_regex: bool = False
@@ -113,7 +115,7 @@ class HookLogSearch(BaseModel):
     queue_id: int | None = None
     annotation_id: int | None = None
     email_id: int | None = None
-    log_level: list[Literal["INFO", "ERROR", "WARNING"]] | Literal["INFO", "ERROR", "WARNING"] | None = None
+    log_level: list[LogLevel] | LogLevel | None = None
     status: str | None = None
     status_code: int | None = None
     request_id: str | None = None

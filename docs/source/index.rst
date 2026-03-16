@@ -44,7 +44,7 @@ This project enables three progressive levels of AI-powered Rossum orchestration
 Features
 --------
 
-A compact, fully-typed tool surface — Pydantic models, ``Literal`` unions, and consolidated APIs built for agents:
+A compact, fully-typed tool surface — Pydantic models, ``StrEnum`` parameters, and consolidated APIs built for agents:
 
 **Unified Read Layer**
 
