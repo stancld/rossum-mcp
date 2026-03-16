@@ -56,12 +56,6 @@ class DatapointType(StrEnum):
     BUTTON = "button"
 
 
-class NodeCategory(StrEnum):
-    DATAPOINT = "datapoint"
-    MULTIVALUE = "multivalue"
-    TUPLE = "tuple"
-
-
 @dataclass
 class SchemaDatapoint:
     """A datapoint node for schema patch operations.
