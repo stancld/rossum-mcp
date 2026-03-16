@@ -187,7 +187,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.84.0"
+version = "0.85.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -199,9 +199,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/ea/0869d6df9ef83dcf393aeefc12dd81677d091c6ffc86f783e51cf44062f2/anthropic-0.84.0.tar.gz", hash = "sha256:72f5f90e5aebe62dca316cb013629cfa24996b0f5a4593b8c3d712bc03c43c37", size = 539457, upload-time = "2026-02-25T05:22:38.54Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/08/c620a0eb8625539a8ea9f5a6e06f13d131be0bc8b5b714c235d4b25dd1b5/anthropic-0.85.0.tar.gz", hash = "sha256:d45b2f38a1efb1a5d15515a426b272179a0d18783efa2bb4c3925fa773eb50b9", size = 542034, upload-time = "2026-03-16T17:00:44.324Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/ca/218fa25002a332c0aa149ba18ffc0543175998b1f65de63f6d106689a345/anthropic-0.84.0-py3-none-any.whl", hash = "sha256:861c4c50f91ca45f942e091d83b60530ad6d4f98733bfe648065364da05d29e7", size = 455156, upload-time = "2026-02-25T05:22:40.468Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/5a/9d85b85686d5cdd79f5488c8667e668d7920d06a0a1a1beb454a5b77b2db/anthropic-0.85.0-py3-none-any.whl", hash = "sha256:b4f54d632877ed7b7b29c6d9ba7299d5e21c4c92ae8de38947e9d862bff74adf", size = 458237, upload-time = "2026-03-16T17:00:45.877Z" },
 ]
 
 [[package]]
@@ -271,50 +271,30 @@ wheels = [
 
 [[package]]
 name = "boto3"
-<<<<<<< HEAD
-version = "1.42.67"
-=======
 version = "1.42.68"
->>>>>>> @{-1}
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore" },
     { name = "jmespath" },
     { name = "s3transfer" },
 ]
-<<<<<<< HEAD
-sdist = { url = "https://files.pythonhosted.org/packages/29/b3/3b5c929df4e46572d2721f0cef7b9fc85fc9d68b659b46df2724ad2606f6/boto3-1.42.67.tar.gz", hash = "sha256:d4123ceb3be36c5cb7ddccc7a7c43701e1fb6af612ef46e3b5d667daf5447d4b", size = 112820, upload-time = "2026-03-12T19:43:40.444Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/d8/41d7657896de9fe3ef666221180dcbcdc9e3f418b88084aba0c9abf0bb0a/boto3-1.42.67-py3-none-any.whl", hash = "sha256:aa900216bdc48bbd0115ed7128a4baed5548c6a60673160a38df8a8566df57cd", size = 140557, upload-time = "2026-03-12T19:43:38.174Z" },
-=======
 sdist = { url = "https://files.pythonhosted.org/packages/06/ae/60c642aa5413e560b671da825329f510b29a77274ed0f580bde77562294d/boto3-1.42.68.tar.gz", hash = "sha256:3f349f967ab38c23425626d130962bcb363e75f042734fe856ea8c5a00eef03c", size = 112761, upload-time = "2026-03-13T19:32:17.137Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/f6/dc6e993479dbb597d68223fbf61cb026511737696b15bd7d2a33e9b2c24f/boto3-1.42.68-py3-none-any.whl", hash = "sha256:dbff353eb7dc93cbddd7926ed24793e0174c04adbe88860dfa639568442e4962", size = 140556, upload-time = "2026-03-13T19:32:14.951Z" },
->>>>>>> @{-1}
 ]
 
 [[package]]
 name = "botocore"
-<<<<<<< HEAD
-version = "1.42.67"
-=======
 version = "1.42.68"
->>>>>>> @{-1}
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jmespath" },
     { name = "python-dateutil" },
     { name = "urllib3" },
 ]
-<<<<<<< HEAD
-sdist = { url = "https://files.pythonhosted.org/packages/34/6a/0326ea8a726e9061d0aff941bc89ff93a1e832f492e6b3d7419301a56c1e/botocore-1.42.67.tar.gz", hash = "sha256:ee307f30fcb798d244fb35a87847b274e1e1f72cd5f7f2e31bd1826df0c45295", size = 14983149, upload-time = "2026-03-12T19:43:27.244Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/0b/cfe18326230476a0b8e3529609190448f2b46453469b07ae95fc57f90fc6/botocore-1.42.67-py3-none-any.whl", hash = "sha256:a94317d2ce83deae230964beb2729639455de65595d0154f285b0ccfd29780cd", size = 14655819, upload-time = "2026-03-12T19:43:21.952Z" },
-=======
 sdist = { url = "https://files.pythonhosted.org/packages/3f/22/87502d5fbbfa8189406a617b30b1e2a3dc0ab2669f7268e91b385c1c1c7a/botocore-1.42.68.tar.gz", hash = "sha256:3951c69e12ac871dda245f48dac5c7dd88ea1bfdd74a8879ec356cf2874b806a", size = 14994514, upload-time = "2026-03-13T19:32:03.577Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3c/2a/1428f6594799780fe6ee845d8e6aeffafe026cd16a70c878684e2dcbbfc8/botocore-1.42.68-py3-none-any.whl", hash = "sha256:9df7da26374601f890e2f115bfa573d65bf15b25fe136bb3aac809f6145f52ab", size = 14668816, upload-time = "2026-03-13T19:31:58.572Z" },
->>>>>>> @{-1}
 ]
 
 [[package]]
@@ -2309,7 +2289,7 @@ wheels = [
 
 [[package]]
 name = "rossum-agent"
-version = "1.5.0"
+version = "1.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2436,13 +2416,8 @@ requires-dist = [
     { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
-<<<<<<< HEAD
-    { name = "rossum-api", specifier = ">=3.9.1" },
-    { name = "rossum-mcp", specifier = ">=2.0.0,<3.0.0" },
-=======
     { name = "rossum-api", specifier = ">=3.11.2" },
-    { name = "rossum-mcp", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp" },
->>>>>>> @{-1}
+    { name = "rossum-mcp", specifier = ">=2.0.0,<3.0.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'slack'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'tests'", specifier = ">=3.27.0" },
@@ -2489,21 +2464,16 @@ wheels = [
 
 [[package]]
 name = "rossum-mcp"
-<<<<<<< HEAD
-version = "2.0.0"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
-=======
-version = "2.1.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#53ced3a61b44a75cfda902ddedf4ba368c70b6f6" }
->>>>>>> @{-1}
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },
     { name = "rossum-api" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/5e/fe064afcfdb2d9e805181cb37275bd3678f67481519f74eb5fc7390dca31/rossum_mcp-2.0.0.tar.gz", hash = "sha256:fab408a04de7ae178dd3f0c1f15d79e28edb99bd2da32d4e66d4b9253776218b", size = 42302, upload-time = "2026-03-09T12:23:35.911Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/05/d3f5b04b99ff2541db1addf7816fd66bb9fc6d7017c44f64fb551c01eb1e/rossum_mcp-2.0.1.tar.gz", hash = "sha256:e776ce8da450907d5054c4ed65eca1e803a716a4544c9075e4e00ffc8669b13f", size = 41976, upload-time = "2026-03-16T14:37:47.357Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/a1/6e1b2e04e40fdbcc85b301d76d8356a22f42378fbf0b984bccb8378ba5ce/rossum_mcp-2.0.0-py3-none-any.whl", hash = "sha256:56a6cac6651b6644f7b030aae806c763278c6ecbcd74005a954c7546c9a9dcda", size = 55504, upload-time = "2026-03-09T12:23:34.68Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/ad/e5adfb79b2a2c8efbcc99dbd90ebf120f7c5ff1598374a7b6110757140f3/rossum_mcp-2.0.1-py3-none-any.whl", hash = "sha256:46a718628c71e0af9774e0108e5a8bfb24cf523d5679f65141a99e5eabc3eafc", size = 55119, upload-time = "2026-03-16T14:37:46.305Z" },
 ]
 
 [[package]]
