@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal
+from enum import StrEnum
 
-DeleteEntityType = Literal[
-    "queue",
-    "schema",
-    "hook",
-    "rule",
-    "workspace",
-    "annotation",
-]
+
+class DeleteEntityType(StrEnum):
+    QUEUE = "queue"
+    SCHEMA = "schema"
+    HOOK = "hook"
+    RULE = "rule"
+    WORKSPACE = "workspace"
+    ANNOTATION = "annotation"
