@@ -29,7 +29,6 @@ dependencies = [
     "boto3>=1.0",
     "fastmcp>=3.0.0",
     "httpx>=0.27.0",
-    "jinja2>=3.0",
     "jq>=1.7.0",
     "pyyaml>=6.0",
     "python-dotenv",
