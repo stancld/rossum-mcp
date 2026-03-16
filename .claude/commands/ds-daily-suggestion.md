@@ -63,9 +63,15 @@ Return MR URL when complete.
 
 ## Constraints
 
-- 1-5 improvements per run
-- Skip if no meaningful improvements found (report "Nothing today")
-- Prefer self-improvement of `.claude/commands/` when patterns emerge from recent commits
+| Constraint | Source |
+|------------|--------|
+| 1-5 improvements per run | Scope |
+| Each improvement gets its own commit | Feedback: bundled commits are harder to review |
+| Vary areas across days | Feedback: don't only touch `.claude/commands/` — rotate through code, docs, commands |
+| No trivial-only MRs | Feedback: single one-line or string-only changes waste review time |
+| Never add "Co-Authored-By" to commits | Feedback: rejected pattern |
+| Skip if nothing meaningful found | Report "Nothing today" |
+| Prefer self-improvement of `.claude/commands/` | When patterns emerge from recent commits |
 
 ## Feedback Integration
 

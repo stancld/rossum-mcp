@@ -15,6 +15,10 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Build rossum-agent-client
+        run: npm ci && npm run build
+        working-directory: rossum-agent-client-ts
+
       - name: Install dependencies
         run: npm install
         working-directory: rossum-agent-tui

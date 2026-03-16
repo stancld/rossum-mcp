@@ -71,6 +71,8 @@ class SchemaDatapoint:
     formula: str | None = None
     prompt: str | None = None
     context: list[str] | None = None
+    matching: dict | None = None
+    enum_value_type: str | None = None
     width: int | None = None
     stretch: bool | None = None
 

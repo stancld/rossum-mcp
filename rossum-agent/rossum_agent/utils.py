@@ -74,8 +74,3 @@ def add_message_cache_breakpoint(messages: list[dict[str, Any]]) -> None:
             last_block["cache_control"] = {"type": "ephemeral"}
     elif isinstance(content, str) and content:
         last_msg["content"] = [{"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}]
-
-
-def get_display_tool_name(tool_call_name: str, tool_arguments: dict[str, Any] | None = None) -> str:
-    """Get display name for a tool."""
-    return tool_call_name

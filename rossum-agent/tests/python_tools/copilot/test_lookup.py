@@ -13,7 +13,7 @@ import httpx
 from rossum_agent.python_tools.copilot.lookup import (
     _build_evaluate_computed_fields_url,
     _build_mdh_aggregate_url,
-    _build_mdh_datasets_metadata_url,
+    _build_mdh_datasets_url,
     _build_suggest_computed_field_url,
     _cache_dataset,
     _collect_datapoint_values,
@@ -55,14 +55,14 @@ class TestBuildEvaluateComputedFieldsUrl:
         assert url == "https://elis.rossum.ai/api/v1/internal/schemas/evaluate_computed_fields"
 
 
-class TestBuildMdhDatasetsMetadataUrl:
-    def test_appends_mdh_metadata_path(self) -> None:
-        url = _build_mdh_datasets_metadata_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets/metadata/"
+class TestBuildMdhDatasetsUrl:
+    def test_appends_mdh_datasets_path(self) -> None:
+        url = _build_mdh_datasets_url("https://elis.rossum.ai/api/v1")
+        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets?limit=1000"
 
     def test_handles_trailing_slash(self) -> None:
-        url = _build_mdh_datasets_metadata_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets/metadata/"
+        url = _build_mdh_datasets_url("https://elis.rossum.ai/api/v1/")
+        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets?limit=1000"
 
 
 class TestBuildMdhAggregateUrl:
@@ -162,10 +162,10 @@ class TestResolveMdhDatasetIdentifier:
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
     @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
-    def test_reads_dataset_items_from_wrapped_list_payload(self, mock_client_class: MagicMock) -> None:
+    def test_reads_dataset_items_from_wrapped_results_payload(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "list": [{"id": "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b", "name": "approved-vendors"}]
+            "results": [{"id": "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b", "name": "approved-vendors"}]
         }
         mock_response.raise_for_status = MagicMock()
 
@@ -180,10 +180,10 @@ class TestResolveMdhDatasetIdentifier:
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
     @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
-    def test_matches_metadata_name_from_wrapped_list_payload(self, mock_client_class: MagicMock) -> None:
+    def test_matches_metadata_name_from_wrapped_results_payload(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "list": [
+            "results": [
                 {
                     "id": "69947f328c0baeb1026f8ad7",
                     "name": "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b",

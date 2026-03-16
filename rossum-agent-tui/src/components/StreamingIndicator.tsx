@@ -40,15 +40,17 @@ function ToolStartIndicator({
           </Text>
           {(subAgentProgress.tool_calls ?? []).length > 0 && (
             <Box flexDirection="column" marginLeft={2}>
-              {(subAgentProgress.tool_calls ?? []).map((call, idx) => (
-                <Text key={idx} dimColor color="blue">
-                  {idx === (subAgentProgress.tool_calls ?? []).length - 1 &&
-                  subAgentProgress.status === "running_tool"
-                    ? "  \u25B8 "
-                    : "  \u2713 "}
-                  {call}
-                </Text>
-              ))}
+              {(subAgentProgress.tool_calls ?? []).map(
+                (call: string, idx: number) => (
+                  <Text key={idx} dimColor color="blue">
+                    {idx === (subAgentProgress.tool_calls ?? []).length - 1 &&
+                    subAgentProgress.status === "running_tool"
+                      ? "  \u25B8 "
+                      : "  \u2713 "}
+                    {call}
+                  </Text>
+                ),
+              )}
             </Box>
           )}
         </Box>

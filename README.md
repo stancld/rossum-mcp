@@ -142,11 +142,12 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 ## Repository Structure
 
-This repository contains four standalone Python packages:
+This repository contains four standalone Python packages and two Node.js packages:
 
 - **[rossum-mcp/](rossum-mcp/)** - MCP server for Rossum API integration with AI assistants
 - **[rossum-agent/](rossum-agent/)** - Specialized AI agent toolkit with REST API
 - **[rossum-agent-client/](rossum-agent-client/)** - Typed Python client for the Rossum Agent API
+- **[rossum-agent-client-ts/](rossum-agent-client-ts/)** - Typed TypeScript client for the Rossum Agent API
 - **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment tool (lightweight alternative to [deployment-manager](https://github.com/rossumai/deployment-manager))
 - **[rossum-agent-tui/](rossum-agent-tui/)** - Terminal UI for development and testing (Node.js)
 

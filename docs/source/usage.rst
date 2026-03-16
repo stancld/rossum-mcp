@@ -934,49 +934,6 @@ Creates a new business rule. Rules automate field operations based on trigger co
 
 **Note:** This operation is only available in read-write mode.
 
-update_rule
-^^^^^^^^^^^
-
-Full update (PUT) of a business rule. All fields are required.
-
-**Parameters:**
-
-- ``rule_id`` (integer, required): Rule ID to update
-- ``name`` (string, required): Rule name
-- ``trigger_condition`` (string, required): TxScript formula
-- ``actions`` (array, required): List of actions
-- ``enabled`` (boolean, required): Whether the rule is enabled
-- ``queue_ids`` (array of integers, optional): List of queue IDs to limit the rule to specific queues
-
-**Returns:**
-
-.. code-block:: json
-
-   {
-     "id": 67890,
-     "name": "Updated Rule",
-     "url": "https://elis.rossum.ai/api/v1/rules/67890",
-     "schema": "https://elis.rossum.ai/api/v1/schemas/12345",
-     "trigger_condition": "field.amount > 5000",
-     "actions": ["..."],
-     "enabled": true
-   }
-
-**Example usage:**
-
-.. code-block:: python
-
-   # Full update of a rule
-   rule = update_rule(
-       rule_id=67890,
-       name="Updated High Value Alert",
-       trigger_condition="field.amount > 5000",
-       actions=[{"id": "alert1", "type": "show_message", "event": "validation", "payload": {"type": "warning", "content": "Check value", "schema_id": "amount"}}],
-       enabled=True
-   )
-
-**Note:** This operation is only available in read-write mode.
-
 patch_rule
 ^^^^^^^^^^
 

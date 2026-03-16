@@ -17,6 +17,7 @@
 | rossum-agent | `rossum-agent/README.md`, `rossum-agent/CHANGELOG.md` |
 | rossum-deploy | `rossum-deploy/README.md`, `rossum-deploy/CHANGELOG.md` |
 | rossum-agent-client | `rossum-agent-client/README.md`, `rossum-agent-client/CHANGELOG.md` |
+| rossum-agent-client-ts | `rossum-agent-client-ts/README.md` |
 | OpenAPI spec | `rossum-agent/rossum_agent/api/openapi.json` |
 | Shared docs | `docs/source/*.rst`, `README.md`, `CHANGELOG.md` |
 | Landing page | `docs/landing/index.html`, `docs/landing/blog/` |

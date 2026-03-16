@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 _BASE_ALLOWED_HOSTS = r"elis\.rossum\.ai|api\.elis\.rossum\.ai|(.*\.)?api\.rossum\.ai|.*\.rossum\.(app|ai)|(elis|api\.elis)\.develop\.r8\.lol"
 
 # Additional hosts from environment variable (comma-separated regex patterns)
-# Example: ADDITIONAL_ALLOWED_ROSSUM_HOSTS=".*\.review\.r8\.lol,.*\.staging\.example\.com"
 _ADDITIONAL_HOSTS = os.environ.get("ADDITIONAL_ALLOWED_ROSSUM_HOSTS", "")
 
 
@@ -73,8 +72,7 @@ def validate_rossum_api_url(url: str) -> str:
     if parsed.path:
         path = parsed.path.rstrip("/")
         # Strip /v1 suffix to avoid duplication when we append /v1/auth/user
-        if path.endswith("/v1"):
-            path = path[:-3]
+        path = path.removesuffix("/v1")
         if path:
             api_base = f"{api_base}{path}"
 
@@ -116,8 +114,7 @@ async def get_validated_credentials(
     api_base = validate_rossum_api_url(credentials.api_url)
     # Strip trailing /v1 to avoid duplication (URL might be .../api or .../api/v1)
     api_base_normalized = api_base.rstrip("/")
-    if api_base_normalized.endswith("/v1"):
-        api_base_normalized = api_base_normalized[:-3]
+    api_base_normalized = api_base_normalized.removesuffix("/v1")
 
     try:
         async with httpx.AsyncClient() as client:

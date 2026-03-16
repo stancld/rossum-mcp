@@ -525,7 +525,7 @@ class TestRuleTracking:
 
     @pytest.fixture
     def rule_conn(self, mock_client):
-        write_tools = {"create_rule", "update_rule", "patch_rule", "delete_rule"}
+        write_tools = {"create_rule", "patch_rule", "delete_rule"}
         c = MCPConnection(client=mock_client, write_tools=write_tools)
         c._call_mcp = AsyncMock()
         return c

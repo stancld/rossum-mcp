@@ -796,6 +796,7 @@ class TestAgentServiceRunAgent:
         mock_agent = MagicMock()
         mock_agent.tokens.total_input = 100
         mock_agent.tokens.total_output = 50
+        mock_agent.tokens.last_main_input = 80
         mock_agent.get_token_usage_breakdown.return_value = TokenUsageBreakdown.from_raw_counts(
             total_input=100, total_output=50, main_input=100, main_output=50, sub_input=0, sub_output=0, sub_by_tool={}
         )
@@ -829,9 +830,14 @@ class TestAgentServiceRunAgent:
             assert len(events) == 3
             assert isinstance(events[0], StepEvent)
             assert events[0].type == "thinking"
+            assert events[0].context_usage_fraction is None  # streaming events don't carry it
             assert isinstance(events[1], StepEvent)
             assert events[1].type == "final_answer"
+            assert events[1].context_usage_fraction == 80 / 1_000_000
             assert isinstance(events[2], StreamDoneEvent)
+            done_event = events[2]
+            assert done_event.max_input_tokens == 1_000_000
+            assert done_event.context_usage_fraction == 80 / 1_000_000
 
     @pytest.mark.asyncio
     async def test_run_agent_handles_error(self, tmp_path):
@@ -886,6 +892,7 @@ class TestAgentServiceRunAgent:
         mock_agent = MagicMock()
         mock_agent.tokens.total_input = 0
         mock_agent.tokens.total_output = 0
+        mock_agent.tokens.last_main_input = 0
 
         async def mock_run(prompt):
             yield FinalAnswerStep(step_number=1, final_answer="Done")
@@ -935,6 +942,7 @@ class TestAgentServiceRunAgent:
         mock_agent.tokens.total_output = 0
         mock_agent.tokens.total_cache_creation = 0
         mock_agent.tokens.total_cache_read = 0
+        mock_agent.tokens.last_main_input = 0
         mock_agent.get_token_usage_breakdown.return_value = {}
         mock_agent.log_token_usage_summary = MagicMock()
         mock_agent.memory = MagicMock()
@@ -984,6 +992,7 @@ class TestAgentServiceRunAgent:
         mock_agent.tokens.total_output = 0
         mock_agent.tokens.total_cache_creation = 0
         mock_agent.tokens.total_cache_read = 0
+        mock_agent.tokens.last_main_input = 0
         mock_agent.get_token_usage_breakdown.return_value = {}
         mock_agent.log_token_usage_summary = MagicMock()
 
@@ -1022,6 +1031,79 @@ class TestAgentServiceRunAgent:
 
             assert service.pop_last_memory("test-chat") is memory
             assert service.pop_last_memory("test-chat") is None
+
+    @pytest.mark.asyncio
+    async def test_run_agent_seeds_last_main_input_from_previous_turn(self, tmp_path):
+        """Test that last_main_input is carried forward across turns."""
+        from rossum_agent.api.models.schemas import StreamDoneEvent, TokenUsageBreakdown
+
+        service = AgentService()
+
+        # Simulate a previous turn that ended with last_main_input = 50_000
+        state = service._get_chat_run_state("test-chat")
+        state.last_main_input_tokens = 50_000
+
+        mock_mcp_connection = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.tokens = MagicMock()
+        mock_agent.tokens.total_input = 60_000
+        mock_agent.tokens.total_output = 1_000
+        mock_agent.tokens.last_main_input = 60_000
+        mock_agent.tokens.total_cache_creation = 0
+        mock_agent.tokens.total_cache_read = 0
+        mock_agent.get_token_usage_breakdown.return_value = TokenUsageBreakdown.from_raw_counts(
+            total_input=60_000,
+            total_output=1_000,
+            main_input=60_000,
+            main_output=1_000,
+            sub_input=0,
+            sub_output=0,
+            sub_by_tool={},
+        )
+        mock_agent.log_token_usage_summary = MagicMock()
+        mock_agent.memory = MagicMock()
+
+        seeded_value = None
+
+        async def mock_run(prompt):
+            nonlocal seeded_value
+            # Capture the seeded value before the agent's first API call overwrites it
+            seeded_value = mock_agent.tokens.last_main_input
+            # Simulate the agent updating last_main_input after API call
+            mock_agent.tokens.last_main_input = 60_000
+            yield FinalAnswerStep(step_number=1, final_answer="Done")
+
+        mock_agent.run = mock_run
+
+        with (
+            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch.object(AgentService, "_try_create_config_commit", return_value=None),
+        ):
+            mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
+            mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_create_agent.return_value = mock_agent
+
+            events = []
+            async for event in service.run_agent(
+                chat_id="test-chat",
+                prompt="Test",
+                conversation_history=[],
+                rossum_api_token="token",
+                rossum_api_base_url="https://api.rossum.ai",
+            ):
+                events.append(event)
+
+            # Verify seeded value was set before agent.run()
+            assert seeded_value == 50_000
+
+            # Verify last_main_input_tokens is updated after the run
+            assert state.last_main_input_tokens == 60_000
+
+            # Verify the done event carries the final context_usage_fraction
+            done_event = next(e for e in events if isinstance(e, StreamDoneEvent))
+            assert done_event.context_usage_fraction == 60_000 / 1_000_000
 
     @pytest.mark.asyncio
     async def test_register_run_clears_stale_memory(self):
@@ -1479,6 +1561,7 @@ class TestAgentServiceRunAgentWithImages:
         mock_agent = MagicMock()
         mock_agent.tokens.total_input = 0
         mock_agent.tokens.total_output = 0
+        mock_agent.tokens.last_main_input = 0
 
         async def mock_run(prompt):
             yield FinalAnswerStep(step_number=1, final_answer="Done")
@@ -1531,6 +1614,7 @@ class TestAgentServiceUrlContext:
         mock_agent = MagicMock()
         mock_agent.tokens.total_input = 0
         mock_agent.tokens.total_output = 0
+        mock_agent.tokens.last_main_input = 0
 
         async def mock_run(prompt):
             yield FinalAnswerStep(step_number=1, final_answer="Done")
@@ -1644,6 +1728,7 @@ class TestAfterLoopHook:
         mock_agent.tokens.total_output = 0
         mock_agent.tokens.total_cache_creation = 0
         mock_agent.tokens.total_cache_read = 0
+        mock_agent.tokens.last_main_input = 0
         mock_agent.get_token_usage_breakdown.return_value = {}
         mock_agent.log_token_usage_summary = MagicMock()
         mock_agent.memory = MagicMock()
@@ -1707,6 +1792,7 @@ class TestAfterLoopHook:
         mock_agent.tokens.total_output = 0
         mock_agent.tokens.total_cache_creation = 0
         mock_agent.tokens.total_cache_read = 0
+        mock_agent.tokens.last_main_input = 0
         mock_agent.get_token_usage_breakdown.return_value = {}
         mock_agent.log_token_usage_summary = MagicMock()
         mock_agent.memory = MagicMock()

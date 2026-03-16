@@ -3,19 +3,23 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-type Persona = Literal["default", "cautious"]
+
+class Persona(StrEnum):
+    DEFAULT = "default"
+    CAUTIOUS = "cautious"
 
 
 class CreateChatRequest(BaseModel):
     """Request body for creating a new chat session."""
 
     mcp_mode: Literal["read-only", "read-write"] = "read-only"
-    persona: Persona = "default"
+    persona: Persona = Persona.DEFAULT
 
 
 class ChatResponse(BaseModel):
@@ -184,6 +188,7 @@ class StepEvent(BaseModel):
     is_final: bool = False
     tool_call_id: str | None = None
     is_hook_output: bool = False
+    context_usage_fraction: float | None = None
 
 
 class SubAgentProgressEvent(BaseModel):
@@ -430,6 +435,8 @@ class StreamDoneEvent(BaseModel):
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
     token_usage_breakdown: TokenUsageBreakdown | None = None
+    max_input_tokens: int = 0
+    context_usage_fraction: float = 0.0
     config_commit_hash: str | None = None
     config_commit_message: str | None = None
     config_changes_count: int = 0

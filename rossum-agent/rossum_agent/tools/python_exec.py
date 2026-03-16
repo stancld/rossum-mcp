@@ -14,21 +14,7 @@ from typing import TYPE_CHECKING, cast
 
 from anthropic import beta_tool
 
-from rossum_agent.python_tools.copilot.formula import suggest_formula_field as _suggest_formula_field
-from rossum_agent.python_tools.copilot.lookup import (
-    evaluate_lookup_field as _evaluate_lookup_field,
-)
-from rossum_agent.python_tools.copilot.lookup import (
-    get_lookup_dataset_raw_values as _get_lookup_dataset_raw_values,
-)
-from rossum_agent.python_tools.copilot.lookup import (
-    query_lookup_dataset as _query_lookup_dataset,
-)
-from rossum_agent.python_tools.copilot.lookup import (
-    suggest_lookup_field as _suggest_lookup_field,
-)
-from rossum_agent.python_tools.copilot.rule import evaluate_rules as _evaluate_rules
-from rossum_agent.python_tools.copilot.rule import suggest_rule as _suggest_rule
+from rossum_agent.python_tools.copilot import formula, lookup, rule
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.file_tools import write_file as _write_file_tool
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool as _call_mcp_tool
@@ -61,6 +47,7 @@ _SAFE_BUILTINS: dict[str, object] = {
     "map": map,
     "max": max,
     "min": min,
+    "ord": ord,
     "print": print,
     "range": range,
     "reversed": reversed,
@@ -72,6 +59,16 @@ _SAFE_BUILTINS: dict[str, object] = {
     "tuple": tuple,
     "type": type,
     "zip": zip,
+    # Exception types for try-except
+    "Exception": Exception,
+    "AttributeError": AttributeError,
+    "IndexError": IndexError,
+    "KeyError": KeyError,
+    "RuntimeError": RuntimeError,
+    "StopIteration": StopIteration,
+    "TypeError": TypeError,
+    "ValueError": ValueError,
+    "ZeroDivisionError": ZeroDivisionError,
 }
 
 _DISALLOWED_AST_NODES = (
@@ -86,9 +83,7 @@ _DISALLOWED_AST_NODES = (
     ast.ImportFrom,
     ast.Nonlocal,
     ast.Raise,
-    ast.Try,
     ast.TryStar,
-    ast.With,
     ast.Yield,
     ast.YieldFrom,
 )
@@ -209,13 +204,13 @@ def _json_wrapper(fn: object) -> object:
 
 def _build_copilot_helpers() -> SimpleNamespace:
     return SimpleNamespace(
-        suggest_formula_field=_json_wrapper(_suggest_formula_field),
-        suggest_lookup_field=_json_wrapper(_suggest_lookup_field),
-        evaluate_lookup_field=_json_wrapper(_evaluate_lookup_field),
-        get_lookup_dataset_raw_values=_json_wrapper(_get_lookup_dataset_raw_values),
-        query_lookup_dataset=_json_wrapper(_query_lookup_dataset),
-        suggest_rule=_json_wrapper(_suggest_rule),
-        evaluate_rules=_json_wrapper(_evaluate_rules),
+        suggest_formula_field=_json_wrapper(formula.suggest_formula_field),
+        suggest_lookup_field=_json_wrapper(lookup.suggest_lookup_field),
+        evaluate_lookup_field=_json_wrapper(lookup.evaluate_lookup_field),
+        get_lookup_dataset_raw_values=_json_wrapper(lookup.get_lookup_dataset_raw_values),
+        query_lookup_dataset=_json_wrapper(lookup.query_lookup_dataset),
+        suggest_rule=_json_wrapper(rule.suggest_rule),
+        evaluate_rules=_json_wrapper(rule.evaluate_rules),
     )
 
 

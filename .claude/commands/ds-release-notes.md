@@ -10,6 +10,7 @@
 | rossum-agent | `rossum-agent/CHANGELOG.md` | `rossum-agent-vX.Y.Z` | Rossum Agent X.Y.Z |
 | rossum-deploy | `rossum-deploy/CHANGELOG.md` | `rossum-deploy-vX.Y.Z` | Rossum Deploy X.Y.Z |
 | rossum-agent-client | `rossum-agent-client/CHANGELOG.md` | `rossum-agent-client-vX.Y.Z` | Rossum Agent Client X.Y.Z |
+| rossum-agent-client-ts | no changelog — use git log | `rossum-agent-client-ts-vX.Y.Z` | Rossum Agent Client TS X.Y.Z |
 | rossum-agent-tui | no changelog — use git log | `rossum-agent-tui-vX.Y.Z` | Fabry X.Y.Z |
 
 ## Approach
@@ -88,5 +89,6 @@ After generating, provide:
 /ds-release-notes rossum-mcp 1.1.0
 /ds-release-notes rossum-agent 1.0.0rc5
 /ds-release-notes rossum-agent-client 1.1.0
+/ds-release-notes rossum-agent-client-ts 0.2.0
 /ds-release-notes rossum-agent-tui 0.2.0
 ```

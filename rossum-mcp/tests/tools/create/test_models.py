@@ -99,6 +99,42 @@ class TestSchemaDataclasses:
         assert result["hidden"] is True
         assert result["category"] == "tuple"
 
+    def test_schema_datapoint_with_lookup_matching(self) -> None:
+        """Test SchemaDatapoint with lookup field matching configuration."""
+        matching = {
+            "type": "master_data_hub",
+            "configuration": {
+                "dataset": "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b",
+                "queries": [
+                    {
+                        "aggregate": [
+                            {"$match": {"Name": "$sender_name"}},
+                            {"$limit": 5},
+                            {"$project": {"label": "$Name", "value": "$ID"}},
+                        ]
+                    }
+                ],
+                "variables": {"sender_name": {"__formula": 'default_to(field.sender_name, "UNKNOWN")'}},
+            },
+        }
+        datapoint = SchemaDatapoint(
+            label="Vendor Match",
+            type="enum",
+            ui_configuration={"type": "lookup", "edit": "enabled"},
+            matching=matching,
+            enum_value_type="string",
+            options=[],
+        )
+        result = datapoint.to_dict()
+
+        assert result["type"] == "enum"
+        assert result["ui_configuration"] == {"type": "lookup", "edit": "enabled"}
+        assert result["matching"]["type"] == "master_data_hub"
+        assert result["matching"]["configuration"]["dataset"].startswith("imported-")
+        assert len(result["matching"]["configuration"]["queries"]) == 1
+        assert result["enum_value_type"] == "string"
+        assert result["options"] == []
+
     def test_schema_multivalue_all_optional_fields(self) -> None:
         """Test SchemaMultivalue with all optional fields set."""
         multivalue = SchemaMultivalue(

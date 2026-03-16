@@ -50,7 +50,7 @@ class TestExecPython:
         assert parsed["result"] == "ok"
         assert parsed["stdout"] == "hello\n"
 
-    @patch("rossum_agent.tools.python_exec._suggest_rule")
+    @patch("rossum_agent.python_tools.copilot.rule.suggest_rule")
     def test_exposes_rule_helper(self, mock_suggest_rule) -> None:
         mock_suggest_rule.return_value = json.dumps(
             {"status": "success", "name": "Rule", "trigger_condition": "field.amount_total > 0", "actions": []}
@@ -67,7 +67,7 @@ class TestExecPython:
         assert parsed["result"]["name"] == "Rule"
         mock_suggest_rule.assert_called_once_with(user_query="Check total", queue_id=123)
 
-    @patch("rossum_agent.tools.python_exec._suggest_formula_field")
+    @patch("rossum_agent.python_tools.copilot.formula.suggest_formula_field")
     def test_exposes_copilot_namespace(self, mock_suggest_formula_field) -> None:
         mock_suggest_formula_field.return_value = json.dumps({"status": "success", "formula": "field.amount_total"})
 
@@ -136,6 +136,13 @@ class TestExecPython:
 
         assert parsed["status"] == "success"
         assert parsed["result"] == "from-var"
+
+    def test_allows_try_except(self) -> None:
+        result = execute_python(code="try:\n  x = 1 / 0\nexcept ZeroDivisionError:\n  x = 42\nx")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == 42
 
     def test_rejects_try_star(self) -> None:
         result = execute_python(code="try:\n  pass\nexcept* ValueError:\n  pass")
@@ -237,6 +244,27 @@ class TestExecPython:
 
         assert parsed["status"] == "error"
         assert "schema_content()" in parsed["error"]
+
+    def test_ord_builtin_available(self) -> None:
+        result = execute_python(code="ord('A')")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == 65
+
+    def test_allows_with_statement(self, tmp_path: Path) -> None:
+        file_path = tmp_path / "example.txt"
+        file_path.write_text("hello", encoding="utf-8")
+
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result = execute_python(code='with open("example.txt") as f:\n    data = f.read()\ndata')
+            parsed = json.loads(result)
+        finally:
+            set_context(AgentContext())
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == "hello"
 
     def test_execute_python_alias_matches_execute_python(self) -> None:
         assert json.loads(execute_python(code="1 + 2"))["result"] == 3

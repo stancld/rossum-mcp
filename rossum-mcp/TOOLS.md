@@ -461,18 +461,6 @@ Creates a new business rule. At least one of `schema_id` or `queue_ids` is requi
 }
 ```
 
-### update_rule
-
-Full replacement (PUT) of a business rule. All fields are required.
-
-**Parameters:**
-- `rule_id` (integer, required): Rule ID to update
-- `name` (string, required): Rule name
-- `trigger_condition` (string, required): TxScript formula
-- `actions` (array, required): List of actions with required fields: `id`, `type`, `event`, `payload`
-- `enabled` (boolean, required): Whether the rule is enabled
-- `queue_ids` (array of integers, required): Queue IDs (pass empty list to remove all queue associations)
-
 ### patch_rule
 
 Partial update (PATCH) of a business rule. Only provided fields are updated.

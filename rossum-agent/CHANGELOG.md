@@ -7,6 +7,20 @@ All notable changes to this project will be documented in this file.
 ## [1.5.0] - 2026-03-13
 
 ### Added
+- Added `ord` to `execute_python` safe builtins
+- Bundled `rossum-kb.json` as package data and load it via `importlib.resources` instead of `Path(__file__)` traversal — works correctly when installed from wheel/zip
+- Allowed `try/except` blocks in `execute_python` sandbox — removes `ast.Try` from disallowed nodes and exposes common exception types (`Exception`, `ValueError`, `KeyError`, `TypeError`, etc.) as safe builtins
+- Allowed `with` statements in `execute_python` sandbox — enables context managers (e.g. `with open(...) as f`)
+- Added `context_usage_fraction` field to `StreamDoneEvent` — reports the fraction of the model's input context window used after each turn, enabling clients to display context budget warnings [#267](https://github.com/rossumai/rossum-agents/pull/267)
+
+### Fixed
+- `run_jq` now accepts `dict` data directly — prevents `TypeError` when the model passes parsed JSON instead of a string [#261](https://github.com/rossumai/rossum-agents/pull/261)
+- Switched MDH dataset listing to `/v2/datasets` endpoint [#261](https://github.com/rossumai/rossum-agents/pull/261)
+- Clarified in lookup-fields skill and base prompt that lookup fields are native schema-level matching, not hook-based — prevents agent from incorrectly creating hooks for lookup fields [#261](https://github.com/rossumai/rossum-agents/pull/261)
+
+## [1.5.0] - 2026-03-13
+
+### Added
 - Added PostgreSQL as chat persistence backend — `CHAT_STORAGE_BACKEND=postgres` (default) uses SQLAlchemy Core with `psycopg` for durable chat/file/feedback storage with configurable TTL; `redis` remains available as an alternative; added `docker-compose.yml` for local development [#248](https://github.com/rossumai/rossum-agents/pull/248)
 - Cautious persona now gates write operations (MCP + internal) behind a user confirmation prompt — blocked tools emit an `agent_question` SSE event with yes/no/chat options; only explicit approval pre-approves the tool for the next turn [#252](https://github.com/stancld/rossum-agents/pull/252)
 

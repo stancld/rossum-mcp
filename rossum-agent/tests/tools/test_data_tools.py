@@ -39,6 +39,12 @@ class TestResolveContent:
         assert result["status"] == "success"
         assert result["matches"] == 1
 
+    def test_jq_accepts_dict_data(self) -> None:
+        data = {"content": [{"id": "vendor_match", "type": "enum"}]}
+        result = json.loads(run_jq('[.. | objects | select(.id == "vendor_match")] | .[0].type', data))
+        assert result["status"] == "success"
+        assert result["result"] == "enum"
+
     def test_jq_on_annotation_content_path_pattern(self, tmp_path: Path) -> None:
         # Mirrors the real-world case: get_annotation_content returns a /tmp path
         annotation = [{"schema_id": "amount_total", "value": "100.00"}]

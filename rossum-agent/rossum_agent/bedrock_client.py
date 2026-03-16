@@ -9,6 +9,7 @@ from anthropic import AnthropicBedrock, AsyncAnthropicBedrock
 
 OPUS_MODEL_ID = "eu.anthropic.claude-opus-4-6-v1"
 HAIKU_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+MAX_INPUT_TOKENS = 1_000_000
 
 
 def _resolve_credentials(

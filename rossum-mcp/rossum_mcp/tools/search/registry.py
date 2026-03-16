@@ -31,9 +31,6 @@ type Timestamp = Annotated[str, "ISO 8601 timestamp (e.g., '2024-01-15T10:30:00Z
 logger = logging.getLogger(__name__)
 
 
-# --- Queue ---
-
-
 def _queue_to_list_item(queue: Queue) -> QueueListItem:
     return QueueListItem(
         id=queue.id,
@@ -64,9 +61,6 @@ async def _list_queues(
     return filter_by_name_regex(items, name, use_regex)
 
 
-# --- Schema ---
-
-
 def _truncate_schema_for_list(schema: Schema) -> SchemaListItem:
     """Convert to SchemaListItem with content omitted."""
     return SchemaListItem(
@@ -88,9 +82,6 @@ async def _list_schemas(
     result = await graceful_list(client, Resource.Schema, "schema", **filters)
     items = [_truncate_schema_for_list(schema) for schema in result.items]
     return filter_by_name_regex(items, name, use_regex)
-
-
-# --- Hook ---
 
 
 async def _list_hooks(
@@ -175,9 +166,6 @@ async def _list_hook_templates(client: AsyncRossumAPIClient) -> list[HookTemplat
     return [_truncate_hook_template_for_list(t) for t in result.items]
 
 
-# --- Engine ---
-
-
 async def _list_engines(
     client: AsyncRossumAPIClient,
     id: int | None = None,
@@ -190,9 +178,6 @@ async def _list_engines(
     return result.items
 
 
-# --- Rule ---
-
-
 async def _list_rules(
     client: AsyncRossumAPIClient,
     schema_id: int | None = None,
@@ -203,9 +188,6 @@ async def _list_rules(
     filters = build_filters(schema=schema_id, organization=organization_id, enabled=enabled)
     result = await graceful_list(client, Resource.Rule, "rule", **filters)
     return result.items
-
-
-# --- User ---
 
 
 async def _list_users(
@@ -245,9 +227,6 @@ async def _list_user_roles(client: AsyncRossumAPIClient) -> list[Group]:
     return result.items
 
 
-# --- Workspace ---
-
-
 async def _list_workspaces(
     client: AsyncRossumAPIClient,
     organization_id: int | None = None,
@@ -258,9 +237,6 @@ async def _list_workspaces(
     filters = build_filters(organization=organization_id, name=None if use_regex else name)
     items = (await graceful_list(client, Resource.Workspace, "workspace", **filters)).items
     return filter_by_name_regex(items, name, use_regex)
-
-
-# --- Email Template ---
 
 
 async def _list_email_templates(
@@ -277,9 +253,6 @@ async def _list_email_templates(
     return filter_by_name_regex(result.items, name, use_regex)
 
 
-# --- Organization Group ---
-
-
 async def _list_organization_groups(
     client: AsyncRossumAPIClient, name: str | None = None, use_regex: bool = False
 ) -> list[OrganizationGroup]:
@@ -287,9 +260,6 @@ async def _list_organization_groups(
     filters = build_filters(name=None if use_regex else name)
     items = (await graceful_list(client, Resource.OrganizationGroup, "organization_group", **filters)).items
     return filter_by_name_regex(items, name, use_regex)
-
-
-# --- Annotation ---
 
 
 async def _list_annotations(
@@ -305,16 +275,10 @@ async def _list_annotations(
     return result.items
 
 
-# --- Relation ---
-
-
 async def _list_relations(client: AsyncRossumAPIClient, **kwargs: object) -> list[object]:
     filters = build_filters(**kwargs)
     result = await graceful_list(client, Resource.Relation, "relation", **filters)
     return result.items
-
-
-# --- Document Relation ---
 
 
 async def _list_document_relations(client: AsyncRossumAPIClient, **kwargs: object) -> list[object]:
@@ -323,14 +287,8 @@ async def _list_document_relations(client: AsyncRossumAPIClient, **kwargs: objec
     return result.items
 
 
-# --- Queue Template Names ---
-
-
 async def _list_queue_template_names() -> list[str]:
     return list(QUEUE_TEMPLATE_NAMES)
-
-
-# --- Registry builder ---
 
 
 def build_search_registry(client: AsyncRossumAPIClient) -> dict[str, Callable[..., Awaitable[list]] | None]:

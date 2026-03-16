@@ -5,6 +5,7 @@ import { FileSuggest } from "./FileSuggest.js";
 import { MultiLineInput, type MultiLineInputHandle } from "./MultiLineInput.js";
 import { useFileSuggest } from "../hooks/useFileSuggest.js";
 import type {
+  ArgumentSuggestion,
   CommandInfo,
   ConnectionStatus,
   InteractionMode,
@@ -31,7 +32,6 @@ function getFileSuggestionRows(visible: boolean, entryCount: number): number {
 
 function computeInputAreaHeight(
   mode: InteractionMode,
-  isDisabled: boolean,
   suggestionRows: number,
   currentText: string,
   pendingImageCount: number,
@@ -40,7 +40,7 @@ function computeInputAreaHeight(
   const inputLineCount = currentText ? currentText.split("\n").length : 1;
   const visibleInputRows = Math.min(inputLineCount, 10);
   const inputFooterRows = inputLineCount > 1 ? 1 : 0;
-  const mainInputRows = isDisabled ? 1 : visibleInputRows + inputFooterRows;
+  const mainInputRows = visibleInputRows + inputFooterRows;
   const imageRow = pendingImageCount > 0 ? 1 : 0;
   return suggestionRows + imageRow + mainInputRows;
 }
@@ -84,8 +84,8 @@ function getCommandSuggestionState(
   if (matchedCommand) {
     const argPartial = trimmedText.slice(spaceIdx + 1).toLowerCase();
     const filtered = (matchedCommand.argument_suggestions ?? [])
-      .filter((s) => s.value.startsWith(argPartial))
-      .map((s) => ({
+      .filter((s: ArgumentSuggestion) => s.value.startsWith(argPartial))
+      .map((s: ArgumentSuggestion) => ({
         name: s.value,
         description: s.description,
         argument_suggestions: [],
@@ -115,9 +115,9 @@ export function InputArea({
   const [cursorCol, setCursorCol] = useState(0);
   const inputRef = useRef<MultiLineInputHandle>(null);
 
-  const isDisabled =
+  const isStreaming =
     connectionStatus === "connecting" || connectionStatus === "streaming";
-  const canSuggest = mode === "input" && !isDisabled;
+  const canSuggest = mode === "input" && !isStreaming;
 
   // Command / argument suggestions (/ prefix)
   const cmdState = getCommandSuggestionState(commands, currentText, canSuggest);
@@ -135,7 +135,6 @@ export function InputArea({
     getFileSuggestionRows(showFileSuggestions, fileSuggest.entries.length);
   const totalRows = computeInputAreaHeight(
     mode,
-    isDisabled,
     suggestionRows,
     currentText,
     pendingImageCount,
@@ -275,15 +274,15 @@ export function InputArea({
         </Box>
       )}
       <Box>
-        <Text color={isDisabled ? "gray" : "green"} bold>
+        <Text color={isStreaming ? "gray" : "green"} bold>
           {"❯ "}
         </Text>
-        {isDisabled ? (
+        {isStreaming ? (
           <Text dimColor>Waiting for response... (Ctrl+X to stop)</Text>
         ) : (
           <MultiLineInput
             ref={inputRef}
-            isActive={!isDisabled}
+            isActive={!isStreaming}
             placeholder="Type a message... (Ctrl+V to paste image)"
             onSubmit={onSubmit}
             onChange={handleTextChange}

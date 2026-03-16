@@ -1,0 +1,28 @@
+{
+  "name": "rossum-agent-client",
+  "version": "0.1.0",
+  "description": "TypeScript client for Rossum Agent API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts'",
+    "generate": "openapi-typescript ../rossum-agent/rossum_agent/api/openapi.json -o src/generated.ts"
+  },
+  "dependencies": {
+    "eventsource-parser": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.0"
+  }
+}

@@ -21,7 +21,7 @@ from rossum_mcp.tools.update.models import (  # noqa: TC001 - needed at runtime 
     SchemaNodeUpdate,
 )
 from rossum_mcp.tools.update.queues import _update_queue
-from rossum_mcp.tools.update.rules import _patch_rule, _update_rule
+from rossum_mcp.tools.update.rules import _patch_rule
 from rossum_mcp.tools.update.schemas.handler import _patch_schema, _prune_schema_fields
 from rossum_mcp.tools.update.schemas.patching import (
     PatchOperation,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
 
-def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:  # noqa: C901 - many tool registrations
+def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
     # --- Annotations ---
     @mcp.tool(
         description="Set annotation status to 'reviewing' (from 'to_review').",
@@ -145,21 +145,6 @@ def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
         return await _test_hook(client, hook_id, event, action, annotation, status, previous_status, config)
 
     # --- Rules ---
-    @mcp.tool(
-        description="Replace a rule (PUT); all fields required. Use patch_rule for partial changes.",
-        tags={"rules", "write"},
-        annotations={"readOnlyHint": False},
-    )
-    async def update_rule(
-        rule_id: int,
-        name: str,
-        trigger_condition: str,
-        actions: list[RuleAction],
-        enabled: bool,
-        queue_ids: list[int],
-    ) -> Rule | dict:
-        return await _update_rule(client, base_url, rule_id, name, trigger_condition, actions, enabled, queue_ids)
-
     @mcp.tool(
         description="Patch a rule (PATCH); only provided fields change. queue_ids=[] clears queue scoping.",
         tags={"rules", "write"},

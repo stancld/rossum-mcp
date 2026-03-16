@@ -14,6 +14,7 @@ from rossum_agent.api.models.schemas import (
     ChatSummary,
     FileInfo,
     Message,
+    Persona,
 )
 from rossum_agent.storage import ChatData, ChatMetadata
 
@@ -49,7 +50,7 @@ class ChatService:
         self,
         user_id: str | None,
         mcp_mode: Literal["read-only", "read-write"] = "read-only",
-        persona: Literal["default", "cautious"] = "default",
+        persona: Persona = Persona.DEFAULT,
     ) -> ChatResponse:
         timestamp = dt.datetime.now(dt.UTC)
         timestamp_str = timestamp.strftime("%Y%m%d%H%M%S")

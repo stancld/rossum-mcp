@@ -1,19 +1,15 @@
 from __future__ import annotations
 
 from datetime import UTC
-from typing import cast, get_args
 
 from rossum_agent.agent.skills import get_all_skills
 from rossum_agent.api.commands.registry import COMMANDS, CommandContext, register_command
 from rossum_agent.api.models.schemas import Persona
 from rossum_agent.prompts.base_prompt import PERSONA_BEHAVIORS
 from rossum_agent.tools import INTERNAL_TOOLS
-from rossum_agent.tools.dynamic_tools import (
-    get_cached_category_tool_names,
-    get_load_tool_definition,
-)
+from rossum_agent.tools.dynamic_tools import get_cached_category_tool_names, get_load_tool_definition
 
-VALID_PERSONAS: tuple[str, ...] = get_args(Persona.__value__)
+VALID_PERSONAS: tuple[Persona, ...] = tuple(Persona)
 
 PERSONA_DESCRIPTIONS: dict[str, str] = {
     "default": "Balanced mode - acts autonomously, asks only when truly ambiguous",
@@ -129,7 +125,7 @@ async def handle_persona(ctx: CommandContext) -> str:
         available = ", ".join(f"`{persona}`" for persona in VALID_PERSONAS)
         return f"Unknown persona `{requested}`. Available personas: {available}"
 
-    persona = cast("Persona", requested)
+    persona = Persona(requested)
     chat_data.metadata.persona = persona
     ctx.chat_service.save_messages(
         user_id=ctx.user_id,

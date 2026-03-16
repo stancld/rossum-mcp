@@ -10,11 +10,16 @@
   <meta property="og:description" content="500+ commits later, here's what I learned building a production AI agent.">
   <meta property="og:image" content="https://stancld.github.io/rossum-agents/blog/images/hero-agent-orchestration.png">
   <meta property="og:type" content="article">
+  <meta property="article:published_time" content="2025-05-18">
+  <meta property="article:author" content="Dan Stancl">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="From Friday Hack to Deployable Agent">
   <meta name="twitter:description" content="500+ commits later, here's what I learned building a production AI agent.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://stancld.github.io/rossum-agents/blog/">
+  <meta property="og:url" content="https://stancld.github.io/rossum-agents/blog/">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <style>
     :root {
       --primary: #3F8AE2;
@@ -114,6 +119,7 @@
     }
 
     .nav-links a:hover { color: var(--primary); }
+    .nav-links a[aria-current="page"] { color: var(--primary); font-weight: 600; }
 
     /* Focus states */
     a:focus, button:focus {
@@ -463,6 +469,12 @@
 
     footer a:hover { color: var(--primary); }
 
+    /* Article lists */
+    .article-list { margin: 1rem 0 1.5rem 1.5rem; }
+    .article-list-tight { margin: 0.5rem 0 1.25rem 1.5rem; }
+    .article-sublist { margin: 0.5rem 0 0 1rem; list-style-type: circle; }
+    .article-list li, .article-list-tight li, .article-sublist li { margin-bottom: 0.25rem; }
+
     /* Responsive */
     @media (max-width: 768px) {
       .article-header h1 { font-size: 1.75rem; }
@@ -510,7 +522,9 @@
       <div class="nav-links">
         <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">GitHub</a>
         <a href="../source/">Docs</a>
-        <a href="../">Home</a>
+        <a href="../api-reference/">API Reference</a>
+        <a href="./" aria-current="page">Blog</a>
+        <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a>
       </div>
     </nav>
   </header>
@@ -595,7 +609,7 @@
       <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> (Hugging Face's library for building agents in a few lines of code) and <strong><a href="https://www.litellm.ai/" target="_blank" rel="noopener">LiteLLM</a></strong> (a unified interface for swapping between OpenAI, Anthropic, and other providers). My first working prototype took an afternoon.</p>
 
       <p>But "afternoon prototype" and "production-ready" live in different zip codes. As requirements grew, I needed lower-level control:</p>
-      <ul style="margin: 0.5rem 0 1.25rem 1.5rem;">
+      <ul class="article-list-tight">
         <li><strong>Native async/await</strong> for cleaner streaming to the FastAPI frontend</li>
         <li><strong>Direct tool calling</strong>: smolagents defaults to "code-agent" mode, where the LLM writes Python to invoke tools. That's powerful for complex orchestration, but my use case was simpler: wrap API calls and validate inputs. When the model generates code, you're debugging Python. When it emits structured JSON that maps to function signatures, you're validating data. For straightforward API wrappers, the latter is easier to constrain and test.</li>
         <li><strong>Full visibility into system prompts</strong> for debugging and iteration</li>
@@ -670,7 +684,7 @@
 └── ui-settings.md          <span class="code-comment"># Configuring annotation list columns</span></pre>
 
       <p>The system operated in two distinct stages to optimize the context window:</p>
-      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+      <ul class="article-list">
         <li>Metadata (always loaded): short descriptions of each skill. These act as "triggers" so the agent knows what expertise is available.</li>
         <li>Instructions (loaded on demand): the full procedural knowledge injected only when the agent identifies a matching task, i.e., examples, patterns, and constraints.</li>
       </ul>
@@ -689,10 +703,10 @@
 
       <p>To solve this, I implemented a <strong>Two-Phase Dynamic Loading</strong> strategy:</p>
 
-      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+      <ul class="article-list">
         <li>Phase 1: Keyword heuristics. When a message arrived, a simple regex scan in Python checked the user's prompt for domain-specific keywords (e.g., "webhook," "schema," "queue"), bypassing the LLM and relying on old-school pattern matching. The system pre-loaded the corresponding tool categories to eliminate "cold-start" delays. The agent started the conversation with the right tools already in hand.</li>
         <li>Phase 2: Just-in-time discovery. For complex or ambiguous requests, the agent used two "meta-tools" to explore the rest of the library:
-          <ul style="margin: 0.5rem 0 0 1rem; list-style-type: circle;">
+          <ul class="article-sublist">
             <li><code>list_tool_categories()</code>: show me the available tool groups.</li>
             <li><code>get_tool_category(name)</code>: load the specific tools for this group.</li>
           </ul>
@@ -787,7 +801,7 @@
 
       <p>By tracking <strong>tool sequences</strong> and <strong>token budgets</strong>, I caught subtle regressions that a simple "check the output" test would miss:</p>
 
-      <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+      <ul class="article-list">
         <li><strong>The silent skip:</strong> After refactoring a skill prompt, the agent stopped calling <code>search_knowledge_base</code> before debugging hooks. The output looked fine, but the agent was guessing instead of consulting documentation. The test caught the missing tool in the expected sequence.</li>
         <li><strong>The infinite loop:</strong> A "clarified" tool description caused the agent to call <code>get_schema</code> repeatedly, convinced each response was incomplete. Token budget alerts flagged it before I burned through $50 in a single test run.</li>
       </ul>
@@ -811,7 +825,7 @@
 
       <p>So I just called the existing Copilot.</p>
 
-      <ol style="margin: 1rem 0 1.5rem 1.5rem;">
+      <ol class="article-list">
         <li><strong>The User</strong> asks for a business rule in plain English: "Add a 'Net Terms' field that computes Due Date minus Issue Date and categorizes it as Net 15, Net 30, or Outstanding."</li>
         <li><strong>Opus</strong> interprets the intent, fetches the current schema, and derives a structured <code>hint</code> for the Formula Field Copilot.</li>
         <li><strong>The Formula Field Copilot</strong> generates the precise extraction formula in Rossum's syntax.</li>
@@ -854,7 +868,7 @@
   <footer>
     <div class="container">
       <p class="disclaimer">This is not an official Rossum product. It is a community-developed integration built on top of the Rossum API.</p>
-      <p>Built with 💙 for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> · <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">Source on GitHub</a> · <a href="../">Back to Home</a></p>
+      <p>Built with 💙 for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> · <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">Source on GitHub</a> · <a href="https://github.com/stancld/rossum-agents/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="../">Back to Home</a></p>
     </div>
   </footer>
 

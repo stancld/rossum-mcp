@@ -8,11 +8,12 @@ Prerequisites
 * Rossum account with API credentials
 * A Rossum queue ID
 
-This repository contains four packages:
+This repository contains five packages:
 
 * **rossum_mcp**: MCP server for Rossum API interactions
 * **rossum_agent**: AI agent with data manipulation and visualization tools
 * **rossum_agent_client**: Typed Python client for the Rossum Agent API
+* **rossum-agent-client-ts**: Typed TypeScript client for the Rossum Agent API
 * **rossum_deploy**: Lightweight deployment tool (alternative to `deployment-manager <https://github.com/rossumai/deployment-manager>`_)
 
 Installation Methods
@@ -71,6 +72,23 @@ With extras:
 .. code-block:: bash
 
    uv sync --extra tests  # Install testing dependencies
+
+Installing TypeScript Agent Client
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install the TypeScript client:
+
+.. code-block:: bash
+
+   git clone https://github.com/stancld/rossum-agents.git
+   cd rossum-agents/rossum-agent-client-ts
+   npm install
+
+To regenerate types from the OpenAPI spec:
+
+.. code-block:: bash
+
+   npm run generate
 
 Installing Deploy Package Only
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

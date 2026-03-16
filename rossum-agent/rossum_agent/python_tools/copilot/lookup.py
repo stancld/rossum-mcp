@@ -55,9 +55,9 @@ def _build_evaluate_computed_fields_url(api_base_url: str) -> str:
     return f"{api_base_url.rstrip('/')}/internal/schemas/evaluate_computed_fields"
 
 
-def _build_mdh_datasets_metadata_url(api_base_url: str) -> str:
+def _build_mdh_datasets_url(api_base_url: str) -> str:
     base = re.sub(r"/(?:api/)?v1/?$", "", api_base_url.rstrip("/"))
-    return f"{base}/svc/master-data-hub/api/v2/datasets/metadata/"  # trailing slash required
+    return f"{base}/svc/master-data-hub/api/v2/datasets?limit=1000"
 
 
 def _build_mdh_aggregate_url(api_base_url: str) -> str:
@@ -167,13 +167,13 @@ def _resolve_mdh_dataset_identifier(api_base_url: str, token: str, dataset: str)
         return dataset.strip()
 
     try:
-        url = _build_mdh_datasets_metadata_url(api_base_url)
+        url = _build_mdh_datasets_url(api_base_url)
         with httpx.Client(timeout=20, follow_redirects=True) as client:
             response = _request_with_retry(client, "get", url, headers={"Authorization": f"Bearer {token}"})
             metadata = response.json()
     except Exception:
         logger.info(
-            "Failed to resolve MDH dataset identifier from metadata endpoint; dataset preselection skipped.",
+            "Failed to resolve MDH dataset identifier from datasets endpoint; dataset preselection skipped.",
             exc_info=True,
         )
         return None
@@ -181,8 +181,8 @@ def _resolve_mdh_dataset_identifier(api_base_url: str, token: str, dataset: str)
     dataset_items: list[object]
     if isinstance(metadata, list):
         dataset_items = metadata
-    elif isinstance(metadata, dict) and isinstance(metadata.get("list"), list):
-        dataset_items = metadata["list"]
+    elif isinstance(metadata, dict) and isinstance(metadata.get("results"), list):
+        dataset_items = metadata["results"]
     else:
         return None
 

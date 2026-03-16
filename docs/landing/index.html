@@ -37,7 +37,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.7;
       background: var(--bg);
     }
 
@@ -47,7 +47,7 @@
     /* Skip link for keyboard navigation */
     .skip-link {
       position: absolute;
-      top: -100%;
+      top: 0;
       left: 0;
       background: var(--primary);
       color: white;
@@ -55,11 +55,12 @@
       z-index: 200;
       text-decoration: none;
       border-radius: 0 0 0.5rem;
-      transition: top 0.2s;
+      transform: translateY(-100%);
+      transition: transform 0.2s;
     }
 
     .skip-link:focus {
-      top: 0;
+      transform: translateY(0);
     }
 
     header {
@@ -119,6 +120,7 @@
     }
 
     .nav-links a:hover { color: var(--primary); }
+    .nav-links a[aria-current="page"] { color: var(--primary); font-weight: 600; }
 
     /* Focus states for accessibility */
     .btn:focus,
@@ -943,7 +945,7 @@
           <div class="stat-value" style="font-size: 1.6rem;">Typed</div>
           <div class="stat-label">MCP Tools</div>
           <div class="stat-desc">Pydantic models, Literal unions, consolidated APIs</div>
-          <div class="stat-tooltip" role="tooltip" id="tooltip-mcp-tools">
+          <div class="stat-tooltip" id="tooltip-mcp-tools">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Read & Delete Layer</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Document Processing</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Queues & Schemas</a></div>
@@ -958,7 +960,7 @@
           <div class="stat-value">10</div>
           <div class="stat-label">Agent Skills</div>
           <div class="stat-desc">Precise workflows for complex tasks</div>
-          <div class="stat-tooltip" role="tooltip" id="tooltip-agent-skills">
+          <div class="stat-tooltip" id="tooltip-agent-skills">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/schema-patching.md" target="_blank" rel="noopener">Schema Patching</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/python-execution.md" target="_blank" rel="noopener">Python Execution</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/ui-settings.md" target="_blank" rel="noopener">UI Settings</a></div>
@@ -971,11 +973,11 @@
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/document-testing.md" target="_blank" rel="noopener">Document Testing</a></div>
           </div>
         </div>
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="4 Sub-Agents" aria-describedby="tooltip-sub-agents">
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="3 Sub-Agents" aria-describedby="tooltip-sub-agents">
           <div class="stat-value">3</div>
           <div class="stat-label">Sub-Agents</div>
           <div class="stat-desc">Offload work, keep context clean</div>
-          <div class="stat-tooltip" role="tooltip" id="tooltip-sub-agents">
+          <div class="stat-tooltip" id="tooltip-sub-agents">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/schema_patching.py" target="_blank" rel="noopener">Schema Patching</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/knowledge_base.py" target="_blank" rel="noopener">Knowledge Base</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/elis_docs.py" target="_blank" rel="noopener">API Docs Search</a></div>
@@ -1192,14 +1194,14 @@
             <div class="faq-answer">
               Every tool call is logged and visible to you in real-time. For example, when you ask to set up an Invoice queue with a custom "Net Terms" field, you can watch the agent:
               <ul class="faq-list">
-                <li>📂 Load the queue setup skill</li>
-                <li>📋 Fetch available queue templates from Rossum</li>
-                <li>🏗️ Create the Invoices queue from a template</li>
-                <li>🌳 Retrieve schema tree structure</li>
-                <li>✂️ Prune unnecessary fields (payment instructions, delivery address)</li>
-                <li>🔧 Load patching skill and add "The Net Terms" field</li>
-                <li>🧮 Call Rossum API for formula suggestion (Date Due − Date Issue → Net 15/30/Outstanding)</li>
-                <li>✅ Validate and apply the final configuration</li>
+                <li><span aria-hidden="true">📂</span> Load the queue setup skill</li>
+                <li><span aria-hidden="true">📋</span> Fetch available queue templates from Rossum</li>
+                <li><span aria-hidden="true">🏗️</span> Create the Invoices queue from a template</li>
+                <li><span aria-hidden="true">🌳</span> Retrieve schema tree structure</li>
+                <li><span aria-hidden="true">✂️</span> Prune unnecessary fields (payment instructions, delivery address)</li>
+                <li><span aria-hidden="true">🔧</span> Load patching skill and add "The Net Terms" field</li>
+                <li><span aria-hidden="true">🧮</span> Call Rossum API for formula suggestion (Date Due − Date Issue → Net 15/30/Outstanding)</li>
+                <li><span aria-hidden="true">✅</span> Validate and apply the final configuration</li>
               </ul>
               You see exactly what happens at each step — no black box.
             </div>

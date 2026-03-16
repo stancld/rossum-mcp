@@ -33,6 +33,7 @@ class TestConcurrentAgentService:
             mock_agent = MagicMock()
             mock_agent.tokens.total_input = 100
             mock_agent.tokens.total_output = 50
+            mock_agent.tokens.last_main_input = 100
             mock_agent.memory = MagicMock()
             mock_agent.get_token_usage_breakdown.return_value = {}
             mock_agent.log_token_usage_summary = MagicMock()
@@ -116,6 +117,7 @@ class TestConcurrentAgentService:
             mock_agent = MagicMock()
             mock_agent.tokens.total_input = 100
             mock_agent.tokens.total_output = 50
+            mock_agent.tokens.last_main_input = 100
             mock_agent.memory = MagicMock()
             mock_agent.get_token_usage_breakdown.return_value = {}
             mock_agent.log_token_usage_summary = MagicMock()
@@ -191,6 +193,7 @@ class TestConcurrentAgentService:
             mock_agent = MagicMock()
             mock_agent.tokens.total_input = 0
             mock_agent.tokens.total_output = 0
+            mock_agent.tokens.last_main_input = 0
             mock_agent.memory = MagicMock()
             mock_agent.get_token_usage_breakdown.return_value = {}
             mock_agent.log_token_usage_summary = MagicMock()

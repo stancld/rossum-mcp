@@ -97,7 +97,7 @@ When reviewing staged changes (not a specific commit), include a suggested commi
 
 | Rule | Detail |
 |------|--------|
-| Package prefix | `rossum-agent`, `rossum-mcp`, `rossum-deploy`, `rossum-agent-client`, `rossum-agent-tui` — omit if changes span multiple packages |
+| Package prefix | `rossum-agent`, `rossum-mcp`, `rossum-deploy`, `rossum-agent-client`, `rossum-agent-client-ts`, `rossum-agent-tui` — omit if changes span multiple packages |
 | Subject line | Imperative mood, capitalize first word after prefix, no period, under 72 chars |
 | Body | Only when the *why* isn't obvious from the subject line |
 

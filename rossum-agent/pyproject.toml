@@ -35,7 +35,7 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv",
     "fpdf2>=2.8.0",
-    "rossum-api>=3.9.1",
+    "rossum-api>=3.11.2",
     "rossum-mcp>=2.0.0,<3.0.0",
 ]
 
@@ -118,7 +118,7 @@ asyncio_mode = "auto"
 include = ["rossum_agent*"]
 
 [tool.setuptools.package-data]
-rossum_agent = ["assets/*.png", "skills/*.md"]
+rossum_agent = ["assets/*.png", "data/*.json", "skills/*.md"]
 
 [dependency-groups]
 dev = [

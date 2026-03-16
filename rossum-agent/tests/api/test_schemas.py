@@ -371,6 +371,22 @@ class TestStepEvent:
         event = StepEvent(type="error", step_number=0, content="Something went wrong", is_final=True)
         assert event.type == "error"
 
+    def test_context_usage_fraction_defaults_to_none(self):
+        """Test context_usage_fraction defaults to None on StepEvent."""
+        event = StepEvent(type="thinking", step_number=1, content="thinking...")
+        assert event.context_usage_fraction is None
+
+    def test_context_usage_fraction_can_be_set(self):
+        """Test context_usage_fraction can be set on StepEvent."""
+        event = StepEvent(
+            type="tool_result",
+            step_number=2,
+            tool_name="list_annotations",
+            result="[]",
+            context_usage_fraction=0.42,
+        )
+        assert event.context_usage_fraction == 0.42
+
 
 class TestStreamDoneEvent:
     """Tests for StreamDoneEvent schema."""
@@ -387,6 +403,24 @@ class TestStreamDoneEvent:
         event = StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
         assert event.cache_creation_input_tokens == 0
         assert event.cache_read_input_tokens == 0
+
+    def test_context_usage_fields_default_to_zero(self):
+        """Test max_input_tokens and context_usage_fraction default to zero."""
+        event = StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
+        assert event.max_input_tokens == 0
+        assert event.context_usage_fraction == 0.0
+
+    def test_context_usage_fields_can_be_set(self):
+        """Test max_input_tokens and context_usage_fraction can be set."""
+        event = StreamDoneEvent(
+            total_steps=3,
+            input_tokens=1500,
+            output_tokens=350,
+            max_input_tokens=200_000,
+            context_usage_fraction=0.75,
+        )
+        assert event.max_input_tokens == 200_000
+        assert event.context_usage_fraction == 0.75
 
     def test_cache_token_fields(self):
         """Test cache token fields can be set."""

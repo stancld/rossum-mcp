@@ -1,6 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createChat, submitFeedback as apiFeedback } from "../api/client.js";
-import { streamMessage } from "../api/sse.js";
+import { streamMessage } from "rossum-agent-client";
+import type {
+  ClientConfig,
+  ImageContent,
+  DocumentContent,
+} from "rossum-agent-client";
 import {
   loadPersistedState,
   savePersistedState,
@@ -36,6 +41,7 @@ const INITIAL_STATE: ChatState = {
   subAgentText: null,
   finalAnswer: null,
   tokenUsage: null,
+  contextUsageFraction: null,
   configCommit: null,
   files: [],
   error: null,
@@ -124,6 +130,8 @@ function handleStepEvent(prev: ChatState, step: StepEvent): ChatState {
     finalAnswer: step.is_final
       ? resolveFinalAnswer(step, prev.finalAnswer)
       : prev.finalAnswer,
+    contextUsageFraction:
+      step.context_usage_fraction ?? prev.contextUsageFraction,
   };
 }
 
@@ -133,7 +141,7 @@ function handleSubAgentTextEvent(
 ): ChatState {
   const prevText =
     prev.subAgentText?.tool_name === textEvent.tool_name
-      ? prev.subAgentText.text
+      ? prev.subAgentText!.text
       : "";
   const nextText = textEvent.text.startsWith(prevText)
     ? textEvent.text
@@ -172,6 +180,7 @@ function handleDoneEvent(
     subAgentProgress: null,
     subAgentText: null,
     tokenUsage: eventData.token_usage_breakdown as TokenUsageBreakdown | null,
+    contextUsageFraction: eventData.context_usage_fraction ?? null,
     configCommit: commitInfo,
   };
 }
@@ -280,14 +289,23 @@ export function useChat(config: Config) {
 
         setState((prev) => ({ ...prev, connectionStatus: "streaming" }));
 
+        const clientConfig: ClientConfig = {
+          apiUrl: config.apiUrl,
+          token: config.token,
+          rossumUrl: config.rossumUrl,
+        };
+
         await streamMessage({
-          config,
+          config: clientConfig,
           chatId,
           message,
-          images: options?.images,
-          documents: options?.documents,
-          onEvent: dispatch,
-          onError: (err) => {
+          persona: config.persona,
+          rossumUrl: config.contextUrl,
+          images: options?.images as ImageContent[] | undefined,
+          documents: options?.documents as DocumentContent[] | undefined,
+          onEvent: (event: Record<string, unknown>) =>
+            dispatch(event as SSEEvent),
+          onError: (err: Error) => {
             setState((prev) => ({
               ...prev,
               error: err.message,

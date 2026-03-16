@@ -138,7 +138,7 @@ Supported entities: `queue`, `schema`, `hook`, `rule`, `workspace`, `annotation`
 `create_hook`, `update_hook`, `create_hook_from_template`, `test_hook`
 
 **Rules & Actions:**
-`create_rule`, `update_rule`, `patch_rule`
+`create_rule`, `patch_rule`
 
 **Workspace Management:**
 `create_workspace`

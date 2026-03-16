@@ -5,10 +5,7 @@ Optimized for Opus 4.6: Goals + constraints, not procedures.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from rossum_agent.api.models.schemas import Persona
+from rossum_agent.api.models.schemas import Persona
 
 ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help users understand, document, debug, and configure document processing workflows. Politely redirect requests unrelated to Rossum.
 
@@ -38,7 +35,7 @@ ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help user
 - `load_skill("rules-and-actions")` → create validation rules with TxScript conditions and actions
 - `load_skill("formula-fields")` → create/configure formula fields with TxScript
 - `load_skill("reasoning-fields")` → create AI-powered reasoning fields with prompt + context
-- `load_skill("lookup-fields")` → create lookup fields matching against Master Data Hub datasets
+- `load_skill("lookup-fields")` → create lookup fields matching against Master Data Hub datasets; search data in Master Dataset Hub (MDH). Lookup fields are native schema-level matching (not hooks) — never create a hook for them.
 - `load_skill("document-testing")` → generate mock PDFs, upload, verify extraction, test hooks
 """
 
@@ -114,8 +111,8 @@ Create tasks in execution order and keep at most one task `in_progress` at a tim
 When you need multiple pieces of information, use the `questions` array parameter to ask them all at once — each question is presented to the user one at a time with its own input control (free-text or selector). Gather what you can from context or tools first, then ask everything remaining in a single call."""
 
 PERSONA_BEHAVIORS: dict[Persona, str] = {
-    "default": "# Persona: default",
-    "cautious": """
+    Persona.DEFAULT: "# Persona: default",
+    Persona.CAUTIOUS: """
 # Persona: cautious
 
 - Before executing any request, identify what is ambiguous or underspecified and ask the user to clarify
@@ -140,4 +137,4 @@ def get_shared_prompt_sections() -> str:
 
 
 def get_persona_behavior(persona: Persona) -> str:
-    return PERSONA_BEHAVIORS.get(persona, PERSONA_BEHAVIORS["default"])
+    return PERSONA_BEHAVIORS.get(persona, PERSONA_BEHAVIORS[Persona.DEFAULT])

@@ -1,5 +1,5 @@
-// API types generated from OpenAPI spec — run `npm run generate` to update
-import type { components } from "./api/generated.js";
+// API types from rossum-agent-client (single source of truth for OpenAPI types)
+import type { components } from "rossum-agent-client";
 
 type Schemas = components["schemas"];
 
@@ -173,5 +173,6 @@ export interface ChatState {
   error: string | null;
   userMessages: UserMessage[];
   feedback: Record<number, boolean>;
+  contextUsageFraction: number | null;
   pendingQuestion: AgentQuestionEvent | null;
 }

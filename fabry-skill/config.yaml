@@ -1,0 +1,84 @@
+name: Fabry
+description: Delegate Rossum platform tasks — configuring, debugging, documenting, and managing
+
+cli:
+  package: rossum-agent-client
+  install: uv pip install rossum-agent-client
+
+env_vars:
+  ROSSUM_AGENT_API_URL: Agent API endpoint
+  ROSSUM_API_BASE_URL: Rossum API URL
+  ROSSUM_API_TOKEN: Authentication token
+
+cli_flags:
+  -x PROMPT: Execute prompt directly
+  -r FILE: Read prompt from file
+  --mcp-mode: read-only (default) | read-write
+  --persona: default (default) | cautious
+  --show-thinking: Show reasoning + tool calls on stderr
+
+output:
+  stdout: Final answer text only — pipe-friendly, capturable
+  stderr: Progress indicators, tool calls, token usage
+  files: Agent-created files (CSVs, PDFs, JSON) saved to current directory
+
+capabilities:
+  - category: Queues & Workspaces
+    handles: Create, list, inspect, configure, delete queues and workspaces
+    example: "List all queues"
+  - category: Schemas
+    handles: Read/modify fields, prune unused fields, all types (sections, multivalue, enums)
+    example: "Add a required 'vendor_vat' string field to the header section on queue 12345"
+  - category: Formula Fields
+    handles: Deterministic computed fields via TxScript — math, strings, dates, aggregations
+    example: "Add a formula that calculates total_with_tax as amount * (1 + tax_rate/100)"
+  - category: AI Reasoning Fields
+    handles: AI-powered fields for ambiguous formats, contextual interpretation, classification
+    example: "Add a reasoning field that determines payment terms from the invoice text"
+  - category: Lookup Fields
+    handles: Fields fetching values from Master Data Hub — vendor matching, catalog lookups
+    example: "Add a lookup field that matches vendor_name against the vendor master data"
+  - category: Hooks & Extensions
+    handles: Create, configure, test serverless functions; Rossum Store templates or custom Python 3.12
+    example: "Create a hook from the 'Copy value to another field' template on queue 12345"
+  - category: Validation Rules
+    handles: TxScript trigger conditions with error/warning/info/automate actions
+    example: "Add a rule that shows an error when amount_total > 1000000"
+  - category: Annotations & Documents
+    handles: Query, inspect, update annotations; upload documents; copy between queues
+    example: "Upload invoice.pdf to queue 12345"
+  - category: UI Settings
+    handles: Queue UI layout — annotation list columns, sidebar ordering, field visibility
+    example: "Add 'vendor_name' and 'amount_total' columns to the annotation list table"
+  - category: Document Testing
+    handles: Generate mock PDFs, upload, verify extraction, trigger hooks — end-to-end
+    example: "Generate a test PDF matching queue 12345's schema, upload it, verify extraction"
+  - category: Users & Permissions
+    handles: Create/update users, manage roles and group assignments
+    example: "Create a user with email john@example.com as annotator on queue 12345"
+  - category: Email Templates
+    handles: Automated notification templates with configurable recipients
+    example: "Create an auto-send email template for confirmed invoices on queue 12345"
+  - category: Change History
+    handles: Audit trail, inspect diffs, revert commits, restore entity versions
+    example: "Show recent changes"
+  - category: Knowledge Base
+    handles: Search Rossum platform docs and API reference
+    example: "How do formula fields work in Rossum?"
+
+constraints:
+  chat_creates_per_min: 30
+  messages_per_min: 10
+  max_message_length: 50000
+  images_per_message: 5
+  max_image_size_mb: 5
+  pdfs_per_message: 5
+  max_pdf_size_mb: 20
+  timeout_seconds: 300
+
+troubleshooting:
+  "Missing required configuration": Set the three env vars
+  "401 error": Token expired — get a fresh ROSSUM_API_TOKEN
+  "429 error": Rate limit hit — wait and retry
+  "Timeout": Break the task into smaller, more focused prompts
+  "read-only mode rejection": Add --mcp-mode read-write

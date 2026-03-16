@@ -7,11 +7,11 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
+from rossum_agent.api.models.schemas import Persona
+
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
-
-    from rossum_agent.api.models.schemas import Persona
 
 STORAGE_BACKEND_ENV = "CHAT_STORAGE_BACKEND"
 DEFAULT_STORAGE_BACKEND = "postgres"
@@ -65,7 +65,7 @@ class ChatMetadata:
     total_tool_calls: int = 0
     total_steps: int = 0
     mcp_mode: Literal["read-only", "read-write"] = "read-only"
-    persona: Persona = "default"
+    persona: Persona = Persona.DEFAULT
     config_commits: list[str] = field(default_factory=list)
     summary: str | None = None
 
@@ -91,7 +91,7 @@ class ChatMetadata:
             total_tool_calls=data.get("total_tool_calls", 0),
             total_steps=data.get("total_steps", 0),
             mcp_mode=data.get("mcp_mode", "read-only"),
-            persona=data.get("persona", "default"),
+            persona=Persona(data.get("persona", "default")),
             config_commits=data.get("config_commits", []),
             summary=data.get("summary"),
         )

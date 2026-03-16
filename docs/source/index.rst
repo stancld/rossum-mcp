@@ -101,7 +101,6 @@ A compact, fully-typed tool surface — Pydantic models, ``Literal`` unions, and
 **Rules & Actions**
 
 * **create_rule** - Create business rules with trigger conditions and actions
-* **update_rule** - Full update of business rules (PUT)
 * **patch_rule** - Partial update of business rules (PATCH)
 
 **Email Templates**

@@ -14,12 +14,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from rossum_agent.api.models.schemas import Persona
+
 if TYPE_CHECKING:
     import asyncio
 
     from anthropic.types import ToolParam
 
-    from rossum_agent.api.models.schemas import Persona
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
     from rossum_agent.rossum_mcp_integration import MCPConnection
     from rossum_agent.tools.task_tracker import TaskTracker
@@ -136,7 +137,7 @@ class AgentContext:
     task_tracker: TaskTracker | None = None
     dynamic_tools: DynamicToolsState = field(default_factory=DynamicToolsState)
     # Persona
-    persona: Persona = "default"
+    persona: Persona = Persona.DEFAULT
     # Cautious persona: write confirmation tracking
     cautious_preapproved_writes: set[str] = field(default_factory=set)
     cautious_blocked_writes: set[str] = field(default_factory=set)

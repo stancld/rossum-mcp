@@ -601,7 +601,10 @@ export interface components {
       /** @description Agent persona to use for this message and all subsequent messages. If not specified, uses the chat's current persona. */
       persona?: components["schemas"]["Persona"] | null;
     };
-    /** @enum {string} */
+    /**
+     * Persona
+     * @enum {string}
+     */
     Persona: "default" | "cautious";
     /** ReportToSlackRequest */
     ReportToSlackRequest: {
@@ -722,6 +725,11 @@ export interface components {
        * @default false
        */
       is_hook_output: boolean;
+      /**
+       * Context Usage Fraction
+       * @default null
+       */
+      context_usage_fraction: number | null;
     };
     /**
      * SubAgentProgressEvent
@@ -920,6 +928,12 @@ export interface components {
      * @description Final event emitted when streaming completes.
      */
     StreamDoneEvent: {
+      /**
+       * Type
+       * @default done
+       * @constant
+       */
+      type: "done";
       /** Total Steps */
       total_steps: number;
       /** Input Tokens */
@@ -940,6 +954,16 @@ export interface components {
       token_usage_breakdown:
         | components["schemas"]["TokenUsageBreakdown"]
         | null;
+      /**
+       * Max Input Tokens
+       * @default 0
+       */
+      max_input_tokens: number;
+      /**
+       * Context Usage Fraction
+       * @default 0
+       */
+      context_usage_fraction: number;
       /**
        * Config Commit Hash
        * @default null

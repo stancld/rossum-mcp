@@ -392,7 +392,7 @@ class Workspace:
                 name = inbox.get("name", f"Inbox {inbox['id']}")
                 modified_at = None
                 if inbox.get("modified_at"):
-                    modified_at = datetime.fromisoformat(inbox["modified_at"].replace("Z", "+00:00"))
+                    modified_at = datetime.fromisoformat(inbox["modified_at"])
                 self._save_object(ObjectType.INBOX, inbox["id"], name, inbox, modified_at)
                 result.pulled.append((ObjectType.INBOX, inbox["id"], name))
 
@@ -594,7 +594,7 @@ class Workspace:
             data = client.request_json("GET", f"inboxes/{obj_id}")
             modified_at = None
             if data.get("modified_at"):
-                modified_at = datetime.fromisoformat(data["modified_at"].replace("Z", "+00:00"))
+                modified_at = datetime.fromisoformat(data["modified_at"])
             return data, modified_at
 
         remote = self._retrieve_remote_object(client, obj_type, obj_id)
@@ -604,7 +604,7 @@ class Workspace:
             remote_data["message"] = remote_data["message"].rstrip()
         remote_modified = getattr(remote, "modified_at", None)
         if isinstance(remote_modified, str):
-            remote_modified = datetime.fromisoformat(remote_modified.replace("Z", "+00:00"))
+            remote_modified = datetime.fromisoformat(remote_modified)
         return remote_data, remote_modified
 
     def _compare_objects(

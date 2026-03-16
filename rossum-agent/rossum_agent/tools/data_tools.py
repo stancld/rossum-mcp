@@ -15,8 +15,13 @@ _JQ_OUTPUT_LIMIT = 50_000
 _GREP_MATCH_LIMIT = 200
 
 
-def _resolve_content(value: str) -> str:
-    """Return file contents if value is an existing path, otherwise return value as-is."""
+def _resolve_content(value: str | dict) -> str:
+    """Return file contents if value is an existing path, otherwise return value as-is.
+
+    Accepts dict (already-parsed JSON) and serializes it back to a string.
+    """
+    if isinstance(value, dict):
+        return json.dumps(value)
     path = Path(value)
     if path.is_absolute():
         try:
@@ -27,7 +32,7 @@ def _resolve_content(value: str) -> str:
 
 
 @beta_tool
-def run_jq(jq_query: str, data: str) -> str:
+def run_jq(jq_query: str, data: str | dict) -> str:
     """Run a jq expression against JSON content or a file path containing JSON.
 
     Use to filter, transform, or extract values from API responses, schema
@@ -51,7 +56,7 @@ def run_jq(jq_query: str, data: str) -> str:
 
     Args:
         jq_query: A jq expression to run.
-        data: JSON string or absolute path to a JSON file (e.g. from get_annotation_content).
+        data: JSON string, absolute path to a JSON file, or parsed JSON dict.
 
     Returns:
         JSON result from the jq expression, or error message.

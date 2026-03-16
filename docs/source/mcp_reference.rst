@@ -306,42 +306,6 @@ create_rule
          schema_id=12345
      )
 
-update_rule
-^^^^^^^^^^^
-
-**MCP Tool:**
-  ``update_rule(rule_id: int, name: str, trigger_condition: str, actions: list[dict], enabled: bool, queue_ids: list[int] | None = None)``
-
-**Rossum SDK Method:**
-  ``AsyncRossumAPIClient._http_client.update(Resource.Rule, rule_id, rule_data)``
-
-**API Endpoint:**
-  ``PUT /v1/rules/{id}``
-
-**Request Body:**
-  - ``name``: Rule name (required)
-  - ``trigger_condition``: TxScript formula string (required)
-  - ``actions``: List of actions (required)
-  - ``enabled``: Whether the rule is active (required)
-  - ``queues``: List of queue URLs to limit rule to specific queues (optional)
-
-**Implementation:**
-  Full update (PUT) of a business rule. All fields are required.
-  Schema cannot be changed after creation.
-
-**Common Use Cases:**
-
-  .. code-block:: python
-
-     # Full update of a rule
-     rule = await server.update_rule(
-         rule_id=67890,
-         name="Updated High Value Alert",
-         trigger_condition="field.amount > 5000",
-         actions=[{"id": "alert1", "type": "show_message", "event": "validation", "payload": {"type": "warning", "content": "Medium value invoice", "schema_id": "amount"}}],
-         enabled=True
-     )
-
 patch_rule
 ^^^^^^^^^^
 

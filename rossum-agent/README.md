@@ -252,6 +252,7 @@ The TUI provides autocomplete suggestions when typing `/`. Commands can also be 
 | `sub_agent_progress` | Sub-agent iteration updates |
 | `sub_agent_text` | Sub-agent text streaming |
 | `task_snapshot` | Task tracker state after each task mutation |
+| `agent_question` | Structured question from agent to user (e.g. confirmation prompts) |
 | `file_created` | Output file notification |
 | `done` | Final event with token usage |
 | `error` | Agent execution error |

@@ -11,11 +11,20 @@
 Append entry to `.claude/daily-suggestion-log.md`:
 
 ```markdown
-## YYYY-MM-DD
+## YYYY-MM-DD (attempt N)
 - **Outcome**: accepted/rejected
 - **Reason**: <reason if rejected>
+- **Note**: <optional context for future improvement>
 - **MR**: <link if available from git>
 ```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| Date heading | Yes | ISO format; add `(attempt N)` suffix when multiple runs on same day |
+| Outcome | Yes | `accepted` or `rejected` |
+| Reason | If rejected | What to avoid in future |
+| Note | Optional | Positive feedback, patterns to repeat, scope guidance |
+| MR | If available | Link from `gh pr list` or git log |
 
 Create file if missing. If rejected, briefly note what to avoid in future.
 

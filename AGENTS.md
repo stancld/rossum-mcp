@@ -121,20 +121,23 @@ Regeneration pipeline:
 # 1. Regenerate OpenAPI spec from Python models
 cd rossum-agent && python scripts/generate_openapi.py
 
-# 2. Regenerate TUI TypeScript types from the spec
-cd rossum-agent-tui && npm run generate
+# 2. Regenerate TypeScript types from the spec (single source in rossum-agent-client-ts)
+cd rossum-agent-client-ts && npm run generate
 ```
+
+Note: `rossum-agent-tui` imports OpenAPI types from `rossum-agent-client` (no duplicate `generated.ts`).
 
 ### rossum-agent-tui Type Generation
 
-TUI types in `src/api/generated.ts` are auto-generated from the OpenAPI spec via `openapi-typescript`. Do not edit `generated.ts` manually.
+TUI imports OpenAPI types from `rossum-agent-client` — there is no separate `generated.ts` in the TUI package. The single source of truth is `rossum-agent-client-ts/src/generated.ts`.
 
 | Rule | Detail |
 |------|--------|
-| Source of truth | `rossum-agent/rossum_agent/api/openapi.json` |
-| Generate command | `cd rossum-agent-tui && npm run generate` |
-| Import types | Use types from `src/api/generated.ts` instead of hand-written interfaces |
-| After API changes | Always regenerate: OpenAPI spec first, then TUI types |
+| Source of truth | `rossum-agent-client-ts/src/generated.ts` (generated from `rossum-agent/rossum_agent/api/openapi.json`) |
+| Generate command | `cd rossum-agent-client-ts && npm run generate` |
+| TUI convenience | `cd rossum-agent-tui && npm run generate` (delegates to client-ts) |
+| Import types | TUI imports `components` from `rossum-agent-client` |
+| After API changes | Regenerate OpenAPI spec, then run generate in client-ts |
 
 ## Testing
 
@@ -194,7 +197,7 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 
 | Event type | Source | Key fields | When emitted |
 |------------|--------|------------|--------------|
-| `tool_start` | `agent_service._create_tool_start_event` | `tool_name`, `tool_arguments`, `tool_progress` | When the agent begins executing a tool; `tool_name` is display-formatted via `get_display_tool_name` |
+| `tool_start` | `agent_service._create_tool_start_event` | `tool_name`, `tool_arguments`, `tool_progress` | When the agent begins executing a tool |
 | `tool_result` | `agent_service._create_tool_result_event` | `tool_name`, `result`, `is_error` | After tool execution completes (only emitted when `is_streaming=false`) |
 
 **Pairing logic** (TUI `buildChatItems.ts`): `tool_result` steps are indexed by `stepNumber` into a map; each `tool_start` is paired with its matching `tool_result` to produce a single `ChatItem` of `kind: "tool_call"`.

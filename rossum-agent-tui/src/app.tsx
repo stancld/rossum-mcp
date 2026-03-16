@@ -622,6 +622,7 @@ export function App({ config }: AppProps) {
         persona={config.persona}
         chatId={state.chatId}
         tokenUsage={state.tokenUsage}
+        contextUsageFraction={state.contextUsageFraction}
         mode={mode}
       />
     </Box>

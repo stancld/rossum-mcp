@@ -7,8 +7,9 @@
 | Input | Files to Analyze |
 |-------|------------------|
 | OpenAPI spec | `rossum-agent/rossum_agent/api/openapi.json` |
-| Client impl | `rossum-agent-client/rossum_agent_client/client.py` |
-| Models | `rossum-agent-client/rossum_agent_client/models/` |
+| Python client impl | `rossum-agent-client/rossum_agent_client/client.py` |
+| Python models | `rossum-agent-client/rossum_agent_client/models/` |
+| TS client impl | `rossum-agent-client-ts/src/` (functions, types, generated types) |
 
 ## What to Check
 
@@ -49,8 +50,18 @@
 - [ ] `client.method()` returns `X`, spec defines `Y`
 ```
 
+## TS Client (rossum-agent-client-ts)
+
+The TS client's types are auto-generated from the same OpenAPI spec. Verify:
+
+| Check | What to verify |
+|-------|----------------|
+| Generated types fresh | `src/generated.ts` matches current `openapi.json` — run `npm run generate` and diff |
+| Client functions | Functions in `src/` cover all spec endpoints |
+| SSE event types | `SSEEvent` union covers all SSE event models in spec |
+
 ## Constraints
 
 - No automatic modifications
 - Report discrepancies only
-- Consider both sync and async client implementations
+- Consider both sync and async client implementations (Python) and TS client

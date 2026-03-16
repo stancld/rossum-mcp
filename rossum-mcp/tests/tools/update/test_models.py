@@ -51,6 +51,27 @@ class TestSchemaNodeUpdate:
         assert "type" not in result
         assert "hidden" not in result
 
+    def test_schema_node_update_with_matching(self) -> None:
+        """Test SchemaNodeUpdate with lookup matching configuration."""
+        matching = {
+            "type": "master_data_hub",
+            "configuration": {
+                "dataset": "imported-abc123",
+                "queries": [{"aggregate": [{"$match": {"Name": "$sender_name"}}]}],
+                "variables": {"sender_name": {"__formula": "field.sender_name"}},
+            },
+        }
+        update = SchemaNodeUpdate(
+            matching=matching,
+            enum_value_type="string",
+        )
+        result = update.to_dict()
+
+        assert result["matching"]["type"] == "master_data_hub"
+        assert result["matching"]["configuration"]["dataset"] == "imported-abc123"
+        assert result["enum_value_type"] == "string"
+        assert "label" not in result
+
     def test_schema_node_update_with_stretch(self) -> None:
         """Test SchemaNodeUpdate with stretch field."""
         update = SchemaNodeUpdate(label="Column", width=100, stretch=True)

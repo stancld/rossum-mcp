@@ -10,6 +10,7 @@
 | rossum-agent | `rossum-agent/` | `rossum_agent` |
 | rossum-deploy | `rossum-deploy/` | `rossum_deploy` |
 | rossum-agent-client | `rossum-agent-client/` | `rossum_agent_client` |
+| rossum-agent-client-ts | `rossum-agent-client-ts/` | npm: `rossum-agent-client` |
 
 ## Checklist
 

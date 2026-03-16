@@ -21,6 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-extras
-          cd rossum-agent-tui && npm ci
+          cd rossum-agent-client-ts && npm ci && npm run build
+          cd ../rossum-agent-tui && npm ci
       - name: Run pre-commit
         run: uvx pre-commit run --all-files

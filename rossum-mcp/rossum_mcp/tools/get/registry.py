@@ -35,9 +35,6 @@ class EntityConfig:
     search_fn: Callable[..., Awaitable[list]] | None
 
 
-# --- Individual retrieve functions ---
-
-
 async def _get_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> Annotation:
     logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
     return await client.retrieve_annotation(annotation_id)
@@ -108,9 +105,6 @@ async def _get_document_relation(client: AsyncRossumAPIClient, document_relation
 async def _get_hook_secrets_keys(client: AsyncRossumAPIClient, hook_id: int) -> list[str]:
     result = await client._http_client.request_json("GET", f"hooks/{hook_id}/secrets_keys")
     return cast("list[str]", result)
-
-
-# --- Registry builder ---
 
 
 def build_get_registry(client: AsyncRossumAPIClient) -> dict[str, EntityConfig]:

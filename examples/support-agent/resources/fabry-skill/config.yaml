@@ -1,0 +1,25 @@
+name: Fabry
+description: Delegate Rossum platform tasks — configuring, debugging, documenting, and managing
+
+cli:
+  command: fabry
+  package: support-fabry (bundled — no separate install needed)
+
+env_vars:
+  ROSSUM_AGENT_API_URL: Agent API endpoint
+  ROSSUM_API_BASE_URL: Rossum API URL
+  ROSSUM_API_TOKEN: Authentication token
+
+cli_flags:
+  -x PROMPT: Execute prompt directly
+  -r FILE: Read prompt from file
+  --mcp-mode: read-only (default) | read-write
+  --persona: default (default) | cautious
+  --show-thinking: Show reasoning + tool calls on stderr
+
+output:
+  stdout: Final answer text only — pipe-friendly, capturable
+  stderr: Progress indicators, tool calls, token usage
+  files: Agent-created files (CSVs, PDFs, JSON) saved to current directory
+
+# Full capabilities, constraints, and troubleshooting: see prompt.md

@@ -24,7 +24,9 @@ select = [
 ]
 extend-select = [
     "ASYNC",  # asyncio
+    "ERA",  # eradicate
     "EXE",  # executable
+    "FURB",
     "ICN",  # import conventions
     "NPY",  # numpy-specific rules
     "PLC0415",  # import-outside-top-level
@@ -41,11 +43,8 @@ unfixable = [
 ]
 
 ignore = [
-    "C408",
     "E501",  # Long literals which Black can't split
     "UP010",  # Unnecessary __future__ import {import} for target Python version -- we require `from __future__ import annotations` everywhere
-    "UP030",  # Use implicit references for positional format fields -- personally, I don't like relying on implicit values
-    "UP031",
     "W191",  # Tab-indentation (discouraged to use with formatter)
 ]
 
@@ -57,12 +56,6 @@ ignore = [
 
 [lint.flake8-import-conventions.aliases]
 "datetime" = "dt"
-"numpy" = "np"
-"pandas" = "pd"
-
-[lint.flake8-import-conventions.extend-aliases]
-# modules
-"numpy.typing" = "npt"
 
 [lint.flake8-unused-arguments]
 # No error for unused *args and **kwargs

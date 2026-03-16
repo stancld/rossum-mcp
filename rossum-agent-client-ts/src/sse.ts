@@ -1,17 +1,23 @@
 import { createParser, type EventSourceMessage } from "eventsource-parser";
 import { buildHeaders } from "./client.js";
-import type { Config, SSEEvent } from "../types.js";
 import type {
-  ImageAttachment,
-  DocumentAttachment,
-} from "../utils/fileAttachments.js";
+  ClientConfig,
+  DocumentContent,
+  ImageContent,
+  McpMode,
+  Persona,
+  SSEEvent,
+} from "./types.js";
 
 export interface StreamOptions {
-  config: Config;
+  config: ClientConfig;
   chatId: string;
   message: string;
-  images?: ImageAttachment[];
-  documents?: DocumentAttachment[];
+  mcpMode?: McpMode;
+  persona?: Persona;
+  rossumUrl?: string;
+  images?: ImageContent[];
+  documents?: DocumentContent[];
   onEvent: (event: SSEEvent) => void;
   onError: (error: Error) => void;
   onDone: () => void;
@@ -19,16 +25,15 @@ export interface StreamOptions {
 }
 
 function buildRequestBody(
-  opts: Pick<StreamOptions, "message" | "images" | "documents"> & {
-    persona: string;
-    contextUrl?: string;
-  },
+  opts: Pick<
+    StreamOptions,
+    "message" | "images" | "documents" | "persona" | "rossumUrl" | "mcpMode"
+  >,
 ): string {
-  const body: Record<string, unknown> = {
-    content: opts.message,
-    persona: opts.persona,
-  };
-  if (opts.contextUrl) body.rossum_url = opts.contextUrl;
+  const body: Record<string, unknown> = { content: opts.message };
+  if (opts.persona) body.persona = opts.persona;
+  if (opts.mcpMode) body.mcp_mode = opts.mcpMode;
+  if (opts.rossumUrl) body.rossum_url = opts.rossumUrl;
   if (opts.images && opts.images.length > 0) body.images = opts.images;
   if (opts.documents && opts.documents.length > 0)
     body.documents = opts.documents;
@@ -77,11 +82,7 @@ export async function streamMessage(opts: StreamOptions): Promise<void> {
     res = await fetch(`${config.apiUrl}/api/v1/chats/${chatId}/messages`, {
       method: "POST",
       headers: buildHeaders(config),
-      body: buildRequestBody({
-        ...opts,
-        persona: config.persona,
-        contextUrl: config.contextUrl,
-      }),
+      body: buildRequestBody(opts),
       signal,
     });
   } catch (err) {
