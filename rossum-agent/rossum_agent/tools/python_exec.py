@@ -94,6 +94,7 @@ _ALLOWED_MODULES = frozenset(
         "collections",
         "csv",
         "datetime",
+        "fpdf",
         "functools",
         "io",
         "itertools",
@@ -256,7 +257,7 @@ def get_execute_python_definition() -> ToolParam:
         "name": "execute_python",
         "description": (
             "Run short Python snippets in a constrained environment. "
-            "Stdlib imports allowed: collections, csv, datetime, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. "
+            "Allowed imports: collections, csv, datetime, fpdf (fpdf2 PDF generation), functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. "
             "Assign the final structured value to `result` or leave it as the last expression. "
             "When the useful output is a large string, dict, or list, prefer `write_file(...)` inside the snippet instead of returning it inline. "
             "Load the relevant skill first for task-specific helper guidance."
@@ -266,7 +267,7 @@ def get_execute_python_definition() -> ToolParam:
             "properties": {
                 "code": {
                     "type": "string",
-                    "description": "Python code to execute. Stdlib imports allowed (collections, csv, datetime, etc.). Max 12000 characters.",
+                    "description": "Python code to execute. Allowed imports: collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. Max 12000 characters.",
                 },
                 "operation_name": {
                     "type": "string",
