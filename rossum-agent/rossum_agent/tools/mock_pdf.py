@@ -10,6 +10,7 @@ import json
 import logging
 import random
 import string
+from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -182,13 +183,69 @@ def _build_header_rir_resolver(header_fields: list[dict]) -> tuple[set[str], dic
     return header_field_ids, header_rir_map
 
 
-def _find_item_total_key(line_items: list[dict[str, str]]) -> str | None:
-    """Find the line item column key that represents amount totals."""
+def _find_key_by_pattern(
+    line_items: list[dict[str, str]],
+    predicate: Callable[[str], bool],
+) -> str | None:
+    """Return the first dict key across all line items matching predicate."""
     for item in line_items:
         for key in item:
-            if "amount_total" in key or "amount" in key:
+            if predicate(key):
                 return key
     return None
+
+
+def _find_item_column(
+    line_items: list[dict[str, str]],
+    line_item_fields: list[dict] | None,
+    rir_name: str,
+) -> str | None:
+    """Find the line item column key matching a rir_field_name or field id."""
+    if line_item_fields:
+        for f in line_item_fields:
+            if rir_name in f.get("rir_field_names", []):
+                fid = f.get("id", "")
+                if any(fid in item for item in line_items):
+                    return fid
+    if any(rir_name in item for item in line_items):
+        return rir_name
+    return None
+
+
+def _find_item_total_key(
+    line_items: list[dict[str, str]],
+    line_item_fields: list[dict] | None = None,
+) -> str | None:
+    """Find the line item column key that represents amount totals.
+
+    Resolution order:
+    1. rir_field_names containing known total rir names (item_amount_total, item_total_amount)
+    2. Dict key containing "amount_total"
+    3. Dict key matching "item_total" exactly
+    4. Dict key containing "total" (but not "amount" and not "item_total")
+    5. Dict key containing "amount" (fallback)
+    """
+    _TOTAL_RIR_NAMES = {"item_amount_total", "item_total_amount"}
+
+    # Try rir_field_names first (most reliable)
+    if line_item_fields:
+        for f in line_item_fields:
+            rir_names = set(f.get("rir_field_names", []))
+            if rir_names & _TOTAL_RIR_NAMES:
+                fid = f.get("id", "")
+                if any(fid in item for item in line_items):
+                    return fid
+
+    # Fallback: scan dict keys by name patterns (most specific first)
+    return (
+        _find_key_by_pattern(line_items, lambda k: "amount_total" in k)
+        or _find_key_by_pattern(line_items, lambda k: k == "item_total")
+        or _find_key_by_pattern(
+            line_items,
+            lambda k: "total" in k and "amount" not in k and k != "item_total",
+        )
+        or _find_key_by_pattern(line_items, lambda k: "amount" in k)
+    )
 
 
 def _apply_base_tax_split(
@@ -210,10 +267,43 @@ def _apply_base_tax_split(
         header_values[tax_id] = "0.00"
 
 
+def _distribute_subtotals(
+    header_values: dict[str, str],
+    line_items: list[dict[str, str]],
+    line_item_fields: list[dict] | None,
+    total: float,
+    item_total_key: str,
+    find_header_id: Callable[[str], str | None],
+) -> None:
+    """Distribute header sub-totals proportionally across line item columns."""
+    _ITEM_HEADER_COLUMN_PAIRS = [
+        ("item_amount_base", "amount_total_base"),
+        ("item_amount", "amount_total"),
+    ]
+    item_weights = [float(item.get(item_total_key, "0")) for item in line_items]
+    for item_rir, header_rir in _ITEM_HEADER_COLUMN_PAIRS:
+        item_col = _find_item_column(line_items, line_item_fields, item_rir)
+        if not item_col or item_col == item_total_key:
+            continue
+        header_id = find_header_id(header_rir)
+        if not header_id or header_id not in header_values:
+            continue
+        target = float(header_values[header_id])
+        running = 0.0
+        for i, item in enumerate(line_items):
+            if i == len(line_items) - 1:
+                item[item_col] = str(round(target - running, 2))
+            else:
+                val = round(item_weights[i] / total * target, 2)
+                item[item_col] = str(val)
+                running += val
+
+
 def _make_amounts_consistent(
     header_values: dict[str, str],
     line_items: list[dict[str, str]],
     header_fields: list[dict],
+    line_item_fields: list[dict] | None = None,
 ) -> None:
     """Ensure amount fields are mathematically consistent (mutates in place).
 
@@ -229,7 +319,7 @@ def _make_amounts_consistent(
             return rir_name
         return header_rir_map.get(rir_name)
 
-    item_total_key = _find_item_total_key(line_items)
+    item_total_key = _find_item_total_key(line_items, line_item_fields)
     if not item_total_key or not line_items:
         return
 
@@ -253,6 +343,11 @@ def _make_amounts_consistent(
         _find_header_id("amount_total_base"),
         _find_header_id("amount_total_tax"),
     )
+
+    # Distribute header sub-totals proportionally across line item columns
+    # so that e.g. sum(item_amount_base) == amount_total_base
+    if total > 0:
+        _distribute_subtotals(header_values, line_items, line_item_fields, total, item_total_key, _find_header_id)
 
 
 def _build_label_map(header_fields: list[dict], line_item_fields: list[dict]) -> dict[str, str]:
@@ -554,7 +649,7 @@ def generate_mock_pdf(
 
         # Make amounts consistent (unless explicitly disabled for mismatch testing)
         if consistent_amounts:
-            _make_amounts_consistent(header_values, line_items, header_fields)
+            _make_amounts_consistent(header_values, line_items, header_fields, line_item_fields)
 
         # Render PDF
         pdf_bytes = _render_pdf(document_type, header_values, line_items, header_fields, line_item_fields)

@@ -9,6 +9,7 @@ from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.mock_pdf import (
     _apply_base_tax_split,
     _build_header_rir_resolver,
+    _find_item_column,
     _find_item_total_key,
     _generate_value_for_field,
     _is_line_item_field,
@@ -439,6 +440,45 @@ class TestGenerateMockPdf:
         finally:
             set_context(AgentContext())
 
+    def test_item_column_sums_match_header_totals(self, tmp_path: Path) -> None:
+        """sum(item_amount_base) == amount_total_base and sum(item_amount) == amount_total."""
+        fields = [
+            _field("document_id", "Document ID"),
+            _field("sender_name", "Vendor Name", ["sender_name"]),
+            _field("amount_total", "Total Amount", ["amount_total"], "number"),
+            _field("amount_total_base", "Total Without Tax", ["amount_total_base"], "number"),
+            _field("amount_total_tax", "Total Tax", ["amount_total_tax"], "number"),
+            _field("item_description", "Description", ["item_description"]),
+            _field("item_quantity", "Quantity", ["item_quantity"], "number"),
+            _field("item_amount_base", "Unit Price Base", ["item_amount_base"], "number"),
+            _field("item_amount", "Unit Price", ["item_amount"], "number"),
+            _field("item_amount_total", "Total Amount", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(fields=fields, line_item_count=4)
+            result = json.loads(result_json)
+
+            assert result["status"] == "success"
+            expected = result["expected_values"]
+            items = result["line_items"]
+
+            # sum of item_amount_base matches amount_total_base
+            sum_base = sum(float(item["item_amount_base"]) for item in items)
+            assert abs(float(expected["amount_total_base"]) - sum_base) < 0.01
+
+            # sum of item_amount matches amount_total
+            sum_amount = sum(float(item["item_amount"]) for item in items)
+            assert abs(float(expected["amount_total"]) - sum_amount) < 0.01
+
+            # tax should still be consistent: total = base + tax
+            total = float(expected["amount_total"])
+            base = float(expected["amount_total_base"])
+            tax = float(expected["amount_total_tax"])
+            assert abs(total - (base + tax)) < 0.01
+        finally:
+            set_context(AgentContext())
+
 
 class TestApplyBaseTaxSplit:
     """Tests for _apply_base_tax_split edge cases."""
@@ -486,6 +526,31 @@ class TestFindItemTotalKey:
     def test_empty_items(self) -> None:
         assert _find_item_total_key([]) is None
 
+    def test_rir_field_names_resolve_custom_id(self) -> None:
+        """Field with custom id but rir_field_names containing item_amount_total."""
+        fields = [_field("item_total", "Total", ["item_amount_total"], "number")]
+        items = [{"item_total": "100"}]
+        assert _find_item_total_key(items, fields) == "item_total"
+
+    def test_item_total_key_without_amount(self) -> None:
+        """item_total as dict key (no 'amount' substring) found via name pattern."""
+        items = [{"item_description": "A", "item_total": "100"}]
+        assert _find_item_total_key(items) == "item_total"
+
+    def test_rir_takes_priority_over_key_scan(self) -> None:
+        """When rir_field_names match, use that field even if another key has 'amount'."""
+        fields = [
+            _field("item_total", "Total", ["item_amount_total"], "number"),
+            _field("item_tax_amount", "Tax", [], "number"),
+        ]
+        items = [{"item_total": "100", "item_tax_amount": "21"}]
+        assert _find_item_total_key(items, fields) == "item_total"
+
+    def test_generic_total_key(self) -> None:
+        """Key containing 'total' but not 'amount' is found."""
+        items = [{"item_description": "A", "item_total_price": "100"}]
+        assert _find_item_total_key(items) == "item_total_price"
+
 
 class TestBuildHeaderRirResolver:
     """Tests for _build_header_rir_resolver."""
@@ -521,6 +586,26 @@ class TestValueGenerationExtended:
         assert value == "Active"
 
 
+class TestFindItemColumn:
+    """Tests for _find_item_column."""
+
+    def test_finds_by_direct_key(self) -> None:
+        items = [{"item_amount_base": "100"}]
+        assert _find_item_column(items, None, "item_amount_base") == "item_amount_base"
+
+    def test_finds_by_rir(self) -> None:
+        fields = [_field("base_price", "Base", ["item_amount_base"], "number")]
+        items = [{"base_price": "100"}]
+        assert _find_item_column(items, fields, "item_amount_base") == "base_price"
+
+    def test_returns_none_when_missing(self) -> None:
+        items = [{"item_description": "A"}]
+        assert _find_item_column(items, None, "item_amount_base") is None
+
+    def test_empty_items(self) -> None:
+        assert _find_item_column([], None, "item_amount_base") is None
+
+
 class TestAmountConsistencyExtended:
     """Additional amount consistency edge cases."""
 
@@ -531,6 +616,71 @@ class TestAmountConsistencyExtended:
         line_items = [{"item_description": "Widget", "item_quantity": "5"}]
         _make_amounts_consistent(header_values, line_items, header_fields)
         assert header_values["amount_total"] == "999.99"
+
+    def test_custom_item_total_field_via_rir(self) -> None:
+        """item_total field with rir_field_names=['item_amount_total'] sums correctly."""
+        header_fields = [
+            _field("total_amount", "Total Amount", ["amount_total"], "number"),
+        ]
+        line_item_fields = [
+            _field("item_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        header_values = {"total_amount": "0"}
+        line_items = [{"item_total": "150.00"}, {"item_total": "250.00"}]
+        _make_amounts_consistent(header_values, line_items, header_fields, line_item_fields)
+        assert float(header_values["total_amount"]) == 400.00
+
+    def test_item_total_without_amount_in_name(self) -> None:
+        """item_total field (no 'amount' substring) still triggers consistency."""
+        header_fields = [
+            _field("amount_total", "Total", ["amount_total"], "number"),
+        ]
+        header_values = {"amount_total": "0"}
+        line_items = [{"item_total": "100.00"}, {"item_total": "200.00"}]
+        _make_amounts_consistent(header_values, line_items, header_fields)
+        assert float(header_values["amount_total"]) == 300.00
+
+    def test_item_amount_base_distributed_to_match_total_base(self) -> None:
+        """item_amount_base values are adjusted so their sum equals amount_total_base."""
+        header_fields = [
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("amount_total_base", "Base", ["amount_total_base"], "number"),
+            _field("amount_total_tax", "Tax", ["amount_total_tax"], "number"),
+        ]
+        line_item_fields = [
+            _field("item_amount_base", "Unit Base", ["item_amount_base"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        header_values = {"amount_total": "0", "amount_total_base": "0", "amount_total_tax": "0"}
+        line_items = [
+            {"item_amount_base": "999", "item_amount_total": "200.00"},
+            {"item_amount_base": "999", "item_amount_total": "300.00"},
+        ]
+        _make_amounts_consistent(header_values, line_items, header_fields, line_item_fields)
+
+        total_base = float(header_values["amount_total_base"])
+        sum_item_base = sum(float(item["item_amount_base"]) for item in line_items)
+        assert abs(total_base - sum_item_base) < 0.01
+
+    def test_item_amount_distributed_to_match_total(self) -> None:
+        """item_amount values are adjusted so their sum equals amount_total."""
+        header_fields = [
+            _field("amount_total", "Total", ["amount_total"], "number"),
+        ]
+        line_item_fields = [
+            _field("item_amount", "Unit Price", ["item_amount"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        header_values = {"amount_total": "0"}
+        line_items = [
+            {"item_amount": "999", "item_amount_total": "150.00"},
+            {"item_amount": "999", "item_amount_total": "350.00"},
+        ]
+        _make_amounts_consistent(header_values, line_items, header_fields, line_item_fields)
+
+        total = float(header_values["amount_total"])
+        sum_item_amount = sum(float(item["item_amount"]) for item in line_items)
+        assert abs(total - sum_item_amount) < 0.01
 
 
 class TestPdfRenderingExtended:
@@ -738,5 +888,33 @@ class TestNumericOverrides:
             assert result["status"] == "success"
             # Total IS recalculated to sum of items
             assert float(result["expected_values"]["amount_total"]) == 300.00
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_amounts_with_item_total_field(self, tmp_path: Path) -> None:
+        """Schemas using 'item_total' (not 'item_amount_total') get consistent amounts."""
+        fields = [
+            _field("sender_name", "Vendor", ["sender_name"]),
+            _field("invoice_id", "Invoice Number", ["invoice_id"]),
+            _field("total_amount", "Total Amount", ["amount_total"], "number"),
+            _field("item_description", "Description", ["item_description"]),
+            _field("item_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=fields,
+                line_item_overrides=[
+                    {"item_total": 120.50},
+                    {"item_total": 230.00},
+                    {"item_total": 49.50},
+                ],
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            total = float(result["expected_values"]["total_amount"])
+            item_sum = sum(float(item["item_total"]) for item in result["line_items"])
+            assert abs(total - item_sum) < 0.01
+            assert total == 400.00
         finally:
             set_context(AgentContext())
