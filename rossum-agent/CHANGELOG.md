@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.5.2] - 2026-03-17
 
 ### Added
 - `generate_mock_pdf`: Accept numeric overrides (`int`/`float`), per-row `line_item_overrides`, and `consistent_amounts` toggle for mismatch testing [#270](https://github.com/rossumai/rossum-agents/pull/270)
