@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-agent"
-version = "1.5.4"
+version = "1.5.5"
 description = "AI agent toolkit for Rossum: document workflows conversationally, debug pipelines automatically, and enable agentic configuration of intelligent document processing."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -34,7 +34,7 @@ dependencies = [
     "python-dotenv",
     "fpdf2>=2.8.0",
     "rossum-api>=3.12.0",
-    "rossum-mcp>=2.0.0,<3.0.0",
+    "rossum-mcp>=2.0.2,<3.0.0",
 ]
 
 [project.scripts]

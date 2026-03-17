@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.5.5] - 2026-03-17
 
 ### Changed
 - Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/rossumai/rossum-agents/pull/276)
