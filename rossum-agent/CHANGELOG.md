@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+- Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/rossumai/rossum-agents/pull/276)
+
 ### Fixed
 - `generate_mock_pdf`: Improved `_find_item_total_key` to resolve line-item total fields via `rir_field_names` and broader key-name patterns (`item_total`, `*total*`) — fixes amount consistency breaking when the schema uses custom field IDs like `item_total` instead of `item_amount_total` [#275](https://github.com/rossumai/rossum-agents/pull/275)
 
