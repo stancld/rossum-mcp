@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- `generate_mock_pdf`: Accept numeric overrides (`int`/`float`), per-row `line_item_overrides`, and `consistent_amounts` toggle for mismatch testing [#270](https://github.com/rossumai/rossum-agents/pull/270)
+- `execute_python`: Allow `fpdf` (fpdf2) imports for custom PDF generation [#270](https://github.com/rossumai/rossum-agents/pull/270)
+
 ## [1.5.1] - 2026-03-16
 
 ### Added

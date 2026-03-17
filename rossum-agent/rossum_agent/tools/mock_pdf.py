@@ -24,6 +24,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Override values can be str, int, or float — converted to str before use
+OverrideValue = str | int | float
+
 # Document type titles
 _DOCUMENT_TITLES: dict[str, str] = {
     "invoice": "INVOICE",
@@ -464,12 +467,39 @@ def _render_pdf(
     return bytes(output)
 
 
+def _generate_line_items(
+    line_item_fields: list[dict],
+    line_item_count: int,
+    overrides: dict[str, OverrideValue],
+    line_item_overrides: list[dict[str, OverrideValue]] | None,
+) -> list[dict[str, str]]:
+    if not line_item_fields:
+        return []
+    row_count = len(line_item_overrides) if line_item_overrides else line_item_count
+    line_items: list[dict[str, str]] = []
+    for i in range(row_count):
+        row: dict[str, str] = {}
+        row_overrides = line_item_overrides[i] if line_item_overrides and i < len(line_item_overrides) else {}
+        for f in line_item_fields:
+            fid = f.get("id", "")
+            if fid in row_overrides:
+                row[fid] = str(row_overrides[fid])
+            elif fid in overrides:
+                row[fid] = str(overrides[fid])
+            else:
+                row[fid] = _generate_value_for_field(f)
+        line_items.append(row)
+    return line_items
+
+
 @beta_tool
 def generate_mock_pdf(
     fields: list[dict],
     document_type: str = "invoice",
     line_item_count: int = 3,
-    overrides: dict[str, str] | None = None,
+    overrides: dict[str, OverrideValue] | None = None,
+    line_item_overrides: list[dict[str, OverrideValue]] | None = None,
+    consistent_amounts: bool = True,
     filename: str | None = None,
 ) -> str:
     """Generate a mock PDF document with realistic values matching schema fields.
@@ -480,8 +510,13 @@ def generate_mock_pdf(
         fields: Schema field descriptors: [{id, label, type, rir_field_names?, options?}].
             Extract from schema content (sections → datapoints, multivalues → tuples).
         document_type: Document type: invoice, purchase_order, receipt, delivery_note, credit_note.
-        line_item_count: Number of line item rows to generate (default 3).
-        overrides: Optional {field_id: value} to force specific field values.
+        line_item_count: Number of line item rows to generate (default 3). Ignored when line_item_overrides is provided.
+        overrides: Optional {field_id: value} to force specific field values. Accepts str, int, or float.
+            Applied to header fields and as fallback for line item fields not covered by line_item_overrides.
+        line_item_overrides: Optional list of per-row override dicts. Length determines row count.
+            Each dict maps field_id to value for that row. Missing fields use overrides fallback or random values.
+        consistent_amounts: When True (default), recalculate header amounts to match line item sums.
+            Set to False to keep overridden amounts as-is — useful for testing mismatch/validation rules.
         filename: Output filename (auto-generated if omitted).
 
     Returns:
@@ -510,25 +545,16 @@ def generate_mock_pdf(
         for f in header_fields:
             fid = f.get("id", "")
             if fid in overrides:
-                header_values[fid] = overrides[fid]
+                header_values[fid] = str(overrides[fid])
             else:
                 header_values[fid] = _generate_value_for_field(f)
 
         # Generate line items (only when line item fields exist)
-        line_items: list[dict[str, str]] = []
-        if line_item_fields:
-            for _ in range(line_item_count):
-                row: dict[str, str] = {}
-                for f in line_item_fields:
-                    fid = f.get("id", "")
-                    if fid in overrides:
-                        row[fid] = overrides[fid]
-                    else:
-                        row[fid] = _generate_value_for_field(f)
-                line_items.append(row)
+        line_items = _generate_line_items(line_item_fields, line_item_count, overrides, line_item_overrides)
 
-        # Make amounts consistent
-        _make_amounts_consistent(header_values, line_items, header_fields)
+        # Make amounts consistent (unless explicitly disabled for mismatch testing)
+        if consistent_amounts:
+            _make_amounts_consistent(header_values, line_items, header_fields)
 
         # Render PDF
         pdf_bytes = _render_pdf(document_type, header_values, line_items, header_fields, line_item_fields)

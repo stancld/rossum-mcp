@@ -1137,8 +1137,10 @@ Use for end-to-end extraction testing: generate PDF → upload → verify extrac
 
 - ``fields`` (list[dict], required): Schema field descriptors: ``[{id, label, type, rir_field_names?, options?}]``. Extract from schema content (sections → datapoints, multivalues → tuples).
 - ``document_type`` (string, optional): ``invoice``, ``purchase_order``, ``receipt``, ``delivery_note``, ``credit_note``. Default: ``invoice``.
-- ``line_item_count`` (int, optional): Number of line item rows to generate. Default: 3.
-- ``overrides`` (dict[str, str], optional): Force specific field values: ``{field_id: value}``.
+- ``line_item_count`` (int, optional): Number of line item rows to generate. Default: 3. Ignored when ``line_item_overrides`` is provided.
+- ``overrides`` (dict[str, str | int | float], optional): Force specific field values: ``{field_id: value}``. Applied to header fields and as fallback for line items.
+- ``line_item_overrides`` (list[dict[str, str | int | float]], optional): Per-row override dicts. Length determines row count. Missing fields use ``overrides`` fallback or random values.
+- ``consistent_amounts`` (bool, optional): Recalculate header amounts to match line item sums. Default: ``True``. Set to ``False`` for mismatch testing.
 - ``filename`` (string, optional): Output filename (auto-generated if omitted).
 
 **Returns:**
