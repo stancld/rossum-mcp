@@ -8,7 +8,7 @@
 execute_python(code="result = 1 + 2", operation_name="quick check")
 ```
 
-Use short snippets only. Stdlib imports allowed: collections, csv, datetime, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. Return the final value via `result` or the last expression.
+Use short snippets only. Stdlib imports allowed: collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap, time. Return the final value via `result` or the last expression.
 
 ## Built-In Helpers
 
@@ -29,7 +29,7 @@ Copilot helpers (e.g. `suggest_formula_field`, `suggest_rule`) are also availabl
 
 | Rule | Detail |
 |------|--------|
-| Imports | Stdlib imports allowed (collections, csv, datetime, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap); all other imports are blocked |
+| Imports | Stdlib imports allowed (collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap, time); all other imports are blocked |
 | No dunder access | Names or attributes starting with `__` are blocked |
 | Short snippets only | Max length is 12000 characters |
 | Large outputs go to files | If the useful result is a large dict/list/string, call `write_file(...)` and return the write result instead of inlining the payload |
