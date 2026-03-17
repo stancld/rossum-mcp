@@ -128,10 +128,16 @@ Workflow: ``get(entity="schema", entity_id=schema_id)`` → extract fields → `
      - ``invoice``, ``purchase_order``, ``receipt``, ``delivery_note``, ``credit_note``
    * - ``line_item_count``
      - ``int``
-     - Number of line item rows (default 3)
+     - Number of line item rows (default 3). Ignored when ``line_item_overrides`` is provided.
    * - ``overrides``
-     - ``dict[str, str]``
-     - Force specific field values: ``{field_id: value}``
+     - ``dict[str, str | int | float]``
+     - Force specific field values: ``{field_id: value}``. Applied to header fields and as fallback for line items.
+   * - ``line_item_overrides``
+     - ``list[dict[str, str | int | float]]``
+     - Per-row override dicts. Length determines row count. Missing fields use ``overrides`` fallback or random values.
+   * - ``consistent_amounts``
+     - ``bool``
+     - Recalculate header amounts to match line item sums (default ``True``). Set to ``False`` for mismatch testing.
    * - ``filename``
      - ``str``
      - Output filename (auto-generated if omitted)

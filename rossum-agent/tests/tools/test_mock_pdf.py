@@ -599,3 +599,144 @@ class TestPdfRenderingExtended:
         header_fields = [_field("invoice_id", "Invoice")]
         pdf_bytes = _render_pdf("invoice", header_values, [], header_fields, [])
         assert pdf_bytes[:5] == b"%PDF-"
+
+
+class TestNumericOverrides:
+    """Tests for numeric override values and per-row line item overrides."""
+
+    def test_numeric_overrides_in_header(self, tmp_path: Path) -> None:
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"amount_total": 1500.50, "amount_total_base": 1240.08, "amount_total_tax": 260.42},
+                consistent_amounts=False,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            assert result["expected_values"]["amount_total"] == "1500.5"
+            assert result["expected_values"]["amount_total_base"] == "1240.08"
+            assert result["expected_values"]["amount_total_tax"] == "260.42"
+        finally:
+            set_context(AgentContext())
+
+    def test_int_overrides(self, tmp_path: Path) -> None:
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"item_quantity": 10},
+                line_item_count=2,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                assert item["item_quantity"] == "10"
+        finally:
+            set_context(AgentContext())
+
+    def test_line_item_overrides_per_row(self, tmp_path: Path) -> None:
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                line_item_overrides=[
+                    {"item_quantity": 5, "item_amount_total": 500.00},
+                    {"item_quantity": 3, "item_amount_total": 150.00},
+                    {"item_quantity": 1, "item_amount_total": 50.00},
+                ],
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            items = result["line_items"]
+            assert len(items) == 3
+            assert items[0]["item_quantity"] == "5"
+            assert items[0]["item_amount_total"] == "500.0"
+            assert items[1]["item_quantity"] == "3"
+            assert items[1]["item_amount_total"] == "150.0"
+            assert items[2]["item_quantity"] == "1"
+            assert items[2]["item_amount_total"] == "50.0"
+        finally:
+            set_context(AgentContext())
+
+    def test_line_item_overrides_determines_row_count(self, tmp_path: Path) -> None:
+        """line_item_overrides length overrides line_item_count."""
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                line_item_count=10,
+                line_item_overrides=[
+                    {"item_quantity": 1},
+                    {"item_quantity": 2},
+                ],
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            assert len(result["line_items"]) == 2
+        finally:
+            set_context(AgentContext())
+
+    def test_line_item_overrides_with_global_fallback(self, tmp_path: Path) -> None:
+        """Per-row overrides take priority over global overrides."""
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"item_description": "Default Item"},
+                line_item_overrides=[
+                    {"item_description": "Special Item", "item_quantity": 99},
+                    {},
+                ],
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            items = result["line_items"]
+            assert items[0]["item_description"] == "Special Item"
+            assert items[0]["item_quantity"] == "99"
+            # Second row falls back to global override for description
+            assert items[1]["item_description"] == "Default Item"
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_amounts_false_preserves_mismatch(self, tmp_path: Path) -> None:
+        """With consistent_amounts=False, overridden totals are NOT recalculated."""
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"amount_total": 9999.99},
+                line_item_overrides=[
+                    {"item_amount_total": 100.00},
+                    {"item_amount_total": 200.00},
+                ],
+                consistent_amounts=False,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            # Total is the overridden value, NOT the sum of items (300)
+            assert result["expected_values"]["amount_total"] == "9999.99"
+            assert float(result["line_items"][0]["item_amount_total"]) == 100.00
+            assert float(result["line_items"][1]["item_amount_total"]) == 200.00
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_amounts_true_recalculates(self, tmp_path: Path) -> None:
+        """With consistent_amounts=True (default), totals are recalculated from items."""
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"amount_total": 9999.99},
+                line_item_overrides=[
+                    {"item_amount_total": 100.00},
+                    {"item_amount_total": 200.00},
+                ],
+                consistent_amounts=True,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            # Total IS recalculated to sum of items
+            assert float(result["expected_values"]["amount_total"]) == 300.00
+        finally:
+            set_context(AgentContext())

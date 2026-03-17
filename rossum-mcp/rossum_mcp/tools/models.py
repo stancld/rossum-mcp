@@ -3,39 +3,44 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Literal, TypedDict, get_args
+from enum import StrEnum
+from typing import Literal, TypedDict
 
-AutomationLevel = Literal["never", "always", "confident"]
 
-QueueLocale = Literal[
-    "auto",
-    "en_US",
-    "en_GB",
-    "de_DE",
-    "de_AT",
-    "de_CH",
-    "fr_FR",
-    "fr_BE",
-    "fr_CH",
-    "cs_CZ",
-    "sk_SK",
-    "es_ES",
-    "it_IT",
-    "pt_PT",
-    "pt_BR",
-    "nl_NL",
-    "nl_BE",
-    "pl_PL",
-    "hu_HU",
-    "ro_RO",
-    "ja_JP",
-    "zh_CN",
-    "ko_KR",
-    "da_DK",
-    "fi_FI",
-    "sv_SE",
-    "nb_NO",
-]
+class AutomationLevel(StrEnum):
+    NEVER = "never"
+    ALWAYS = "always"
+    CONFIDENT = "confident"
+
+
+class QueueLocale(StrEnum):
+    AUTO = "auto"
+    EN_US = "en_US"
+    EN_GB = "en_GB"
+    DE_DE = "de_DE"
+    DE_AT = "de_AT"
+    DE_CH = "de_CH"
+    FR_FR = "fr_FR"
+    FR_BE = "fr_BE"
+    FR_CH = "fr_CH"
+    CS_CZ = "cs_CZ"
+    SK_SK = "sk_SK"
+    ES_ES = "es_ES"
+    IT_IT = "it_IT"
+    PT_PT = "pt_PT"
+    PT_BR = "pt_BR"
+    NL_NL = "nl_NL"
+    NL_BE = "nl_BE"
+    PL_PL = "pl_PL"
+    HU_HU = "hu_HU"
+    RO_RO = "ro_RO"
+    JA_JP = "ja_JP"
+    ZH_CN = "zh_CN"
+    KO_KR = "ko_KR"
+    DA_DK = "da_DK"
+    FI_FI = "fi_FI"
+    SV_SE = "sv_SE"
+    NB_NO = "nb_NO"
 
 
 class EmailRecipient(TypedDict):
@@ -43,8 +48,12 @@ class EmailRecipient(TypedDict):
     value: str
 
 
-DatapointType = Literal["string", "number", "date", "enum", "button"]
-NodeCategory = Literal["datapoint", "multivalue", "tuple"]
+class DatapointType(StrEnum):
+    STRING = "string"
+    NUMBER = "number"
+    DATE = "date"
+    ENUM = "enum"
+    BUTTON = "button"
 
 
 @dataclass
@@ -140,46 +149,61 @@ class SchemaMultivalue:
 SchemaNode = SchemaDatapoint | SchemaMultivalue | SchemaTuple
 
 
-QueueTemplateName = Literal[
-    "EU Demo Template",
-    "AP&R EU Demo Template",
-    "Tax Invoice EU Demo Template",
-    "US Demo Template",
-    "AP&R US Demo Template",
-    "Tax Invoice US Demo Template",
-    "UK Demo Template",
-    "AP&R UK Demo Template",
-    "Tax Invoice UK Demo Template",
-    "CZ Demo Template",
-    "Empty Organization Template",
-    "Delivery Notes Demo Template",
-    "Delivery Note Demo Template",
-    "Chinese Invoices (Fapiao) Demo Template",
-    "Tax Invoice CN Demo Template",
-    "Certificates of Analysis Demo Template",
-    "Purchase Order Demo Template",
-    "Credit Note Demo Template",
-    "Debit Note Demo Template",
-    "Proforma Invoice Demo Template",
-]
-QUEUE_TEMPLATE_NAMES = get_args(QueueTemplateName)
+class QueueTemplateName(StrEnum):
+    EU_DEMO = "EU Demo Template"
+    APR_EU_DEMO = "AP&R EU Demo Template"
+    TAX_INVOICE_EU_DEMO = "Tax Invoice EU Demo Template"
+    US_DEMO = "US Demo Template"
+    APR_US_DEMO = "AP&R US Demo Template"
+    TAX_INVOICE_US_DEMO = "Tax Invoice US Demo Template"
+    UK_DEMO = "UK Demo Template"
+    APR_UK_DEMO = "AP&R UK Demo Template"
+    TAX_INVOICE_UK_DEMO = "Tax Invoice UK Demo Template"
+    CZ_DEMO = "CZ Demo Template"
+    EMPTY_ORGANIZATION = "Empty Organization Template"
+    DELIVERY_NOTES_DEMO = "Delivery Notes Demo Template"
+    DELIVERY_NOTE_DEMO = "Delivery Note Demo Template"
+    CHINESE_INVOICES_FAPIAO_DEMO = "Chinese Invoices (Fapiao) Demo Template"
+    TAX_INVOICE_CN_DEMO = "Tax Invoice CN Demo Template"
+    CERTIFICATES_OF_ANALYSIS_DEMO = "Certificates of Analysis Demo Template"
+    PURCHASE_ORDER_DEMO = "Purchase Order Demo Template"
+    CREDIT_NOTE_DEMO = "Credit Note Demo Template"
+    DEBIT_NOTE_DEMO = "Debit Note Demo Template"
+    PROFORMA_INVOICE_DEMO = "Proforma Invoice Demo Template"
 
-EmailTemplateType = Literal["rejection", "rejection_default", "email_with_no_processable_attachments", "custom"]
 
-HookSideload = Literal[
-    "queues",
-    "modifiers",
-    "schemas",
-    "emails",
-    "related_emails",
-    "relations",
-    "child_relation",
-    "notes",
-    "suggested_edits",
-    "assignees",
-    "pages",
-    "labels",
-    "automation_blockers",
-]
+QUEUE_TEMPLATE_NAMES = tuple(QueueTemplateName)
 
-type EngineType = Literal["extractor", "splitter"]
+
+class EmailTemplateType(StrEnum):
+    REJECTION = "rejection"
+    REJECTION_DEFAULT = "rejection_default"
+    EMAIL_WITH_NO_PROCESSABLE_ATTACHMENTS = "email_with_no_processable_attachments"
+    CUSTOM = "custom"
+
+
+class HookSideload(StrEnum):
+    QUEUES = "queues"
+    MODIFIERS = "modifiers"
+    SCHEMAS = "schemas"
+    EMAILS = "emails"
+    RELATED_EMAILS = "related_emails"
+    RELATIONS = "relations"
+    CHILD_RELATION = "child_relation"
+    NOTES = "notes"
+    SUGGESTED_EDITS = "suggested_edits"
+    ASSIGNEES = "assignees"
+    PAGES = "pages"
+    LABELS = "labels"
+    AUTOMATION_BLOCKERS = "automation_blockers"
+
+
+class EngineType(StrEnum):
+    EXTRACTOR = "extractor"
+    SPLITTER = "splitter"
+
+
+class LogLevel(StrEnum):
+    INFO = "INFO"
+    ERROR = "ERROR"
+    WARNING = "WARNING"

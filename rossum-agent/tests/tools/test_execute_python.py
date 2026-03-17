@@ -266,5 +266,12 @@ class TestExecPython:
         assert parsed["status"] == "success"
         assert parsed["result"] == "hello"
 
+    def test_allows_import_fpdf(self) -> None:
+        result = execute_python(code="from fpdf import FPDF\npdf = FPDF()\npdf.add_page()\nresult = pdf.pages_count")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == 1
+
     def test_execute_python_alias_matches_execute_python(self) -> None:
         assert json.loads(execute_python(code="1 + 2"))["result"] == 3

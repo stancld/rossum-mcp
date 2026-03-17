@@ -2,14 +2,14 @@
 
 <div align="center">
 
-**MCP server for AI-powered Rossum document processing. Fully typed tools with Pydantic models, Literal unions, and unified APIs — built for agents.**
+**MCP server for AI-powered Rossum document processing. Fully typed tools with Pydantic models, StrEnum parameters, and unified APIs — built for agents.**
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/pypi/pyversions/rossum-mcp.svg)](https://pypi.org/project/rossum-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-agents)
-[![Fully Typed](https://img.shields.io/badge/Fully_Typed-Pydantic_%2B_Literals-blue.svg)](#available-tools)
+[![Fully Typed](https://img.shields.io/badge/Fully_Typed-Pydantic_%2B_Enums-blue.svg)](#available-tools)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -89,7 +89,7 @@ To change the mode, restart the server with a different `ROSSUM_MCP_MODE` enviro
 
 ## Available Tools
 
-A compact, fully-typed tool surface — Pydantic models, `Literal` unions, and consolidated APIs built for agents:
+A compact, fully-typed tool surface — Pydantic models, `StrEnum` parameters, and consolidated APIs built for agents:
 
 | Category | Description |
 |----------|-------------|

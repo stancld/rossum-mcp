@@ -19,7 +19,7 @@ from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.create.rules import _create_rule
 from rossum_mcp.tools.create.users import _create_user
 from rossum_mcp.tools.create.workspaces import _create_workspace
-from rossum_mcp.tools.models import (  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+from rossum_mcp.tools.models import (
     EmailRecipient,
     EmailTemplateType,
     EngineType,
@@ -205,7 +205,7 @@ def register_create_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
         queue: int,
         subject: str,
         message: str,
-        type: EmailTemplateType = "custom",
+        type: EmailTemplateType = EmailTemplateType.CUSTOM,
         automate: bool = False,
         to: list[EmailRecipient] | None = None,
         cc: list[EmailRecipient] | None = None,

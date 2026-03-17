@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Literal, TypedDict
+from typing import Any, TypedDict
 
 from rossum_mcp.tools.models import (  # noqa: TC001 - needed at runtime for FastMCP TypedDict resolution
     AutomationLevel,
+    DatapointType,
     QueueLocale,
 )
-
-DatapointType = Literal["string", "number", "date", "enum", "button"]
 
 
 @dataclass

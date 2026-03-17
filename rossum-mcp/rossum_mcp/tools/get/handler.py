@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Literal, get_args
+from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from fastmcp.exceptions import ToolError
 from rossum_api.models.engine import EngineField
@@ -23,22 +24,22 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-EntityType = Literal[
-    "queue",
-    "schema",
-    "hook",
-    "engine",
-    "rule",
-    "user",
-    "workspace",
-    "email_template",
-    "organization_group",
-    "annotation",
-    "relation",
-    "document_relation",
-    "organization_limit",
-    "hook_secrets_keys",
-]
+
+class EntityType(StrEnum):
+    QUEUE = "queue"
+    SCHEMA = "schema"
+    HOOK = "hook"
+    ENGINE = "engine"
+    RULE = "rule"
+    USER = "user"
+    WORKSPACE = "workspace"
+    EMAIL_TEMPLATE = "email_template"
+    ORGANIZATION_GROUP = "organization_group"
+    ANNOTATION = "annotation"
+    RELATION = "relation"
+    DOCUMENT_RELATION = "document_relation"
+    ORGANIZATION_LIMIT = "organization_limit"
+    HOOK_SECRETS_KEYS = "hook_secrets_keys"
 
 
 def _serialize(obj: object) -> object:
@@ -84,7 +85,7 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
     registry = build_get_registry(client)
 
     # Fail fast at startup if EntityType drifts from the registry
-    for _entity in get_args(EntityType):
+    for _entity in EntityType:
         if _entity not in registry or registry[_entity].retrieve_fn is None:
             raise RuntimeError(
                 f"EntityType member '{_entity}' is missing from registry or has no retrieve_fn — "

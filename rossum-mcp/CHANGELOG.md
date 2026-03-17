@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+- Replaced `Literal` type aliases with `StrEnum` classes for all tool parameters — `AutomationLevel`, `QueueLocale`, `DatapointType`, `QueueTemplateName`, `EmailTemplateType`, `HookSideload`, `EngineType`, `DeleteEntityType`, `EntityType`, `PatchOperation`, and search-model types (`LogLevel`). Enums provide named members, iteration support, and consistent JSON schema representation [#269](https://github.com/stancld/rossum-agents/pull/269)
+- Removed duplicate `DatapointType` Literal from `update/models.py` — now imported from `tools/models.py` [#269](https://github.com/stancld/rossum-agents/pull/269)
+
 ## [2.0.1] - 2026-03-16
 
 ### Fixed

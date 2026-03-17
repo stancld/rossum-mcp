@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import TYPE_CHECKING, Annotated, Literal
+from typing import TYPE_CHECKING, Annotated
 
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.annotation import Annotation
@@ -18,7 +18,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES
+from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, LogLevel
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:
@@ -102,7 +102,7 @@ async def _list_hook_logs(
     queue_id: int | None = None,
     annotation_id: int | None = None,
     email_id: int | None = None,
-    log_level: list[Literal["INFO", "ERROR", "WARNING"]] | Literal["INFO", "ERROR", "WARNING"] | None = None,
+    log_level: list[LogLevel] | LogLevel | None = None,
     status: str | None = None,
     status_code: int | None = None,
     request_id: str | None = None,
@@ -169,7 +169,7 @@ async def _list_hook_templates(client: AsyncRossumAPIClient) -> list[HookTemplat
 async def _list_engines(
     client: AsyncRossumAPIClient,
     id: int | None = None,
-    engine_type: Literal["extractor", "splitter"] | None = None,
+    engine_type: EngineType | None = None,
     agenda_id: str | None = None,
 ) -> list[Engine]:
     logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")

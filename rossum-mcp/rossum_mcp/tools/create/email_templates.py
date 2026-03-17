@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, Any
 from rossum_api.models.email_template import EmailTemplate
 
 from rossum_mcp.tools.base import build_resource_url
+from rossum_mcp.tools.models import EmailTemplateType
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
-    from rossum_mcp.tools.models import EmailRecipient, EmailTemplateType
+    from rossum_mcp.tools.models import EmailRecipient
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ async def _create_email_template(
     queue: int,
     subject: str,
     message: str,
-    type: EmailTemplateType = "custom",
+    type: EmailTemplateType = EmailTemplateType.CUSTOM,
     automate: bool = False,
     to: list[EmailRecipient] | None = None,
     cc: list[EmailRecipient] | None = None,
