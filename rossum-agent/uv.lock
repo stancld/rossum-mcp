@@ -2414,7 +2414,7 @@ requires-dist = [
     { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
-    { name = "rossum-api", specifier = ">=3.11.2" },
+    { name = "rossum-api", specifier = ">=3.12.0" },
     { name = "rossum-mcp", specifier = ">=2.0.0,<3.0.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'slack'", specifier = ">=3.27.0" },
@@ -2447,7 +2447,7 @@ dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "rossum-api"
-version = "3.11.2"
+version = "3.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -2455,23 +2455,23 @@ dependencies = [
     { name = "httpx" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/4d/28102eaacf3326bb67cb76ce83c2c70a72a90618577c9bbbe74525eac600/rossum_api-3.11.2.tar.gz", hash = "sha256:b158f4620ee24b26aec12232c8e70ab441997d586c33348c1df2bff0d8748175", size = 160333, upload-time = "2026-03-16T14:02:44.981Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/25/b01ff581340b7c87a0e2647bd1453eb32adf821335e789ebb10d1052833e/rossum_api-3.12.0.tar.gz", hash = "sha256:bd579b6acee02fef3b68541caad90cc8b465a4bbbdf8946198d7b5875b7aed40", size = 161138, upload-time = "2026-03-17T14:50:48.192Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8c/ac/ac0a9a8b5479e0958431ca920551aab7731d16405f174e057d6e5b1eaac7/rossum_api-3.11.2-py3-none-any.whl", hash = "sha256:2fe159a2383a3b5fd9eb1aafb1abcfeab287dffc43c22a4cf986ee8d1b622fe7", size = 77478, upload-time = "2026-03-16T14:02:43.588Z" },
+    { url = "https://files.pythonhosted.org/packages/07/94/8e315917a75a897dd1954a2e3242fcc022ea2e747bdb224f813cc8777d08/rossum_api-3.12.0-py3-none-any.whl", hash = "sha256:f49ba4cad439d32b13bc157c5867ef1579354f91937fd3fdd24b77b4cd758323", size = 77769, upload-time = "2026-03-17T14:50:47.143Z" },
 ]
 
 [[package]]
 name = "rossum-mcp"
-version = "2.0.1"
+version = "2.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },
     { name = "rossum-api" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/14/05/d3f5b04b99ff2541db1addf7816fd66bb9fc6d7017c44f64fb551c01eb1e/rossum_mcp-2.0.1.tar.gz", hash = "sha256:e776ce8da450907d5054c4ed65eca1e803a716a4544c9075e4e00ffc8669b13f", size = 41976, upload-time = "2026-03-16T14:37:47.357Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/59/f34cc8c560db1de28fdefe0f54b4a68b2860771a2c25f7cd7ea9d51f672e/rossum_mcp-2.0.2.tar.gz", hash = "sha256:3c84b20b0ce868cd3d84bf1c86276f7624e5ea5a366a63e71a17ec2886b588ba", size = 42621, upload-time = "2026-03-17T15:05:40.627Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/ad/e5adfb79b2a2c8efbcc99dbd90ebf120f7c5ff1598374a7b6110757140f3/rossum_mcp-2.0.1-py3-none-any.whl", hash = "sha256:46a718628c71e0af9774e0108e5a8bfb24cf523d5679f65141a99e5eabc3eafc", size = 55119, upload-time = "2026-03-16T14:37:46.305Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/68/f5c4ae2183ac717fc013dd21f11719f19999ea8e4801e06a013243f3674d/rossum_mcp-2.0.2-py3-none-any.whl", hash = "sha256:6fac42ef52639aa65a8714bd31add7ab400b8eda7c1056fad430113490c39f6b", size = 55639, upload-time = "2026-03-17T15:05:39.302Z" },
 ]
 
 [[package]]
