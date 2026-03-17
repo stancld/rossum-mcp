@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.5.4] - 2026-03-17
+
 ### Fixed
 - `get_chat`: Normalize multimodal content blocks (Anthropic image `source` format → flat `ImageContent`) in `task_step` and regular user messages — fixes incorrect serialization when chat history contains images [#273](https://github.com/rossumai/rossum-agents/pull/273)
 
