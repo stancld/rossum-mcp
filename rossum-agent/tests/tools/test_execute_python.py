@@ -273,5 +273,12 @@ class TestExecPython:
         assert parsed["status"] == "success"
         assert parsed["result"] == 1
 
+    def test_allows_import_time(self) -> None:
+        result = execute_python(code="import time\nresult = isinstance(time.time(), float)")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] is True
+
     def test_execute_python_alias_matches_execute_python(self) -> None:
         assert json.loads(execute_python(code="1 + 2"))["result"] == 3

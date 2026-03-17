@@ -1164,7 +1164,7 @@ Run constrained Python snippets in a sandboxed environment. Load the relevant sk
 
 **Parameters:**
 
-- ``code`` (string, required): Python code to execute. Stdlib imports allowed: collections, csv, datetime, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. Assign the final value to ``result`` or leave it as the last expression.
+- ``code`` (string, required): Python code to execute. Stdlib imports allowed: collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap, time. Assign the final value to ``result`` or leave it as the last expression.
 - For large dict/list/string outputs, prefer calling ``write_file(...)`` inside the snippet and return the write result or a short summary instead of inlining the payload.
 - ``operation_name`` (string, optional): Short label for the intent of the execution.
 
