@@ -227,6 +227,72 @@ class TestChatServiceGetChat:
         assert result is not None
         assert len(result.messages) == 2
 
+    def test_get_chat_handles_multimodal_task_step(self):
+        """Test get_chat normalizes Anthropic image blocks in task_step messages."""
+        mock_storage = MagicMock()
+        mock_storage.load_chat.return_value = ChatData(
+            messages=[
+                {
+                    "type": "task_step",
+                    "task": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": "image/png", "data": "iVBOR"},
+                        },
+                        {"type": "text", "text": "What is this?"},
+                    ],
+                },
+            ],
+            output_dir=None,
+            metadata=ChatMetadata(),
+        )
+        mock_storage.list_files.return_value = []
+
+        service = ChatService(storage=mock_storage)
+        result = service.get_chat(user_id="user_123", chat_id="chat_20241209143052_abc123")
+
+        assert result is not None
+        assert len(result.messages) == 1
+        msg = result.messages[0]
+        assert msg.role == "user"
+        assert isinstance(msg.content, list)
+        assert len(msg.content) == 2
+        assert msg.content[0].type == "image"
+        assert msg.content[0].media_type == "image/png"
+        assert msg.content[0].data == "iVBOR"
+        assert msg.content[1].type == "text"
+        assert msg.content[1].text == "What is this?"
+
+    def test_get_chat_handles_multimodal_user_message(self):
+        """Test get_chat normalizes Anthropic image blocks in regular user messages."""
+        mock_storage = MagicMock()
+        mock_storage.load_chat.return_value = ChatData(
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": "image/jpeg", "data": "/9j/4A"},
+                        },
+                        {"type": "text", "text": "Describe this"},
+                    ],
+                },
+            ],
+            output_dir=None,
+            metadata=ChatMetadata(),
+        )
+        mock_storage.list_files.return_value = []
+
+        service = ChatService(storage=mock_storage)
+        result = service.get_chat(user_id="user_123", chat_id="chat_20241209143052_abc123")
+
+        assert result is not None
+        msg = result.messages[0]
+        assert isinstance(msg.content, list)
+        assert msg.content[0].type == "image"
+        assert msg.content[0].media_type == "image/jpeg"
+
     def test_get_chat_handles_memory_format(self):
         """Test get_chat handles task_step and memory_step formats from agent memory."""
         mock_storage = MagicMock()
