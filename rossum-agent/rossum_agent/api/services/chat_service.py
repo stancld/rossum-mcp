@@ -37,6 +37,34 @@ def _extract_text(content: object) -> str | None:
     return str(content)
 
 
+def _normalize_content(content: object) -> str | list[dict[str, Any]]:
+    """Normalize message content from storage format to API schema format.
+
+    Converts Anthropic API image blocks (nested ``source``) to the flat
+    ImageContent format expected by the Message model.
+    """
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return str(content) if content is not None else ""
+    normalized: list[dict[str, Any]] = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        source = block.get("source")
+        if block.get("type") == "image" and isinstance(source, dict):
+            normalized.append(
+                {
+                    "type": "image",
+                    "media_type": source.get("media_type", ""),
+                    "data": source.get("data", ""),
+                }
+            )
+        else:
+            normalized.append(block)
+    return normalized or ""
+
+
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
@@ -113,14 +141,20 @@ class ChatService:
             role = msg.get("role")
 
             if msg_type == "task_step":
-                task_content = msg.get("task", "")
+                task_content = _normalize_content(msg.get("task", ""))
                 messages.append(Message(role="user", content=task_content, feedback=msg.get("feedback")))
             elif msg_type == "memory_step":
                 text = msg.get("text")
                 if text:
                     messages.append(Message(role="assistant", content=text, feedback=msg.get("feedback")))
             elif role in ("user", "assistant"):
-                messages.append(Message(role=role, content=msg.get("content", ""), feedback=msg.get("feedback")))
+                messages.append(
+                    Message(
+                        role=role,
+                        content=_normalize_content(msg.get("content", "")),
+                        feedback=msg.get("feedback"),
+                    )
+                )
 
         files_data = self._storage.list_files(chat_id)
         files = [FileInfo(filename=f["filename"], size=f["size"], timestamp=f["timestamp"]) for f in files_data]
