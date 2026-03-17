@@ -36,7 +36,7 @@ Each change object in the `changes` array:
 | `context` | Context field IDs for reasoning (TxScript format, e.g. `field.invoice_id`) |
 | `formula` | TxScript formula code (for formula fields) |
 
-Not supported: multiline fields, default_value, constraints. Use regular `string` type for multiline.
+Not supported: multiline fields, default_value, constraints, disable_prediction. Use regular `string` type for multiline. For fields without AI extraction, set `ui_configuration.type` to `manual` or `data`.
 
 ## UI Configuration
 
