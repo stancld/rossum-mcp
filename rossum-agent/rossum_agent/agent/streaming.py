@@ -33,6 +33,7 @@ from rossum_agent.agent.models import (
     ThinkingBlockData,
     ThinkingStep,
     ToolCall,
+    ToolStartStep,
 )
 from rossum_agent.agent.tool_execution import _parse_json_encoded_strings
 
@@ -53,6 +54,18 @@ _STREAM_END = object()
 
 # How often to log streaming progress (seconds)
 _STREAM_PROGRESS_LOG_INTERVAL = 10.0
+
+
+@dataclasses.dataclass
+class ToolUseStartSignal:
+    """Signal that a new tool use block has started in the stream.
+
+    Returned by process_stream_event when it sees a ToolUseBlock start,
+    so the streaming loop can yield an early tool_start event to the UI.
+    """
+
+    name: str
+    id: str
 
 
 @dataclasses.dataclass
@@ -121,6 +134,19 @@ class StreamState:
         self.thinking_finalized = True
         return ThinkingStep(step_number=step_num, thinking=self.thinking_text, is_streaming=False)
 
+    def try_timeout_flush(self, step_num: int) -> TextDeltaStep | None:
+        """Attempt a timeout-based flush of the initial text buffer.
+
+        Returns a TextDeltaStep if the buffer had content and the delay elapsed,
+        otherwise None.
+        """
+        if not self.text_buffer or not self._should_flush_initial_buffer():
+            return None
+        step = self.flush_buffer(step_num, self.get_step_type(step_num))
+        if step is not None:
+            self.initial_buffer_flushed = True
+        return step
+
     def maybe_log_progress(self, step_num: int) -> None:
         """Log streaming progress periodically (every _STREAM_PROGRESS_LOG_INTERVAL seconds)."""
         now = time.monotonic()
@@ -142,11 +168,12 @@ class StreamState:
 
 def process_stream_event(
     event: MessageStreamEvent, pending_tools: dict[int, dict[str, str]], tool_calls: list[ToolCall]
-) -> StreamDelta | None:
+) -> StreamDelta | ToolUseStartSignal | None:
     """Process a single stream event.
 
     Returns:
-        StreamDelta with kind="thinking" or "text", or None if no delta.
+        StreamDelta with kind="thinking" or "text", ToolUseStartSignal when a
+        tool use block starts, or None if no delta.
     """
     if isinstance(event, RawContentBlockStartEvent):
         if isinstance(event.content_block, ToolUseBlock):
@@ -155,6 +182,10 @@ def process_stream_event(
                 "id": event.content_block.id,
                 "json": "",
             }
+            return ToolUseStartSignal(
+                name=event.content_block.name,
+                id=event.content_block.id,
+            )
 
     elif isinstance(event, RawContentBlockDeltaEvent):
         if isinstance(event.delta, ThinkingDelta):
@@ -214,6 +245,42 @@ def handle_text_delta_with_finalization(step_num: int, content: str, state: Stre
     return steps
 
 
+def handle_tool_use_start_signal(step_num: int, signal: ToolUseStartSignal, state: StreamState) -> list[AgentStep]:
+    """Finalize thinking (if needed), flush text buffer, then create early ToolStartStep. Returns 1-3 steps."""
+    steps: list[AgentStep] = []
+    if finalized := state.finalize_thinking(step_num):
+        steps.append(finalized)
+    if state.text_buffer:
+        state.initial_buffer_flushed = True
+        if text_step := state.flush_buffer(step_num, StepType.INTERMEDIATE):
+            steps.append(text_step)
+    steps.append(
+        ToolStartStep(
+            step_number=step_num,
+            tool_calls=[ToolCall(id=signal.id, name=signal.name, arguments={})],
+        )
+    )
+    return steps
+
+
+def dispatch_stream_signal(
+    step_num: int, signal: StreamDelta | ToolUseStartSignal | None, state: StreamState
+) -> list[AgentStep]:
+    """Dispatch a stream signal to the appropriate handler. Returns 0+ steps."""
+    if isinstance(signal, ToolUseStartSignal):
+        return handle_tool_use_start_signal(step_num, signal, state)
+    if not signal:
+        return []
+    if signal.kind == "thinking":
+        state.thinking_text += signal.content
+        state.thinking_deltas += 1
+        state.maybe_log_progress(step_num)
+        return [ThinkingStep(step_number=step_num, thinking=state.thinking_text)]
+    state.text_deltas += 1
+    state.maybe_log_progress(step_num)
+    return handle_text_delta_with_finalization(step_num, signal.content, state)
+
+
 async def process_stream_events(
     step_num: int,
     stream: AsyncIterator[MessageStreamEvent],
@@ -241,12 +308,7 @@ async def process_stream_events(
 
             if not done:
                 # Yield #1: Timeout-based flush of initial text buffer (ensures responsiveness during model pauses)
-                if (
-                    state.text_buffer
-                    and state._should_flush_initial_buffer()
-                    and (step := state.flush_buffer(step_num, state.get_step_type(step_num)))
-                ):
-                    state.initial_buffer_flushed = True
+                if step := state.try_timeout_flush(step_num):
                     yield step
                 continue
 
@@ -260,26 +322,13 @@ async def process_stream_events(
                 break
 
             event: MessageStreamEvent = item  # type: ignore[assignment]  # narrowed after _STREAM_END sentinel check
-            delta = process_stream_event(event, state.pending_tools, state.tool_calls)
-            if not delta:
-                continue
+            signal = process_stream_event(event, state.pending_tools, state.tool_calls)
 
-            if delta.kind == "thinking":
-                state.thinking_text += delta.content
-                state.thinking_deltas += 1
-                state.maybe_log_progress(step_num)
-                # Yield #3: Streaming thinking tokens (extended thinking / chain-of-thought)
-                yield ThinkingStep(
-                    step_number=step_num,
-                    thinking=state.thinking_text,
-                )
-                continue
-
-            state.text_deltas += 1
-            state.maybe_log_progress(step_num)
+            # Yield #2.5: Early tool_start when model begins generating tool arguments.
+            # Yield #3: Streaming thinking tokens (extended thinking / chain-of-thought)
             # Yield #4a: Finalize thinking before first text delta.
             # Yield #4b: Text delta - immediate flush after initial buffer period or when tool calls detected.
-            for yielded_step in handle_text_delta_with_finalization(step_num, delta.content, state):
+            for yielded_step in dispatch_stream_signal(step_num, signal, state):
                 yield yielded_step
     finally:
         if pending_next is not None and not pending_next.done():

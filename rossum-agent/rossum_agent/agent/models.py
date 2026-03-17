@@ -117,7 +117,7 @@ class ToolStartStep:
 
     step_number: int
     tool_calls: list[ToolCall]
-    tool_progress: tuple[int, int]
+    tool_progress: tuple[int, int] | None = None
     current_tool: str | None = None
     current_tool_call_id: str | None = None
     sub_agent_progress: SubAgentProgress | None = None

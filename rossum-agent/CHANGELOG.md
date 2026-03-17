@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - `generate_mock_pdf`: Accept numeric overrides (`int`/`float`), per-row `line_item_overrides`, and `consistent_amounts` toggle for mismatch testing [#270](https://github.com/rossumai/rossum-agents/pull/270)
 - `execute_python`: Allow `fpdf` (fpdf2) imports for custom PDF generation [#270](https://github.com/rossumai/rossum-agents/pull/270)
+- Early `ToolStartStep` emission — streaming layer yields the tool name and ID as soon as the model begins generating tool arguments, breaking the UI "info void" before tool execution starts [#271](https://github.com/rossumai/rossum-agents/pull/271)
 
 ## [1.5.1] - 2026-03-16
 

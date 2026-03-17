@@ -23,24 +23,27 @@ from rossum_agent.agent.models import (
     TextDeltaStep,
     ThinkingStep,
     ToolResultStep,
+    ToolStartStep,
 )
-from rossum_agent.agent.streaming import StreamState, process_stream_event
+from rossum_agent.agent.streaming import StreamState, ToolUseStartSignal, process_stream_event
 
 
 class TestProcessStreamEvent:
     """Test RossumAgent._process_stream_event method directly."""
 
     def test_content_block_start_event_for_tool_use(self):
-        """Test processing ContentBlockStartEvent for tool use."""
+        """Test processing ContentBlockStartEvent for tool use returns ToolUseStartSignal."""
         pending_tools: dict[int, dict[str, str]] = {}
         tool_calls: list[ToolCall] = []
 
         tool_block = ToolUseBlock(type="tool_use", id="tool_123", name="test_tool", input={})
         event = RawContentBlockStartEvent(type="content_block_start", index=0, content_block=tool_block)
 
-        delta = process_stream_event(event, pending_tools, tool_calls)
+        signal = process_stream_event(event, pending_tools, tool_calls)
 
-        assert delta is None
+        assert isinstance(signal, ToolUseStartSignal)
+        assert signal.name == "test_tool"
+        assert signal.id == "tool_123"
         assert 0 in pending_tools
         assert pending_tools[0]["name"] == "test_tool"
         assert pending_tools[0]["id"] == "tool_123"
@@ -681,6 +684,50 @@ class TestStreamModelResponse:
         assert final_step.tool_calls[0].name == "list_queues"
         assert final_step.tool_calls[0].arguments == {"workspace_url": "https://example.com"}
         assert len(final_step.tool_results) == 1
+
+    @pytest.mark.asyncio
+    async def test_early_tool_start_emitted_on_tool_use_block(self):
+        """Test that an early ToolStartStep is emitted when a ToolUseBlock starts in the stream.
+
+        This breaks the "info void" — the UI learns the tool name immediately,
+        before the model finishes generating tool arguments.
+        """
+        agent = self._create_agent()
+        agent.memory.add_task("Generate report")
+        agent.mcp_connection.call_tool.return_value = {"status": "ok"}
+
+        tool_block = ToolUseBlock(type="tool_use", id="tool_ep1", name="execute_python", input={})
+        start_event = RawContentBlockStartEvent(type="content_block_start", index=0, content_block=tool_block)
+        delta_event = RawContentBlockDeltaEvent(
+            type="content_block_delta",
+            index=0,
+            delta=InputJSONDelta(type="input_json_delta", partial_json='{"code": "print(1)"}'),
+        )
+        stop_event = ContentBlockStopEvent(type="content_block_stop", index=0)
+
+        final_message = self._create_final_message()
+        mock_stream = self._create_mock_stream([start_event, delta_event, stop_event], final_message)
+
+        with patch.object(agent.client.messages, "stream", return_value=mock_stream):
+            steps = []
+            async for step in agent._stream_model_response(1):
+                steps.append(step)
+
+        # Early ToolStartStep should appear before the execution-phase ToolStartStep
+        early_starts = [
+            s
+            for s in steps
+            if isinstance(s, ToolStartStep) and len(s.tool_calls) == 1 and s.tool_calls[0].arguments == {}
+        ]
+        assert len(early_starts) == 1
+        assert early_starts[0].tool_calls[0].name == "execute_python"
+        assert early_starts[0].tool_calls[0].id == "tool_ep1"
+        assert early_starts[0].tool_progress is None
+
+        # Execution-phase ToolStartStep has full arguments
+        exec_starts = [s for s in steps if isinstance(s, ToolStartStep) and any(tc.arguments for tc in s.tool_calls)]
+        assert len(exec_starts) >= 1
+        assert exec_starts[0].tool_calls[0].arguments == {"code": "print(1)"}
 
     @pytest.mark.asyncio
     async def test_malformed_json_tool_input(self):
