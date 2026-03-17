@@ -18,6 +18,25 @@ from rossum_agent.api.models.schemas import (
 )
 from rossum_agent.storage import ChatData, ChatMetadata
 
+
+def _extract_text(content: object) -> str | None:
+    """Extract plain text from a message content field.
+
+    Handles both plain strings and multimodal content block lists
+    (e.g. [{'type': 'image', ...}, {'type': 'text', 'text': '...'}]).
+    """
+    if content is None:
+        return None
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = [
+            str(block["text"]) for block in content if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return " ".join(parts) if parts else ""
+    return str(content)
+
+
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
@@ -75,8 +94,8 @@ class ChatService:
                 chat_id=chat["chat_id"],
                 timestamp=chat["timestamp"],
                 message_count=chat["message_count"],
-                first_message=chat["first_message"],
-                preview=chat.get("preview"),
+                first_message=_extract_text(chat["first_message"]) or "",
+                preview=_extract_text(chat.get("preview")),
                 summary=chat.get("summary"),
             )
             for chat in paginated

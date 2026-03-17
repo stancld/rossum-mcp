@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- `list_chats`: Handle multimodal content blocks (e.g. image + text) in `first_message` and `preview` fields — fixes 500 error when chat history contains image messages [#273](https://github.com/rossumai/rossum-agents/pull/273)
+
 ## [1.5.2] - 2026-03-17
 
 ### Added
