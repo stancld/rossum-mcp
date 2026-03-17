@@ -65,6 +65,7 @@ class PostgresStorage:
         dbname: str | None = None,
         user: str | None = None,
         password: str | None = None,
+        sslmode: str | None = None,
         ttl_days: int = 30,
     ) -> None:
         self.host = host or os.getenv("POSTGRES_HOST", "localhost")
@@ -72,6 +73,7 @@ class PostgresStorage:
         self.dbname = dbname or os.getenv("POSTGRES_DB", "rossum_agent")
         self.user = user or os.getenv("POSTGRES_USER", "rossum")
         self.password = password or os.getenv("POSTGRES_PASSWORD", "rossum")
+        self.sslmode = sslmode or os.getenv("POSTGRES_SSLMODE")
         self.ttl = dt.timedelta(days=ttl_days)
         self._engine: Engine | None = None
 
@@ -86,7 +88,10 @@ class PostgresStorage:
                 port=self.port,
                 database=self.dbname,
             )
-            self._engine = sa.create_engine(url, pool_recycle=1200, connect_args={"connect_timeout": 5})
+            connect_args: dict[str, Any] = {"connect_timeout": 5}
+            if self.sslmode:
+                connect_args["sslmode"] = self.sslmode
+            self._engine = sa.create_engine(url, pool_recycle=1200, connect_args=connect_args)
         return self._engine
 
     def initialize(self) -> None:

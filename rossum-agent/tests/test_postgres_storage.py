@@ -20,6 +20,7 @@ def _make_storage_with_mock_engine():
     storage.dbname = "test_db"
     storage.user = "test_user"
     storage.password = "test_pass"
+    storage.sslmode = None
     storage.ttl = __import__("datetime").timedelta(days=30)
     storage._engine = MagicMock(spec=sa.engine.Engine)
     return storage
@@ -51,6 +52,7 @@ class TestPostgresStorageInit:
             assert storage.dbname == "rossum_agent"
             assert storage.user == "rossum"
             assert storage.password == "rossum"
+            assert storage.sslmode is None
 
     def test_custom_values(self):
         """Test custom constructor values."""
@@ -60,6 +62,7 @@ class TestPostgresStorageInit:
             dbname="mydb",
             user="myuser",
             password="mypass",
+            sslmode="require",
             ttl_days=7,
         )
         assert storage.host == "db.example.com"
@@ -67,6 +70,7 @@ class TestPostgresStorageInit:
         assert storage.dbname == "mydb"
         assert storage.user == "myuser"
         assert storage.password == "mypass"
+        assert storage.sslmode == "require"
         assert storage.ttl.days == 7
 
     def test_env_var_override(self):
@@ -77,6 +81,7 @@ class TestPostgresStorageInit:
             "POSTGRES_DB": "env-db",
             "POSTGRES_USER": "env-user",
             "POSTGRES_PASSWORD": "env-pass",
+            "POSTGRES_SSLMODE": "require",
         }
         with patch.dict("os.environ", env, clear=True):
             storage = PostgresStorage()
@@ -85,6 +90,26 @@ class TestPostgresStorageInit:
             assert storage.dbname == "env-db"
             assert storage.user == "env-user"
             assert storage.password == "env-pass"
+            assert storage.sslmode == "require"
+
+    def test_sslmode_passed_to_engine(self):
+        """Test that sslmode is included in connect_args when set."""
+        storage = PostgresStorage(sslmode="require")
+        with patch("rossum_agent.postgres_storage.sa.create_engine") as mock_create:
+            mock_create.return_value = MagicMock(spec=sa.engine.Engine)
+            _ = storage.engine
+            call_kwargs = mock_create.call_args
+            assert call_kwargs.kwargs["connect_args"]["sslmode"] == "require"
+
+    def test_sslmode_omitted_when_not_set(self):
+        """Test that sslmode is not in connect_args when unset."""
+        with patch.dict("os.environ", {}, clear=True):
+            storage = PostgresStorage()
+        with patch("rossum_agent.postgres_storage.sa.create_engine") as mock_create:
+            mock_create.return_value = MagicMock(spec=sa.engine.Engine)
+            _ = storage.engine
+            call_kwargs = mock_create.call_args
+            assert "sslmode" not in call_kwargs.kwargs["connect_args"]
 
 
 class TestPostgresStorageChat:
