@@ -146,6 +146,30 @@ class TestChatServiceListChats:
         assert response.offset == 2
         assert response.chats[0].chat_id == "chat_2"
 
+    def test_list_chats_with_multimodal_content(self):
+        """Test list_chats handles multimodal content blocks in first_message and preview."""
+        mock_storage = MagicMock()
+        multimodal_content = [
+            {"type": "image", "source": {"type": "base64", "data": "abc123"}},
+            {"type": "text", "text": "What is this?"},
+        ]
+        mock_storage.list_all_chats.return_value = [
+            {
+                "chat_id": "chat_multimodal",
+                "timestamp": 1702132252,
+                "message_count": 3,
+                "first_message": multimodal_content,
+                "preview": multimodal_content,
+            },
+        ]
+
+        service = ChatService(storage=mock_storage)
+        response = service.list_chats(user_id="user_123")
+
+        assert len(response.chats) == 1
+        assert response.chats[0].first_message == "What is this?"
+        assert response.chats[0].preview == "What is this?"
+
 
 class TestChatServiceGetChat:
     """Tests for get_chat method."""
