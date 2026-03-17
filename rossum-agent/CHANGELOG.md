@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+
+### Fixed
+- `list_chats`: Handle multimodal content blocks (e.g. image + text) in `first_message` and `preview` fields — fixes 500 error when chat history contains image messages [#273](https://github.com/rossumai/rossum-agents/pull/273)
+
 ## [1.5.2] - 2026-03-17
 
 ### Added
@@ -193,7 +198,6 @@ All notable changes to this project will be documented in this file.
 - Removed `hook-debugging` skill (hook testing now uses MCP tools directly) [#176](https://github.com/stancld/rossum-agents/pull/176)
 - Removed hook debug sub-agent (`HookDebugSubAgent`, `debug_hook`, `evaluate_python_hook`) [#176](https://github.com/stancld/rossum-agents/pull/176)
 
-
 ## [1.1.3] - 2026-02-12
 
 ### Fixed
@@ -208,12 +212,10 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Fixed output files lost after SSE keepalive by moving chat-bound state (`output_dir`, `last_memory`) off context vars to `_ChatRunState` keyed by chat_id — `asyncio.create_task()` in keepalive copied the context, so mutations inside the task never propagated back to the caller
 
-
 ## [1.1.1] - 2026-02-10
 
 ### Added
 - Added SSE keepalive mechanism to prevent reverse proxies from dropping connections during prolonged agent thinking periods [#174](https://github.com/stancld/rossum-agents/pull/174)
-
 
 ## [1.1.0] - 2026-02-09
 
@@ -252,7 +254,6 @@ All notable changes to this project will be documented in this file.
 - Removed `ddgs` dependency (replaced by pre-scraped KB article search) [#161](https://github.com/stancld/rossum-agents/pull/161)
 - Removed Streamlit UI (`streamlit_app` submodule and all Streamlit dependencies) [#160](https://github.com/stancld/rossum-agents/pull/160)
 - Removed Teleport JWT user isolation (`user_detection.py`, `PyJWT`, `cryptography` dependencies) [#155](https://github.com/stancld/rossum-agents/pull/155)
-
 
 ## [1.0.0] - 2026-02-05
 
@@ -303,7 +304,6 @@ All notable changes to this project will be documented in this file.
 - Fixed `write_file` tool to accept dict/list content by auto-converting to JSON [#139](https://github.com/stancld/rossum-agents/pull/139)
 - Fixed displaying generated files in Streamlit UI [#73](https://github.com/stancld/rossum-agents/pull/73)
 
-
 ## [0.2.7] - 2025-12-16
 
 ### Added
@@ -322,10 +322,8 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Fixed sending generated files to front-end in API responses [#72](https://github.com/stancld/rossum-agents/pull/72)
 
-
 ## [0.2.6] - 2025-12-15
 - Made LLM response to be streamed in API [#70](https://github.com/stancld/rossum-agents/pull/70)
-
 
 ## [0.2.5] - 2025-12-14
 - Added SSRF protection via URL validation for Rossum API endpoints [#69](https://github.com/stancld/rossum-agents/pull/69)
@@ -342,14 +340,11 @@ All notable changes to this project will be documented in this file.
 - Added `preview` field to `/api/v1/chats` response with user request preview [#65](https://github.com/stancld/rossum-agents/pull/65)
 - Separated Streamlit components into `streamlit_app` submodule as a standalone test-bed component [#66](https://github.com/stancld/rossum-agents/pull/66)
 
-
 ## [0.2.3] - 2025-12-10
 - Handle invalid passed sideload to get_annotation gracefully [#60](https://github.com/stancld/rossum-agents/pull/60)
 
-
 ## [0.2.2] - 2025-12-10
 - Pass extra context from URL to the LLM [#59](https://github.com/stancld/rossum-agents/pull/59)
-
 
 ## [0.2.1] - 2025-12-10
 - Added FastAPI-based REST API with SSE streaming for real-time agent responses [#58](https://github.com/stancld/rossum-agents/pull/58)
@@ -358,7 +353,6 @@ All notable changes to this project will be documented in this file.
   - File management endpoints (list, download) for agent-generated artifacts
   - Rate limiting (30/min for chat creation, 10/min for messages)
   - Rossum API credential validation via headers (`X-Rossum-Token`, `X-Rossum-Api-Url`)
-
 
 ## [0.2.0] - 2025-12-09
 
@@ -378,36 +372,28 @@ All notable changes to this project will be documented in this file.
 - New `mcp_tools.py` for async MCP server connection
 - New `agent/` package with `core.py`, `memory.py`, `models.py`
 
-
 ## [0.1.8] - 2025-12-06
 - Updated Rossum MCP to 0.2.0. See more info in the [release notes](https://github.com/stancld/rossum-agents/releases/tag/rossum-mcp-v0.2.0).
-
 
 ## [0.1.7] - 2025-12-04
 - Fixed teleport user detection from JWT [#46](https://github.com/stancld/rossum-agents/pull/46)
 - Made permalinks shareable across users [#47](https://github.com/stancld/rossum-agents/pull/47), [#48](https://github.com/stancld/rossum-agents/pull/48)
 
-
 ## [0.1.6] - 2025-12-03
 - Improved teleport user detection [#45](https://github.com/stancld/rossum-agents/pull/45)
-
 
 ## [0.1.5] - 2025-12-03
 - Added User ID to a Streamlit UI for debugging purposes
 
-
 ## [0.1.4] - 2025-12-03
 - Added conversation permalinks persisted in Redis [#44](https://github.com/stancld/rossum-agents/pull/44)
-
 
 ## [0.1.3] - 2025-12-02
 - Fixed leaking Rossum API credentials across users' session [#41](https://github.com/stancld/rossum-agents/pull/41)
 - Fixed leaking generated files across users' session [#42](https://github.com/stancld/rossum-agents/pull/42)
 
-
 ## [0.1.2] - 2025-12-01
 - Fixed using AWS Bedrock Model ARN [#39](https://github.com/stancld/rossum-agents/pull/39)
-
 
 ## [0.1.1] - 2025-12-01
 - Fixed displaying mermaid diagrams in Streamlit UI [#36](https://github.com/stancld/rossum-agents/pull/36)
