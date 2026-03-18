@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import asdict, is_dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
@@ -19,7 +18,7 @@ from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
 
 from rossum_mcp.tools.base import build_filters, extract_id_from_url, graceful_list
-from rossum_mcp.tools.get.schemas import _extract_schema_tree
+from rossum_mcp.tools.get.schemas import extract_schema_tree
 from rossum_mcp.tools.search.registry import _list_hooks
 
 if TYPE_CHECKING:
@@ -85,11 +84,7 @@ async def _get_schema_tree_structure(
         queue = await client.retrieve_queue(queue_id)
         schema_id = extract_id_from_url(queue.schema)
     schema = await _get_schema(client, schema_id)  # type: ignore[arg-type]
-    content_dicts: list[dict[str, Any]] = [
-        asdict(section) if is_dataclass(section) else dict(section)  # type: ignore[arg-type]
-        for section in schema.content
-    ]
-    return _extract_schema_tree(content_dicts)
+    return extract_schema_tree(schema)
 
 
 async def _fetch_queue_related(

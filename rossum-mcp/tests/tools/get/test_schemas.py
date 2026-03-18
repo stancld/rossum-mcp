@@ -97,8 +97,20 @@ class TestGetSchemaTreeStructure:
                     "label": "Header",
                     "category": "section",
                     "children": [
-                        {"id": "invoice_number", "label": "Invoice Number", "category": "datapoint", "type": "string"},
-                        {"id": "invoice_date", "label": "Invoice Date", "category": "datapoint", "type": "date"},
+                        {
+                            "id": "invoice_number",
+                            "label": "Invoice Number",
+                            "category": "datapoint",
+                            "type": "string",
+                            "constraints": {"required": True},
+                        },
+                        {
+                            "id": "invoice_date",
+                            "label": "Invoice Date",
+                            "category": "datapoint",
+                            "type": "date",
+                            "constraints": {"required": False},
+                        },
                     ],
                 },
                 {
@@ -137,11 +149,73 @@ class TestGetSchemaTreeStructure:
         assert len(result) == 2
         assert result[0]["id"] == "header_section"
         assert result[0]["label"] == "Header"
+        assert result[0]["required"] is False
+        assert result[0]["hidden"] is False
         assert len(result[0]["children"]) == 2
         assert result[0]["children"][0]["id"] == "invoice_number"
         assert result[0]["children"][0]["type"] == "string"
+        assert result[0]["children"][0]["required"] is True
+        assert result[0]["children"][0]["hidden"] is False
+        assert result[0]["children"][1]["required"] is False
+        assert result[0]["children"][1]["hidden"] is False
         assert result[1]["children"][0]["id"] == "line_items"
+        assert result[1]["children"][0]["required"] is False
+        assert result[1]["children"][0]["hidden"] is False
         assert result[1]["children"][0]["children"][0]["id"] == "line_item"
+        assert result[1]["children"][0]["children"][0]["required"] is False
+        assert result[1]["children"][0]["children"][0]["hidden"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_schema_tree_structure_always_includes_boolean_flags(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test that required/hidden are always present as booleans in tree structure."""
+        register_get_tools(mock_mcp, mock_client)
+
+        mock_schema = create_mock_schema(
+            id=50,
+            content=[
+                {
+                    "id": "header_section",
+                    "label": "Header",
+                    "category": "section",
+                    "children": [
+                        {
+                            "id": "invoice_number",
+                            "label": "Invoice Number",
+                            "category": "datapoint",
+                            "type": "string",
+                            "hidden": False,
+                        },
+                        {
+                            "id": "internal_id",
+                            "label": "Internal ID",
+                            "category": "datapoint",
+                            "type": "string",
+                            "hidden": True,
+                        },
+                        {
+                            "id": "no_hidden_key",
+                            "label": "No Hidden Key",
+                            "category": "datapoint",
+                            "type": "string",
+                        },
+                    ],
+                },
+            ],
+        )
+        mock_client.retrieve_schema.return_value = mock_schema
+
+        get_schema_tree_structure = mock_mcp._tools["get_schema_tree_structure"]
+        result = await get_schema_tree_structure(schema_id=50)
+
+        children = result[0]["children"]
+        assert children[0]["required"] is False
+        assert children[0]["hidden"] is False
+        assert children[1]["required"] is False
+        assert children[1]["hidden"] is True
+        assert children[2]["required"] is False
+        assert children[2]["hidden"] is False
 
     @pytest.mark.asyncio
     async def test_get_schema_tree_structure_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:

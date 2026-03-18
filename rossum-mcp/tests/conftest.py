@@ -136,7 +136,7 @@ def create_mock_schema(**kwargs) -> Schema:
         "modified_at": "2025-01-01T00:00:00Z",
     }
     defaults.update(kwargs)
-    return Schema(**defaults)
+    return Schema.from_dict(defaults)
 
 
 def create_mock_queue(**kwargs) -> Queue:

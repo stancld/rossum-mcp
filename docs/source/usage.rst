@@ -1141,6 +1141,7 @@ Use for end-to-end extraction testing: generate PDF → upload → verify extrac
 - ``overrides`` (dict[str, str | int | float], optional): Force specific field values: ``{field_id: value}``. Applied to header fields and as fallback for line items.
 - ``line_item_overrides`` (list[dict[str, str | int | float]], optional): Per-row override dicts. Length determines row count. Missing fields use ``overrides`` fallback or random values.
 - ``consistent_amounts`` (bool, optional): Recalculate header amounts to match line item sums. Default: ``True``. Set to ``False`` for mismatch testing.
+- ``consistent_line_items`` (bool, optional): Derive unset row-level amounts so ``item_amount_total = item_quantity * item_rate`` and ``item_amount_total_base`` or ``item_total_base`` matches the total excluding tax, while preserving explicit overrides. Default: ``True``. Set to ``False`` for row-level mismatch testing.
 - ``filename`` (string, optional): Output filename (auto-generated if omitted).
 
 **Returns:**
