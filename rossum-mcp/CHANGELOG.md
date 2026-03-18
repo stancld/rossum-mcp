@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+- `get_schema_tree_structure` now includes boolean `required` and `hidden` flags on every node; datapoints map `required` from `constraints.required` and default to `false` when unset [#279](https://github.com/rossumai/rossum-agents/pull/279)
+
 ## [2.0.2] - 2026-03-17
 
 ### Changed

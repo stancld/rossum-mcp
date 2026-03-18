@@ -1,25 +1,56 @@
 from __future__ import annotations
 
+from rossum_api.models.schema import Datapoint, Multivalue, Schema, Tuple
+
 from rossum_mcp.tools.get.models import SchemaTreeNode
 
 
-def _build_tree_node(node: dict) -> SchemaTreeNode:
-    category = node.get("category", "")
-    node_id = node.get("id", "")
-    label = node.get("label", "")
-    node_type = node.get("type") if category == "datapoint" else None
-
-    children_data = node.get("children")
-    children: list[SchemaTreeNode] | None = None
-
-    if children_data is not None:
-        if isinstance(children_data, list):
-            children = [_build_tree_node(child) for child in children_data]
-        elif isinstance(children_data, dict):
-            children = [_build_tree_node(children_data)]
-
-    return SchemaTreeNode(id=node_id, label=label, category=category, type=node_type, children=children)
+def _node_from_datapoint(dp: Datapoint) -> SchemaTreeNode:
+    return SchemaTreeNode(
+        id=dp.id,
+        label=dp.label or "",
+        category=dp.category,
+        type=dp.type,
+        required=dp.constraints.get("required", False) if dp.constraints else False,
+        hidden=dp.hidden,
+    )
 
 
-def _extract_schema_tree(content: list[dict]) -> list[dict]:
-    return [_build_tree_node(section).to_dict() for section in content]
+def _node_from_multivalue(mv: Multivalue) -> SchemaTreeNode:
+    return SchemaTreeNode(
+        id=mv.id,
+        label=mv.label or "",
+        category=mv.category,
+        hidden=mv.hidden,
+        children=[_node_from_child(mv.children)] if mv.children is not None else None,
+    )
+
+
+def _node_from_tuple(tpl: Tuple) -> SchemaTreeNode:
+    return SchemaTreeNode(
+        id=tpl.id,
+        label=tpl.label or "",
+        category=tpl.category,
+        hidden=tpl.hidden,
+        children=[_node_from_datapoint(dp) for dp in tpl.children] or None,
+    )
+
+
+def _node_from_child(child: Datapoint | Multivalue | Tuple) -> SchemaTreeNode:
+    if isinstance(child, Datapoint):
+        return _node_from_datapoint(child)
+    if isinstance(child, Multivalue):
+        return _node_from_multivalue(child)
+    return _node_from_tuple(child)
+
+
+def extract_schema_tree(schema: Schema) -> list[dict]:
+    return [
+        SchemaTreeNode(
+            id=section.id,
+            label=section.label or "",
+            category=section.category,
+            children=[_node_from_child(c) for c in section.children] or None,
+        ).to_dict()
+        for section in schema.content
+    ]
