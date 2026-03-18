@@ -207,7 +207,6 @@ class TestToolStartStep:
         assert len(step.tool_calls) == 1
         assert step.tool_progress == (2, 5)
         assert step.current_tool is None
-        assert step.sub_agent_progress is None
         assert step.is_streaming is True
 
     def test_with_current_tool(self):

@@ -20,6 +20,9 @@
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
 
+> [!IMPORTANT]
+> The `send_message_stream` method still parses the legacy SSE protocol (`event:` + `data:` lines). The server now uses the [AI SDK UI Message Stream v1](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol) format (`data: <json>\n\n` with `type` inside JSON). Streaming will be migrated in a future release. REST operations (chat CRUD, files, feedback) work as expected.
+
 ## Quick Start
 
 ```python
@@ -35,18 +38,6 @@ client = RossumAgentClient(
 # Create a chat session
 chat = client.create_chat(mcp_mode="read-only", persona="default")
 print(f"Created chat: {chat.chat_id}")
-
-# Send a message and stream the response
-last_content = ""
-for event in client.send_message_stream(chat.chat_id, "List all queues"):
-    if event.type == "tool_start":
-        print(f"\n[Tool] {event.tool_name}")
-    elif event.type == "final_answer":
-        # Print only new content (events contain cumulative text)
-        print(event.content[len(last_content):], end="", flush=True)
-        last_content = event.content
-    elif event.type == "done":
-        print(f"\n({event.input_tokens} in, {event.output_tokens} out)")
 ```
 
 ## Installation
@@ -107,9 +98,9 @@ async def main():
         # Create chat
         chat = await client.create_chat()
 
-        # Stream response
-        async for event in client.send_message_stream(chat.chat_id, "Hello!"):
-            print(event)
+        # List chats
+        chats = await client.list_chats()
+        print(f"Total chats: {chats.total}")
 
 asyncio.run(main())
 ```
@@ -154,30 +145,18 @@ result = client.delete_chat(chat_id)
 
 #### Messages
 
-```python
-# Send message and stream response (recommended)
-last_content = ""
-for event in client.send_message_stream(chat_id, "Your message"):
-    match event.type:
-        case "tool_start":
-            print(f"\n[Tool] {event.tool_name}")
-        case "final_answer":
-            # Print only new content (events contain cumulative text)
-            print(event.content[len(last_content):], end="", flush=True)
-            last_content = event.content
-        case "done":
-            print()  # Final newline
+> [!NOTE]
+> `send_message_stream` currently parses the legacy SSE protocol. It will be updated to parse the AI SDK UI Message Stream v1 format in a future release.
 
+```python
 # Send message with images
-from rossum_agent_client.models import ImageContent
+from rossum_agent_client.models import ImageContent, MessageRequest
 import base64
 
 with open("invoice.png", "rb") as f:
     image_data = base64.b64encode(f.read()).decode()
 
 images = [ImageContent(media_type="image/png", data=image_data)]
-for event in client.send_message_stream(chat_id, "Extract data from this invoice", images=images):
-    print(event)
 
 # Send message with PDF documents
 from rossum_agent_client.models import DocumentContent
@@ -186,8 +165,6 @@ with open("invoice.pdf", "rb") as f:
     pdf_data = base64.b64encode(f.read()).decode()
 
 documents = [DocumentContent(media_type="application/pdf", data=pdf_data, filename="invoice.pdf")]
-for event in client.send_message_stream(chat_id, "Process this document", documents=documents):
-    print(event)
 ```
 
 #### Files
@@ -200,25 +177,18 @@ files = client.list_files(chat_id)
 content = client.download_file(chat_id, "report.csv")
 ```
 
-## SSE Event Types
+## Streaming Protocol
 
-When streaming messages, you'll receive these event types:
+The message endpoint (`POST /api/v1/chats/{id}/messages`) returns an AI SDK UI Message Stream v1 response (`x-vercel-ai-ui-message-stream: v1`). Each line is `data: <json>\n\n` discriminated by the `type` field. Stream ends with `data: [DONE]\n\n`.
 
-| Event Type | Field | Description |
-|------------|-------|-------------|
-| `thinking` | `event.content` | Agent's reasoning |
-| `intermediate` | `event.content` | Partial response |
-| `tool_start` | `event.tool_name` | Tool being called |
-| `tool_result` | `event.result` | Tool output |
-| `final_answer` | `event.content` | Final response |
-| `error` | `event.content` | Error message |
-| `file_created` | `event.filename`, `event.url` | Generated file |
-| `sub_agent_progress` | `event.tool_name`, `event.iteration` | Sub-agent status |
-| `sub_agent_text` | `event.text` | Sub-agent output |
-| `task_snapshot` | `event.tasks` | Task tracker state (list of tasks with id, subject, status, description) |
-| `done` | `event.input_tokens`, `event.output_tokens`, `event.token_usage_breakdown` | Token usage with optional breakdown by main agent vs sub-agents |
+| Wire `type` | Description |
+|-------------|-------------|
+| `start` / `finish` | Stream lifecycle |
+| `text-start` / `text-delta` / `text-end` | Text content blocks |
+| `error` | Agent execution error |
+| `data-agent-question` | Structured question from agent |
 
-**Note:** Text events (`thinking`, `intermediate`, `final_answer`) contain cumulative content - each event includes all previous text plus new tokens. To display live progress, print only the delta: `event.content[len(last_content):]`.
+All JSON fields use camelCase keys (`toolCallId`, `toolName`, `textDelta`, etc.).
 
 ## Models
 
@@ -241,21 +211,8 @@ from rossum_agent_client.models import (
     DeleteResponse,
     FileListResponse,
     FileInfo,
-
-    # Events
-    StepEvent,
-    StreamDoneEvent,
-    FileCreatedEvent,
-    SubAgentProgressEvent,
-    SubAgentTextEvent,
-    TaskSnapshotEvent,
     Message,
     TextContent,
-
-    # Token usage
-    TokenUsageBySource,
-    SubAgentTokenUsageDetail,
-    TokenUsageBreakdown
 )
 ```
 

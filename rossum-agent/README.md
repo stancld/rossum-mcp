@@ -159,7 +159,7 @@ The agent provides internal tools and access to 30 MCP tools via dynamic loading
 - `list_tasks` - List all tracked tasks with current status
 
 **User Interaction:**
-- `ask_user_question` - Ask the user structured questions (free-text or multiple-choice) mid-execution; streamed via SSE `agent_question` event
+- `ask_user_question` - Ask the user structured questions (free-text or multiple-choice) mid-execution; streamed via `data-agent-question` event
 
 </details>
 
@@ -218,7 +218,7 @@ flowchart TB
 | `POST /api/v1/chats` | Create new chat |
 | `GET /api/v1/chats/{id}` | Get chat details |
 | `DELETE /api/v1/chats/{id}` | Delete chat |
-| `POST /api/v1/chats/{id}/messages` | Send message (SSE) |
+| `POST /api/v1/chats/{id}/messages` | Send message (AI SDK UI Message Stream v1) |
 | `PUT /api/v1/chats/{id}/feedback` | Submit thumbs up/down for a turn |
 | `GET /api/v1/chats/{id}/feedback` | Get all feedback for a chat |
 | `DELETE /api/v1/chats/{id}/feedback/{turn}` | Remove feedback for a turn |
@@ -240,18 +240,14 @@ API docs: `/api/docs` (Swagger) or `/api/redoc`
 
 The TUI provides autocomplete suggestions when typing `/`. Commands can also be discovered programmatically via `GET /api/v1/commands`.
 
-**SSE Events:** The message endpoint streams these SSE event types:
+**SSE Events:** AI SDK UI Message Stream v1 compatible (`x-vercel-ai-ui-message-stream: v1`). Each line is `data: <json>\n\n` discriminated by `type`:
 
-| SSE `event:` | Description |
-|--------------|-------------|
-| `step` | Agent steps (thinking, tool calls, final answer) |
-| `sub_agent_progress` | Sub-agent iteration updates |
-| `sub_agent_text` | Sub-agent text streaming |
-| `task_snapshot` | Task tracker state after each task mutation |
-| `agent_question` | Structured question from agent to user (e.g. confirmation prompts) |
-| `file_created` | Output file notification |
-| `done` | Final event with token usage |
+| Wire `type` | Description |
+|-------------|-------------|
+| `start` / `finish` | Stream lifecycle |
+| `text-start` / `text-delta` / `text-end` | Text content blocks |
 | `error` | Agent execution error |
+| `data-agent-question` | Structured question from agent |
 
 **MCP Mode:** Chat sessions support mode switching via the `mcp_mode` parameter:
 - Set at chat creation: `POST /api/v1/chats` with `{"mcp_mode": "read-write"}`
