@@ -439,7 +439,8 @@ get_schema_tree_structure
   https://github.com/rossumai/rossum-api
 
 **Implementation:**
-  Returns a lightweight tree structure of the schema with only ids, labels, categories, and types.
+  Returns a lightweight tree structure of the schema with only ids, labels, categories, types, and boolean
+  ``required``/``hidden`` flags.
   Accepts either ``schema_id`` or ``queue_id`` (resolves to schema automatically). Exactly one
   parameter must be provided.
 

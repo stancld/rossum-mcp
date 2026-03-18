@@ -1141,6 +1141,7 @@ Use for end-to-end extraction testing: generate PDF → upload → verify extrac
 - ``overrides`` (dict[str, str | int | float], optional): Force specific field values: ``{field_id: value}``. Applied to header fields and as fallback for line items.
 - ``line_item_overrides`` (list[dict[str, str | int | float]], optional): Per-row override dicts. Length determines row count. Missing fields use ``overrides`` fallback or random values.
 - ``consistent_amounts`` (bool, optional): Recalculate header amounts to match line item sums. Default: ``True``. Set to ``False`` for mismatch testing.
+- ``consistent_line_items`` (bool, optional): Derive unset row-level amounts so ``item_amount_total = item_quantity * item_rate`` and ``item_amount_total_base`` or ``item_total_base`` matches the total excluding tax, while preserving explicit overrides. Default: ``True``. Set to ``False`` for row-level mismatch testing.
 - ``filename`` (string, optional): Output filename (auto-generated if omitted).
 
 **Returns:**
@@ -1164,7 +1165,7 @@ Run constrained Python snippets in a sandboxed environment. Load the relevant sk
 
 **Parameters:**
 
-- ``code`` (string, required): Python code to execute. Stdlib imports allowed: collections, csv, datetime, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. Assign the final value to ``result`` or leave it as the last expression.
+- ``code`` (string, required): Python code to execute. Stdlib imports allowed: collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap, time. Assign the final value to ``result`` or leave it as the last expression.
 - For large dict/list/string outputs, prefer calling ``write_file(...)`` inside the snippet and return the write result or a short summary instead of inlining the payload.
 - ``operation_name`` (string, optional): Short label for the intent of the execution.
 

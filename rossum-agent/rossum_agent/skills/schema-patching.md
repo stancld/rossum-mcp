@@ -36,7 +36,9 @@ Each change object in the `changes` array:
 | `context` | Context field IDs for reasoning (TxScript format, e.g. `field.invoice_id`) |
 | `formula` | TxScript formula code (for formula fields) |
 
-Not supported: multiline fields, default_value, constraints. Use regular `string` type for multiline.
+Not supported: multiline fields, default_value, constraints, disable_prediction. Use regular `string` type for multiline. For fields without AI extraction, set `ui_configuration.type` to `manual` or `data`.
+
+- **Engine constraint**: Schemas linked to a queue with an engine (Aurora schemas) require every captured field (`ui_configuration.type` = `captured` or `null`) to have a corresponding engine field with matching type and tabular/non-tabular placement. To add a new captured field, first create a matching engine field via `create_engine_field` (requires `load_tool`), then patch the schema. Non-captured fields (`formula`, `reasoning`, `manual`, `data`) are exempt — use these types when the field doesn't need AI extraction.
 
 ## UI Configuration
 

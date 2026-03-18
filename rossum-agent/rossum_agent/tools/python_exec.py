@@ -106,8 +106,11 @@ _ALLOWED_MODULES = frozenset(
         "statistics",
         "string",
         "textwrap",
+        "time",
     }
 )
+
+ALLOWED_MODULES_CSV = ", ".join(sorted(_ALLOWED_MODULES))
 
 
 def _is_allowed_import(node: ast.Import | ast.ImportFrom) -> bool:
@@ -257,7 +260,7 @@ def get_execute_python_definition() -> ToolParam:
         "name": "execute_python",
         "description": (
             "Run short Python snippets in a constrained environment. "
-            "Allowed imports: collections, csv, datetime, fpdf (fpdf2 PDF generation), functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. "
+            f"Allowed imports: {ALLOWED_MODULES_CSV}. "
             "Assign the final structured value to `result` or leave it as the last expression. "
             "When the useful output is a large string, dict, or list, prefer `write_file(...)` inside the snippet instead of returning it inline. "
             "Load the relevant skill first for task-specific helper guidance."
@@ -267,7 +270,7 @@ def get_execute_python_definition() -> ToolParam:
             "properties": {
                 "code": {
                     "type": "string",
-                    "description": "Python code to execute. Allowed imports: collections, csv, datetime, fpdf, functools, io, itertools, json, math, operator, pathlib, re, statistics, string, textwrap. Max 12000 characters.",
+                    "description": f"Python code to execute. Allowed imports: {ALLOWED_MODULES_CSV}. Max {_MAX_CODE_LENGTH} characters.",
                 },
                 "operation_name": {
                     "type": "string",

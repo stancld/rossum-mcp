@@ -153,7 +153,7 @@ The agent provides internal tools and access to 32 MCP tools via dynamic loading
 - `load_skill` - Load domain-specific workflows (`schema-patching`, `python-execution`, `ui-settings`, `hooks`, `txscript`, `rules-and-actions`, `formula-fields`, `reasoning-fields`, `lookup-fields`, `document-testing`)
 
 **Document Testing:**
-- `generate_mock_pdf` - Generate schema-aware mock PDFs with realistic field values for end-to-end extraction testing
+- `generate_mock_pdf` - Generate schema-aware mock PDFs with realistic field values and optional header/row consistency checks for end-to-end extraction testing, while preserving explicit overrides
 
 **Task Tracking:**
 - `create_task` - Create a task to track progress on multi-step operations

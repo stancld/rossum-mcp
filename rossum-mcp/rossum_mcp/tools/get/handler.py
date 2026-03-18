@@ -141,7 +141,7 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
         return await _get_annotation_content(client, annotation_id)
 
     @mcp.tool(
-        description="Lightweight schema tree (ids/labels/categories/types); accepts schema_id or queue_id.",
+        description="Lightweight schema tree (ids/labels/categories/types/required/hidden); accepts schema_id or queue_id.",
         tags={"schemas"},
         annotations={"readOnlyHint": True},
     )

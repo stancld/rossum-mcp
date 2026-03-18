@@ -93,6 +93,51 @@ class TestCreateEngineField:
         assert result.label == "Invoice Number"
 
     @pytest.mark.asyncio
+    async def test_create_engine_field_multiline_sent_as_string(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test that multiline bool is converted to lowercase string for the API."""
+        register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+
+        mock_field = create_mock_engine_field(id=501, label="Notes")
+        mock_client._http_client.create.return_value = {"id": 501}
+        mock_client._deserializer = Mock(return_value=mock_field)
+
+        create_engine_field = mock_mcp._tools["create_engine_field"]
+        await create_engine_field(
+            engine_id=123,
+            name="notes",
+            label="Notes",
+            field_type="string",
+            schema_ids=[1],
+            multiline=True,
+        )
+
+        create_call = mock_client._http_client.create.call_args
+        assert create_call[0][1]["multiline"] == "true"
+
+    @pytest.mark.asyncio
+    async def test_create_engine_field_multiline_default_sent_as_string(
+        self, mock_mcp: Mock, mock_client: AsyncMock
+    ) -> None:
+        """Test that default multiline=False is sent as 'false' string."""
+        register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+
+        mock_field = create_mock_engine_field(id=502, label="Name")
+        mock_client._http_client.create.return_value = {"id": 502}
+        mock_client._deserializer = Mock(return_value=mock_field)
+
+        create_engine_field = mock_mcp._tools["create_engine_field"]
+        await create_engine_field(
+            engine_id=123,
+            name="name",
+            label="Name",
+            field_type="string",
+            schema_ids=[1],
+        )
+
+        create_call = mock_client._http_client.create.call_args
+        assert create_call[0][1]["multiline"] == "false"
+
+    @pytest.mark.asyncio
     async def test_create_engine_field_empty_schemas(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test create_engine_field fails with empty schema_ids."""
         register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
