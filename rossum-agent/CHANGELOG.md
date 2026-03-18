@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.5.6] - 2026-03-18
 
 ### Changed
 - Schema-patching skill: Added `disable_prediction` to unsupported properties list and documented `ui_configuration.type` (`manual`/`data`) as the alternative for fields without AI extraction [#277](https://github.com/rossumai/rossum-agents/pull/277)
