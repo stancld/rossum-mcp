@@ -15,6 +15,7 @@ from rossum_agent.tools.mock_pdf import (
     _is_hidden,
     _is_line_item_field,
     _make_amounts_consistent,
+    _make_line_items_internally_consistent,
     _render_pdf,
     generate_mock_pdf,
 )
@@ -482,6 +483,68 @@ class TestGenerateMockPdf:
         finally:
             set_context(AgentContext())
 
+    def test_qty_times_rate_equals_item_total(self, tmp_path: Path) -> None:
+        """qty * unit_price = item_amount_total for every line item row."""
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("item_description", "Description", ["item_description"]),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result = json.loads(generate_mock_pdf(fields=fields, line_item_count=3))
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                expected_total = round(float(item["item_quantity"]) * float(item["item_rate"]), 2)
+                assert abs(float(item["item_amount_total"]) - expected_total) < 0.01
+        finally:
+            set_context(AgentContext())
+
+    def test_item_amount_total_base_is_total_base(self, tmp_path: Path) -> None:
+        """item_amount_total_base = item_amount_total / 1.21 (total excl. tax, not unit price)."""
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("item_description", "Description", ["item_description"]),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Line Base Total", ["item_amount_total_base"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result = json.loads(generate_mock_pdf(fields=fields, line_item_count=3))
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                expected_base = round(float(item["item_amount_total"]) / 1.21, 2)
+                assert abs(float(item["item_amount_total_base"]) - expected_base) < 0.015
+        finally:
+            set_context(AgentContext())
+
+    def test_item_total_base_is_supported_schema_variant(self, tmp_path: Path) -> None:
+        """item_total_base = item_amount_total / 1.21 for Rossum schemas using that field name."""
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("item_description", "Description", ["item_description"]),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+            _field("item_total_base", "Line Base Total", ["item_total_base"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result = json.loads(generate_mock_pdf(fields=fields, line_item_count=3))
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                expected_base = round(float(item["item_amount_total"]) / 1.21, 2)
+                assert abs(float(item["item_total_base"]) - expected_base) < 0.015
+        finally:
+            set_context(AgentContext())
+
 
 class TestApplyBaseTaxSplit:
     """Tests for _apply_base_tax_split edge cases."""
@@ -684,6 +747,118 @@ class TestAmountConsistencyExtended:
         total = float(header_values["amount_total"])
         sum_item_amount = sum(float(item["item_amount"]) for item in line_items)
         assert abs(total - sum_item_amount) < 0.01
+
+
+class TestLineItemsInternalConsistency:
+    """Tests for _make_line_items_internally_consistent."""
+
+    def test_qty_times_rate_equals_total(self) -> None:
+        fields = [
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"item_quantity": "5", "item_rate": "20.00", "item_amount_total": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert float(line_items[0]["item_amount_total"]) == 100.0
+
+    def test_total_base_derived_from_total(self) -> None:
+        fields = [
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Total Base", ["item_amount_total_base"], "number"),
+        ]
+        line_items = [{"item_amount_total": "121.00", "item_amount_total_base": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert abs(float(line_items[0]["item_amount_total_base"]) - round(121.0 / 1.21, 2)) < 0.01
+
+    def test_total_base_uses_qty_times_rate_total(self) -> None:
+        """When all three fields present, total_base is derived from qty*rate total."""
+        fields = [
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Total Base", ["item_amount_total_base"], "number"),
+        ]
+        line_items = [
+            {"item_quantity": "4", "item_rate": "121.00", "item_amount_total": "999", "item_amount_total_base": "999"}
+        ]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert float(line_items[0]["item_amount_total"]) == 484.0
+        assert abs(float(line_items[0]["item_amount_total_base"]) - round(484.0 / 1.21, 2)) < 0.01
+
+    def test_explicit_total_override_is_preserved(self) -> None:
+        fields = [
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"item_quantity": "4", "item_rate": "121.00", "item_amount_total": "999"}]
+        _make_line_items_internally_consistent(line_items, fields, [{"item_amount_total"}])
+        assert float(line_items[0]["item_amount_total"]) == 999.0
+
+    def test_item_total_base_schema_variant(self) -> None:
+        fields = [
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_total_base", "Total Base", ["item_total_base"], "number"),
+        ]
+        line_items = [{"item_amount_total": "121.00", "item_total_base": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert abs(float(line_items[0]["item_total_base"]) - round(121.0 / 1.21, 2)) < 0.01
+
+    def test_no_change_when_no_rate_col(self) -> None:
+        fields = [
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"item_quantity": "5", "item_amount_total": "100.00"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert line_items[0]["item_amount_total"] == "100.00"
+
+    def test_empty_items(self) -> None:
+        _make_line_items_internally_consistent([], [])  # no error
+
+    def test_via_rir_field_names(self) -> None:
+        """Column resolution works via rir_field_names even when field id differs."""
+        fields = [
+            _field("qty", "Qty", ["item_quantity"], "number"),
+            _field("price", "Price", ["item_rate"], "number"),
+            _field("total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"qty": "3", "price": "10.00", "total": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert float(line_items[0]["total"]) == 30.0
+
+    def test_no_qty_col_sets_total_equal_to_rate(self) -> None:
+        """When schema has no quantity column, implicit qty=1 so total = unit price."""
+        fields = [
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"item_rate": "75.50", "item_amount_total": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert line_items[0]["item_amount_total"] == "75.50"
+
+    def test_no_qty_col_with_total_base(self) -> None:
+        """No quantity column → total = rate, and total_base derived from that total."""
+        fields = [
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Total Base", ["item_amount_total_base"], "number"),
+        ]
+        line_items = [{"item_rate": "121.00", "item_amount_total": "999", "item_amount_total_base": "999"}]
+        _make_line_items_internally_consistent(line_items, fields)
+        assert line_items[0]["item_amount_total"] == "121.00"
+        assert abs(float(line_items[0]["item_amount_total_base"]) - round(121.0 / 1.21, 2)) < 0.01
+
+    def test_no_qty_col_explicit_total_override_preserved(self) -> None:
+        """Explicit total override is preserved even when qty column is absent."""
+        fields = [
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+        ]
+        line_items = [{"item_rate": "75.50", "item_amount_total": "200.00"}]
+        _make_line_items_internally_consistent(line_items, fields, [{"item_amount_total"}])
+        assert line_items[0]["item_amount_total"] == "200.00"
 
 
 class TestPdfRenderingExtended:
@@ -919,6 +1094,100 @@ class TestNumericOverrides:
             item_sum = sum(float(item["item_total"]) for item in result["line_items"])
             assert abs(total - item_sum) < 0.01
             assert total == 400.00
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_line_items_false_preserves_raw_values(self, tmp_path: Path) -> None:
+        """With consistent_line_items=False, qty * rate != total is preserved as-is."""
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=fields,
+                line_item_overrides=[{"item_quantity": 2, "item_rate": 50.0, "item_amount_total": 999.0}],
+                consistent_line_items=False,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            # item_amount_total NOT recomputed from qty * rate
+            assert float(result["line_items"][0]["item_amount_total"]) == 999.0
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_line_items_true_recalculates(self, tmp_path: Path) -> None:
+        """With consistent_line_items=True (default), unset item_amount_total = qty * rate."""
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=fields,
+                line_item_overrides=[{"item_quantity": 3, "item_rate": 40.0}],
+                consistent_line_items=True,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            # item_amount_total IS recomputed: 3 * 40 = 120
+            assert float(result["line_items"][0]["item_amount_total"]) == 120.0
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_line_items_true_preserves_explicit_overrides(self, tmp_path: Path) -> None:
+        fields = [
+            _field("invoice_id", "Invoice #", ["invoice_id"]),
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=fields,
+                line_item_overrides=[{"item_quantity": 3, "item_rate": 40.0, "item_amount_total": 999.0}],
+                consistent_line_items=True,
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            assert float(result["line_items"][0]["item_amount_total"]) == 999.0
+        finally:
+            set_context(AgentContext())
+
+    def test_consistent_line_items_rounding_matches_header_base_total(self, tmp_path: Path) -> None:
+        fields = [
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("amount_total_base", "Base", ["amount_total_base"], "number"),
+            _field("amount_total_tax", "Tax", ["amount_total_tax"], "number"),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_rate", "Unit Price", ["item_rate"], "number"),
+            _field("item_amount_total", "Line Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Line Base Total", ["item_amount_total_base"], "number"),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=fields,
+                line_item_overrides=[
+                    {"item_quantity": 1, "item_rate": 0.03},
+                    {"item_quantity": 1, "item_rate": 0.03},
+                    {"item_quantity": 1, "item_rate": 0.03},
+                ],
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            total_base = float(result["expected_values"]["amount_total_base"])
+            sum_item_base = sum(float(item["item_amount_total_base"]) for item in result["line_items"])
+            assert abs(total_base - sum_item_base) < 0.01
         finally:
             set_context(AgentContext())
 

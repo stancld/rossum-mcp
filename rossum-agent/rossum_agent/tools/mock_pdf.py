@@ -6,6 +6,7 @@ for end-to-end extraction testing.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import random
@@ -138,6 +139,13 @@ def _is_hidden(field: dict) -> bool:
     return bool(field.get("hidden", False))
 
 
+_DEFAULT_TAX_RATE = 0.21
+
+# rir_field_names that represent item-level total amounts
+_TOTAL_RIR_NAMES: set[str] = {"item_amount_total", "item_total_amount"}
+_TOTAL_BASE_RIR_NAMES: set[str] = {"item_amount_total_base", "item_total_base"}
+
+
 def _is_line_item_field(field: dict) -> bool:
     """Determine if a field belongs to line items (table rows)."""
     field_id = field.get("id", "")
@@ -229,8 +237,6 @@ def _find_item_total_key(
     4. Dict key containing "total" (but not "amount" and not "item_total")
     5. Dict key containing "amount" (fallback)
     """
-    _TOTAL_RIR_NAMES = {"item_amount_total", "item_total_amount"}
-
     # Try rir_field_names first (most reliable)
     if line_item_fields:
         for f in line_item_fields:
@@ -260,8 +266,7 @@ def _apply_base_tax_split(
 ) -> None:
     """Split total into base + tax amounts."""
     if base_id and tax_id:
-        tax_rate = 0.21
-        base = round(total / (1 + tax_rate), 2)
+        base = round(total / (1 + _DEFAULT_TAX_RATE), 2)
         tax = round(total - base, 2)
         header_values[base_id] = str(base)
         header_values[tax_id] = str(tax)
@@ -354,12 +359,134 @@ def _make_amounts_consistent(
         _distribute_subtotals(header_values, line_items, line_item_fields, total, item_total_key, _find_header_id)
 
 
+def _get_explicit_row_fields(
+    explicit_fields_by_row: list[set[str]],
+    row_index: int,
+) -> set[str]:
+    if row_index < len(explicit_fields_by_row):
+        return explicit_fields_by_row[row_index]
+    return set()
+
+
+def _collect_row_totals(
+    line_items: list[dict[str, str]],
+    total_col: str,
+) -> list[tuple[int, float]]:
+    total_by_row: list[tuple[int, float]] = []
+    for i, item in enumerate(line_items):
+        with contextlib.suppress(ValueError, KeyError):
+            total_by_row.append((i, round(float(item[total_col]), 2)))
+    return total_by_row
+
+
+def _set_fallback_base_totals(
+    line_items: list[dict[str, str]],
+    auto_base_rows: list[tuple[int, float]],
+    total_base_col: str,
+) -> None:
+    for i, total in auto_base_rows:
+        line_items[i][total_base_col] = str(round(total / (1 + _DEFAULT_TAX_RATE), 2))
+
+
+def _distribute_row_base_totals(
+    line_items: list[dict[str, str]],
+    total_base_col: str,
+    total_by_row: list[tuple[int, float]],
+    explicit_fields_by_row: list[set[str]],
+) -> None:
+    explicit_base_sum = 0.0
+    auto_base_rows: list[tuple[int, float]] = []
+    for i, total in total_by_row:
+        explicit_fields = _get_explicit_row_fields(explicit_fields_by_row, i)
+        if total_base_col in explicit_fields:
+            with contextlib.suppress(ValueError, KeyError):
+                explicit_base_sum += round(float(line_items[i][total_base_col]), 2)
+            continue
+        auto_base_rows.append((i, total))
+
+    if not auto_base_rows:
+        return
+
+    target_base_total = round(sum(total for _, total in total_by_row) / (1 + _DEFAULT_TAX_RATE), 2)
+    remaining_base_total = round(target_base_total - explicit_base_sum, 2)
+    auto_total_sum = sum(total for _, total in auto_base_rows)
+
+    if remaining_base_total < 0 or auto_total_sum <= 0:
+        _set_fallback_base_totals(line_items, auto_base_rows, total_base_col)
+        return
+
+    running_base = 0.0
+    for position, (i, total) in enumerate(auto_base_rows):
+        if position == len(auto_base_rows) - 1:
+            base_value = round(remaining_base_total - running_base, 2)
+        else:
+            base_value = round(total / auto_total_sum * remaining_base_total, 2)
+            running_base += base_value
+        line_items[i][total_base_col] = str(base_value)
+
+
+def _make_line_items_internally_consistent(
+    line_items: list[dict[str, str]],
+    line_item_fields: list[dict] | None,
+    explicit_fields_by_row: list[set[str]] | None = None,
+) -> None:
+    """Fill derived row values without overwriting explicit overrides."""
+    if not line_items:
+        return
+
+    explicit_fields_by_row = explicit_fields_by_row or [set() for _ in line_items]
+
+    qty_col = _find_item_column(line_items, line_item_fields, "item_quantity")
+    price_col = _find_item_column(line_items, line_item_fields, "item_rate")
+    total_col = _find_item_total_key(line_items, line_item_fields)
+    total_base_col = next(
+        (
+            col
+            for rir_name in _TOTAL_BASE_RIR_NAMES
+            if (col := _find_item_column(line_items, line_item_fields, rir_name)) is not None
+        ),
+        None,
+    )
+
+    for i, item in enumerate(line_items):
+        explicit_fields = _get_explicit_row_fields(explicit_fields_by_row, i)
+        if total_col and total_col not in explicit_fields:
+            with contextlib.suppress(ValueError, KeyError):
+                if qty_col and price_col:
+                    item[total_col] = str(round(float(item[qty_col]) * float(item[price_col]), 2))
+                elif not qty_col and price_col:
+                    # No quantity column in schema → implicit qty=1, total = unit price
+                    item[total_col] = item[price_col]
+
+    if not total_base_col or not total_col:
+        return
+
+    total_by_row = _collect_row_totals(line_items, total_col)
+    if not total_by_row:
+        return
+
+    _distribute_row_base_totals(line_items, total_base_col, total_by_row, explicit_fields_by_row)
+
+
 def _build_label_map(header_fields: list[dict], line_item_fields: list[dict]) -> dict[str, str]:
     """Build field ID → label mapping."""
     label_map: dict[str, str] = {}
     for f in header_fields + line_item_fields:
         label_map[f.get("id", "")] = f.get("label", f.get("id", ""))
     return label_map
+
+
+# Field groups for each rendered section — single source of truth for both rendering and "remaining" detection
+_VENDOR_FIELDS = ["sender_name", "sender_address", "sender_vat_id", "sender_ic"]
+_DOC_FIELDS = ["invoice_id", "order_id", "document_id", "date_issue", "date_due", "date_delivery", "currency"]
+_BUYER_FIELDS = ["recipient_name", "recipient_address", "recipient_vat_id", "recipient_ic"]
+_TOTAL_FIELDS = ["amount_total_base", "amount_total_tax", "amount_total", "amount_due", "amount_paid"]
+_PAYMENT_FIELDS = ["bank_num", "iban", "bic", "var_sym", "const_sym"]
+
+# All known section field IDs — used to find "remaining" fields not covered by named sections
+_KNOWN_SECTION_FIELDS = frozenset(
+    {*_VENDOR_FIELDS, *_DOC_FIELDS, *_BUYER_FIELDS, *_TOTAL_FIELDS, *_PAYMENT_FIELDS, "notes"}
+)
 
 
 def _render_field_list(
@@ -389,22 +516,20 @@ def _render_header_section(
     y_start = pdf.get_y()
 
     # Left column: vendor info
-    vendor_fields = ["sender_name", "sender_address", "sender_vat_id", "sender_ic"]
     pdf.set_xy(left_col_x, y_start)
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(100, 6, "From:", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
-    _render_field_list(pdf, vendor_fields, header_values, label_map, x=left_col_x)
+    _render_field_list(pdf, _VENDOR_FIELDS, header_values, label_map, x=left_col_x)
     left_end_y = pdf.get_y()
 
     # Right column: document ID, dates
-    doc_fields = ["invoice_id", "order_id", "document_id", "date_issue", "date_due", "date_delivery", "currency"]
     pdf.set_xy(right_col_x, y_start)
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(80, 6, "Details:")
     pdf.set_font("Helvetica", "", 10)
     right_y = y_start + 6
-    for df in doc_fields:
+    for df in _DOC_FIELDS:
         if df in header_values:
             lbl = label_map.get(df, df)
             pdf.set_xy(right_col_x, right_y)
@@ -420,13 +545,12 @@ def _render_buyer_section(
     label_map: dict[str, str],
 ) -> None:
     """Render buyer/recipient info block."""
-    buyer_fields = ["recipient_name", "recipient_address", "recipient_vat_id", "recipient_ic"]
-    if not any(bf in header_values for bf in buyer_fields):
+    if not any(bf in header_values for bf in _BUYER_FIELDS):
         return
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 6, "Bill To:", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
-    _render_field_list(pdf, buyer_fields, header_values, label_map)
+    _render_field_list(pdf, _BUYER_FIELDS, header_values, label_map)
     pdf.ln(4)
 
 
@@ -471,14 +595,13 @@ def _render_totals_section(
     label_map: dict[str, str],
 ) -> None:
     """Render totals block with bold emphasis on total/due amounts."""
-    total_fields = ["amount_total_base", "amount_total_tax", "amount_total", "amount_due", "amount_paid"]
-    if not any(tf in header_values for tf in total_fields):
+    if not any(tf in header_values for tf in _TOTAL_FIELDS):
         return
 
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 8, "Totals", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
-    for tf in total_fields:
+    for tf in _TOTAL_FIELDS:
         if tf in header_values:
             lbl = label_map.get(tf, tf)
             is_total = tf in ("amount_total", "amount_due")
@@ -496,27 +619,13 @@ def _render_payment_section(
     label_map: dict[str, str],
 ) -> None:
     """Render payment details block."""
-    payment_fields = ["bank_num", "iban", "bic", "var_sym", "const_sym"]
-    if not any(pf in header_values for pf in payment_fields):
+    if not any(pf in header_values for pf in _PAYMENT_FIELDS):
         return
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 8, "Payment Details", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 10)
-    _render_field_list(pdf, payment_fields, header_values, label_map)
+    _render_field_list(pdf, _PAYMENT_FIELDS, header_values, label_map)
     pdf.ln(4)
-
-
-# All known section field IDs — used to find "remaining" fields
-_KNOWN_SECTION_FIELDS = frozenset(
-    [
-        *["sender_name", "sender_address", "sender_vat_id", "sender_ic"],
-        *["invoice_id", "order_id", "document_id", "date_issue", "date_due", "date_delivery", "currency"],
-        *["recipient_name", "recipient_address", "recipient_vat_id", "recipient_ic"],
-        *["amount_total_base", "amount_total_tax", "amount_total", "amount_due", "amount_paid"],
-        *["bank_num", "iban", "bic", "var_sym", "const_sym"],
-        "notes",
-    ]
-)
 
 
 def _render_pdf(
@@ -591,6 +700,28 @@ def _generate_line_items(
     return line_items
 
 
+def _build_explicit_line_item_fields(
+    line_item_fields: list[dict],
+    row_count: int,
+    overrides: dict[str, OverrideValue],
+    line_item_overrides: list[dict[str, OverrideValue]] | None,
+) -> list[set[str]]:
+    """Track which row fields were set explicitly by the caller."""
+    explicit_fields_by_row: list[set[str]] = []
+    line_item_field_ids = {f.get("id", "") for f in line_item_fields}
+    global_override_ids = {field_id for field_id in overrides if field_id in line_item_field_ids}
+
+    for i in range(row_count):
+        row_override_ids = (
+            set(line_item_overrides[i]) & line_item_field_ids
+            if line_item_overrides and i < len(line_item_overrides)
+            else set()
+        )
+        explicit_fields_by_row.append(global_override_ids | row_override_ids)
+
+    return explicit_fields_by_row
+
+
 @beta_tool
 def generate_mock_pdf(
     fields: list[dict],
@@ -599,6 +730,7 @@ def generate_mock_pdf(
     overrides: dict[str, OverrideValue] | None = None,
     line_item_overrides: list[dict[str, OverrideValue]] | None = None,
     consistent_amounts: bool = True,
+    consistent_line_items: bool = True,
     filename: str | None = None,
 ) -> str:
     """Generate a mock PDF document with realistic values matching schema fields.
@@ -618,6 +750,9 @@ def generate_mock_pdf(
             Each dict maps field_id to value for that row. Missing fields use overrides fallback or random values.
         consistent_amounts: When True (default), recalculate header totals to match sum of line item totals.
             Set to False to keep header amounts as-is — useful for testing header/line-item mismatch.
+        consistent_line_items: When True (default), derive unset row-level values: item_amount_total from
+            item_quantity * item_rate, and item_amount_total_base or item_total_base from item_amount_total.
+            Explicit override values are preserved. Set to False to keep raw generated values.
         filename: Output filename (auto-generated if omitted).
 
     Returns:
@@ -654,7 +789,15 @@ def generate_mock_pdf(
 
         # Generate line items for all fields (including hidden) — needed for consistency
         line_items = _generate_line_items(all_line_item_fields, line_item_count, overrides, line_item_overrides)
+        explicit_line_item_fields = _build_explicit_line_item_fields(
+            all_line_item_fields,
+            len(line_items),
+            overrides,
+            line_item_overrides,
+        )
 
+        if consistent_line_items:
+            _make_line_items_internally_consistent(line_items, all_line_item_fields, explicit_line_item_fields)
         if consistent_amounts:
             _make_amounts_consistent(header_values, line_items, header_fields, all_line_item_fields)
 

@@ -138,6 +138,9 @@ Workflow: ``get(entity="schema", entity_id=schema_id)`` → extract fields → `
    * - ``consistent_amounts``
      - ``bool``
      - Recalculate header amounts to match line item sums (default ``True``). Set to ``False`` for mismatch testing.
+   * - ``consistent_line_items``
+     - ``bool``
+     - Derive unset row-level amounts so ``item_amount_total = item_quantity * item_rate`` and ``item_amount_total_base`` or ``item_total_base`` matches the total excluding tax, while preserving explicit overrides (default ``True``). Set to ``False`` for row-level mismatch testing.
    * - ``filename``
      - ``str``
      - Output filename (auto-generated if omitted)
