@@ -59,7 +59,7 @@ async def _create_engine_field(
         "label": label,
         "type": field_type,
         "tabular": tabular,
-        "multiline": multiline,
+        "multiline": str(multiline).lower(),
         "schemas": [build_resource_url(base_url, "schemas", schema_id) for schema_id in schema_ids],
     }
     if subtype is not None:

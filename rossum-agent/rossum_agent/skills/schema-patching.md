@@ -38,6 +38,8 @@ Each change object in the `changes` array:
 
 Not supported: multiline fields, default_value, constraints, disable_prediction. Use regular `string` type for multiline. For fields without AI extraction, set `ui_configuration.type` to `manual` or `data`.
 
+- **Engine constraint**: Schemas linked to a queue with an engine (Aurora schemas) require every captured field (`ui_configuration.type` = `captured` or `null`) to have a corresponding engine field with matching type and tabular/non-tabular placement. To add a new captured field, first create a matching engine field via `create_engine_field` (requires `load_tool`), then patch the schema. Non-captured fields (`formula`, `reasoning`, `manual`, `data`) are exempt — use these types when the field doesn't need AI extraction.
+
 ## UI Configuration
 
 Optional `ui_configuration` object controls field behavior in the UI. Only set properties when explicitly requested - do not add ui_configuration if the user hasn't specified type or edit behavior.

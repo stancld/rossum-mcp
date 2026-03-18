@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- Fixed `create_engine_field` sending `multiline` as Python bool (`True`/`False`) instead of API-expected lowercase string (`"true"`/`"false"`) [#280](https://github.com/rossumai/rossum-agents/pull/280)
+
 ### Changed
 - `get_schema_tree_structure` now includes boolean `required` and `hidden` flags on every node; datapoints map `required` from `constraints.required` and default to `false` when unset [#279](https://github.com/rossumai/rossum-agents/pull/279)
 
