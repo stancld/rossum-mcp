@@ -18,9 +18,11 @@
 
 ## Overview
 
-Typed TypeScript client generated from the [Rossum Agent OpenAPI spec](../rossum-agent/rossum_agent/api/openapi.json). Provides full type safety for all API endpoints, SSE events, and request/response models.
+Typed TypeScript client generated from the [Rossum Agent OpenAPI spec](../rossum-agent/rossum_agent/api/openapi.json). Provides full type safety for all REST API endpoints and request/response models.
 
 Used by [`rossum-agent-tui`](../rossum-agent-tui/) as the single source of truth for API types.
+
+Streaming is handled natively via the [AI SDK UI Message Stream v1](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol) protocol — use `useChat` from `@ai-sdk/react` or parse the `data: <json>\n\n` stream directly. This package provides REST operations and OpenAPI types only.
 
 ## Installation
 
@@ -31,12 +33,7 @@ npm install rossum-agent-client
 ## Quick Start
 
 ```typescript
-import {
-  createChat,
-  streamMessage,
-  type ClientConfig,
-  type SSEEvent,
-} from "rossum-agent-client";
+import { createChat, buildHeaders, type ClientConfig } from "rossum-agent-client";
 
 const config: ClientConfig = {
   apiUrl: "https://your-agent-api.example.com",
@@ -47,27 +44,30 @@ const config: ClientConfig = {
 // Create a chat session
 const chat = await createChat(config, "read-only");
 
-// Stream a message
-await streamMessage({
-  config,
-  chatId: chat.chat_id,
-  message: "List all queues",
-  onEvent: (event: SSEEvent) => {
-    switch (event.event) {
-      case "step":
-        if (event.data.type === "final_answer") {
-          process.stdout.write(event.data.content ?? "");
-        }
-        break;
-      case "done":
-        console.log(`\n(${event.data.input_tokens} in, ${event.data.output_tokens} out)`);
-        break;
-    }
+// Stream a message (AI SDK UI Message Stream v1)
+const response = await fetch(
+  `${config.apiUrl}/api/v1/chats/${chat.chat_id}/messages`,
+  {
+    method: "POST",
+    headers: { ...buildHeaders(config) },
+    body: JSON.stringify({ content: "List all queues" }),
   },
-  onError: (err) => console.error(err),
-  onDone: () => console.log("Stream complete"),
-});
+);
+
+const reader = response.body!.getReader();
+const decoder = new TextDecoder();
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  for (const line of decoder.decode(value).split("\n")) {
+    if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+    const event = JSON.parse(line.slice(6));
+    if (event.type === "text-delta") process.stdout.write(event.textDelta);
+  }
+}
 ```
+
+> For React/Next.js apps, use `useChat` from `@ai-sdk/react` which handles the stream protocol automatically.
 
 ## API Reference
 
@@ -80,7 +80,6 @@ await streamMessage({
 | `listChats(config, limit?, offset?)` | List all chat sessions |
 | `getChat(config, chatId)` | Get chat details |
 | `deleteChat(config, chatId)` | Delete a chat session |
-| `streamMessage(opts)` | Send a message and stream SSE response |
 | `cancelMessage(config, chatId)` | Cancel an in-progress message |
 | `listCommands(config)` | List available agent commands |
 | `listFiles(config, chatId)` | List files in a chat |
@@ -90,31 +89,18 @@ await streamMessage({
 | `deleteFeedback(config, chatId, turnIndex)` | Delete feedback |
 | `listCommits(config, chatId)` | List config commits from a chat |
 | `reportToSlack(config, chatId, rossumUrl?)` | Report chat to Slack |
+| `buildHeaders(config)` | Build auth headers for custom fetch calls |
 
-### SSE Event Types
+### Streaming Protocol
 
-When streaming messages, you receive these event types:
+The message endpoint (`POST /api/v1/chats/{id}/messages`) returns an AI SDK UI Message Stream v1 response. Each line is `data: <json>\n\n` discriminated by the `type` field. Stream ends with `data: [DONE]\n\n`.
 
-| Event | Data Type | Description |
-|-------|-----------|-------------|
-| `step` | `StepEvent` | Agent execution step (thinking, tool use, final answer) |
-| `sub_agent_progress` | `SubAgentProgressEvent` | Sub-agent iteration updates |
-| `sub_agent_text` | `SubAgentTextEvent` | Sub-agent text streaming |
-| `task_snapshot` | `TaskSnapshotEvent` | Task tracker state |
-| `agent_question` | `AgentQuestionEvent` | Structured question from agent |
-| `file_created` | `FileCreatedEvent` | Output file notification |
-| `done` | `StreamDoneEvent` | Final event with token usage |
-
-### StepEvent Types
-
-| Type | Description |
-|------|-------------|
-| `thinking` | Agent's chain-of-thought reasoning |
-| `intermediate` | Partial response before tool calls |
-| `tool_start` | Tool execution begins |
-| `tool_result` | Tool execution completes |
-| `final_answer` | Final response text |
+| Wire `type` | Description |
+|-------------|-------------|
+| `start` / `finish` | Stream lifecycle |
+| `text-start` / `text-delta` / `text-end` | Text content blocks |
 | `error` | Agent execution error |
+| `data-agent-question` | Structured question from agent |
 
 ## Type Generation
 

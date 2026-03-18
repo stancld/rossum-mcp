@@ -113,7 +113,7 @@ The OpenAPI spec is the contract for `rossum-agent-client` and `rossum-agent-tui
 |---------|--------|
 | New/changed endpoint | Regenerate spec |
 | New/changed Pydantic model | Regenerate spec |
-| New SSE event type | Add model to `_SSE_EVENT_MODELS` list in `api/main.py`, regenerate spec |
+| New SSE event type | Add model to `_SSE_EVENT_MODELS` list in `scripts/generate_openapi.py`, regenerate spec |
 | Changed SSE event fields | Regenerate spec |
 
 Regeneration pipeline:
@@ -156,67 +156,50 @@ Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at
 
 **Exception**: `rossum-agent-tui` — dev-only test-bed, tests not required.
 
-## SSE Streaming Contract (rossum-agent → rossum-agent-tui)
+## Streaming Contract (rossum-agent → rossum-agent-tui)
 
-Target direction: treat the contract below as legacy. For new streaming work and any SSE refactors, aim to make Rossum streaming compatible with the Vercel AI SDK UI message stream model. Prefer AI SDK-style message parts, custom `data-*` parts, and message metadata over adding new bespoke SSE event types or more `StepEvent` variants. Any intentional divergence from AI SDK compatibility should be documented in the implementation plan and API docs.
+AI SDK UI Message Stream v1 compatible. Wire protocol: https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol
 
-### SSE Event Types
+Response header: `x-vercel-ai-ui-message-stream: v1`. Each line is `data: <json>\n\n` where the JSON `type` field discriminates the event. Stream ends with `data: [DONE]\n\n`.
 
-Backend (`messages.py`) emits these SSE event names with corresponding payloads:
+### Wire Event Types
 
-| SSE `event:` | Payload model (Python) | TS type (TUI) | Notes |
-|--------------|------------------------|---------------|-------|
-| `step` | `StepEvent` | `StepEvent` | Main event for all agent steps |
-| `sub_agent_progress` | `SubAgentProgressEvent` | `SubAgentProgressEvent` | Sub-agent iteration updates |
-| `sub_agent_text` | `SubAgentTextEvent` | `SubAgentTextEvent` | Sub-agent text streaming |
-| `task_snapshot` | `TaskSnapshotEvent` | `TaskSnapshotEvent` | Task tracker state |
-| `agent_question` | `AgentQuestionEvent` | `AgentQuestionEvent` | Structured question from agent to user |
-| `file_created` | `FileCreatedEvent` | `FileCreatedEvent` | Output file notification |
-| `done` | `StreamDoneEvent` | `StreamDoneEvent` | Final event with token usage |
+Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentStep`/`StreamEvent` → wire event dicts. Only text and error events are emitted; thinking, tool, and sub-agent events are dropped.
 
-### StepEvent.type Values
+| Wire `type` | When emitted |
+|-------------|--------------|
+| `start` | Stream begins (emitted by route handler) |
+| `finish` | Stream ends (before `[DONE]` sentinel) |
+| `text-start` | New text block opens |
+| `text-delta` | Incremental text content |
+| `text-end` | Text block closes |
+| `error` | Error event |
+| `data-agent-question` | Structured question from agent |
 
-`StepEvent.type` is a `Literal` union shared across both sides:
+### Stream Lifecycle
 
-| Type | When emitted | `is_streaming` | Key fields |
-|------|-------------|----------------|------------|
-| `thinking` | Model's chain-of-thought reasoning | `true` while streaming, `false` when finalized | `content` |
-| `intermediate` | Model's response text before tool calls | `true` while streaming | `content` |
-| `tool_start` | Tool execution begins | implicitly streaming (not explicitly marked) | `tool_name`, `tool_arguments`, `tool_progress` |
-| `tool_result` | Tool execution completes | always `false` | `tool_name`, `result`, `is_error` |
-| `final_answer` | Model's final response | `true` while streaming, `is_final=true` when done | `content` |
-| `error` | Agent execution error | N/A, `is_final=true` | `content` |
+| Phase | Detail |
+|-------|--------|
+| Start | `start` event emitted first |
+| Content | Text blocks open/close with start/delta/end triplets |
+| Finish | Open text block closed, then `finish`, then `data: [DONE]\n\n` |
 
-### Streaming Lifecycle
+### Internal Adapter
 
-| Behavior | Detail |
-|----------|--------|
-| `is_streaming: true` | Step is still in progress; may be replaced by updated events with the same `step_number`/`type` |
-| `is_streaming: false` | Step is finalized; safe to commit to history |
-| Finalization guarantee | Every `is_streaming: true` step is eventually followed by an `is_streaming: false` event for the same `step_number`. The finalized event carries the authoritative type (e.g. text streamed as `final_answer` may be finalized as `intermediate` once tool_use blocks arrive). |
-| TUI implication | When a finalized event arrives for the same `step_number` as the current streaming step, replace (don't commit) the stale streaming version. When `step_number` differs, commit the previous streaming step before replacing. |
+The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 
-### Tool Use Event Flow
-
-The agent signals tool usage through two paired `StepEvent` types sharing the same `step_number`:
-
-| Event type | Source | Key fields | When emitted |
-|------------|--------|------------|--------------|
-| `tool_start` | `agent_service._create_tool_start_event` | `tool_name`, `tool_arguments`, `tool_progress` | When the agent begins executing a tool |
-| `tool_result` | `agent_service._create_tool_result_event` | `tool_name`, `result`, `is_error` | After tool execution completes (only emitted when `is_streaming=false`) |
-
-**Pairing logic** (TUI `buildChatItems.ts`): `tool_result` steps are indexed by `stepNumber` into a map; each `tool_start` is paired with its matching `tool_result` to produce a single `ChatItem` of `kind: "tool_call"`.
-
-**Rendering** (`ToolCall.tsx`): Tool calls are expandable. Collapsed shows tool name, args summary, status icon (✓/✗), and result preview. Expanded shows full arguments and full result.
-
-**During streaming**: While a tool is executing, the TUI shows a `StreamingIndicator` with a spinner and tool name/progress. Sub-agent progress (for compound tools like `patch_schema_with_subagent`) is shown inline.
-
-### Field Serialization
-
-- Backend uses Pydantic `model_dump_json()` → snake_case keys (`step_number`, `tool_name`, `is_streaming`)
-- TUI `StepEvent` interface mirrors snake_case field names directly
-- TUI converts to camelCase `CompletedStep` via `stepToCompleted()` in `useChat.ts` for internal state
-- `tool_progress`: Python `tuple[int, int]` serializes as JSON `[int, int]`; TS declares `number[] | null` (works but could be tightened to `[number, number] | null`)
+| Internal event | Wire event(s) |
+|---------------|---------------|
+| `TextDeltaStep` | `text-start` + `text-delta` (+ `text-end` when finalized) |
+| `FinalAnswerStep` | `text-start` + `text-delta` + `text-end` |
+| `ErrorStep` | `error` |
+| `AgentQuestionPart` | `data-agent-question` |
+| `ThinkingStep` | Dropped |
+| `ToolStartStep` | Dropped |
+| `ToolResultStep` | Dropped |
+| `SubAgentProgressPart` | Dropped |
+| `TaskSnapshotPart` | Dropped |
+| `StreamDoneEvent` | Captured for metadata; not emitted directly |
 
 ## Environment Variables
 

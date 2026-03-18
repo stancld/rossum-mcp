@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import re
 
-_MERMAID_BLOCK_RE = re.compile(r"(```mermaid\s*\n)(.*?)(^```)", re.DOTALL | re.MULTILINE)
-
 # NodeId[unquoted label with shape-conflict chars] → NodeId["quoted label"]
 # Parentheses and curly braces inside [...] labels are ambiguous — mermaid
 # tries to parse them as nested shape modifiers, causing syntax errors.
@@ -27,6 +25,9 @@ def _quote_special_labels(block: str) -> str:
 def sanitize_mermaid_block(block: str) -> str:
     """Sanitize a single mermaid diagram block."""
     return _quote_special_labels(block)
+
+
+_MERMAID_BLOCK_RE = re.compile(r"(```mermaid\s*\n)(.*?)(^```)", re.DOTALL | re.MULTILINE)
 
 
 def sanitize_mermaid_in_markdown(text: str) -> str:
