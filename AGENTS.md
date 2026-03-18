@@ -158,6 +158,8 @@ Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at
 
 ## SSE Streaming Contract (rossum-agent → rossum-agent-tui)
 
+Target direction: treat the contract below as legacy. For new streaming work and any SSE refactors, aim to make Rossum streaming compatible with the Vercel AI SDK UI message stream model. Prefer AI SDK-style message parts, custom `data-*` parts, and message metadata over adding new bespoke SSE event types or more `StepEvent` variants. Any intentional divergence from AI SDK compatibility should be documented in the implementation plan and API docs.
+
 ### SSE Event Types
 
 Backend (`messages.py`) emits these SSE event names with corresponding payloads:
