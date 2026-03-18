@@ -12,6 +12,7 @@ from rossum_agent.tools.mock_pdf import (
     _find_item_column,
     _find_item_total_key,
     _generate_value_for_field,
+    _is_hidden,
     _is_line_item_field,
     _make_amounts_consistent,
     _render_pdf,
@@ -25,8 +26,10 @@ if TYPE_CHECKING:
 # -- Sample field fixtures --
 
 
-def _field(field_id: str, label: str, rir: list[str] | None = None, field_type: str = "string") -> dict:
-    return {"id": field_id, "label": label, "type": field_type, "rir_field_names": rir or []}
+def _field(
+    field_id: str, label: str, rir: list[str] | None = None, field_type: str = "string", **kwargs: object
+) -> dict:
+    return {"id": field_id, "label": label, "type": field_type, "rir_field_names": rir or [], **kwargs}
 
 
 INVOICE_FIELDS = [
@@ -916,5 +919,105 @@ class TestNumericOverrides:
             item_sum = sum(float(item["item_total"]) for item in result["line_items"])
             assert abs(total - item_sum) < 0.01
             assert total == 400.00
+        finally:
+            set_context(AgentContext())
+
+
+class TestIsHidden:
+    """Tests for _is_hidden."""
+
+    def test_hidden_true(self) -> None:
+        assert _is_hidden({"hidden": True}) is True
+
+    def test_hidden_false(self) -> None:
+        assert _is_hidden({"hidden": False}) is False
+
+    def test_hidden_missing(self) -> None:
+        assert _is_hidden({}) is False
+
+    def test_hidden_truthy_non_bool(self) -> None:
+        assert _is_hidden({"hidden": 1}) is True
+
+
+class TestHiddenFieldHandling:
+    """Hidden fields are excluded from PDF and output; required non-hidden fields are included."""
+
+    def test_hidden_line_item_fields_not_in_output(self, tmp_path: Path) -> None:
+        fields = [
+            _field("sender_name", "Vendor", ["sender_name"]),
+            _field("item_code", "Code", ["item_code"]),
+            _field("item_quantity", "Qty", ["item_quantity"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_base", "Base", ["item_amount_base"], "number", hidden=True),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(fields=fields, line_item_count=2)
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                assert "item_amount_base" not in item
+                assert "item_code" in item
+                assert "item_quantity" in item
+                assert "item_amount_total" in item
+        finally:
+            set_context(AgentContext())
+
+    def test_hidden_header_fields_not_in_expected_values(self, tmp_path: Path) -> None:
+        fields = [
+            _field("sender_name", "Vendor", ["sender_name"]),
+            _field("invoice_id", "Invoice", ["invoice_id"]),
+            _field("internal_ref", "Internal Ref", [], hidden=True),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(fields=fields)
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            assert "internal_ref" not in result["expected_values"]
+            assert "sender_name" in result["expected_values"]
+            assert "invoice_id" in result["expected_values"]
+        finally:
+            set_context(AgentContext())
+
+    def test_required_non_hidden_field_always_in_output(self, tmp_path: Path) -> None:
+        """Visible line item fields appear in output even when marked required."""
+        fields = [
+            _field("sender_name", "Vendor", ["sender_name"]),
+            _field("item_code", "Code", ["item_code"]),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_total_base", "Total Base", ["item_amount_total_base"], "number", required=True),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(fields=fields, line_item_count=2)
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            for item in result["line_items"]:
+                assert "item_amount_total" in item
+                assert "item_amount_total_base" in item
+        finally:
+            set_context(AgentContext())
+
+    def test_amounts_consistent_with_hidden_fields(self, tmp_path: Path) -> None:
+        """Consistency calculation uses all fields; output only shows visible ones."""
+        fields = [
+            _field("amount_total", "Total", ["amount_total"], "number"),
+            _field("amount_total_base", "Base", ["amount_total_base"], "number"),
+            _field("amount_total_tax", "Tax", ["amount_total_tax"], "number"),
+            _field("item_amount_total", "Total", ["item_amount_total"], "number"),
+            _field("item_amount_base", "Base", ["item_amount_base"], "number", hidden=True),
+        ]
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(fields=fields, line_item_count=3)
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            total = float(result["expected_values"]["amount_total"])
+            item_sum = sum(float(item["item_amount_total"]) for item in result["line_items"])
+            assert abs(total - item_sum) < 0.01
+            # Hidden field not in output
+            for item in result["line_items"]:
+                assert "item_amount_base" not in item
         finally:
             set_context(AgentContext())

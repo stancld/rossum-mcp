@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Schema-patching skill: Added `disable_prediction` to unsupported properties list and documented `ui_configuration.type` (`manual`/`data`) as the alternative for fields without AI extraction [#277](https://github.com/rossumai/rossum-agents/pull/277)
 - `execute_python`: Add `time` to allowed imports; factor out allowed-modules list into `ALLOWED_MODULES_CSV` constant used by tool definition [#278](https://github.com/rossumai/rossum-agents/pull/278)
+- Document-testing skill: Include only required fields in mock PDFs, exclude hidden fields, use "Total Amount" / "Total Amount Base" labels for Aurora capture [#279](https://github.com/rossumai/rossum-agents/pull/279)
 
 ## [1.5.5] - 2026-03-17
 

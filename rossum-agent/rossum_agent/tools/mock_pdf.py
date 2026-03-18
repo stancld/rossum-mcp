@@ -10,7 +10,6 @@ import json
 import logging
 import random
 import string
-from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -132,6 +131,11 @@ _RIR_VALUE_GENERATORS: dict[str, Callable[[], str]] = {
     "item_tax": lambda: str(_random_amount(1, 100)),
     "item_code": lambda: "".join(random.choices(string.ascii_uppercase + string.digits, k=6)),
 }
+
+
+def _is_hidden(field: dict) -> bool:
+    """Return True if a field is marked as hidden."""
+    return bool(field.get("hidden", False))
 
 
 def _is_line_item_field(field: dict) -> bool:
@@ -602,16 +606,18 @@ def generate_mock_pdf(
     Use for end-to-end extraction testing: generate PDF → upload → verify extracted values match expected.
 
     Args:
-        fields: Schema field descriptors: [{id, label, type, rir_field_names?, options?}].
+        fields: Schema field descriptors: [{id, label, type, rir_field_names?, options?, required?, hidden?}].
             Extract from schema content (sections → datapoints, multivalues → tuples).
+            hidden=True fields are excluded from the PDF rendering and output JSON, but still included in
+            internal consistency calculations (e.g., tax/total rounding). Use for internal/formula fields.
         document_type: Document type: invoice, purchase_order, receipt, delivery_note, credit_note.
         line_item_count: Number of line item rows to generate (default 3). Ignored when line_item_overrides is provided.
         overrides: Optional {field_id: value} to force specific field values. Accepts str, int, or float.
             Applied to header fields and as fallback for line item fields not covered by line_item_overrides.
         line_item_overrides: Optional list of per-row override dicts. Length determines row count.
             Each dict maps field_id to value for that row. Missing fields use overrides fallback or random values.
-        consistent_amounts: When True (default), recalculate header amounts to match line item sums.
-            Set to False to keep overridden amounts as-is — useful for testing mismatch/validation rules.
+        consistent_amounts: When True (default), recalculate header totals to match sum of line item totals.
+            Set to False to keep header amounts as-is — useful for testing header/line-item mismatch.
         filename: Output filename (auto-generated if omitted).
 
     Returns:
@@ -633,7 +639,9 @@ def generate_mock_pdf(
     try:
         # Classify fields
         header_fields = [f for f in fields if not _is_line_item_field(f)]
-        line_item_fields = [f for f in fields if _is_line_item_field(f)]
+        all_line_item_fields = [f for f in fields if _is_line_item_field(f)]
+        # Only visible (non-hidden) fields appear as PDF columns and in the output
+        visible_line_item_fields = [f for f in all_line_item_fields if not _is_hidden(f)]
 
         # Generate header values
         header_values: dict[str, str] = {}
@@ -644,15 +652,14 @@ def generate_mock_pdf(
             else:
                 header_values[fid] = _generate_value_for_field(f)
 
-        # Generate line items (only when line item fields exist)
-        line_items = _generate_line_items(line_item_fields, line_item_count, overrides, line_item_overrides)
+        # Generate line items for all fields (including hidden) — needed for consistency
+        line_items = _generate_line_items(all_line_item_fields, line_item_count, overrides, line_item_overrides)
 
-        # Make amounts consistent (unless explicitly disabled for mismatch testing)
         if consistent_amounts:
-            _make_amounts_consistent(header_values, line_items, header_fields, line_item_fields)
+            _make_amounts_consistent(header_values, line_items, header_fields, all_line_item_fields)
 
-        # Render PDF
-        pdf_bytes = _render_pdf(document_type, header_values, line_items, header_fields, line_item_fields)
+        # Render PDF with only visible (non-hidden) line item columns
+        pdf_bytes = _render_pdf(document_type, header_values, line_items, header_fields, visible_line_item_fields)
 
         # Write to output directory
         output_dir = get_context().get_output_dir()
@@ -668,12 +675,16 @@ def generate_mock_pdf(
 
         logger.info(f"generate_mock_pdf: wrote {len(pdf_bytes)} bytes to {file_path}")
 
+        # Output only non-hidden fields — what's visible in the document and extractable
+        visible_header_ids = {f.get("id", "") for f in header_fields if not _is_hidden(f)}
+        visible_line_item_ids = {f.get("id", "") for f in all_line_item_fields if not _is_hidden(f)}
+
         return json.dumps(
             {
                 "status": "success",
                 "file_path": str(file_path),
-                "expected_values": header_values,
-                "line_items": line_items,
+                "expected_values": {k: v for k, v in header_values.items() if k in visible_header_ids},
+                "line_items": [{k: v for k, v in item.items() if k in visible_line_item_ids} for item in line_items],
             }
         )
 
