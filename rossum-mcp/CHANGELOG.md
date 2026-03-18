@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.0.3] - 2026-03-18
 
 ### Fixed
 - Fixed `create_engine_field` sending `multiline` as Python bool (`True`/`False`) instead of API-expected lowercase string (`"true"`/`"false"`) [#280](https://github.com/rossumai/rossum-agents/pull/280)
