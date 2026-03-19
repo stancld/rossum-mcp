@@ -9,15 +9,15 @@ All notable changes to this project will be documented in this file.
 ## [2.0.3] - 2026-03-18
 
 ### Fixed
-- Fixed `create_engine_field` sending `multiline` as Python bool (`True`/`False`) instead of API-expected lowercase string (`"true"`/`"false"`) [#280](https://github.com/rossumai/rossum-agents/pull/280)
+- Fixed `create_engine_field` sending `multiline` as Python bool (`True`/`False`) instead of API-expected lowercase string (`"true"`/`"false"`) [#280](https://github.com/stancld/rossum-agents/pull/280)
 
 ### Changed
-- `get_schema_tree_structure` now includes boolean `required` and `hidden` flags on every node; datapoints map `required` from `constraints.required` and default to `false` when unset [#279](https://github.com/rossumai/rossum-agents/pull/279)
+- `get_schema_tree_structure` now includes boolean `required` and `hidden` flags on every node; datapoints map `required` from `constraints.required` and default to `false` when unset [#279](https://github.com/stancld/rossum-agents/pull/279)
 
 ## [2.0.2] - 2026-03-17
 
 ### Changed
-- Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/rossumai/rossum-agents/pull/276)
+- Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/stancld/rossum-agents/pull/276)
 - Replaced `Literal` type aliases with `StrEnum` classes for all tool parameters — `AutomationLevel`, `QueueLocale`, `DatapointType`, `QueueTemplateName`, `EmailTemplateType`, `HookSideload`, `EngineType`, `DeleteEntityType`, `EntityType`, `PatchOperation`, and search-model types (`LogLevel`). Enums provide named members, iteration support, and consistent JSON schema representation [#269](https://github.com/stancld/rossum-agents/pull/269)
 - Removed duplicate `DatapointType` Literal from `update/models.py` — now imported from `tools/models.py` [#269](https://github.com/stancld/rossum-agents/pull/269)
 
@@ -188,10 +188,10 @@ All notable changes to this project will be documented in this file.
 - Added `create_queue_from_template` tool for creating queues from predefined templates (EU/US/UK/CZ/CN demo templates) [#102](https://github.com/stancld/rossum-agents/pull/102)
 - Added `get_queue_template_names` tool for listing available queue template names [#102](https://github.com/stancld/rossum-agents/pull/102)
 - Added `list_queues` tool for listing queues with optional filtering by workspace or name [#101](https://github.com/stancld/rossum-agents/pull/101)
-- Added `list_schemas` tool for listing schemas with optional filtering by name or queue [#101](https://github.com/stancl/rossum-mcp/pull/101)
+- Added `list_schemas` tool for listing schemas with optional filtering by name or queue [#101](https://github.com/stancld/rossum-agents/pull/101)
 - Enhanced `list_annotations` tool with `ordering` and `first_n` parameters for sorting and limiting results [#101](https://github.com/stancld/rossum-agents/pull/101)
 - Added schema validation with clear error messages for datapoint, tuple, multivalue, and section nodes [#102](https://github.com/stancld/rossum-agents/pull/102)
-- Improved multivalue node handling in `patch_schema` with explicit error when attempting to add children to multivalue nodes [#102](https://github.com/stancl/rossum-mcp/pull/102)
+- Improved multivalue node handling in `patch_schema` with explicit error when attempting to add children to multivalue nodes [#102](https://github.com/stancld/rossum-agents/pull/102)
 
 
 ## [0.3.4] - 2025-12-31

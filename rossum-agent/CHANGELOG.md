@@ -7,48 +7,48 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/rossumai/rossum-agents/pull/284)
+- `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/stancld/rossum-agents/pull/284)
 
 ### Changed
-- `automation-setup` skill: Clarified `blocked_document_counts` shape (dict of blocker→count) and `get_automation_projections` return structure (`baseline` object + `projections` array) [#287](https://github.com/rossumai/rossum-agents/pull/287)
+- `automation-setup` skill: Clarified `blocked_document_counts` shape (dict of blocker→count) and `get_automation_projections` return structure (`baseline` object + `projections` array) [#287](https://github.com/stancld/rossum-agents/pull/287)
 
 ### Fixed
-- Hooks skill: Marked `user_update` action as deprecated in favor of `updated`; TxScript skill: Fixed payload key from `updated_datapoint_ids` to `updated_datapoints` [#285](https://github.com/rossumai/rossum-agents/pull/285)
+- Hooks skill: Marked `user_update` action as deprecated in favor of `updated`; TxScript skill: Fixed payload key from `updated_datapoint_ids` to `updated_datapoints` [#285](https://github.com/stancld/rossum-agents/pull/285)
 
 ## [1.5.6] - 2026-03-18
 
 ### Changed
-- Schema-patching skill: Added `disable_prediction` to unsupported properties list and documented `ui_configuration.type` (`manual`/`data`) as the alternative for fields without AI extraction [#277](https://github.com/rossumai/rossum-agents/pull/277)
-- `execute_python`: Add `time` to allowed imports; factor out allowed-modules list into `ALLOWED_MODULES_CSV` constant used by tool definition [#278](https://github.com/rossumai/rossum-agents/pull/278)
-- Document-testing skill: Include only required fields in mock PDFs, exclude hidden fields, use "Total Amount" / "Total Amount Base" labels for Aurora capture [#279](https://github.com/rossumai/rossum-agents/pull/279)
-- Schema-patching skill: Added engine constraint guidance — captured fields on Aurora schemas require a matching engine field via `create_engine_field` before schema patching; non-captured types (`formula`, `reasoning`, `manual`, `data`) are exempt [#280](https://github.com/rossumai/rossum-agents/pull/280)
+- Schema-patching skill: Added `disable_prediction` to unsupported properties list and documented `ui_configuration.type` (`manual`/`data`) as the alternative for fields without AI extraction [#277](https://github.com/stancld/rossum-agents/pull/277)
+- `execute_python`: Add `time` to allowed imports; factor out allowed-modules list into `ALLOWED_MODULES_CSV` constant used by tool definition [#278](https://github.com/stancld/rossum-agents/pull/278)
+- Document-testing skill: Include only required fields in mock PDFs, exclude hidden fields, use "Total Amount" / "Total Amount Base" labels for Aurora capture [#279](https://github.com/stancld/rossum-agents/pull/279)
+- Schema-patching skill: Added engine constraint guidance — captured fields on Aurora schemas require a matching engine field via `create_engine_field` before schema patching; non-captured types (`formula`, `reasoning`, `manual`, `data`) are exempt [#280](https://github.com/stancld/rossum-agents/pull/280)
 
 ## [1.5.5] - 2026-03-17
 
 ### Changed
-- Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/rossumai/rossum-agents/pull/276)
+- Bump `rossum-api` dependency from `>=3.11.2` to `>=3.12.0` [#276](https://github.com/stancld/rossum-agents/pull/276)
 
 ### Fixed
-- `generate_mock_pdf`: Improved `_find_item_total_key` to resolve line-item total fields via `rir_field_names` and broader key-name patterns (`item_total`, `*total*`) — fixes amount consistency breaking when the schema uses custom field IDs like `item_total` instead of `item_amount_total` [#275](https://github.com/rossumai/rossum-agents/pull/275)
+- `generate_mock_pdf`: Improved `_find_item_total_key` to resolve line-item total fields via `rir_field_names` and broader key-name patterns (`item_total`, `*total*`) — fixes amount consistency breaking when the schema uses custom field IDs like `item_total` instead of `item_amount_total` [#275](https://github.com/stancld/rossum-agents/pull/275)
 
 ## [1.5.4] - 2026-03-17
 
 ### Fixed
-- `get_chat`: Normalize multimodal content blocks (Anthropic image `source` format → flat `ImageContent`) in `task_step` and regular user messages — fixes incorrect serialization when chat history contains images [#273](https://github.com/rossumai/rossum-agents/pull/273)
+- `get_chat`: Normalize multimodal content blocks (Anthropic image `source` format → flat `ImageContent`) in `task_step` and regular user messages — fixes incorrect serialization when chat history contains images [#273](https://github.com/stancld/rossum-agents/pull/273)
 
 ## [1.5.3] - 2026-03-17
 
 ### Fixed
-- `list_chats`: Handle multimodal content blocks (e.g. image + text) in `first_message` and `preview` fields — fixes 500 error when chat history contains image messages [#273](https://github.com/rossumai/rossum-agents/pull/273)
+- `list_chats`: Handle multimodal content blocks (e.g. image + text) in `first_message` and `preview` fields — fixes 500 error when chat history contains image messages [#273](https://github.com/stancld/rossum-agents/pull/273)
 
 ## [1.5.2] - 2026-03-17
 
 ### Added
-- `generate_mock_pdf`: Accept numeric overrides (`int`/`float`), per-row `line_item_overrides`, and `consistent_amounts` toggle for mismatch testing [#270](https://github.com/rossumai/rossum-agents/pull/270)
-- `execute_python`: Allow `fpdf` (fpdf2) imports for custom PDF generation [#270](https://github.com/rossumai/rossum-agents/pull/270)
+- `generate_mock_pdf`: Accept numeric overrides (`int`/`float`), per-row `line_item_overrides`, and `consistent_amounts` toggle for mismatch testing [#270](https://github.com/stancld/rossum-agents/pull/270)
+- `execute_python`: Allow `fpdf` (fpdf2) imports for custom PDF generation [#270](https://github.com/stancld/rossum-agents/pull/270)
 
 ### Fixed
-- `PostgresStorage`: Added `sslmode` support via constructor parameter and `POSTGRES_SSLMODE` env var — fixes connections to PostgreSQL servers that require SSL [#272](https://github.com/rossumai/rossum-agents/pull/272)
+- `PostgresStorage`: Added `sslmode` support via constructor parameter and `POSTGRES_SSLMODE` env var — fixes connections to PostgreSQL servers that require SSL [#272](https://github.com/stancld/rossum-agents/pull/272)
 
 ## [1.5.1] - 2026-03-16
 
@@ -57,17 +57,17 @@ All notable changes to this project will be documented in this file.
 - Bundled `rossum-kb.json` as package data and load it via `importlib.resources` instead of `Path(__file__)` traversal — works correctly when installed from wheel/zip
 - Allowed `try/except` blocks in `execute_python` sandbox — removes `ast.Try` from disallowed nodes and exposes common exception types (`Exception`, `ValueError`, `KeyError`, `TypeError`, etc.) as safe builtins
 - Allowed `with` statements in `execute_python` sandbox — enables context managers (e.g. `with open(...) as f`)
-- Added `context_usage_fraction` field to `StreamDoneEvent` — reports the fraction of the model's input context window used after each turn, enabling clients to display context budget warnings [#267](https://github.com/rossumai/rossum-agents/pull/267)
+- Added `context_usage_fraction` field to `StreamDoneEvent` — reports the fraction of the model's input context window used after each turn, enabling clients to display context budget warnings [#267](https://github.com/stancld/rossum-agents/pull/267)
 
 ### Fixed
-- `run_jq` now accepts `dict` data directly — prevents `TypeError` when the model passes parsed JSON instead of a string [#261](https://github.com/rossumai/rossum-agents/pull/261)
-- Switched MDH dataset listing to `/v2/datasets` endpoint [#261](https://github.com/rossumai/rossum-agents/pull/261)
-- Clarified in lookup-fields skill and base prompt that lookup fields are native schema-level matching, not hook-based — prevents agent from incorrectly creating hooks for lookup fields [#261](https://github.com/rossumai/rossum-agents/pull/261)
+- `run_jq` now accepts `dict` data directly — prevents `TypeError` when the model passes parsed JSON instead of a string [#261](https://github.com/stancld/rossum-agents/pull/261)
+- Switched MDH dataset listing to `/v2/datasets` endpoint [#261](https://github.com/stancld/rossum-agents/pull/261)
+- Clarified in lookup-fields skill and base prompt that lookup fields are native schema-level matching, not hook-based — prevents agent from incorrectly creating hooks for lookup fields [#261](https://github.com/stancld/rossum-agents/pull/261)
 
 ## [1.5.0] - 2026-03-13
 
 ### Added
-- Added PostgreSQL as chat persistence backend — `CHAT_STORAGE_BACKEND=postgres` (default) uses SQLAlchemy Core with `psycopg` for durable chat/file/feedback storage with configurable TTL; `redis` remains available as an alternative; added `docker-compose.yml` for local development [#248](https://github.com/rossumai/rossum-agents/pull/248)
+- Added PostgreSQL as chat persistence backend — `CHAT_STORAGE_BACKEND=postgres` (default) uses SQLAlchemy Core with `psycopg` for durable chat/file/feedback storage with configurable TTL; `redis` remains available as an alternative; added `docker-compose.yml` for local development [#248](https://github.com/stancld/rossum-agents/pull/248)
 - Cautious persona now gates write operations (MCP + internal) behind a user confirmation prompt — blocked tools emit an `agent_question` SSE event with yes/no/chat options; only explicit approval pre-approves the tool for the next turn [#252](https://github.com/stancld/rossum-agents/pull/252)
 
 ### Changed
@@ -82,19 +82,19 @@ All notable changes to this project will be documented in this file.
 ## [1.4.0] - 2026-03-09
 
 ### Added
-- Auto-spillover for large tool results — results exceeding 30k chars are automatically saved to `{output_dir}/workspace/` and replaced with a compact summary + file path; agent uses `run_jq` or `run_grep` to query full content on demand [#240](https://github.com/rossumai/rossum-agents/pull/240)
-- Per-message boolean feedback (thumbs up/down) — `PUT/GET/DELETE /api/v1/chats/{chat_id}/feedback` endpoints for rating agent responses by turn index [#222](https://github.com/rossumai/rossum-agents/pull/222)
+- Auto-spillover for large tool results — results exceeding 30k chars are automatically saved to `{output_dir}/workspace/` and replaced with a compact summary + file path; agent uses `run_jq` or `run_grep` to query full content on demand [#240](https://github.com/stancld/rossum-agents/pull/240)
+- Per-message boolean feedback (thumbs up/down) — `PUT/GET/DELETE /api/v1/chats/{chat_id}/feedback` endpoints for rating agent responses by turn index [#222](https://github.com/stancld/rossum-agents/pull/222)
 - Streaming progress logging — logs model/message count at stream start, periodic progress every 10s (phase, elapsed time, character throughput), and total elapsed time on completion for visibility into long Bedrock generations
-- Added `ask_user_question` tool — agent can ask the user structured questions (free-text or multiple-choice) mid-execution when it needs information it cannot determine on its own; streamed via SSE `agent_question` event [#224](https://github.com/rossumai/rossum-agents/pull/224)
+- Added `ask_user_question` tool — agent can ask the user structured questions (free-text or multiple-choice) mid-execution when it needs information it cannot determine on its own; streamed via SSE `agent_question` event [#224](https://github.com/stancld/rossum-agents/pull/224)
 
 ### Changed
 - Updated hooks skill prompt to show `token_owner` and `run_after` in `create_hook` example [#247](https://github.com/stancld/rossum-agents/pull/247)
-- Removed `elis_openapi_grep` and `elis_openapi_jq` as direct agent tools — Elis API reference lookups now route exclusively through the `search_elis_docs` sub-agent ([#220](https://github.com/rossumai/rossum-agents/pull/220))
+- Removed `elis_openapi_grep` and `elis_openapi_jq` as direct agent tools — Elis API reference lookups now route exclusively through the `search_elis_docs` sub-agent ([#220](https://github.com/stancld/rossum-agents/pull/220))
 - Replaced individual copilot tools (`suggest_formula_field`, `suggest_lookup_field`, `evaluate_lookup_field`, `get_lookup_dataset_raw_values`, `query_lookup_dataset`) with a single `execute_python` tool — copilot functions are now called via Python execution instead of dedicated agent tools [#242](https://github.com/stancld/rossum-agents/pull/242)
 - Removed `load_tool_category` tool — agent now loads MCP tools individually via `load_tool` by name; `load_tool` description updated with category listing guidance [#243](https://github.com/stancld/rossum-agents/pull/243)
 
 ### Removed
-- Removed `organization-setup` skill — queue creation is handled directly via `create_queue_from_template` without needing a dedicated skill [#245](https://github.com/rossumai/rossum-agents/pull/245)
+- Removed `organization-setup` skill — queue creation is handled directly via `create_queue_from_template` without needing a dedicated skill [#245](https://github.com/stancld/rossum-agents/pull/245)
 - Removed `create_schema_with_subagent` tool and `schema-creation` skill — schema creation is handled by the agent directly using `patch_schema_with_subagent` (via schema-patching sub-agent) [#244](https://github.com/stancld/rossum-agents/pull/244)
 - Removed `HIDDEN_TOOLS` concept — `update_schema` and `create_queue` MCP tools are fully removed; schema patching subagent now calls the Rossum API directly via `httpx` instead of routing through `update_schema` MCP tool [#245](https://github.com/stancld/rossum-agents/pull/245)
 - Removed `rossum-deployment` skill and all deploy/spawn tools — unused and unsolved [#241](https://github.com/stancld/rossum-agents/pull/241)
@@ -105,7 +105,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed `packages.find` in `pyproject.toml` — removed `rossum_mcp*` and `rossum_deploy*` from the `include` list; only `rossum_agent*` belongs in this package's build
-- Fixed Slack reporter name blank when using support access — `/v1/users/{id}` returns 404 for cross-org support tokens; now falls back to `first_name last_name (email)` from `/v1/auth/user` response [#223](https://github.com/rossumai/rossum-agents/pull/223)
+- Fixed Slack reporter name blank when using support access — `/v1/users/{id}` returns 404 for cross-org support tokens; now falls back to `first_name last_name (email)` from `/v1/auth/user` response [#223](https://github.com/stancld/rossum-agents/pull/223)
 - Schema patching sub-agent now auto-recovers from engine restriction errors — when `update_schema` fails with "extracted field '...' is not present among names of engine fields", invalid `rir_field_names` are auto-stripped and the update retried [#221](https://github.com/stancld/rossum-agents/pull/221)
 
 ## [1.3.6] - 2026-03-02
@@ -122,8 +122,8 @@ All notable changes to this project will be documented in this file.
 ## [1.3.4] - 2026-02-26
 
 ### Changed
-- Hidden `create_queue` tool — agent now uses `create_queue_from_template` exclusively; if the template is unknown, the agent asks the user and presents options grouped by category ([#218](https://github.com/rossumai/rossum-agents/pull/218))
-- Added queue template guidance to base prompt — lists available templates grouped by category (standard invoices, AP&R, tax invoices, specialty, other) ([#218](https://github.com/rossumai/rossum-agents/pull/218))
+- Hidden `create_queue` tool — agent now uses `create_queue_from_template` exclusively; if the template is unknown, the agent asks the user and presents options grouped by category ([#218](https://github.com/stancld/rossum-agents/pull/218))
+- Added queue template guidance to base prompt — lists available templates grouped by category (standard invoices, AP&R, tax invoices, specialty, other) ([#218](https://github.com/stancld/rossum-agents/pull/218))
 - Chat summary generation now uses AWS Bedrock (`create_async_bedrock_client`) instead of the direct Anthropic API
 
 ## [1.3.3] - 2026-02-26
@@ -134,7 +134,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed several chat summary issues: now updates incrementally instead of regenerating from scratch, correctly extracts `first_message` from `task_step` format, and no longer overwrites an existing summary with `None` on failure
-- Fixed rule creation workflow — added `suggest_rule` tool that uses Rossum Local Copilot to generate trigger conditions and actions from natural language; updated rules-and-actions skill to use suggest-then-create flow and removed `schema_id` from scope requirements ([#217](https://github.com/rossumai/rossum-agents/pull/217))
+- Fixed rule creation workflow — added `suggest_rule` tool that uses Rossum Local Copilot to generate trigger conditions and actions from natural language; updated rules-and-actions skill to use suggest-then-create flow and removed `schema_id` from scope requirements ([#217](https://github.com/stancld/rossum-agents/pull/217))
 
 ## [1.3.2] - 2026-02-25
 
@@ -317,7 +317,7 @@ All notable changes to this project will be documented in this file.
 - Refactored `internal_tools.py` into modular `tools/` subpackage with separate modules for file tools, spawn MCP, knowledge base search, hook debugging, and skills [#78](https://github.com/stancld/rossum-agents/pull/78)
 - Reorganized sub-agent tools into `tools/subagents/` module (hook_debug, knowledge_base, schema_patching) [#102](https://github.com/stancld/rossum-agents/pull/102)
 - Improved multi-turn conversation by passing context properly [#73](https://github.com/stancld/rossum-agents/pull/73)
-- Improved sub-agent knowledge base info panel [#73](https://github.com/stancl/rossum-mcp/pull/73)
+- Improved sub-agent knowledge base info panel [#73](https://github.com/stancld/rossum-agents/pull/73)
 - Made token owner selection stricter in deployment tools [#73](https://github.com/stancld/rossum-agents/pull/73)
 - Display workspace diffs in a concise way [#73](https://github.com/stancld/rossum-agents/pull/73)
 - Improved result analyzing UX for sub-agent responses [#85](https://github.com/stancld/rossum-agents/pull/85)
