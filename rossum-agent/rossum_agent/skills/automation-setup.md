@@ -33,7 +33,7 @@ Returns:
 - `estimated_error_rate` — overall queue error rate
 - `document_automation_rate`, `document_touchless_rate` — headline metrics
 - `document_blockers` — list of `{blocker, granularity, document_count}` showing what prevents automation
-- `datapoint_statistics` — per-field `{schema_id, blocked_document_counts, estimated_error_rate, confidence_threshold}`
+- `datapoint_statistics` — per-field `{schema_id, blocked_document_counts, estimated_error_rate, confidence_threshold}`. `blocked_document_counts` is a **dict mapping blocker type → count** (e.g. `{"low_score": 450, "error_message": 106}`), not an object with a `.total` key. To compute total: `[.blocked_document_counts | to_entries[].value] | add`.
 - `document_automation_timeseries`, `estimated_error_rate_timeseries` — daily history
 
 ### get_automation_projections
@@ -49,7 +49,13 @@ result = get_automation_projections(
 )
 ```
 
-Returns `baseline` (current state) and `projections` (projected state after applying the error rate limits). Compare them to show the user what would change.
+Returns:
+- `baseline` — object with current-state metrics (same shape as each projection)
+- `projections` — **array** of scenario objects (one per error-rate step), each containing the same keys as `baseline`
+
+Both `baseline` and each element of `projections` share this shape: `{document_automation_rate, document_touchless_rate, estimated_error_rate, datapoint_statistics, document_blockers, ...}`.
+
+When using `run_jq` to extract projection data, index into the array: `.result.projections[0]`, `.result.projections[]`, etc.
 
 ### list_automation_targets
 
