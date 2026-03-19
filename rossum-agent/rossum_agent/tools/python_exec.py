@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, cast
 
 from anthropic import beta_tool
 
-from rossum_agent.python_tools.copilot import formula, lookup, rule
+from rossum_agent.python_tools.copilot import automation_setup, formula, lookup, rule
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.file_tools import write_file as _write_file_tool
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool as _call_mcp_tool
@@ -215,6 +215,10 @@ def _build_copilot_helpers() -> SimpleNamespace:
         query_lookup_dataset=_json_wrapper(lookup.query_lookup_dataset),
         suggest_rule=_json_wrapper(rule.suggest_rule),
         evaluate_rules=_json_wrapper(rule.evaluate_rules),
+        get_automation_current_stats=_json_wrapper(automation_setup.get_automation_current_stats),
+        get_automation_projections=_json_wrapper(automation_setup.get_automation_projections),
+        list_automation_targets=_json_wrapper(automation_setup.list_automation_targets),
+        save_automation_target=_json_wrapper(automation_setup.save_automation_target),
     )
 
 
@@ -241,9 +245,13 @@ def _build_helpers() -> dict[str, object]:
         "evaluate_lookup_field": copilot.evaluate_lookup_field,
         "evaluate_rules": copilot.evaluate_rules,
         "api_get": api_get,
+        "get_automation_current_stats": copilot.get_automation_current_stats,
+        "get_automation_projections": copilot.get_automation_projections,
         "get_lookup_dataset_raw_values": copilot.get_lookup_dataset_raw_values,
         "json": json,
+        "list_automation_targets": copilot.list_automation_targets,
         "query_lookup_dataset": copilot.query_lookup_dataset,
+        "save_automation_target": copilot.save_automation_target,
         "schema_content": schema_content,
         "suggest_formula_field": copilot.suggest_formula_field,
         "suggest_lookup_field": copilot.suggest_lookup_field,
