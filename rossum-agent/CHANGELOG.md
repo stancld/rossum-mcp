@@ -7,10 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/stancld/rossum-agents/pull/284)
-
-### Changed
-- `automation-setup` skill: Clarified `blocked_document_counts` shape (dict of blocker→count) and `get_automation_projections` return structure (`baseline` object + `projections` array) [#287](https://github.com/stancld/rossum-agents/pull/287)
+- `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/stancld/rossum-agents/pull/284) [#287](https://github.com/stancld/rossum-agents/pull/287)
 
 ### Fixed
 - Hooks skill: Marked `user_update` action as deprecated in favor of `updated`; TxScript skill: Fixed payload key from `updated_datapoint_ids` to `updated_datapoints` [#285](https://github.com/stancld/rossum-agents/pull/285)
