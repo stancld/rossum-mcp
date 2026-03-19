@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/rossumai/rossum-agents/pull/284)
 
+### Fixed
+- Hooks skill: Marked `user_update` action as deprecated in favor of `updated`; TxScript skill: Fixed payload key from `updated_datapoint_ids` to `updated_datapoints` [#285](https://github.com/rossumai/rossum-agents/pull/285)
+
 ## [1.5.6] - 2026-03-18
 
 ### Changed
