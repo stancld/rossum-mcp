@@ -23,7 +23,7 @@ Events use strict `event.action` format — passing just `"annotation_content"` 
 
 | Event | Actions |
 |-------|---------|
-| `annotation_content` | `initialize`, `started`, `user_update`, `updated`, `confirm`, `export` |
+| `annotation_content` | `initialize`, `started`, `user_update` (deprecated — use `updated`), `updated`, `confirm`, `export` |
 | `annotation_status` | `changed` |
 | `invocation` | `manual`, `scheduled`, `interface` |
 | `upload` | `created` |

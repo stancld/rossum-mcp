@@ -155,7 +155,7 @@ base_url = payload.get("base_url", "https://api.elis.rossum.ai")
 auth_token = payload.get("rossum_authorization_token")
 settings = payload.get("settings", {})
 secrets = payload.get("secrets", {})
-updated_ids = payload.get("updated_datapoint_ids", [])
+updated_ids = payload.get("updated_datapoints", [])
 ```
 
 ## Enum Fields (serverless only)
