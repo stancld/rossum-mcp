@@ -43,6 +43,7 @@ agent = [
 ]
 # Agent API server
 api = [
+    "alembic>=1.13.0",
     "fastapi>=0.115.0",
     "gunicorn>=23.0.0",
     "psycopg[binary]>=3.1.0",
@@ -80,6 +81,7 @@ tests = [
 ]
 # All dependencies
 all = [
+    "alembic>=1.13.0",
     "anthropic>=0.79.0",
     "boto3>=1.0",
     "coverage>=7.0.0",
@@ -173,5 +175,11 @@ possibly-missing-attribute = "ignore"
 # jq is a C extension without type stubs
 [[tool.ty.overrides]]
 include = ["**/subagents/elis_docs.py"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
+
+# Alembic doesn't ship type stubs that ty can resolve
+[[tool.ty.overrides]]
+include = ["**/alembic/**", "**/postgres_storage.py"]
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

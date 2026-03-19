@@ -112,6 +112,23 @@ class TestPostgresStorageInit:
             assert "sslmode" not in call_kwargs.kwargs["connect_args"]
 
 
+class TestPostgresStorageInitialize:
+    """Test initialize() runs Alembic migrations."""
+
+    def test_initialize_calls_alembic_upgrade(self):
+        """Test that initialize() invokes alembic upgrade to head."""
+        storage = _make_storage_with_mock_engine()
+
+        with patch("rossum_agent.postgres_storage.command") as mock_command:
+            storage.initialize()
+
+            mock_command.upgrade.assert_called_once()
+            cfg = mock_command.upgrade.call_args[0][0]
+            assert cfg.get_main_option("script_location").endswith("alembic")
+            assert cfg.attributes["engine"] is storage._engine
+            assert mock_command.upgrade.call_args[0][1] == "head"
+
+
 class TestPostgresStorageChat:
     """Test chat CRUD operations."""
 

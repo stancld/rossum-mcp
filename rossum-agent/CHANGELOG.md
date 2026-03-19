@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
+- Alembic migrations for PostgreSQL schema management — initial migration creates `chats` and `messages` tables, with `alembic upgrade head` / `alembic downgrade` support [#286](https://github.com/stancld/rossum-agents/pull/286)
 
 ### Removed
 - Redis as chat persistence backend — PostgreSQL is now the only storage backend; `CHAT_STORAGE_BACKEND` env var is no longer used [#294](https://github.com/stancld/rossum-agents/pull/294)

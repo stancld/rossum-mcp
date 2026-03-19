@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
+from alembic import command
+from alembic.config import Config
 from sqlalchemy.dialects.postgresql import BYTEA, JSONB, insert
 from sqlalchemy.dialects.postgresql import array as pg_array
 
@@ -95,8 +97,12 @@ class PostgresStorage:
         return self._engine
 
     def initialize(self) -> None:
-        """Create tables if they don't exist. Call once at startup."""
-        sa_metadata.create_all(self.engine)
+        """Run Alembic migrations to bring the database schema up to date. Call once at startup."""
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option("script_location", str(Path(__file__).resolve().parent / "alembic"))
+        alembic_cfg.attributes["engine"] = self.engine
+
+        command.upgrade(alembic_cfg, "head")
 
     def _user_id_db(self, user_id: str | None) -> str:
         return user_id or ""
