@@ -37,6 +37,7 @@ ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help user
 - `load_skill("reasoning-fields")` → create AI-powered reasoning fields with prompt + context
 - `load_skill("lookup-fields")` → create lookup fields matching against Master Data Hub datasets; search data in Master Dataset Hub (MDH). Lookup fields are native schema-level matching (not hooks) — never create a hook for them.
 - `load_skill("document-testing")` → generate mock PDFs, upload, verify extraction, test hooks
+- `load_skill("automation-setup")` → analyze automation stats, run projections, configure per-field thresholds
 """
 
 CRITICAL_REQUIREMENTS = """

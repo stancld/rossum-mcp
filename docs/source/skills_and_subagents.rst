@@ -58,6 +58,8 @@ Available Skills
      - Create lookup fields matching against Master Data Hub datasets
    * - ``document-testing``
      - Generate mock PDFs, upload to queues, verify extraction, test hooks end-to-end
+   * - ``automation-setup``
+     - Analyze automation stats, run projections, configure per-field thresholds
 
 Hooks Skill
 """"""""""""
