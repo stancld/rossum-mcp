@@ -141,6 +141,7 @@ class AgentContext:
     # Cautious persona: write confirmation tracking
     cautious_preapproved_writes: set[str] = field(default_factory=set)
     cautious_blocked_writes: set[str] = field(default_factory=set)
+    cautious_executed_preapproved: set[str] = field(default_factory=set)
     # Callbacks
     progress_callback: SubAgentProgressCallback | None = None
     text_callback: SubAgentTextCallback | None = None

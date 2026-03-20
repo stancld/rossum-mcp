@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- Cautious persona losing pre-approvals when agent asks questions [#290](https://github.com/stancld/rossum-agents/pull/290)
+
 ## [1.6.0] - 2026-03-20
 
 ### Added

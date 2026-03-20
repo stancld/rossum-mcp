@@ -50,7 +50,7 @@ async def check_cautious_write_gate(
     if not is_write_tool(tool_call.name):
         return None
     if tool_call.name in agent_ctx.cautious_preapproved_writes:
-        agent_ctx.cautious_preapproved_writes.discard(tool_call.name)
+        agent_ctx.cautious_executed_preapproved.add(tool_call.name)
         logger.info(f"Cautious persona: allowing pre-approved write tool {tool_call.name}")
         return None
 
