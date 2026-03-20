@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Graceful shutdown with request draining on SIGTERM — health endpoint returns `shutting_down` status with 503 during shutdown [#292](https://github.com/stancld/rossum-agents/pull/292)
+
 ### Fixed
 - Cautious persona losing pre-approvals when agent asks questions [#290](https://github.com/stancld/rossum-agents/pull/290)
 
