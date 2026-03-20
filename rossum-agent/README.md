@@ -74,8 +74,7 @@ uv sync --extra api        # REST API (FastAPI, PostgreSQL, Redis)
 | `AWS_REGION` | No | AWS region for Bedrock (default: `us-east-1`) |
 | `AWS_BEDROCK_MODEL_ARN` | No | Custom ARN for the Opus model in Bedrock |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | No | Custom ARN for the Haiku model in Bedrock |
-| `CHAT_STORAGE_BACKEND` | No | Chat persistence backend: `postgres` (default) or `redis` |
-| `POSTGRES_HOST` | No | PostgreSQL host (default: `localhost`) |
+| `POSTGRES_HOST` | No | PostgreSQL host for chat storage (default: `localhost`) |
 | `POSTGRES_PORT` | No | PostgreSQL port (default: `5432`) |
 | `POSTGRES_DB` | No | PostgreSQL database name (default: `rossum_agent`) |
 | `POSTGRES_USER` | No | PostgreSQL user (default: `rossum`) |

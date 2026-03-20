@@ -85,39 +85,16 @@ class TestRateLimitExceededHandler:
 class TestCreateStorage:
     """Tests for _create_storage factory function."""
 
-    def test_default_backend_is_postgres(self):
-        """Test that default backend is postgres."""
-        with (
-            patch("rossum_agent.api.main.os.getenv", return_value="postgres"),
-            patch("rossum_agent.api.main.PostgresStorage") as mock_pg_cls,
-        ):
+    def test_creates_postgres_storage(self):
+        """Test that _create_storage creates and initializes PostgresStorage."""
+        with patch("rossum_agent.api.main.PostgresStorage") as mock_pg_cls:
             mock_pg_instance = MagicMock()
             mock_pg_cls.return_value = mock_pg_instance
 
             result = _create_storage()
 
             assert result is mock_pg_instance
-
-    def test_redis_backend(self):
-        """Test that redis backend creates RedisStorage."""
-        with (
-            patch("rossum_agent.api.main.os.getenv", return_value="redis"),
-            patch("rossum_agent.api.main.RedisStorage") as mock_redis_cls,
-        ):
-            mock_redis_instance = MagicMock()
-            mock_redis_cls.return_value = mock_redis_instance
-
-            result = _create_storage()
-
-            assert result is mock_redis_instance
-
-    def test_unknown_backend_raises(self):
-        """Test that unknown backend raises ValueError."""
-        with (
-            patch("rossum_agent.api.main.os.getenv", return_value="sqlite"),
-            pytest.raises(ValueError, match=r"Unknown CHAT_STORAGE_BACKEND.*sqlite"),
-        ):
-            _create_storage()
+            mock_pg_instance.initialize.assert_called_once()
 
 
 class TestInitServices:
@@ -157,8 +134,8 @@ class TestInitServices:
             assert test_app.state.agent_service is mock_agent_instance
             assert test_app.state.file_service is mock_file_instance
 
-    def test_init_services_creates_redis_storage(self):
-        """Test that _init_services creates redis_storage for change tracking."""
+    def test_init_services_creates_redis_connection(self):
+        """Test that _init_services creates redis_connection for change tracking."""
         from fastapi import FastAPI
         from rossum_agent.api.main import _init_services
 
@@ -170,7 +147,7 @@ class TestInitServices:
             patch("rossum_agent.api.main.ChatService") as mock_chat_cls,
             patch("rossum_agent.api.main.AgentService"),
             patch("rossum_agent.api.main.FileService"),
-            patch("rossum_agent.api.main.RedisStorage", return_value=mock_redis) as mock_redis_cls,
+            patch("rossum_agent.api.main.RedisConnection", return_value=mock_redis) as mock_redis_cls,
         ):
             mock_chat_instance = MagicMock()
             mock_chat_instance.storage = mock_storage
@@ -180,10 +157,10 @@ class TestInitServices:
             _init_services(test_app)
 
             mock_redis_cls.assert_called_once()
-            assert test_app.state.redis_storage is mock_redis
+            assert test_app.state.redis_connection is mock_redis
 
-    def test_init_services_skips_existing_redis_storage(self):
-        """Test that _init_services doesn't overwrite existing redis_storage."""
+    def test_init_services_skips_existing_redis_connection(self):
+        """Test that _init_services doesn't overwrite existing redis_connection."""
         from fastapi import FastAPI
         from rossum_agent.api.main import _init_services
 
@@ -201,10 +178,10 @@ class TestInitServices:
             mock_chat_cls.return_value = mock_chat_instance
 
             test_app = FastAPI()
-            test_app.state.redis_storage = existing_redis
+            test_app.state.redis_connection = existing_redis
             _init_services(test_app)
 
-            assert test_app.state.redis_storage is existing_redis
+            assert test_app.state.redis_connection is existing_redis
 
 
 class TestLifespan:
@@ -259,6 +236,7 @@ class TestLifespan:
         mock_chat_service.is_connected.return_value = True
 
         with (
+            patch("rossum_agent.api.main._create_storage"),
             patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
             patch("rossum_agent.api.main.AgentService"),
             patch("rossum_agent.api.main.FileService"),

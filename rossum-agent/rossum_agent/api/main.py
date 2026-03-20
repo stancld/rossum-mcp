@@ -51,8 +51,7 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.api.shutdown import shutdown_state
 from rossum_agent.postgres_storage import PostgresStorage
-from rossum_agent.redis_storage import RedisStorage
-from rossum_agent.storage import get_storage_backend
+from rossum_agent.redis_client import RedisConnection
 
 logger = logging.getLogger(__name__)
 
@@ -167,15 +166,10 @@ async def _drain_and_shutdown() -> None:
 
 
 def _create_storage() -> ChatStorage:
-    """Create the chat storage backend based on CHAT_STORAGE_BACKEND env var."""
-    backend = get_storage_backend()
-    if backend == "redis":
-        return RedisStorage()
-    if backend == "postgres":
-        storage = PostgresStorage()
-        storage.initialize()
-        return storage
-    raise ValueError(f"Unknown CHAT_STORAGE_BACKEND: {backend!r}. Use 'postgres' or 'redis'.")
+    """Create the PostgreSQL chat storage backend."""
+    storage = PostgresStorage()
+    storage.initialize()
+    return storage
 
 
 def _init_services(app: FastAPI) -> None:
@@ -190,8 +184,8 @@ def _init_services(app: FastAPI) -> None:
         app.state.agent_service = AgentService()
     if not hasattr(app.state, "file_service"):
         app.state.file_service = FileService(storage=app.state.chat_service.storage)
-    if not hasattr(app.state, "redis_storage"):
-        app.state.redis_storage = RedisStorage()
+    if not hasattr(app.state, "redis_connection"):
+        app.state.redis_connection = RedisConnection()
 
 
 @asynccontextmanager
@@ -206,11 +200,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     _init_services(app)
     _install_sigterm_handler(app)
 
-    backend = get_storage_backend()
     if app.state.chat_service.is_connected():
-        logger.info(f"Chat storage ({backend}) connection established")
+        logger.info("Chat storage (postgres) connection established")
     else:
-        logger.warning(f"Chat storage ({backend}) connection failed - some features may not work")
+        logger.warning("Chat storage (postgres) connection failed - some features may not work")
 
     yield
 

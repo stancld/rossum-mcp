@@ -11,7 +11,6 @@ from rossum_agent.api.dependencies import get_chat_service
 from rossum_agent.api.models.schemas import HealthResponse
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.shutdown import shutdown_state
-from rossum_agent.storage import get_storage_backend
 
 router = APIRouter(tags=["health"])
 
@@ -35,7 +34,7 @@ async def health_check(
     body = HealthResponse(
         status=health_status,
         storage_connected=storage_connected,
-        storage_backend=get_storage_backend(),
+        storage_backend="postgres",
         version=VERSION,
     )
 
