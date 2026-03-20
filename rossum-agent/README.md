@@ -84,7 +84,6 @@ uv sync --extra api        # REST API (FastAPI, PostgreSQL, Redis)
 | `REDIS_PORT` | No | Redis port for change tracking (default: `6379`) |
 | `ROSSUM_MCP_MODE` | No | MCP mode: `read-only` (default) or `read-write` |
 | `ROSSUM_AGENT_PERSONA` | No | Agent persona: `default` (default) or `cautious` — read by the TUI client, not the server |
-| `ROSSUM_KB_DATA_PATH` | No | Path to local knowledge base JSON file |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | No | Comma-separated regex patterns for additional allowed Rossum API hosts |
 | `SLACK_BOT_TOKEN` | No | Slack bot token for report integration |
 | `SLACK_CHANNEL` | No | Slack channel for posting reports |

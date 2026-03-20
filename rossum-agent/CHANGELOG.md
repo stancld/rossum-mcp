@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Removed
+- `ROSSUM_KB_DATA_PATH` env var override from knowledge base cache — KB data now resolves only via explicit `cache_path` or the bundled package resource
+
 ## [1.6.1] - 2026-03-20
 
 ### Added

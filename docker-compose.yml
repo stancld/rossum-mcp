@@ -48,7 +48,6 @@ services:
       - POSTGRES_PASSWORD=rossum
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - ROSSUM_KB_DATA_PATH=/app/rossum-agent/data/rossum-kb.json
     ports:
       - 127.0.0.1:8000:8000
     volumes:

@@ -87,22 +87,6 @@ class TestKBCache:
         assert data1 is not data2
         assert data2["scraped_at"] == "2026-02-08T00:00:00Z"
 
-    def test_local_path_env_override(self, tmp_path, sample_data, monkeypatch):
-        local_file = tmp_path / "local_kb.json"
-        local_file.write_text(json.dumps(sample_data))
-        monkeypatch.setenv("ROSSUM_KB_DATA_PATH", str(local_file))
-
-        cache = KBCache(cache_path=tmp_path / "other.json")
-        data = cache.load()
-        assert data["articles"] == sample_data["articles"]
-
-    def test_local_path_env_missing_file(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("ROSSUM_KB_DATA_PATH", str(tmp_path / "nonexistent.json"))
-        cache = KBCache(cache_path=tmp_path / "other.json")
-
-        with pytest.raises(FileNotFoundError):
-            cache.load()
-
     def test_corrupt_file_raises(self, cache_path):
         cache_path.write_text("not valid json{{{")
         cache = KBCache(cache_path=cache_path)

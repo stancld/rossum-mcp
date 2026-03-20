@@ -228,7 +228,6 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 | `AWS_REGION` | Optional - AWS region for Bedrock (default: us-east-1) |
 | `AWS_BEDROCK_MODEL_ARN` | Optional - Custom ARN for Opus model |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | Optional - Custom ARN for Haiku model |
-| `ROSSUM_KB_DATA_PATH` | Optional - Path to local knowledge base JSON |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | Optional - Comma-separated regex for extra allowed API hosts |
 | `SLACK_BOT_TOKEN` | Optional - Slack bot token for reports |
 | `SLACK_CHANNEL` | Optional - Slack channel for reports |
