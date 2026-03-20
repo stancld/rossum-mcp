@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.6.0] - 2026-03-20
+
 ### Added
 - `automation-setup` skill: Analyze automation stats, run what-if projections, and configure per-field thresholds via `get_automation_current_stats`, `get_automation_projections`, `list_automation_targets`, and `save_automation_target` helpers [#284](https://github.com/stancld/rossum-agents/pull/284) [#287](https://github.com/stancld/rossum-agents/pull/287)
 
