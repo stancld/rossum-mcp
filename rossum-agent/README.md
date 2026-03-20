@@ -142,7 +142,7 @@ The agent provides internal tools and access to 32 MCP tools via dynamic loading
 - `run_grep` - Regex search in text content or file paths
 
 **Copilot Execution:**
-- `execute_python` - Run constrained Python snippets; load the relevant skill first and use `write_file(...)` for large outputs
+- `execute_python` - Run constrained Python snippets; load the relevant skill first and use `write_file(...)` for large outputs. Allowed imports include `pandas` and `openpyxl`; use the built-in `read_excel(path)` helper to read `.xlsx`/`.xls` files into a DataFrame
 
 **Schema:**
 - `patch_schema_with_subagent` - Safe schema modifications via Opus

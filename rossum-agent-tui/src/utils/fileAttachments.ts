@@ -40,6 +40,8 @@ const DOCUMENT_EXTENSIONS: Record<string, string> = {
   ".pdf": "application/pdf",
 };
 
+const SPREADSHEET_EXTENSIONS = new Set([".xlsx", ".xls"]);
+
 const TEXT_EXTENSIONS = new Set([
   ".md",
   ".markdown",
@@ -75,7 +77,8 @@ function isSupportedFileExtension(ext: string): boolean {
   return (
     ext in IMAGE_EXTENSIONS ||
     ext in DOCUMENT_EXTENSIONS ||
-    TEXT_EXTENSIONS.has(ext)
+    TEXT_EXTENSIONS.has(ext) ||
+    SPREADSHEET_EXTENSIONS.has(ext)
   );
 }
 
@@ -100,7 +103,7 @@ export function getSupportedMimeType(
   if (ext in DOCUMENT_EXTENSIONS) {
     return { mimeType: DOCUMENT_EXTENSIONS[ext]!, kind: "document" };
   }
-  if (TEXT_EXTENSIONS.has(ext)) {
+  if (TEXT_EXTENSIONS.has(ext) || SPREADSHEET_EXTENSIONS.has(ext)) {
     return { mimeType: "text/plain", kind: "text" };
   }
   return null;
@@ -161,6 +164,15 @@ export function readAttachment(filePath: string): Attachment {
     );
   }
 
+  const filename = path.basename(absolutePath);
+  const ext = path.extname(absolutePath).toLowerCase();
+
+  // Spreadsheets: pass file path for agent to read via execute_python
+  if (SPREADSHEET_EXTENSIONS.has(ext)) {
+    fs.statSync(absolutePath); // verify file exists
+    return { type: "text", content: absolutePath, filename };
+  }
+
   const stat = fs.statSync(absolutePath);
   const maxSize =
     info.kind === "image"
@@ -180,8 +192,6 @@ export function readAttachment(filePath: string): Attachment {
       `File too large (${(stat.size / (1024 * 1024)).toFixed(1)}MB). ${kindLabel} limit is ${limitMB}MB.`,
     );
   }
-
-  const filename = path.basename(absolutePath);
 
   if (info.kind === "text") {
     const content = fs.readFileSync(absolutePath, "utf-8");
