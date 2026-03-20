@@ -106,7 +106,38 @@ class TestCautiousWriteGate:
                 result = await self._get_final_result(agent, tool_call)
 
             assert result.is_error is False
-            assert "update_queue" not in ctx.cautious_preapproved_writes
+            # Pre-approval stays for entire turn (not discarded)
+            assert "update_queue" in ctx.cautious_preapproved_writes
+            # But tracked as executed
+            assert "update_queue" in ctx.cautious_executed_preapproved
+        finally:
+            reset_context(token)
+
+    @pytest.mark.asyncio
+    async def test_preapproval_persists_for_repeated_calls_in_same_turn(self):
+        """Pre-approval covers multiple calls to the same tool within one turn."""
+        agent = self._create_agent()
+        agent.mcp_connection.call_tool.return_value = {"status": "ok"}
+
+        ctx = AgentContext(
+            persona="cautious",
+            cautious_preapproved_writes={"update_queue"},
+        )
+        token = set_context(ctx)
+        try:
+            with patch("rossum_agent.agent.cautious_gate.is_mcp_write_tool", return_value=True):
+                # First call
+                tool_call_1 = ToolCall(id="tc_1", name="update_queue", arguments={"queue_id": 123})
+                result_1 = await self._get_final_result(agent, tool_call_1)
+                assert result_1.is_error is False
+
+                # Second call to the same tool — should still be allowed
+                tool_call_2 = ToolCall(id="tc_2", name="update_queue", arguments={"queue_id": 456})
+                result_2 = await self._get_final_result(agent, tool_call_2)
+                assert result_2.is_error is False
+
+            assert "update_queue" in ctx.cautious_preapproved_writes
+            assert "update_queue" in ctx.cautious_executed_preapproved
         finally:
             reset_context(token)
 
