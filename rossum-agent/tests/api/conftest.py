@@ -9,6 +9,7 @@ import pytest
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
 from rossum_agent.api.routes.messages import limiter
+from rossum_agent.api.shutdown import shutdown_state
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -25,6 +26,16 @@ def mock_chat_summary():
 def reset_rate_limiter() -> None:
     """Reset rate limiter storage before each test to prevent cross-test rate limit bleed."""
     limiter._storage.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_shutdown_state() -> Generator[None, None, None]:
+    """Reset graceful shutdown state before each test."""
+    shutdown_state.shutting_down = False
+    shutdown_state.active_requests = 0
+    yield
+    shutdown_state.shutting_down = False
+    shutdown_state.active_requests = 0
 
 
 @pytest.fixture(autouse=True)

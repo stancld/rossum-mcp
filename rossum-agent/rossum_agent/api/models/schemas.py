@@ -463,7 +463,7 @@ class ReportToSlackResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Response for health check endpoint."""
 
-    status: Literal["healthy", "unhealthy"]
+    status: Literal["healthy", "unhealthy", "shutting_down"]
     storage_connected: bool
     storage_backend: str
     version: str

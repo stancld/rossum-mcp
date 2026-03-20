@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 import os
+import signal
 import sys
+import threading
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
@@ -15,6 +18,8 @@ from gunicorn.app.base import BaseApplication
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+    from starlette.types import ASGIApp, Receive, Scope, Send
 
     from rossum_agent.storage import ChatStorage
 
@@ -44,6 +49,7 @@ from rossum_agent.api.routes import chats, commands, files, health, messages, sl
 from rossum_agent.api.services.agent_service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
+from rossum_agent.api.shutdown import shutdown_state
 from rossum_agent.postgres_storage import PostgresStorage
 from rossum_agent.redis_storage import RedisStorage
 from rossum_agent.storage import get_storage_backend
@@ -53,8 +59,9 @@ logger = logging.getLogger(__name__)
 MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10 MB (supports image uploads)
 
 GUNICORN_TIMEOUT = 120
-GUNICORN_GRACEFUL_TIMEOUT = 30
+GUNICORN_GRACEFUL_TIMEOUT = 660  # 11 min — allow long SSE streams to complete on SIGTERM
 GUNICORN_KEEPALIVE = 5
+UVICORN_GRACEFUL_SHUTDOWN_TIMEOUT = 660
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -78,6 +85,85 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         content={"detail": f"Rate limit exceeded: {exc.detail}"},
     )
+
+
+class GracefulShutdownMiddleware:
+    """ASGI middleware that rejects new requests during graceful shutdown.
+
+    Allows in-flight requests (including SSE streams) to complete. Health
+    endpoint stays accessible for K8s readiness probes.
+
+    Implemented as raw ASGI middleware (not BaseHTTPMiddleware) so that the
+    active-request counter covers the full lifetime of streaming responses.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        if shutdown_state.shutting_down and scope["path"] != "/api/v1/health":
+            response = JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"detail": "Server is shutting down"},
+            )
+            await response(scope, receive, send)
+            return
+
+        shutdown_state.active_requests += 1
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            shutdown_state.active_requests -= 1
+
+
+def _install_sigterm_handler(app: FastAPI) -> None:
+    """Register a SIGTERM handler for graceful shutdown.
+
+    On first SIGTERM: set the shutting-down flag (middleware starts returning
+    503) and start a drain watcher that terminates the process once all
+    in-flight requests complete.
+
+    The handler removes itself so a second SIGTERM falls through to the
+    default (immediate termination), acting as a force-quit escape hatch.
+    """
+    loop = asyncio.get_running_loop()
+
+    def _on_sigterm():
+        logger.info(
+            f"SIGTERM received — entering graceful shutdown, {shutdown_state.active_requests} request(s) in flight"
+        )
+        shutdown_state.shutting_down = True
+        # Remove our handler; second SIGTERM will terminate immediately (SIG_DFL)
+        loop.remove_signal_handler(signal.SIGTERM)
+        shutdown_state.drain_task = asyncio.ensure_future(_drain_and_shutdown())
+
+    if threading.current_thread() is threading.main_thread():
+        loop.add_signal_handler(signal.SIGTERM, _on_sigterm)
+
+
+async def _drain_and_shutdown() -> None:
+    """Wait for in-flight requests to complete, then trigger uvicorn shutdown.
+
+    Uses SIGINT (not SIGTERM) because our SIGTERM handler replaced uvicorn's.
+    SIGINT still reaches uvicorn's handler, ensuring proper lifespan teardown.
+    """
+    max_wait = 600  # 10 min
+    elapsed = 0
+    while shutdown_state.active_requests > 0 and elapsed < max_wait:
+        logger.info(f"Graceful shutdown: waiting for {shutdown_state.active_requests} active request(s)")
+        await asyncio.sleep(5)
+        elapsed += 5
+    if shutdown_state.active_requests > 0:
+        logger.warning(
+            f"Drain timeout ({max_wait}s) reached with {shutdown_state.active_requests} active request(s), forcing shutdown"
+        )
+    else:
+        logger.info("All active requests completed, shutting down")
+    os.kill(os.getpid(), signal.SIGINT)
 
 
 def _create_storage() -> ChatStorage:
@@ -114,7 +200,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logger.info("Rossum Agent API starting up...")
 
+    shutdown_state.shutting_down = False
+    shutdown_state.active_requests = 0
+
     _init_services(app)
+    _install_sigterm_handler(app)
 
     backend = get_storage_backend()
     if app.state.chat_service.is_connected():
@@ -142,6 +232,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 app.add_middleware(RequestSizeLimitMiddleware)
+app.add_middleware(GracefulShutdownMiddleware)
 
 
 def _build_cors_origin_regex() -> str:
@@ -292,6 +383,7 @@ def _run_uvicorn(args: argparse.Namespace) -> None:
         reload=args.reload,
         workers=args.workers if not args.reload else 1,
         ws="wsproto",
+        timeout_graceful_shutdown=UVICORN_GRACEFUL_SHUTDOWN_TIMEOUT,
     )
 
 
