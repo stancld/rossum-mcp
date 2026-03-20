@@ -514,7 +514,7 @@ export interface components {
        * Status
        * @enum {string}
        */
-      status: "healthy" | "unhealthy";
+      status: "healthy" | "unhealthy" | "shutting_down";
       /** Storage Connected */
       storage_connected: boolean;
       /** Storage Backend */
