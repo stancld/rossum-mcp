@@ -28,9 +28,41 @@ class TestDocumentContent:
         assert doc.filename == "test.pdf"
         assert doc.data == data
 
+    def test_valid_csv_document(self) -> None:
+        """Test creating a valid CSV document."""
+        data = base64.b64encode(b"col1,col2\na,b").decode()
+        doc = DocumentContent(
+            media_type="text/csv",
+            data=data,
+            filename="data.csv",
+        )
+        assert doc.media_type == "text/csv"
+        assert doc.filename == "data.csv"
+
+    def test_valid_xlsx_document(self) -> None:
+        """Test creating a valid Excel (.xlsx) document."""
+        data = base64.b64encode(b"fake xlsx content").decode()
+        doc = DocumentContent(
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            data=data,
+            filename="data.xlsx",
+        )
+        assert doc.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert doc.filename == "data.xlsx"
+
+    def test_valid_xls_document(self) -> None:
+        """Test creating a valid Excel (.xls) document."""
+        data = base64.b64encode(b"fake xls content").decode()
+        doc = DocumentContent(
+            media_type="application/vnd.ms-excel",
+            data=data,
+            filename="data.xls",
+        )
+        assert doc.media_type == "application/vnd.ms-excel"
+
     def test_invalid_media_type(self) -> None:
-        """Test that non-PDF media types are rejected."""
-        data = base64.b64encode(b"Not a PDF").decode()
+        """Test that unsupported media types are rejected."""
+        data = base64.b64encode(b"Not a supported format").decode()
         with pytest.raises(ValidationError) as exc_info:
             DocumentContent(
                 media_type="text/plain",  # type: ignore[arg-type]

@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
+
 ### Removed
 - Redis as chat persistence backend — PostgreSQL is now the only storage backend; `CHAT_STORAGE_BACKEND` env var is no longer used [#294](https://github.com/stancld/rossum-agents/pull/294)
 - `ROSSUM_KB_DATA_PATH` env var override from knowledge base cache — KB data now resolves only via explicit `cache_path` or the bundled package resource

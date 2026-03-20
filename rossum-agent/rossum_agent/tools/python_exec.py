@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
+import pandas
 from anthropic import beta_tool
 
 from rossum_agent.python_tools.copilot import automation_setup, formula, lookup, rule
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _MAX_CODE_LENGTH = 12000
+_SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls"})
+_VAR_DIR = Path("/var").resolve()
 _ALLOWED_OPEN_MODES = {"r", "rt", "w", "wt", "a", "at"}
 _READ_ONLY_OPEN_MODES = {"r", "rt"}
 
@@ -100,7 +103,9 @@ _ALLOWED_MODULES = frozenset(
         "itertools",
         "json",
         "math",
+        "openpyxl",
         "operator",
+        "pandas",
         "pathlib",
         "re",
         "statistics",
@@ -126,6 +131,24 @@ def _parse_json_result(raw: str) -> object:
         return raw
 
 
+def _validate_sandbox_path(resolved: Path, caller: str) -> bool:
+    """Check that *resolved* is inside the workspace or /var.
+
+    Returns ``True`` when the path is inside /var (read-only zone),
+    ``False`` when it is inside the workspace.
+    """
+    workspace_dir = get_context().get_output_dir().resolve()
+    try:
+        resolved.relative_to(workspace_dir)
+        return False
+    except ValueError:
+        try:
+            resolved.relative_to(_VAR_DIR)
+            return True
+        except ValueError as e:
+            raise ValueError(f"{caller} path must stay inside workspace or /var") from e
+
+
 def _sandboxed_open(
     file: str,
     mode: str = "r",
@@ -136,21 +159,14 @@ def _sandboxed_open(
         raise ValueError(f"open mode not allowed: {mode}")
 
     workspace_dir = get_context().get_output_dir().resolve()
-    var_dir = Path("/var").resolve()
     path = Path(file)
     if not path.is_absolute():
         path = workspace_dir / path
     resolved = path.resolve()
 
-    try:
-        resolved.relative_to(workspace_dir)
-    except ValueError:
-        try:
-            resolved.relative_to(var_dir)
-        except ValueError as e:
-            raise ValueError("open() path must stay inside workspace or /var") from e
-        if mode not in _READ_ONLY_OPEN_MODES:
-            raise ValueError("open() only supports read-only access for /var paths") from None
+    is_var = _validate_sandbox_path(resolved, "open()")
+    if is_var and mode not in _READ_ONLY_OPEN_MODES:
+        raise ValueError("open() only supports read-only access for /var paths") from None
 
     return resolved.open(mode, encoding=encoding)
 
@@ -240,6 +256,13 @@ def _build_helpers() -> dict[str, object]:
             raise ValueError("schema_content() expected a schema object with 'content' or a content list")
         return content
 
+    def read_excel(file_path: str, sheet_name: str | int | None = 0) -> object:
+        resolved = Path(file_path).resolve()
+        if resolved.suffix.lower() not in _SPREADSHEET_EXTENSIONS:
+            raise ValueError("read_excel() only supports .xlsx and .xls files")
+        _validate_sandbox_path(resolved, "read_excel()")
+        return pandas.read_excel(resolved, sheet_name=sheet_name)
+
     return {
         "copilot": copilot,
         "evaluate_lookup_field": copilot.evaluate_lookup_field,
@@ -258,6 +281,7 @@ def _build_helpers() -> dict[str, object]:
         "suggest_rule": copilot.suggest_rule,
         "mcp": mcp,
         "open": _sandboxed_open,
+        "read_excel": read_excel,
         "write_file": write_file,
     }
 
@@ -271,6 +295,7 @@ def get_execute_python_definition() -> ToolParam:
             f"Allowed imports: {ALLOWED_MODULES_CSV}. "
             "Assign the final structured value to `result` or leave it as the last expression. "
             "When the useful output is a large string, dict, or list, prefer `write_file(...)` inside the snippet instead of returning it inline. "
+            "Use `read_excel(path)` to read .xlsx/.xls files (returns a DataFrame). "
             "Load the relevant skill first for task-specific helper guidance."
         ),
         "input_schema": {
