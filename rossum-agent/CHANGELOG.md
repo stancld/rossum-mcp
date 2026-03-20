@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.6.1] - 2026-03-20
+
 ### Added
 - Graceful shutdown with request draining on SIGTERM — health endpoint returns `shutting_down` status with 503 during shutdown [#292](https://github.com/stancld/rossum-agents/pull/292)
 
