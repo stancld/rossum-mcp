@@ -44,7 +44,7 @@ from rossum_agent.api.services.agent_service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_small_model_id
 from rossum_agent.change_tracking.store import CommitStore
-from rossum_agent.redis_storage import RedisStorage
+from rossum_agent.redis_client import RedisConnection
 from rossum_agent.storage import ChatData
 from rossum_agent.url_context import extract_url_context
 
@@ -299,9 +299,9 @@ async def _with_sse_keepalive(
 def _get_commit_store() -> CommitStore | None:
     """Create a CommitStore if Redis is available."""
     try:
-        storage = RedisStorage()
-        if storage.is_connected():
-            return CommitStore(storage.client)
+        conn = RedisConnection()
+        if conn.is_connected():
+            return CommitStore(conn.client)
     except Exception as e:
         logger.warning(f"Commit store is unavailable: {e}")
     return None

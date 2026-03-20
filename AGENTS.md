@@ -219,7 +219,6 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 |----------|---------|
 | `ROSSUM_API_TOKEN` | Required - API authentication |
 | `ROSSUM_API_BASE_URL` | Required - API endpoint |
-| `CHAT_STORAGE_BACKEND` | Optional - `postgres` (default) or `redis` for chat persistence |
 | `POSTGRES_HOST`, `POSTGRES_PORT` | Optional - PostgreSQL connection (default: localhost:5432) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Optional - PostgreSQL credentials (default: rossum_agent/rossum/rossum) |
 | `REDIS_HOST`, `REDIS_PORT` | Optional - Redis connection for change tracking (default: localhost:6379) |

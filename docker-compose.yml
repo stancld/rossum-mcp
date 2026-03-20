@@ -40,7 +40,6 @@ services:
     environment:
       - AWS_PROFILE=${AWS_PROFILE}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - CHAT_STORAGE_BACKEND=postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=rossum_agent

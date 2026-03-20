@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 from rossum_agent.api.dependencies import (
     RossumCredentials,
     get_chat_service,
-    get_redis_storage,
+    get_redis_connection,
     get_validated_credentials,
 )
 from rossum_agent.api.models.schemas import (
@@ -30,7 +30,7 @@ from rossum_agent.api.models.schemas import (
 )
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.change_tracking.store import CommitStore
-from rossum_agent.redis_storage import RedisStorage
+from rossum_agent.redis_client import RedisConnection
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -91,7 +91,7 @@ async def list_chat_commits(
     chat_id: str,
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)],
     chat_service: Annotated[ChatService, Depends(get_chat_service)],
-    redis: Annotated[RedisStorage, Depends(get_redis_storage)],
+    redis: Annotated[RedisConnection, Depends(get_redis_connection)],
 ) -> CommitListResponse:
     """List configuration commits made in a chat session."""
     chat_data = chat_service.get_chat_data(user_id=credentials.user_id, chat_id=chat_id)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -13,14 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, Literal
 
-STORAGE_BACKEND_ENV = "CHAT_STORAGE_BACKEND"
-DEFAULT_STORAGE_BACKEND = "postgres"
 CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
-
-
-def get_storage_backend() -> str:
-    """Return the configured storage backend name."""
-    return os.getenv(STORAGE_BACKEND_ENV, DEFAULT_STORAGE_BACKEND)
 
 
 def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str:
@@ -44,14 +36,6 @@ def _preview_from_first_msg(msg: dict[str, Any] | None) -> str:
         return msg.get("task", "")
     if msg.get("role") == "user":
         return extract_text_from_content(msg.get("content"))
-    return ""
-
-
-def _extract_first_user_text(messages: list[dict[str, Any]]) -> str:
-    """Extract text from the first user message, handling both legacy and task_step formats."""
-    for msg in messages:
-        if text := _preview_from_first_msg(msg):
-            return text
     return ""
 
 
