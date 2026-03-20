@@ -101,6 +101,10 @@ class _ChatRunState:
     last_main_input_tokens: int = 0
     # Cautious persona: write tools blocked last turn, pre-approved next turn
     cautious_blocked_last_turn: set[str] = dataclasses.field(default_factory=set)
+    # Unconsumed pre-approvals that carry over when the agent asked questions instead of writing
+    cautious_unconsumed_preapprovals: set[str] = dataclasses.field(default_factory=set)
+    # Tools approved by the user (persists for the conversation lifetime)
+    cautious_approved_tools: set[str] = dataclasses.field(default_factory=set)
 
 
 _request_context: contextvars.ContextVar[_RequestContext] = contextvars.ContextVar("request_context")
@@ -285,17 +289,32 @@ class AgentService:
         return self._chat_runs[chat_id]
 
     @staticmethod
-    def _resolve_cautious_preapprovals(pending: set[str], prompt: str) -> set[str]:
-        """Only pre-approve blocked writes if the user's answer was affirmative.
+    def _resolve_cautious_preapprovals(
+        pending: set[str],
+        prompt: str,
+        unconsumed: set[str] | None = None,
+        approved: set[str] | None = None,
+    ) -> set[str]:
+        """Resolve pre-approved writes from blocked tools, unconsumed carry-overs, and lifetime approvals.
 
-        The TUI formats question answers as "1. <question>\\n<selected_label>".
+        The front-end formats question answers as "1. <question>\\n<selected_label>".
         We check for the approval label to avoid pre-approving on "No" or "Chat" answers.
+
+        Unconsumed pre-approvals from previous turns (where the agent asked
+        questions instead of executing the write) are always carried forward.
+
+        Lifetime-approved tools (already approved and executed in earlier turns)
+        are always included — the MCP server is re-instantiated each turn,
+        so approvals must persist at the service level.
         """
-        if not pending:
-            return set()
-        if CAUTIOUS_APPROVAL_LABEL in prompt:
-            return pending.copy()
-        return set()
+        result: set[str] = set()
+        if approved:
+            result.update(approved)
+        if unconsumed:
+            result.update(unconsumed)
+        if pending and CAUTIOUS_APPROVAL_LABEL in prompt:
+            result.update(pending)
+        return result
 
     async def _register_run(self, chat_id: str) -> int:
         """Register a new run for a chat, cancelling any existing run.
@@ -455,7 +474,10 @@ class AgentService:
             rossum_credentials=(rossum_api_base_url, rossum_api_token),
             persona=persona,
             cautious_preapproved_writes=self._resolve_cautious_preapprovals(
-                chat_run_state.cautious_blocked_last_turn, prompt
+                chat_run_state.cautious_blocked_last_turn,
+                prompt,
+                chat_run_state.cautious_unconsumed_preapprovals,
+                chat_run_state.cautious_approved_tools,
             ),
             progress_callback=self._on_sub_agent_progress,
             text_callback=self._on_sub_agent_text,
@@ -464,9 +486,13 @@ class AgentService:
             question_callback=self._on_agent_question,
         )
         chat_run_state.cautious_blocked_last_turn.clear()
+        chat_run_state.cautious_unconsumed_preapprovals.clear()
         ctx_token = set_context(agent_ctx)
 
         system_prompt = self._build_system_prompt(rossum_url, persona)
+        system_prompt = self._inject_preapproval_into_system_prompt(
+            system_prompt, agent_ctx.cautious_preapproved_writes
+        )
 
         try:
             try:
@@ -522,7 +548,6 @@ class AgentService:
 
                         chat_run_state.last_memory = agent.memory
                         chat_run_state.last_main_input_tokens = agent.tokens.last_main_input
-                        chat_run_state.cautious_blocked_last_turn = agent_ctx.cautious_blocked_writes.copy()
 
                         async for event in self._stream_finalization(
                             commit_store,
@@ -546,6 +571,16 @@ class AgentService:
                             content=f"Agent execution failed: {e}",
                             is_final=True,
                         )
+                    finally:
+                        # Persist cautious state in `finally` — the front-end
+                        # can cancel the run before the agent finishes (e.g.
+                        # when a question is emitted), and without this the
+                        # blocked-tool state would be lost.
+                        chat_run_state.cautious_blocked_last_turn = agent_ctx.cautious_blocked_writes.copy()
+                        chat_run_state.cautious_unconsumed_preapprovals = (
+                            agent_ctx.cautious_preapproved_writes - agent_ctx.cautious_executed_preapproved
+                        )
+                        chat_run_state.cautious_approved_tools.update(agent_ctx.cautious_executed_preapproved)
             finally:
                 reset_context(ctx_token)
         except asyncio.CancelledError:
@@ -664,6 +699,26 @@ class AgentService:
             content.append({"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"})
         content.append({"type": "text", "text": prompt})
         return content
+
+    @staticmethod
+    def _inject_preapproval_into_system_prompt(system_prompt: str, preapproved: set[str]) -> str:
+        """Append pre-approval instructions to the system prompt.
+
+        When writes are pre-approved, the system prompt — which the model treats
+        as authoritative — must override the cautious persona's tendency to re-ask.
+        Placing this in the system prompt is stronger than a user-content hint
+        because it outranks the conversation history's "STOP" tool results.
+        """
+        if not preapproved:
+            return system_prompt
+        tools = ", ".join(sorted(preapproved))
+        return (
+            f"{system_prompt}\n\n"
+            f"# Pre-approved write operations\n"
+            f"The user has already approved the following write operations: {tools}. "
+            "Execute them directly without asking for confirmation again. "
+            "Do not call `ask_user_question` for these operations."
+        )
 
     def _restore_conversation_history(self, agent: RossumAgent, history: list[dict[str, Any]]) -> None:
         if not history:

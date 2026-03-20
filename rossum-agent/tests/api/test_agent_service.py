@@ -1859,3 +1859,79 @@ class TestResolveCautiousPreapprovals:
         pending = {"update_queue"}
         result = AgentService._resolve_cautious_preapprovals(pending, "I'd rather not do this right now")
         assert result == set()
+
+    def test_unconsumed_preapprovals_carried_forward(self):
+        """Unconsumed pre-approvals from previous turns are always included."""
+        unconsumed = {"update_queue"}
+        result = AgentService._resolve_cautious_preapprovals(set(), "some answer", unconsumed)
+        assert result == {"update_queue"}
+
+    def test_unconsumed_merged_with_new_approvals(self):
+        """Unconsumed pre-approvals merge with newly approved tools."""
+        pending = {"create_hook"}
+        unconsumed = {"update_queue"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed)
+        assert result == {"update_queue", "create_hook"}
+
+    def test_unconsumed_alone_without_approval_label(self):
+        """Unconsumed pre-approvals carry forward even when pending are rejected."""
+        pending = {"create_hook"}
+        unconsumed = {"update_queue"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "No, cancel", unconsumed)
+        assert result == {"update_queue"}
+
+    def test_empty_unconsumed_no_effect(self):
+        """Empty unconsumed set has no effect."""
+        pending = {"update_queue"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", set())
+        assert result == {"update_queue"}
+
+    def test_lifetime_approved_tools_always_included(self):
+        """Lifetime-approved tools are included regardless of prompt content."""
+        approved = {"patch_schema"}
+        result = AgentService._resolve_cautious_preapprovals(set(), "some unrelated message", approved=approved)
+        assert result == {"patch_schema"}
+
+    def test_lifetime_approved_merged_with_new_approvals(self):
+        """Lifetime approvals merge with newly approved pending tools."""
+        pending = {"create_hook"}
+        approved = {"patch_schema"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", approved=approved)
+        assert result == {"patch_schema", "create_hook"}
+
+    def test_lifetime_approved_merged_with_unconsumed(self):
+        """All three sources merge: lifetime approved + unconsumed + newly approved."""
+        pending = {"create_hook"}
+        unconsumed = {"update_queue"}
+        approved = {"patch_schema"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed, approved)
+        assert result == {"patch_schema", "update_queue", "create_hook"}
+
+    def test_lifetime_approved_survives_rejection(self):
+        """Lifetime approvals persist even when pending tools are rejected."""
+        pending = {"create_hook"}
+        approved = {"patch_schema"}
+        result = AgentService._resolve_cautious_preapprovals(pending, "No, cancel", approved=approved)
+        assert result == {"patch_schema"}
+
+
+class TestInjectPreapprovalIntoSystemPrompt:
+    """Test AgentService._inject_preapproval_into_system_prompt."""
+
+    def test_no_preapprovals_returns_unchanged(self):
+        result = AgentService._inject_preapproval_into_system_prompt("You are an agent.", set())
+        assert result == "You are an agent."
+
+    def test_appends_preapproval_section(self):
+        result = AgentService._inject_preapproval_into_system_prompt("You are an agent.", {"update_queue"})
+        assert "update_queue" in result
+        assert "already approved" in result
+        assert "without asking for confirmation" in result
+        assert "ask_user_question" in result
+        assert result.startswith("You are an agent.")
+
+    def test_multiple_preapprovals_sorted(self):
+        result = AgentService._inject_preapproval_into_system_prompt(
+            "You are an agent.", {"create_hook", "update_queue"}
+        )
+        assert "create_hook, update_queue" in result
