@@ -16,7 +16,7 @@ PRODUCTION_PACKAGES = [
     REPO_ROOT / "rossum-agent-client" / "rossum_agent_client",
 ]
 
-EXCLUDED_DIRS = {"tests", "__pycache__", ".venv", "regression_tests", "scripts"}
+EXCLUDED_DIRS = {"tests", "__pycache__", ".venv", "regression_tests", "scripts", "alembic"}
 
 # Decorators that register functions externally (framework callbacks, tools, routes)
 REGISTRATION_DECORATORS = {
