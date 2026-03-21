@@ -321,19 +321,22 @@ class TestExecPython:
         assert parsed["status"] == "error"
         assert "only supports .xlsx and .xls" in parsed["error"]
 
-    def test_read_excel_rejects_path_outside_workspace(self, tmp_path: Path) -> None:
+    def test_read_excel_allows_path_outside_workspace(self, tmp_path: Path) -> None:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["col1"])
         xlsx_path = tmp_path / "test.xlsx"
-        xlsx_path.touch()
+        wb.save(xlsx_path)
 
         set_context(AgentContext(output_dir=tmp_path / "workspace"))
         try:
-            result = execute_python(code=f'result = read_excel("{xlsx_path}")')
+            result = execute_python(code=f'df = read_excel("{xlsx_path}")\nresult = list(df.columns)')
         finally:
             set_context(AgentContext())
         parsed = json.loads(result)
 
-        assert parsed["status"] == "error"
-        assert "must stay inside workspace or /var" in parsed["error"]
+        assert parsed["status"] == "success"
+        assert parsed["result"] == ["col1"]
 
     def test_execute_python_alias_matches_execute_python(self) -> None:
         assert json.loads(execute_python(code="1 + 2"))["result"] == 3

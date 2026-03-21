@@ -260,7 +260,6 @@ def _build_helpers() -> dict[str, object]:
         resolved = Path(file_path).resolve()
         if resolved.suffix.lower() not in _SPREADSHEET_EXTENSIONS:
             raise ValueError("read_excel() only supports .xlsx and .xls files")
-        _validate_sandbox_path(resolved, "read_excel()")
         return pandas.read_excel(resolved, sheet_name=sheet_name)
 
     return {
