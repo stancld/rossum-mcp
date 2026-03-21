@@ -60,14 +60,25 @@ class TestDocumentContent:
         )
         assert doc.media_type == "application/vnd.ms-excel"
 
+    def test_valid_text_plain_document(self) -> None:
+        """Test creating a valid text/plain document."""
+        data = base64.b64encode(b"Hello world\nLine 2").decode()
+        doc = DocumentContent(
+            media_type="text/plain",
+            data=data,
+            filename="readme.md",
+        )
+        assert doc.media_type == "text/plain"
+        assert doc.filename == "readme.md"
+
     def test_invalid_media_type(self) -> None:
         """Test that unsupported media types are rejected."""
         data = base64.b64encode(b"Not a supported format").decode()
         with pytest.raises(ValidationError) as exc_info:
             DocumentContent(
-                media_type="text/plain",  # type: ignore[arg-type]
+                media_type="application/zip",  # type: ignore[arg-type]
                 data=data,
-                filename="test.txt",
+                filename="test.zip",
             )
         assert "media_type" in str(exc_info.value)
 
@@ -201,6 +212,63 @@ class TestAgentServiceDocumentStorage:
                 saved_file = Path(tmpdir) / f"doc{i}.pdf"
                 assert saved_file.exists()
                 assert saved_file.read_bytes() == f"PDF content {i}".encode()
+
+
+class TestExtractAndSaveTextFiles:
+    """Tests for AgentService._extract_and_save_text_files."""
+
+    def test_extracts_and_saves_text_file(self) -> None:
+        """Test extracting a single text file from prompt."""
+        prompt = 'Check this:\n\n<file_content path="notes.md">\n# Hello\nWorld\n</file_content>'
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+
+            assert len(paths) == 1
+            assert paths[0].name == "notes.md"
+            assert paths[0].read_text() == "# Hello\nWorld"
+
+    def test_extracts_multiple_files(self) -> None:
+        """Test extracting multiple text files."""
+        prompt = (
+            '<file_content path="a.py">\nprint("hi")\n</file_content>\n\n'
+            '<file_content path="b.json">\n{"key": 1}\n</file_content>'
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+
+            assert len(paths) == 2
+            names = {p.name for p in paths}
+            assert names == {"a.py", "b.json"}
+
+    def test_skips_spreadsheet_files(self) -> None:
+        """Test that spreadsheet files (passed by path) are skipped."""
+        prompt = '<file_content path="data.xlsx">\n/tmp/data.xlsx\n</file_content>'
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+
+            assert len(paths) == 0
+
+    def test_prevents_path_traversal(self) -> None:
+        """Test that path traversal in filename is stripped."""
+        prompt = '<file_content path="../../etc/passwd">\nsecret\n</file_content>'
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+
+            assert len(paths) == 1
+            assert paths[0].name == "passwd"
+            assert paths[0].parent == output_dir.resolve()
+
+    def test_no_file_content_tags(self) -> None:
+        """Test that prompt without file_content tags returns empty list."""
+        prompt = "Just a regular message"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            assert len(paths) == 0
 
 
 class TestBuildUpdatedHistoryWithDocuments:

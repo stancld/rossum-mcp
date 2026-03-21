@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -1169,6 +1170,44 @@ class TestAgentServiceBuildUserContent:
         result = service._build_user_content("Hello", [])
         assert result == "Hello"
         assert isinstance(result, str)
+
+    def test_with_text_file_paths_returns_list(self):
+        """Test that text file paths produce a content list with workspace note."""
+        service = AgentService()
+        paths = [Path("/mock/output/readme.md"), Path("/mock/output/data.json")]
+        result = service._build_user_content("Analyze these", None, text_file_paths=paths)
+
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["type"] == "text"
+        assert "readable via open()" in result[0]["text"]
+        assert "/mock/output/readme.md" in result[0]["text"]
+        assert "/mock/output/data.json" in result[0]["text"]
+        assert result[1]["text"] == "Analyze these"
+
+    def test_with_empty_text_file_paths_returns_string(self):
+        """Test that empty text_file_paths returns plain string."""
+        service = AgentService()
+        result = service._build_user_content("Hello", None, text_file_paths=[])
+        assert result == "Hello"
+        assert isinstance(result, str)
+
+    def test_with_documents_and_text_file_paths(self):
+        """Test that both documents and text files produce separate notes."""
+        from rossum_agent.api.models.schemas import DocumentContent
+
+        service = AgentService()
+        docs = [DocumentContent(media_type="application/pdf", data="aGVsbG8=", filename="invoice.pdf")]
+        text_paths = [Path("/mock/output/notes.md")]
+        result = service._build_user_content(
+            "Process all", None, documents=docs, output_dir=Path("/mock/output"), text_file_paths=text_paths
+        )
+
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert "Uploaded documents" in result[0]["text"]
+        assert "Text files saved to workspace" in result[1]["text"]
+        assert result[2]["text"] == "Process all"
 
 
 class TestAgentServiceBuildUpdatedHistoryWithImages:
