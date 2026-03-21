@@ -52,7 +52,7 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
   "mcpServers": {
     "rossum": {
       "command": "python",
-      "args": ["/path/to/rossum-mcp/rossum-mcp/rossum_mcp/server.py"],
+      "args": ["/path/to/rossum-agents/rossum-mcp/rossum_mcp/server.py"],
       "env": {
         "ROSSUM_API_TOKEN": "your-api-token",
         "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",

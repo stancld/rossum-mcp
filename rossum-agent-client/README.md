@@ -17,6 +17,38 @@
 
 </div>
 
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
+
+## Quick Start
+
+```python
+from rossum_agent_client import RossumAgentClient
+
+# Initialize client
+client = RossumAgentClient(
+    agent_api_url="https://your-agent-api.example.com",
+    rossum_api_base_url="https://elis.rossum.ai/api/v1",
+    token="your-rossum-api-token",
+)
+
+# Create a chat session
+chat = client.create_chat(mcp_mode="read-only", persona="default")
+print(f"Created chat: {chat.chat_id}")
+
+# Send a message and stream the response
+last_content = ""
+for event in client.send_message_stream(chat.chat_id, "List all queues"):
+    if event.type == "tool_start":
+        print(f"\n[Tool] {event.tool_name}")
+    elif event.type == "final_answer":
+        # Print only new content (events contain cumulative text)
+        print(event.content[len(last_content):], end="", flush=True)
+        last_content = event.content
+    elif event.type == "done":
+        print(f"\n({event.input_tokens} in, {event.output_tokens} out)")
+```
+
 ## Installation
 
 ```bash
@@ -59,35 +91,6 @@ Files created by the agent (via `write_file` tool) are automatically downloaded 
 | `ROSSUM_API_TOKEN` | Rossum API authentication token |
 | `ROSSUM_MCP_MODE` | MCP mode: `read-only` (default) or `read-write` |
 | `ROSSUM_AGENT_PERSONA` | Agent persona: `default` (default) or `cautious` |
-
-## Quick Start
-
-```python
-from rossum_agent_client import RossumAgentClient
-
-# Initialize client
-client = RossumAgentClient(
-    agent_api_url="https://your-agent-api.example.com",
-    rossum_api_base_url="https://elis.rossum.ai/api/v1",
-    token="your-rossum-api-token",
-)
-
-# Create a chat session
-chat = client.create_chat(mcp_mode="read-only", persona="default")
-print(f"Created chat: {chat.chat_id}")
-
-# Send a message and stream the response
-last_content = ""
-for event in client.send_message_stream(chat.chat_id, "List all queues"):
-    if event.type == "tool_start":
-        print(f"\n[Tool] {event.tool_name}")
-    elif event.type == "final_answer":
-        # Print only new content (events contain cumulative text)
-        print(event.content[len(last_content):], end="", flush=True)
-        last_content = event.content
-    elif event.type == "done":
-        print(f"\n({event.input_tokens} in, {event.output_tokens} out)")
-```
 
 ## Async Usage
 
