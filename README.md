@@ -197,11 +197,7 @@ EOF
 docker-compose up rossum-agent-api
 ```
 
-Redis is included in the compose stack and used for logging. View logs with:
-
-```bash
-redis-cli LRANGE logs:$(date +%Y-%m-%d) 0 -1
-```
+Redis is included in the compose stack and used for change tracking.
 
 ---
 

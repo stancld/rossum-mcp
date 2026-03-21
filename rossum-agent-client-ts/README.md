@@ -13,6 +13,9 @@
 
 </div>
 
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
+
 ## Overview
 
 Typed TypeScript client generated from the [Rossum Agent OpenAPI spec](../rossum-agent/rossum_agent/api/openapi.json). Provides full type safety for all API endpoints, SSE events, and request/response models.
@@ -135,7 +138,7 @@ npm run format:check # Check formatting
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](../LICENSE) for details.
 
 ## Resources
 
