@@ -73,6 +73,7 @@ class DocumentContent(BaseModel):
     media_type: Literal[
         "application/pdf",
         "text/csv",
+        "text/plain",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel",
     ]
@@ -147,7 +148,7 @@ class MessageRequest(BaseModel):
 
     Supports text-only messages or multimodal messages with images and documents.
     For image messages, use the `images` field with base64-encoded image data.
-    For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel).
+    For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
     """
 
     content: str = Field(..., min_length=1, max_length=50000, description="Text content of the message")
@@ -159,7 +160,7 @@ class MessageRequest(BaseModel):
     documents: list[DocumentContent] | None = Field(
         default=None,
         max_length=5,
-        description="Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls).",
+        description="Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.",
     )
     rossum_url: str | None = Field(default=None, description="Optional Rossum app URL for context")
     mcp_mode: Literal["read-only", "read-write"] | None = Field(
