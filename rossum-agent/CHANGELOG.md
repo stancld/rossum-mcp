@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
-- Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297)
+- Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297), [#298](https://github.com/stancld/rossum-agents/pull/298)
 - Alembic migrations for PostgreSQL schema management — initial migration creates `chats` and `messages` tables, with `alembic upgrade head` / `alembic downgrade` support [#286](https://github.com/stancld/rossum-agents/pull/286)
 
 ### Removed

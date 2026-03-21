@@ -1,3 +1,4 @@
+import path from "node:path";
 import React, {
   useState,
   useCallback,
@@ -103,10 +104,13 @@ function splitTextFilesByLineCount(textFiles: TextAttachment[]): {
   return { inlineable, oversized };
 }
 
+const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
+
 function textAttachmentToDocument(f: TextAttachment): DocumentAttachment {
+  const ext = path.extname(f.filename).toLowerCase();
   return {
     type: "document",
-    media_type: "text/plain",
+    media_type: MARKDOWN_EXTENSIONS.has(ext) ? "text/markdown" : "text/plain",
     data: Buffer.from(f.content, "utf-8").toString("base64"),
     filename: f.filename,
   };

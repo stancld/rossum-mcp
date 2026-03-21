@@ -778,9 +778,19 @@ class AgentService:
                     }
                 )
         if documents and output_dir:
-            doc_paths = [str(output_dir / Path(doc.filename).name) for doc in documents]
-            doc_info = "\n".join(f"- {path}" for path in doc_paths)
-            content.append({"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"})
+            text_media_types = {"text/plain", "text/markdown"}
+            inlineable_docs = [d for d in documents if d.media_type in text_media_types]
+            other_docs = [d for d in documents if d.media_type not in text_media_types]
+            if inlineable_docs:
+                inlined = []
+                for doc in inlineable_docs:
+                    text = base64.b64decode(doc.data).decode("utf-8")
+                    inlined.append(f'<file_content path="{doc.filename}">\n{text}\n</file_content>')
+                content.append({"type": "text", "text": "\n\n".join(inlined)})
+            if other_docs:
+                doc_paths = [str(output_dir / Path(doc.filename).name) for doc in other_docs]
+                doc_info = "\n".join(f"- {path}" for path in doc_paths)
+                content.append({"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"})
         if text_file_paths:
             paths_info = "\n".join(f"- {path}" for path in text_file_paths)
             content.append(
