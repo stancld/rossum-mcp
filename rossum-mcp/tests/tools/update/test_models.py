@@ -72,14 +72,6 @@ class TestSchemaNodeUpdate:
         assert result["enum_value_type"] == "string"
         assert "label" not in result
 
-    def test_schema_node_update_with_format(self) -> None:
-        """Test SchemaNodeUpdate with format field."""
-        update = SchemaNodeUpdate(format="M/D/YYYY")
-        result = update.to_dict()
-
-        assert result == {"format": "M/D/YYYY"}
-        assert "label" not in result
-
     def test_schema_node_update_with_stretch(self) -> None:
         """Test SchemaNodeUpdate with stretch field."""
         update = SchemaNodeUpdate(label="Column", width=100, stretch=True)

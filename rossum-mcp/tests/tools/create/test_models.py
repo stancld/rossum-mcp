@@ -32,14 +32,6 @@ class TestSchemaDataclasses:
         assert result["formula"] == "field_a + field_b"
         assert result["type"] == "number"
 
-    def test_schema_datapoint_with_format(self) -> None:
-        """Test SchemaDatapoint with format field."""
-        datapoint = SchemaDatapoint(label="Issue Date", type="date", format="M/D/YYYY")
-        result = datapoint.to_dict()
-
-        assert result["format"] == "M/D/YYYY"
-        assert result["type"] == "date"
-
     def test_schema_tuple_to_dict(self) -> None:
         """Test SchemaTuple converts to dict with nested children."""
         tuple_node = SchemaTuple(
