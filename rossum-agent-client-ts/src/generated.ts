@@ -420,6 +420,7 @@ export interface components {
         | "application/pdf"
         | "text/csv"
         | "text/plain"
+        | "text/markdown"
         | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         | "application/vnd.ms-excel";
       /**

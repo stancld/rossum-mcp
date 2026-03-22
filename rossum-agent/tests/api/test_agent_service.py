@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -1207,6 +1208,62 @@ class TestAgentServiceBuildUserContent:
         assert len(result) == 3
         assert "Uploaded documents" in result[0]["text"]
         assert "Text files saved to workspace" in result[1]["text"]
+        assert result[2]["text"] == "Process all"
+
+    def test_text_documents_inlined_in_context(self):
+        """Test that text/plain and text/markdown documents are inlined, not just path-referenced."""
+        from rossum_agent.api.models.schemas import DocumentContent
+
+        service = AgentService()
+        docs = [
+            DocumentContent(
+                media_type="text/markdown",
+                data=base64.b64encode(b"# Hello\nWorld").decode(),
+                filename="readme.md",
+            ),
+            DocumentContent(
+                media_type="text/plain",
+                data=base64.b64encode(b"plain text content").decode(),
+                filename="notes.txt",
+            ),
+        ]
+        result = service._build_user_content("Read these", None, documents=docs, output_dir=Path("/mock/output"))
+
+        assert isinstance(result, list)
+        assert len(result) == 2  # inlined block + prompt
+        inlined = result[0]["text"]
+        assert '<file_content path="readme.md">' in inlined
+        assert "# Hello\nWorld" in inlined
+        assert '<file_content path="notes.txt">' in inlined
+        assert "plain text content" in inlined
+        assert "Uploaded documents" not in inlined
+        assert result[1]["text"] == "Read these"
+
+    def test_mixed_text_and_binary_documents(self):
+        """Test that text documents are inlined while binary documents are path-referenced."""
+        from rossum_agent.api.models.schemas import DocumentContent
+
+        service = AgentService()
+        docs = [
+            DocumentContent(
+                media_type="text/markdown",
+                data=base64.b64encode(b"# Markdown").decode(),
+                filename="doc.md",
+            ),
+            DocumentContent(
+                media_type="application/pdf",
+                data="aGVsbG8=",
+                filename="invoice.pdf",
+            ),
+        ]
+        result = service._build_user_content("Process all", None, documents=docs, output_dir=Path("/mock/output"))
+
+        assert isinstance(result, list)
+        assert len(result) == 3  # inlined text + doc reference + prompt
+        assert '<file_content path="doc.md">' in result[0]["text"]
+        assert "# Markdown" in result[0]["text"]
+        assert "Uploaded documents" in result[1]["text"]
+        assert "invoice.pdf" in result[1]["text"]
         assert result[2]["text"] == "Process all"
 
 

@@ -66,9 +66,20 @@ class TestDocumentContent:
         doc = DocumentContent(
             media_type="text/plain",
             data=data,
-            filename="readme.md",
+            filename="readme.txt",
         )
         assert doc.media_type == "text/plain"
+        assert doc.filename == "readme.txt"
+
+    def test_valid_text_markdown_document(self) -> None:
+        """Test creating a valid text/markdown document."""
+        data = base64.b64encode(b"# Hello\n\nSome **bold** text").decode()
+        doc = DocumentContent(
+            media_type="text/markdown",
+            data=data,
+            filename="readme.md",
+        )
+        assert doc.media_type == "text/markdown"
         assert doc.filename == "readme.md"
 
     def test_invalid_media_type(self) -> None:
