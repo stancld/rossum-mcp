@@ -110,13 +110,18 @@ class TestExecPython:
         assert parsed["result"] == "hello"
 
     def test_open_rejects_path_outside_workspace(self, tmp_path: Path) -> None:
-        outside_file = tmp_path.parent / "outside.txt"
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        outside_file = tmp_path / "outside.txt"
         outside_file.write_text("secret", encoding="utf-8")
 
-        set_context(AgentContext(output_dir=tmp_path))
+        set_context(AgentContext(output_dir=workspace))
         try:
-            result = execute_python(code=f'result = open("{outside_file}").read()')
-            parsed = json.loads(result)
+            # Patch _VAR_DIR to a non-existent path so the /var fallback does not
+            # mask the rejection on macOS where tmp_path lives under /private/var.
+            with patch("rossum_agent.tools.python_exec._VAR_DIR", Path("/nonexistent")):
+                result = execute_python(code=f'result = open("{outside_file}").read()')
+                parsed = json.loads(result)
         finally:
             set_context(AgentContext())
 
