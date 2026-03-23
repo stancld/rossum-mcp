@@ -14,9 +14,9 @@ from rossum_agent.agent.memory import AgentMemory, MemoryStep, TaskStep
 from rossum_agent.agent.models import (
     ErrorStep,
     FinalAnswerStep,
+    ReasoningStep,
     TaskSnapshotPart,
     ThinkingBlockData,
-    ThinkingStep,
     ToolCall,
     ToolResult,
     ToolResultStep,
@@ -460,7 +460,7 @@ class TestAgentServiceRunAgent:
         )
 
         async def mock_run(prompt):
-            yield ThinkingStep(step_number=1, thinking="Processing...")
+            yield ReasoningStep(step_number=1, reasoning="Processing...")
             yield FinalAnswerStep(step_number=1, final_answer="Done!")
 
         mock_agent.run = mock_run
@@ -486,7 +486,7 @@ class TestAgentServiceRunAgent:
                 events.append(event)
 
             assert len(events) == 3
-            assert isinstance(events[0], ThinkingStep)
+            assert isinstance(events[0], ReasoningStep)
             assert isinstance(events[1], FinalAnswerStep)
             assert isinstance(events[2], StreamDoneEvent)
             done_event = events[2]

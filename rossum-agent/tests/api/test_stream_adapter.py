@@ -8,12 +8,12 @@ from rossum_agent.agent.models import (
     AgentQuestionPart,
     ErrorStep,
     FinalAnswerStep,
+    ReasoningStep,
     StepType,
     TaskSnapshotPart,
     TaskSnapshotTask,
     TaskStatus,
     TextDeltaStep,
-    ThinkingStep,
     ToolCall,
     ToolResult,
     ToolResultStep,
@@ -68,6 +68,122 @@ class TestStreamLifecycle:
         events = build_finish_events(state)
         assert events[0]["type"] == "text-end"
         assert events[-1]["type"] == "finish"
+
+    def test_finish_events_close_open_reasoning_block(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
+            state,
+        )
+        events = build_finish_events(state)
+        assert events[0]["type"] == "reasoning-end"
+        assert events[-1]["type"] == "finish"
+
+
+class TestReasoningConversion:
+    def test_reasoning_opens_block(self):
+        state = StreamState()
+        events = convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Let me think...", is_streaming=True),
+            state,
+        )
+        assert len(events) == 2
+        assert events[0]["type"] == "reasoning-start"
+        assert events[1]["type"] == "reasoning-delta"
+        assert events[1]["delta"] == "Let me think..."
+
+    def test_reasoning_accumulates_deltas(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Hello", is_streaming=True),
+            state,
+        )
+        events = convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Hello world", is_streaming=True),
+            state,
+        )
+        assert len(events) == 1
+        assert events[0]["type"] == "reasoning-delta"
+        assert events[0]["delta"] == " world"
+
+    def test_reasoning_finalized_closes_block(self):
+        state = StreamState()
+        events = convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Done thinking", is_streaming=False),
+            state,
+        )
+        types = [e["type"] for e in events]
+        assert types == ["reasoning-start", "reasoning-delta", "reasoning-end"]
+
+    def test_reasoning_closed_by_text_delta(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
+            state,
+        )
+        assert state.active_reasoning_id is not None
+        events = convert_agent_event(
+            TextDeltaStep(
+                step_number=1,
+                step_type=StepType.INTERMEDIATE,
+                text_delta="Hello",
+                accumulated_text="Hello",
+                is_streaming=True,
+            ),
+            state,
+        )
+        assert events[0]["type"] == "reasoning-end"
+        assert events[1]["type"] == "text-start"
+        assert events[2]["type"] == "text-delta"
+
+    def test_reasoning_closed_by_tool_start(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
+            state,
+        )
+        events = convert_agent_event(
+            ToolStartStep(
+                step_number=1,
+                tool_calls=[ToolCall(id="tc_1", name="search", arguments={})],
+                tool_progress=(0, 1),
+            ),
+            state,
+        )
+        assert events[0]["type"] == "reasoning-end"
+        assert events[1]["type"] == "tool-input-start"
+
+    def test_reasoning_closed_by_error(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
+            state,
+        )
+        events = convert_agent_event(ErrorStep(step_number=1, error="Failed"), state)
+        assert events[0]["type"] == "reasoning-end"
+        assert events[1]["type"] == "error"
+
+    def test_reasoning_closed_by_final_answer(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
+            state,
+        )
+        events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
+        types = [e["type"] for e in events]
+        assert types == ["reasoning-end", "text-start", "text-delta", "text-end"]
+
+    def test_no_delta_when_no_new_content(self):
+        state = StreamState()
+        convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Hello", is_streaming=True),
+            state,
+        )
+        events = convert_agent_event(
+            ReasoningStep(step_number=1, reasoning="Hello", is_streaming=True),
+            state,
+        )
+        assert events == []
 
 
 class TestTextConversion:
@@ -324,11 +440,6 @@ class TestToolConversion:
 
 
 class TestDroppedEvents:
-    def test_thinking_dropped(self):
-        state = StreamState()
-        events = convert_agent_event(ThinkingStep(step_number=1, thinking="Let me think...", is_streaming=True), state)
-        assert events == []
-
     def test_task_snapshot_dropped(self):
         state = StreamState()
         part = TaskSnapshotPart(

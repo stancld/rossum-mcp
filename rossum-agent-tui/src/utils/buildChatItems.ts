@@ -13,6 +13,16 @@ function makeFinalAnswer(
   };
 }
 
+function makeToolCall(step: CompletedStep): ChatItem {
+  return {
+    kind: "tool_call",
+    toolName: step.toolName ?? "unknown",
+    toolCallId: step.toolCallId ?? "",
+    args: step.toolArgs ?? {},
+    result: step.content || "",
+  };
+}
+
 function stepToItem(
   step: CompletedStep,
   turnIndex: number,
@@ -21,14 +31,10 @@ function stepToItem(
   switch (step.type) {
     case "final_answer":
       return makeFinalAnswer(step.content || "", turnIndex, feedback);
+    case "reasoning":
+      return { kind: "reasoning", content: step.content || "" };
     case "tool_call":
-      return {
-        kind: "tool_call",
-        toolName: step.toolName ?? "unknown",
-        toolCallId: step.toolCallId ?? "",
-        args: step.toolArgs ?? {},
-        result: step.content || "",
-      };
+      return makeToolCall(step);
     case "error":
       return { kind: "error", content: step.content || "Unknown error" };
     default:

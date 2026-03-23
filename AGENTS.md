@@ -170,6 +170,9 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 |-------------|--------------|
 | `start` | Stream begins (emitted by route handler) |
 | `finish` | Stream ends (before `[DONE]` sentinel) |
+| `reasoning-start` | Reasoning block opens (`id`) |
+| `reasoning-delta` | Incremental reasoning content (`id`, `delta`) |
+| `reasoning-end` | Reasoning block closes (`id`) |
 | `text-start` | New text block opens |
 | `text-delta` | Incremental text content |
 | `text-end` | Text block closes |
@@ -184,9 +187,10 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | Phase | Detail |
 |-------|--------|
 | Start | `start` event emitted first |
+| Reasoning | Reasoning blocks open/close with start/delta/end triplets |
 | Content | Text blocks open/close with start/delta/end triplets |
 | Tool use | Tool input start/available, then output available per tool call |
-| Finish | Open text block closed, then `finish`, then `data: [DONE]\n\n` |
+| Finish | Open reasoning/text blocks closed, then `finish`, then `data: [DONE]\n\n` |
 
 ### Internal Adapter
 
@@ -194,13 +198,13 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 
 | Internal event | Wire event(s) |
 |---------------|---------------|
+| `ReasoningStep` | `reasoning-start` + `reasoning-delta` (+ `reasoning-end` when finalized) |
 | `TextDeltaStep` | `text-start` + `text-delta` (+ `text-end` when finalized) |
 | `FinalAnswerStep` | `text-start` + `text-delta` + `text-end` |
 | `ErrorStep` | `error` |
 | `ToolStartStep` | `tool-input-start` + `tool-input-available` (per new tool call, deduplicated) |
 | `ToolResultStep` | `tool-output-available` (per result) |
 | `AgentQuestionPart` | `data-agent-question` |
-| `ThinkingStep` | Dropped |
 | `SubAgentProgressPart` | Dropped |
 | `TaskSnapshotPart` | Dropped |
 | `StreamDoneEvent` | Captured for metadata; not emitted directly |

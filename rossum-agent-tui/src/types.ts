@@ -40,7 +40,12 @@ export interface Config {
 export type InteractionMode = "input" | "browse";
 
 // Step types
-export type StepType = "text" | "final_answer" | "error" | "tool_call";
+export type StepType =
+  | "text"
+  | "final_answer"
+  | "error"
+  | "tool_call"
+  | "reasoning";
 
 export interface CompletedStep {
   stepNumber: number;
@@ -59,7 +64,7 @@ export interface PendingToolCall {
 
 // Current streaming step for display
 export interface StreamingStep {
-  type: "text" | "tool";
+  type: "text" | "tool" | "reasoning";
   content: string | null;
   toolName?: string;
 }
@@ -72,6 +77,7 @@ export type ChatItem =
       turnIndex: number;
       feedback: boolean | null;
     }
+  | { kind: "reasoning"; content: string }
   | {
       kind: "tool_call";
       toolName: string;

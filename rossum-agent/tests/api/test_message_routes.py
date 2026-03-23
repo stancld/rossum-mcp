@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import anthropic
 import pytest
-from rossum_agent.agent.models import FinalAnswerStep, ThinkingStep
+from rossum_agent.agent.models import FinalAnswerStep, ReasoningStep
 from rossum_agent.api.models.schemas import StreamDoneEvent
 from rossum_agent.api.routes.helpers import (
     SSE_KEEPALIVE_INTERVAL,
@@ -47,7 +47,7 @@ class TestWithSSEKeepalive:
     @pytest.mark.asyncio
     async def test_forwards_events_without_delay(self):
         async def fast_events():
-            yield ThinkingStep(step_number=1, thinking="Thinking...")
+            yield ReasoningStep(step_number=1, reasoning="Thinking...")
             yield FinalAnswerStep(step_number=2, final_answer="Done!")
 
         results = []
@@ -56,13 +56,13 @@ class TestWithSSEKeepalive:
 
         real_events = [event for event, is_keepalive in results if not is_keepalive]
         assert len(real_events) == 2
-        assert isinstance(real_events[0], ThinkingStep)
+        assert isinstance(real_events[0], ReasoningStep)
         assert isinstance(real_events[1], FinalAnswerStep)
 
     @pytest.mark.asyncio
     async def test_emits_keepalive_during_pause(self):
         async def slow_events():
-            yield ThinkingStep(step_number=1, thinking="Thinking...")
+            yield ReasoningStep(step_number=1, reasoning="Thinking...")
             await asyncio.sleep(0.15)
             yield FinalAnswerStep(step_number=2, final_answer="Done!")
 
