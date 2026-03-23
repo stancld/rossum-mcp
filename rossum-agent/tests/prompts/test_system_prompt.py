@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rossum_agent.prompts.system_prompt import get_system_prompt
+from rossum_agent.system_prompt import get_system_prompt
 
 
 class TestSystemPromptPersona:

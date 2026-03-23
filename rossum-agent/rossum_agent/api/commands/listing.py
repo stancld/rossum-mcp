@@ -5,7 +5,7 @@ from datetime import UTC
 from rossum_agent.agent.skills import get_all_skills
 from rossum_agent.api.commands.registry import COMMANDS, CommandContext, register_command
 from rossum_agent.api.models.schemas import Persona
-from rossum_agent.prompts.base_prompt import PERSONA_BEHAVIORS
+from rossum_agent.system_prompt import PERSONA_BEHAVIORS
 from rossum_agent.tools import INTERNAL_TOOLS
 from rossum_agent.tools.dynamic_tools import get_cached_category_tool_names, get_load_tool_definition
 

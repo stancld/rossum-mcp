@@ -37,6 +37,11 @@ jobs:
           cd rossum-agent
           uv build
 
+      - name: Generate OpenAPI spec
+        run: |
+          cd rossum-agent
+          uv run python scripts/generate_openapi.py dist/assets/openapi.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -45,7 +50,9 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.package_version.outputs.version, '-') }}
           files: |
-            rossum-agent/dist/*
+            rossum-agent/dist/*.whl
+            rossum-agent/dist/*.tar.gz
+            rossum-agent/dist/assets/openapi.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
