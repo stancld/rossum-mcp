@@ -40,7 +40,7 @@ jobs:
       - name: Generate OpenAPI spec
         run: |
           cd rossum-agent
-          uv run python scripts/generate_openapi.py dist/assets/openapi.json
+          uv run --extra api python scripts/generate_openapi.py dist/assets/openapi.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
