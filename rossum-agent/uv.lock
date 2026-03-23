@@ -2453,7 +2453,7 @@ wheels = [
 
 [[package]]
 name = "rossum-agent"
-version = "1.6.1.post0"
+version = "1.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2589,7 +2589,7 @@ requires-dist = [
     { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "rossum-api", specifier = ">=3.12.1" },
-    { name = "rossum-mcp", specifier = ">=2.0.3,<3.0.0" },
+    { name = "rossum-mcp", specifier = ">=2.0.4,<3.0.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'slack'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'tests'", specifier = ">=3.27.0" },

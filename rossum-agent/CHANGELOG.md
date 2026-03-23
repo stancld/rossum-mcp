@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 
-## [Unreleased] - YYYY-MM-DD
+## [1.7.0] - 2026-03-23
 
 ### Added
 - `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
