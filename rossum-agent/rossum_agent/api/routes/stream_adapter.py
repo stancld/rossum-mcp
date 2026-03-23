@@ -55,14 +55,18 @@ def _convert_agent_question(event: AgentQuestionPart) -> list[dict]:
     return [
         {
             "type": "data-agent-question",
-            "questions": [
-                {
-                    "question": q.question,
-                    "options": [{"value": o.value, "label": o.label, "description": o.description} for o in q.options],
-                    "multi_select": q.multi_select,
-                }
-                for q in event.questions
-            ],
+            "data": {
+                "questions": [
+                    {
+                        "question": q.question,
+                        "options": [
+                            {"value": o.value, "label": o.label, "description": o.description} for o in q.options
+                        ],
+                        "multi_select": q.multi_select,
+                    }
+                    for q in event.questions
+                ],
+            },
         }
     ]
 
@@ -71,15 +75,17 @@ def _convert_task_snapshot(event: TaskSnapshotPart) -> list[dict]:
     return [
         {
             "type": "data-task-snapshot",
-            "tasks": [
-                {
-                    "id": t.id,
-                    "subject": t.subject,
-                    "status": t.status.value,
-                    "description": t.description,
-                }
-                for t in event.tasks
-            ],
+            "data": {
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "subject": t.subject,
+                        "status": t.status.value,
+                        "description": t.description,
+                    }
+                    for t in event.tasks
+                ],
+            },
         }
     ]
 

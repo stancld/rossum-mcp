@@ -232,6 +232,8 @@ async def send_message(
             return
         except Exception as e:
             logger.error(f"Error during agent execution: {e}", exc_info=True)
+            for event in build_finish_events(state):
+                yield _format_sse(event)
             yield _format_sse({"type": "error", "errorText": str(e)})
             yield STREAM_DONE
             return
