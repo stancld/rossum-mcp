@@ -164,7 +164,7 @@ Response header: `x-vercel-ai-ui-message-stream: v1`. Each line is `data: <json>
 
 ### Wire Event Types
 
-Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentStep`/`StreamEvent` → wire event dicts. Only text and error events are emitted; thinking, tool, and sub-agent events are dropped.
+Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentStep`/`StreamEvent` → wire event dicts.
 
 | Wire `type` | When emitted |
 |-------------|--------------|
@@ -173,6 +173,9 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | `text-start` | New text block opens |
 | `text-delta` | Incremental text content |
 | `text-end` | Text block closes |
+| `tool-input-start` | Tool call begins (`toolCallId`, `toolName`) |
+| `tool-input-available` | Tool call args ready (`toolCallId`, `toolName`, `input`) |
+| `tool-output-available` | Tool result ready (`toolCallId`, `output`) |
 | `error` | Error event |
 | `data-agent-question` | Structured question from agent |
 
@@ -182,6 +185,7 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 |-------|--------|
 | Start | `start` event emitted first |
 | Content | Text blocks open/close with start/delta/end triplets |
+| Tool use | Tool input start/available, then output available per tool call |
 | Finish | Open text block closed, then `finish`, then `data: [DONE]\n\n` |
 
 ### Internal Adapter
@@ -193,10 +197,10 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `TextDeltaStep` | `text-start` + `text-delta` (+ `text-end` when finalized) |
 | `FinalAnswerStep` | `text-start` + `text-delta` + `text-end` |
 | `ErrorStep` | `error` |
+| `ToolStartStep` | `tool-input-start` + `tool-input-available` (per new tool call, deduplicated) |
+| `ToolResultStep` | `tool-output-available` (per result) |
 | `AgentQuestionPart` | `data-agent-question` |
 | `ThinkingStep` | Dropped |
-| `ToolStartStep` | Dropped |
-| `ToolResultStep` | Dropped |
 | `SubAgentProgressPart` | Dropped |
 | `TaskSnapshotPart` | Dropped |
 | `StreamDoneEvent` | Captured for metadata; not emitted directly |

@@ -34,6 +34,7 @@ function hydrateState(p: PersistedState): ChatState {
       p.pendingQuestion && Array.isArray(p.pendingQuestion.questions)
         ? p.pendingQuestion
         : null,
+    pendingToolCalls: {},
   };
 }
 

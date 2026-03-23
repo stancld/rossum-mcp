@@ -1,5 +1,18 @@
 import type { ChatItem, ChatState, CompletedStep } from "../types.js";
 
+function makeFinalAnswer(
+  content: string,
+  turnIndex: number,
+  feedback: Record<number, boolean>,
+): ChatItem {
+  return {
+    kind: "final_answer",
+    content,
+    turnIndex,
+    feedback: turnIndex in feedback ? feedback[turnIndex]! : null,
+  };
+}
+
 function stepToItem(
   step: CompletedStep,
   turnIndex: number,
@@ -7,24 +20,19 @@ function stepToItem(
 ): ChatItem {
   switch (step.type) {
     case "final_answer":
+      return makeFinalAnswer(step.content || "", turnIndex, feedback);
+    case "tool_call":
       return {
-        kind: "final_answer",
-        content: step.content || "",
-        turnIndex,
-        feedback: turnIndex in feedback ? feedback[turnIndex]! : null,
+        kind: "tool_call",
+        toolName: step.toolName ?? "unknown",
+        toolCallId: step.toolCallId ?? "",
+        args: step.toolArgs ?? {},
+        result: step.content || "",
       };
     case "error":
       return { kind: "error", content: step.content || "Unknown error" };
     default:
-      // "text" steps that are not final_answer are intermediate —
-      // they get promoted to final_answer on finish, so this case
-      // only appears if streaming was aborted mid-text.
-      return {
-        kind: "final_answer",
-        content: step.content || "",
-        turnIndex,
-        feedback: turnIndex in feedback ? feedback[turnIndex]! : null,
-      };
+      return makeFinalAnswer(step.content || "", turnIndex, feedback);
   }
 }
 

@@ -8,6 +8,13 @@ interface StreamingIndicatorProps {
 }
 
 export function StreamingIndicator({ streaming }: StreamingIndicatorProps) {
+  if (streaming.type === "tool") {
+    const label = streaming.toolName
+      ? ` Running ${streaming.toolName}...`
+      : " Running tool...";
+    return <Spinner label={label} />;
+  }
+
   if (streaming.content) {
     return (
       <Box flexDirection="column">

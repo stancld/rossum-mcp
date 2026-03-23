@@ -190,35 +190,143 @@ class TestErrorConversion:
         assert events[1]["type"] == "error"
 
 
-class TestDroppedEvents:
-    def test_thinking_dropped(self):
-        state = StreamState()
-        events = convert_agent_event(ThinkingStep(step_number=1, thinking="Let me think...", is_streaming=True), state)
-        assert events == []
-
-    def test_tool_start_dropped(self):
+class TestToolConversion:
+    def test_tool_start_emits_input_events(self):
         state = StreamState()
         events = convert_agent_event(
             ToolStartStep(
                 step_number=1,
-                tool_calls=[ToolCall(id="tc_1", name="search", arguments={})],
-                tool_progress=(1, 1),
+                tool_calls=[ToolCall(id="tc_1", name="search", arguments={"query": "users"})],
+                tool_progress=(0, 1),
                 current_tool="search",
             ),
             state,
         )
+        assert len(events) == 2
+        assert events[0] == {"type": "tool-input-start", "toolCallId": "tc_1", "toolName": "search"}
+        assert events[1] == {
+            "type": "tool-input-available",
+            "toolCallId": "tc_1",
+            "toolName": "search",
+            "input": {"query": "users"},
+        }
+
+    def test_tool_start_multiple_calls(self):
+        state = StreamState()
+        events = convert_agent_event(
+            ToolStartStep(
+                step_number=1,
+                tool_calls=[
+                    ToolCall(id="tc_1", name="search", arguments={"q": "a"}),
+                    ToolCall(id="tc_2", name="list_users", arguments={}),
+                ],
+                tool_progress=(0, 2),
+            ),
+            state,
+        )
+        types = [e["type"] for e in events]
+        assert types == ["tool-input-start", "tool-input-available", "tool-input-start", "tool-input-available"]
+        assert events[0]["toolCallId"] == "tc_1"
+        assert events[2]["toolCallId"] == "tc_2"
+
+    def test_tool_start_deduplicates_repeated_emissions(self):
+        state = StreamState()
+        tool_calls = [ToolCall(id="tc_1", name="search", arguments={})]
+        convert_agent_event(
+            ToolStartStep(step_number=1, tool_calls=tool_calls, tool_progress=(0, 1)),
+            state,
+        )
+        events = convert_agent_event(
+            ToolStartStep(step_number=1, tool_calls=tool_calls, tool_progress=(0, 1), current_tool="search"),
+            state,
+        )
         assert events == []
 
-    def test_tool_result_dropped(self):
+    def test_tool_start_closes_active_text_block(self):
+        state = StreamState()
+        convert_agent_event(
+            TextDeltaStep(
+                step_number=1,
+                step_type=StepType.INTERMEDIATE,
+                text_delta="Thinking...",
+                accumulated_text="Thinking...",
+                is_streaming=True,
+            ),
+            state,
+        )
+        assert state.active_text_id is not None
+        events = convert_agent_event(
+            ToolStartStep(
+                step_number=2,
+                tool_calls=[ToolCall(id="tc_1", name="search", arguments={})],
+                tool_progress=(0, 1),
+            ),
+            state,
+        )
+        assert events[0]["type"] == "text-end"
+        assert events[1]["type"] == "tool-input-start"
+
+    def test_tool_result_emits_output_event(self):
         state = StreamState()
         events = convert_agent_event(
             ToolResultStep(
                 step_number=1,
-                tool_calls=[],
-                tool_results=[ToolResult(tool_call_id="tc_1", name="search", content="found it")],
+                tool_calls=[ToolCall(id="tc_1", name="search", arguments={})],
+                tool_results=[ToolResult(tool_call_id="tc_1", name="search", content="found 3 results")],
             ),
             state,
         )
+        assert len(events) == 1
+        assert events[0] == {
+            "type": "tool-output-available",
+            "toolCallId": "tc_1",
+            "output": "found 3 results",
+        }
+
+    def test_tool_result_multiple_results(self):
+        state = StreamState()
+        events = convert_agent_event(
+            ToolResultStep(
+                step_number=1,
+                tool_calls=[
+                    ToolCall(id="tc_1", name="search", arguments={}),
+                    ToolCall(id="tc_2", name="list_users", arguments={}),
+                ],
+                tool_results=[
+                    ToolResult(tool_call_id="tc_1", name="search", content="result1"),
+                    ToolResult(tool_call_id="tc_2", name="list_users", content="result2"),
+                ],
+            ),
+            state,
+        )
+        assert len(events) == 2
+        assert events[0]["toolCallId"] == "tc_1"
+        assert events[1]["toolCallId"] == "tc_2"
+
+    def test_full_tool_lifecycle(self):
+        """ToolStart → ToolResult produces the full AI SDK tool event sequence."""
+        state = StreamState()
+        tc = ToolCall(id="tc_1", name="get_queue", arguments={"id": 42})
+        start_events = convert_agent_event(
+            ToolStartStep(step_number=1, tool_calls=[tc], tool_progress=(0, 1)),
+            state,
+        )
+        result_events = convert_agent_event(
+            ToolResultStep(
+                step_number=1,
+                tool_calls=[tc],
+                tool_results=[ToolResult(tool_call_id="tc_1", name="get_queue", content='{"name":"invoices"}')],
+            ),
+            state,
+        )
+        all_types = [e["type"] for e in start_events + result_events]
+        assert all_types == ["tool-input-start", "tool-input-available", "tool-output-available"]
+
+
+class TestDroppedEvents:
+    def test_thinking_dropped(self):
+        state = StreamState()
+        events = convert_agent_event(ThinkingStep(step_number=1, thinking="Let me think...", is_streaming=True), state)
         assert events == []
 
     def test_task_snapshot_dropped(self):
