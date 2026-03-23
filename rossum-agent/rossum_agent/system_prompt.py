@@ -1,4 +1,4 @@
-"""Shared prompt content for the Rossum Agent.
+"""System prompt for the Rossum Agent.
 
 Optimized for Opus 4.6: Goals + constraints, not procedures.
 """
@@ -139,3 +139,14 @@ def get_shared_prompt_sections() -> str:
 
 def get_persona_behavior(persona: Persona) -> str:
     return PERSONA_BEHAVIORS.get(persona, PERSONA_BEHAVIORS[Persona.DEFAULT])
+
+
+def get_system_prompt(persona: Persona = Persona.DEFAULT) -> str:
+    """Get the system prompt for the RossumAgent."""
+    return f"""{ROSSUM_EXPERT_INTRO}
+
+---
+{get_persona_behavior(persona)}
+
+---
+{get_shared_prompt_sections()}"""

@@ -43,9 +43,9 @@ from rossum_agent.api.models.schemas import (
 from rossum_agent.bedrock_client import MAX_INPUT_TOKENS
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-from rossum_agent.prompts import get_system_prompt
 from rossum_agent.redis_client import RedisConnection
 from rossum_agent.rossum_mcp_integration import MCPConnection, connect_mcp_server
+from rossum_agent.system_prompt import get_system_prompt
 from rossum_agent.tools.core import (
     CAUTIOUS_APPROVAL_LABEL,
     AgentContext,
