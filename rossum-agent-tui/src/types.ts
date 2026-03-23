@@ -39,19 +39,29 @@ export interface Config {
 
 export type InteractionMode = "input" | "browse";
 
-// Step types — simplified to text-only events
-export type StepType = "text" | "final_answer" | "error";
+// Step types
+export type StepType = "text" | "final_answer" | "error" | "tool_call";
 
 export interface CompletedStep {
   stepNumber: number;
   type: StepType;
   content: string | null;
+  toolName?: string;
+  toolCallId?: string;
+  toolArgs?: Record<string, unknown>;
+}
+
+export interface PendingToolCall {
+  toolName: string;
+  toolCallId: string;
+  input?: Record<string, unknown>;
 }
 
 // Current streaming step for display
 export interface StreamingStep {
-  type: "text";
+  type: "text" | "tool";
   content: string | null;
+  toolName?: string;
 }
 
 export type ChatItem =
@@ -61,6 +71,13 @@ export type ChatItem =
       content: string;
       turnIndex: number;
       feedback: boolean | null;
+    }
+  | {
+      kind: "tool_call";
+      toolName: string;
+      toolCallId: string;
+      args: Record<string, unknown>;
+      result: string;
     }
   | {
       kind: "agent_question";
@@ -105,4 +122,5 @@ export interface ChatState {
   userMessages: UserMessage[];
   feedback: Record<number, boolean>;
   pendingQuestion: AgentQuestionPart | null;
+  pendingToolCalls: Record<string, PendingToolCall>;
 }

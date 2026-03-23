@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import { AgentQuestion } from "./AgentQuestion.js";
 import { StreamingIndicator } from "./StreamingIndicator.js";
+import { ToolCallBlock } from "./ToolCallBlock.js";
 import { renderMarkdown } from "../utils/markdown.js";
 import { truncate } from "../utils/format.js";
 import { useTerminalSize } from "../hooks/useTerminalSize.js";
@@ -103,6 +104,17 @@ export const ChatItemDisplay = React.memo(function ChatItemDisplay({
           expanded={expanded}
           selected={selected}
           feedback={item.feedback}
+        />
+      );
+
+    case "tool_call":
+      return (
+        <ToolCallBlock
+          toolName={item.toolName}
+          args={item.args}
+          result={item.result}
+          expanded={expanded}
+          selected={selected}
         />
       );
 

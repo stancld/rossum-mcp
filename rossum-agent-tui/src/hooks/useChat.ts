@@ -10,6 +10,7 @@ import type {
   ChatState,
   CompletedStep,
   Config,
+  PendingToolCall,
 } from "../types.js";
 import type {
   ImageAttachment,
@@ -28,6 +29,7 @@ const INITIAL_STATE: ChatState = {
   userMessages: [],
   feedback: {},
   pendingQuestion: null,
+  pendingToolCalls: {},
 };
 
 // --- Wire event types (minimal v1 protocol) ---
@@ -70,6 +72,25 @@ interface WireAgentQuestion {
   }>;
 }
 
+interface WireToolInputStart {
+  type: "tool-input-start";
+  toolCallId: string;
+  toolName: string;
+}
+
+interface WireToolInputAvailable {
+  type: "tool-input-available";
+  toolCallId: string;
+  toolName: string;
+  input: Record<string, unknown>;
+}
+
+interface WireToolOutputAvailable {
+  type: "tool-output-available";
+  toolCallId: string;
+  output: string;
+}
+
 type WireEvent =
   | WireStart
   | WireFinish
@@ -77,7 +98,10 @@ type WireEvent =
   | WireTextDelta
   | WireTextEnd
   | WireError
-  | WireAgentQuestion;
+  | WireAgentQuestion
+  | WireToolInputStart
+  | WireToolInputAvailable
+  | WireToolOutputAvailable;
 
 // --- SSE stream helpers ---
 
@@ -208,7 +232,7 @@ function commitStreaming(prev: ChatState): {
   steps: CompletedStep[];
   streaming: null;
 } {
-  if (!prev.currentStreaming) {
+  if (!prev.currentStreaming || prev.currentStreaming.type === "tool") {
     return { steps: prev.completedSteps, streaming: null };
   }
   return {
@@ -226,15 +250,16 @@ function commitStreaming(prev: ChatState): {
 
 function handleFinish(prev: ChatState): ChatState {
   const lastStream = prev.currentStreaming;
-  const extra: CompletedStep[] = lastStream
-    ? [
-        {
-          stepNumber: nextStepNumber(prev.completedSteps),
-          type: lastStream.type,
-          content: lastStream.content,
-        },
-      ]
-    : [];
+  const extra: CompletedStep[] =
+    lastStream && lastStream.type !== "tool"
+      ? [
+          {
+            stepNumber: nextStepNumber(prev.completedSteps),
+            type: lastStream.type,
+            content: lastStream.content,
+          },
+        ]
+      : [];
   // Mark the last text step as final_answer
   const steps = [...prev.completedSteps, ...extra];
   for (let i = steps.length - 1; i >= 0; i--) {
@@ -290,6 +315,64 @@ function handleTextEvent(
   };
 }
 
+function handleToolEvent(
+  prev: ChatState,
+  wire: WireToolInputStart | WireToolInputAvailable | WireToolOutputAvailable,
+): ChatState {
+  if (wire.type === "tool-input-start") {
+    const committed = commitStreaming(prev);
+    const pending: PendingToolCall = {
+      toolName: wire.toolName,
+      toolCallId: wire.toolCallId,
+    };
+    return {
+      ...prev,
+      completedSteps: committed.steps,
+      currentStreaming: {
+        type: "tool",
+        content: null,
+        toolName: wire.toolName,
+      },
+      pendingToolCalls: {
+        ...prev.pendingToolCalls,
+        [wire.toolCallId]: pending,
+      },
+    };
+  }
+  if (wire.type === "tool-input-available") {
+    const existing = prev.pendingToolCalls[wire.toolCallId];
+    if (!existing) return prev;
+    return {
+      ...prev,
+      pendingToolCalls: {
+        ...prev.pendingToolCalls,
+        [wire.toolCallId]: { ...existing, input: wire.input },
+      },
+    };
+  }
+  // tool-output-available
+  const tc = prev.pendingToolCalls[wire.toolCallId];
+  if (!tc) return prev;
+  const { [wire.toolCallId]: _matched, ...remaining } = prev.pendingToolCalls; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const hasMorePending = Object.keys(remaining).length > 0;
+  return {
+    ...prev,
+    completedSteps: [
+      ...prev.completedSteps,
+      {
+        stepNumber: nextStepNumber(prev.completedSteps),
+        type: "tool_call" as const,
+        content: wire.output,
+        toolName: tc.toolName,
+        toolCallId: tc.toolCallId,
+        toolArgs: tc.input ?? {},
+      },
+    ],
+    currentStreaming: hasMorePending ? prev.currentStreaming : null,
+    pendingToolCalls: remaining,
+  };
+}
+
 function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
   const t = wire.type;
   if (t === "start") return prev;
@@ -300,6 +383,14 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
     return handleTextEvent(
       prev,
       wire as WireTextStart | WireTextDelta | WireTextEnd,
+    );
+  if (t.startsWith("tool-"))
+    return handleToolEvent(
+      prev,
+      wire as
+        | WireToolInputStart
+        | WireToolInputAvailable
+        | WireToolOutputAvailable,
     );
   if (t === "data-agent-question")
     return {
@@ -431,15 +522,16 @@ export function useChat(config: Config) {
         return prev;
       }
 
-      const extra: CompletedStep[] = prev.currentStreaming
-        ? [
-            {
-              stepNumber: nextStepNumber(prev.completedSteps),
-              type: prev.currentStreaming.type,
-              content: prev.currentStreaming.content,
-            },
-          ]
-        : [];
+      const extra: CompletedStep[] =
+        prev.currentStreaming && prev.currentStreaming.type !== "tool"
+          ? [
+              {
+                stepNumber: nextStepNumber(prev.completedSteps),
+                type: prev.currentStreaming.type,
+                content: prev.currentStreaming.content,
+              },
+            ]
+          : [];
 
       return {
         ...prev,
