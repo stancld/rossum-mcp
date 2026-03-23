@@ -14,7 +14,6 @@ from rossum_agent.agent.models import (
     ToolResultStep,
     ToolStartStep,
 )
-from rossum_agent.api.models.schemas import StreamDoneEvent
 from rossum_agent.api.services.agent_service import StreamEvent
 from rossum_agent.mermaid_sanitizer import sanitize_mermaid_in_markdown
 
@@ -27,8 +26,6 @@ class StreamState:
     active_reasoning_id: str | None = None
     reasoning_sent_length: int = 0
     part_counter: int = 0
-    final_response: str | None = None
-    done_event: StreamDoneEvent | None = None
     emitted_tool_call_ids: set[str] = field(default_factory=set)
 
     def next_id(self, prefix: str) -> str:
@@ -100,7 +97,13 @@ def _convert_final_answer(event: FinalAnswerStep, state: StreamState) -> list[di
     # Sanitize mermaid blocks to fix common LLM syntax mistakes
     # (e.g. unquoted labels with parens/braces — see mermaid-js/mermaid#7002).
     answer = sanitize_mermaid_in_markdown(event.final_answer)
-    events: list[dict] = [*_close_reasoning(state), *_close_text(state)]
+    events: list[dict] = [*_close_reasoning(state)]
+    if state.active_text_id is not None and not event.is_hook_output:
+        # Text was already streamed via TextDeltaStep; just close the open block.
+        events.extend(_close_text(state))
+        return events
+    # No prior streaming (e.g. hook output) — emit the full text as a new block.
+    events.extend(_close_text(state))
     text_id = state.next_id("text")
     events.append({"type": "text-start", "id": text_id})
     events.append({"type": "text-delta", "id": text_id, "delta": answer})
@@ -139,9 +142,8 @@ def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
     Emits: reasoning-start/delta/end, text-start/delta/end, tool-input-start/available,
     tool-output-available, error, data-agent-question.
     Dropped: SubAgentProgressPart, TaskSnapshotPart.
+    Pre-filtered by caller: StreamDoneEvent.
     """
-    if isinstance(event, StreamDoneEvent):
-        return []
     if isinstance(event, AgentQuestionPart):
         return _convert_agent_question(event)
     if isinstance(event, ReasoningStep):

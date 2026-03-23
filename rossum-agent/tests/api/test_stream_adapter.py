@@ -22,7 +22,6 @@ from rossum_agent.agent.models import (
 from rossum_agent.api.models.schemas import (
     AgentQuestionItemSchema,
     QuestionOptionSchema,
-    StreamDoneEvent,
 )
 from rossum_agent.api.routes.messages import STREAM_DONE, _format_sse
 from rossum_agent.api.routes.stream_adapter import (
@@ -258,7 +257,8 @@ class TestTextConversion:
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer=""), state)
         assert events == []
 
-    def test_final_answer_closes_active_text_block(self):
+    def test_final_answer_closes_active_text_block_without_re_emitting(self):
+        """When text was already streamed, FinalAnswerStep just closes the open block."""
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -273,7 +273,18 @@ class TestTextConversion:
         assert state.active_text_id is not None
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
         types = [e["type"] for e in events]
-        assert types == ["text-end", "text-start", "text-delta", "text-end"]
+        assert types == ["text-end"]
+
+    def test_hook_output_emits_new_text_block(self):
+        """Hook output FinalAnswerStep always emits a new text block (genuinely new content)."""
+        state = StreamState()
+        events = convert_agent_event(
+            FinalAnswerStep(step_number=2, final_answer="Commit summary", is_hook_output=True),
+            state,
+        )
+        types = [e["type"] for e in events]
+        assert types == ["text-start", "text-delta", "text-end"]
+        assert events[1]["delta"] == "Commit summary"
 
 
 class TestErrorConversion:
@@ -448,14 +459,6 @@ class TestDroppedEvents:
         events = convert_agent_event(part, state)
         assert events == []
 
-    def test_stream_done_event_dropped(self):
-        state = StreamState()
-        events = convert_agent_event(
-            StreamDoneEvent(total_steps=5, input_tokens=1000, output_tokens=500),
-            state,
-        )
-        assert events == []
-
 
 class TestAgentQuestionConversion:
     def test_agent_question_emitted(self):
@@ -500,17 +503,9 @@ class TestFinishEvents:
         assert events[0]["type"] == "text-end"
         assert events[-1]["type"] == "finish"
 
-    def test_no_usage_or_file_events(self):
+    def test_finish_only_emits_finish(self):
+        """build_finish_events only closes open blocks and emits finish — no usage/file/commit events."""
         state = StreamState()
-        state.done_event = StreamDoneEvent(
-            total_steps=5,
-            input_tokens=1000,
-            output_tokens=500,
-            config_commit_hash="abc123",
-        )
         events = build_finish_events(state)
         types = [e["type"] for e in events]
-        assert "data-usage" not in types
-        assert "data-file-created" not in types
-        assert "data-commit-info" not in types
         assert types == ["finish"]
