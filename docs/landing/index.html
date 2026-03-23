@@ -217,19 +217,29 @@
 
     /* Stats */
     .stats {
-      display: flex;
-      justify-content: center;
-      gap: 4rem;
-      padding: 2rem 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      margin: 1.5rem 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      padding: 0;
+      margin: 2rem 0;
     }
 
-    .stat { text-align: center; }
+    .stat {
+      text-align: center;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .stat:hover {
+      border-color: rgba(63, 138, 226, 0.3);
+      box-shadow: 0 4px 12px rgba(63, 138, 226, 0.08);
+    }
 
     .stat-value {
-      font-size: 2.5rem;
+      font-size: 2.25rem;
       font-weight: 700;
       background: var(--gradient);
       -webkit-background-clip: text;
@@ -245,7 +255,7 @@
 
     .stat-desc {
       font-size: 0.8rem;
-      color: #6b7280;
+      color: var(--text-muted);
       margin-top: 0.35rem;
     }
 
@@ -734,11 +744,9 @@
     @media (max-width: 768px) {
       h1 { font-size: 2rem; }
       .stats {
-        flex-direction: column;
-        gap: 1.5rem;
-        padding: 1.5rem 0;
+        grid-template-columns: 1fr;
+        gap: 1rem;
       }
-      .stat { width: 100%; }
       .hero { padding: 2rem 0 1.5rem; }
       .preview-row { grid-template-columns: 1fr; }
 
@@ -941,10 +949,10 @@
 
     <div class="container">
       <div class="stats">
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="Fully Typed MCP Tools" aria-describedby="tooltip-mcp-tools">
-          <div class="stat-value" style="font-size: 1.6rem;">Typed</div>
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="32+ MCP Tools" aria-describedby="tooltip-mcp-tools">
+          <div class="stat-value">32+</div>
           <div class="stat-label">MCP Tools</div>
-          <div class="stat-desc">Pydantic models, StrEnum parameters, consolidated APIs</div>
+          <div class="stat-desc">Fully typed with Pydantic models & StrEnum parameters</div>
           <div class="stat-tooltip" id="tooltip-mcp-tools">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Read & Delete Layer</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Document Processing</a></div>
@@ -956,8 +964,8 @@
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-mcp#features" target="_blank" rel="noopener">Discovery & Mode</a></div>
           </div>
         </div>
-        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="10 Agent Skills" aria-describedby="tooltip-agent-skills">
-          <div class="stat-value">10</div>
+        <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="11 Agent Skills" aria-describedby="tooltip-agent-skills">
+          <div class="stat-value">11</div>
           <div class="stat-label">Agent Skills</div>
           <div class="stat-desc">Precise workflows for complex tasks</div>
           <div class="stat-tooltip" id="tooltip-agent-skills">
@@ -971,6 +979,7 @@
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/reasoning-fields.md" target="_blank" rel="noopener">Reasoning Fields</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/lookup-fields.md" target="_blank" rel="noopener">Lookup Fields</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/document-testing.md" target="_blank" rel="noopener">Document Testing</a></div>
+            <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills/automation-setup.md" target="_blank" rel="noopener">Automation Setup</a></div>
           </div>
         </div>
         <div class="stat stat-with-tooltip" tabindex="0" role="group" aria-label="3 Sub-Agents" aria-describedby="tooltip-sub-agents">
@@ -979,7 +988,7 @@
           <div class="stat-desc">Offload work, keep context clean</div>
           <div class="stat-tooltip" id="tooltip-sub-agents">
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/schema_patching.py" target="_blank" rel="noopener">Schema Patching</a></div>
-            <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/knowledge_base.py" target="_blank" rel="noopener">Knowledge Base</a></div>
+            <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/tree/master/rossum-agent/rossum_agent/tools/subagents/knowledge_base" target="_blank" rel="noopener">Knowledge Base</a></div>
             <div class="tooltip-item"><a href="https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/tools/subagents/elis_docs.py" target="_blank" rel="noopener">API Docs Search</a></div>
           </div>
         </div>
