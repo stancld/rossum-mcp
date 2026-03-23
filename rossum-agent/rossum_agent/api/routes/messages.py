@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -70,6 +71,14 @@ def _format_sse(event: dict) -> str:
     return f"data: {json.dumps(event, separators=(',', ':'))}\n\n"
 
 
+@dataclass
+class _ResponseMeta:
+    """Route-level metadata collected during streaming (not wire-protocol state)."""
+
+    final_response: str | None = None
+    done_event: StreamDoneEvent | None = None
+
+
 async def _stream_agent_response(
     *,
     request: Request,
@@ -84,6 +93,7 @@ async def _stream_agent_response(
     images: list[ImageContent] | None,
     documents: list[DocumentContent] | None,
     state: StreamState,
+    meta: _ResponseMeta,
 ) -> AsyncIterator[str]:
     watcher = asyncio.create_task(watch_disconnect(request, chat_id, agent_service))
 
@@ -106,12 +116,12 @@ async def _stream_agent_response(
                 continue
 
             if isinstance(event, StreamDoneEvent):
-                state.done_event = event
+                meta.done_event = event
                 continue
             if isinstance(event, FinalAnswerStep) and not event.is_hook_output:
-                state.final_response = event.final_answer
+                meta.final_response = event.final_answer
             elif isinstance(event, TextDeltaStep) and event.step_type == StepType.FINAL_ANSWER:
-                state.final_response = event.accumulated_text
+                meta.final_response = event.accumulated_text
 
             try:
                 wire_events = convert_agent_event(event, state)
@@ -196,6 +206,7 @@ async def send_message(
 
     async def event_generator() -> AsyncIterator[str]:
         state = StreamState()
+        meta = _ResponseMeta()
 
         yield _format_sse({"type": "start"})
 
@@ -213,6 +224,7 @@ async def send_message(
                 images=images,
                 documents=documents,
                 state=state,
+                meta=meta,
             ):
                 yield chunk
         except asyncio.CancelledError:
@@ -239,12 +251,12 @@ async def send_message(
             chat_data=chat_data,
             history=history,
             user_prompt=user_prompt,
-            final_response=state.final_response,
+            final_response=meta.final_response,
             images=images,
             documents=documents,
             output_dir=output_dir,
             memory=memory,
-            done_event=state.done_event,
+            done_event=meta.done_event,
             summary=summary,
         )
 
