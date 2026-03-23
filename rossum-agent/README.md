@@ -228,7 +228,7 @@ flowchart TB
 
 API docs: `/api/docs` (Swagger) or `/api/redoc`
 
-**Slash Commands:** Messages starting with `/` are intercepted before reaching the agent and return instant responses via SSE. Available commands:
+**Slash Commands:** Messages starting with `/` are intercepted before reaching the agent and return instant responses via the wire protocol. Available commands:
 
 | Command | Description |
 |---------|-------------|
@@ -240,14 +240,19 @@ API docs: `/api/docs` (Swagger) or `/api/redoc`
 
 The TUI provides autocomplete suggestions when typing `/`. Commands can also be discovered programmatically via `GET /api/v1/commands`.
 
-**SSE Events:** AI SDK UI Message Stream v1 compatible (`x-vercel-ai-ui-message-stream: v1`). Each line is `data: <json>\n\n` discriminated by `type`:
+**Streaming Events:** AI SDK UI Message Stream v1 compatible (`x-vercel-ai-ui-message-stream: v1`). Each line is `data: <json>\n\n` discriminated by `type`:
 
 | Wire `type` | Description |
 |-------------|-------------|
 | `start` / `finish` | Stream lifecycle |
+| `reasoning-start` / `reasoning-delta` / `reasoning-end` | Extended thinking blocks |
 | `text-start` / `text-delta` / `text-end` | Text content blocks |
+| `tool-input-start` / `tool-input-available` | Tool call begins and args ready |
+| `tool-output-available` | Tool result |
 | `error` | Agent execution error |
 | `data-agent-question` | Structured question from agent |
+| `data-task-snapshot` | Full task list snapshot |
+| `data-file-created` | File created during agent run |
 
 **MCP Mode:** Chat sessions support mode switching via the `mcp_mode` parameter:
 - Set at chat creation: `POST /api/v1/chats` with `{"mcp_mode": "read-write"}`

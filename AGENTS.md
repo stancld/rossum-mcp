@@ -113,8 +113,8 @@ The OpenAPI spec is the contract for `rossum-agent-client` and `rossum-agent-tui
 |---------|--------|
 | New/changed endpoint | Regenerate spec |
 | New/changed Pydantic model | Regenerate spec |
-| New SSE event type | Add model to `_SSE_EVENT_MODELS` list in `scripts/generate_openapi.py`, regenerate spec |
-| Changed SSE event fields | Regenerate spec |
+| New wire event type | Add model to `_SSE_EVENT_MODELS` list in `scripts/generate_openapi.py`, regenerate spec |
+| Changed wire event fields | Regenerate spec |
 
 Regeneration pipeline:
 
