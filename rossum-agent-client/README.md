@@ -184,9 +184,14 @@ The message endpoint (`POST /api/v1/chats/{id}/messages`) returns an AI SDK UI M
 | Wire `type` | Description |
 |-------------|-------------|
 | `start` / `finish` | Stream lifecycle |
+| `reasoning-start` / `reasoning-delta` / `reasoning-end` | Extended thinking blocks |
 | `text-start` / `text-delta` / `text-end` | Text content blocks |
+| `tool-input-start` / `tool-input-available` | Tool call begins and args ready |
+| `tool-output-available` | Tool result |
 | `error` | Agent execution error |
 | `data-agent-question` | Structured question from agent |
+| `data-task-snapshot` | Full task list snapshot |
+| `data-file-created` | File created during agent run |
 
 All JSON fields use camelCase keys (`toolCallId`, `toolName`, `textDelta`, etc.).
 

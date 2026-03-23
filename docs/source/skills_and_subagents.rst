@@ -245,7 +245,7 @@ This ensures relevant tools are available without requiring explicit loading whi
 Slash Commands
 --------------
 
-Slash commands provide instant introspection into the agent's capabilities without consuming tokens or invoking the agent. Messages starting with ``/`` sent via the ``POST /api/v1/chats/{id}/messages`` endpoint are intercepted and return a direct response as an SSE stream.
+Slash commands provide instant introspection into the agent's capabilities without consuming tokens or invoking the agent. Messages starting with ``/`` sent via the ``POST /api/v1/chats/{id}/messages`` endpoint are intercepted and return a direct response as an AI SDK UI Message Stream v1 stream.
 
 Available Commands
 ^^^^^^^^^^^^^^^^^^

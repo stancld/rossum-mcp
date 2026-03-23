@@ -87,7 +87,12 @@ All notable changes to this project will be documented in this file.
 - Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297), [#298](https://github.com/stancld/rossum-agents/pull/298)
 - Alembic migrations for PostgreSQL schema management — initial migration creates `chats` and `messages` tables, with `alembic upgrade head` / `alembic downgrade` support [#286](https://github.com/stancld/rossum-agents/pull/286)
 
+### Changed
+- **Breaking**: Replace custom SSE protocol with AI SDK UI Message Stream v1 wire protocol — response header `x-vercel-ai-ui-message-stream: v1`, `data: <json>\n\n` framing, `data: [DONE]\n\n` sentinel
+- New `stream_adapter.py` converts internal agent events to wire events (`reasoning-start/delta/end`, `text-start/delta/end`, `tool-input-start/available`, `tool-output-available`, `error`, `data-agent-question`, `data-task-snapshot`, `data-file-created`)
+
 ### Removed
+- `StepEvent`, `SubAgentProgressEvent`, `SubAgentTextEvent`, `TaskSnapshotEvent`, `AgentQuestionEvent`, `FileCreatedEvent` Pydantic models — replaced by plain dict wire events
 - Redis as chat persistence backend — PostgreSQL is now the only storage backend; `CHAT_STORAGE_BACKEND` env var is no longer used [#294](https://github.com/stancld/rossum-agents/pull/294)
 - `ROSSUM_KB_DATA_PATH` env var override from knowledge base cache — KB data now resolves only via explicit `cache_path` or the bundled package resource
 
