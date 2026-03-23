@@ -16,7 +16,6 @@ interface PersistedState {
   chatId: string | null;
   completedSteps: CompletedStep[];
   userMessages: UserMessage[];
-  finalAnswer: string | null;
   feedback: Record<number, boolean>;
   pendingQuestion: AgentQuestionPart | null;
   tasks: TaskSnapshotPart | null;
@@ -28,7 +27,6 @@ function hydrateState(p: PersistedState): ChatState {
     connectionStatus: "idle",
     completedSteps: p.completedSteps ?? [],
     currentStreaming: null,
-    finalAnswer: p.finalAnswer ?? null,
     error: null,
     userMessages: p.userMessages ?? [],
     feedback: p.feedback ?? {},
@@ -59,7 +57,6 @@ export function savePersistedState(state: ChatState): void {
       chatId: state.chatId,
       completedSteps: state.completedSteps,
       userMessages: state.userMessages,
-      finalAnswer: state.finalAnswer,
       feedback: state.feedback,
       pendingQuestion: state.pendingQuestion,
       tasks: state.tasks,
