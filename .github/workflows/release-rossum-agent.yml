@@ -37,6 +37,12 @@ jobs:
           cd rossum-agent
           uv build
 
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages-dir: rossum-agent/dist/
+
       - name: Generate OpenAPI spec
         run: |
           cd rossum-agent
@@ -55,9 +61,3 @@ jobs:
             rossum-agent/dist/assets/openapi.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
-          packages-dir: rossum-agent/dist/
