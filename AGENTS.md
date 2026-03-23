@@ -181,6 +181,7 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | `tool-output-available` | Tool result ready (`toolCallId`, `output`) |
 | `error` | Error event |
 | `data-agent-question` | Structured question from agent |
+| `data-task-snapshot` | Full task list snapshot (after create/update) |
 
 ### Stream Lifecycle
 
@@ -205,8 +206,8 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `ToolStartStep` | `tool-input-start` + `tool-input-available` (per new tool call, deduplicated) |
 | `ToolResultStep` | `tool-output-available` (per result) |
 | `AgentQuestionPart` | `data-agent-question` |
+| `TaskSnapshotPart` | `data-task-snapshot` |
 | `SubAgentProgressPart` | Dropped |
-| `TaskSnapshotPart` | Dropped |
 | `StreamDoneEvent` | Captured for metadata; not emitted directly |
 
 ## Environment Variables

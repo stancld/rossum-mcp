@@ -11,6 +11,7 @@ import type {
   CompletedStep,
   Config,
   PendingToolCall,
+  TaskSnapshotPart,
 } from "../types.js";
 import type {
   ImageAttachment,
@@ -30,6 +31,7 @@ const INITIAL_STATE: ChatState = {
   feedback: {},
   pendingQuestion: null,
   pendingToolCalls: {},
+  tasks: null,
 };
 
 // --- Wire event types (minimal v1 protocol) ---
@@ -69,6 +71,16 @@ interface WireAgentQuestion {
     question: string;
     options: Array<{ value: string; label: string; description: string }>;
     multi_select: boolean;
+  }>;
+}
+
+interface WireTaskSnapshot {
+  type: "data-task-snapshot";
+  tasks: Array<{
+    id: string;
+    subject: string;
+    status: "pending" | "in_progress" | "completed";
+    description: string;
   }>;
 }
 
@@ -118,6 +130,7 @@ type WireEvent =
   | WireTextEnd
   | WireError
   | WireAgentQuestion
+  | WireTaskSnapshot
   | WireToolInputStart
   | WireToolInputAvailable
   | WireToolOutputAvailable;
@@ -460,6 +473,8 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
       pendingQuestion: wire as AgentQuestionPart,
       connectionStatus: "idle",
     };
+  if (t === "data-task-snapshot")
+    return { ...prev, tasks: wire as TaskSnapshotPart };
   return prev;
 }
 

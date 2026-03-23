@@ -62,6 +62,10 @@ function appendTrailingItems(
     }
   }
 
+  if (state.tasks && state.tasks.tasks.length > 0) {
+    items.push({ kind: "task_snapshot", tasks: state.tasks.tasks });
+  }
+
   if (
     state.error &&
     (items.length === 0 || items[items.length - 1]?.kind !== "error")

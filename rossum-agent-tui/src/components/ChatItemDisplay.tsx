@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import { AgentQuestion } from "./AgentQuestion.js";
 import { StreamingIndicator } from "./StreamingIndicator.js";
+import { TaskSnapshot } from "./TaskSnapshot.js";
 import { ThinkingBlock } from "./ThinkingBlock.js";
 import { ToolCallBlock } from "./ToolCallBlock.js";
 import { renderMarkdown } from "../utils/markdown.js";
@@ -145,6 +146,9 @@ export const ChatItemDisplay = React.memo(function ChatItemDisplay({
           totalQuestions={item.totalQuestions}
         />
       );
+
+    case "task_snapshot":
+      return <TaskSnapshot tasks={item.tasks} />;
 
     case "streaming":
       return <StreamingIndicator streaming={item.streaming} />;
