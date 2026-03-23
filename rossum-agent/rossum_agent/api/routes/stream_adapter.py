@@ -9,6 +9,7 @@ from rossum_agent.agent.models import (
     AgentQuestionPart,
     ErrorStep,
     FinalAnswerStep,
+    ReasoningStep,
     TextDeltaStep,
     ToolResultStep,
     ToolStartStep,
@@ -23,6 +24,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StreamState:
     active_text_id: str | None = None
+    active_reasoning_id: str | None = None
+    reasoning_sent_length: int = 0
     part_counter: int = 0
     final_response: str | None = None
     done_event: StreamDoneEvent | None = None
@@ -31,6 +34,15 @@ class StreamState:
     def next_id(self, prefix: str) -> str:
         self.part_counter += 1
         return f"{prefix}_{self.part_counter}"
+
+
+def _close_reasoning(state: StreamState) -> list[dict]:
+    if state.active_reasoning_id is None:
+        return []
+    events: list[dict] = [{"type": "reasoning-end", "id": state.active_reasoning_id}]
+    state.active_reasoning_id = None
+    state.reasoning_sent_length = 0
+    return events
 
 
 def _close_text(state: StreamState) -> list[dict]:
@@ -57,8 +69,22 @@ def _convert_agent_question(event: AgentQuestionPart) -> list[dict]:
     ]
 
 
-def _convert_text_delta(event: TextDeltaStep, state: StreamState) -> list[dict]:
+def _convert_reasoning(event: ReasoningStep, state: StreamState) -> list[dict]:
     events: list[dict] = []
+    if state.active_reasoning_id is None:
+        state.active_reasoning_id = state.next_id("reasoning")
+        events.append({"type": "reasoning-start", "id": state.active_reasoning_id})
+    delta = event.reasoning[state.reasoning_sent_length :]
+    if delta:
+        events.append({"type": "reasoning-delta", "id": state.active_reasoning_id, "delta": delta})
+        state.reasoning_sent_length = len(event.reasoning)
+    if not event.is_streaming:
+        events.extend(_close_reasoning(state))
+    return events
+
+
+def _convert_text_delta(event: TextDeltaStep, state: StreamState) -> list[dict]:
+    events: list[dict] = _close_reasoning(state)
     if state.active_text_id is None:
         state.active_text_id = state.next_id("text")
         events.append({"type": "text-start", "id": state.active_text_id})
@@ -74,7 +100,7 @@ def _convert_final_answer(event: FinalAnswerStep, state: StreamState) -> list[di
     # Sanitize mermaid blocks to fix common LLM syntax mistakes
     # (e.g. unquoted labels with parens/braces — see mermaid-js/mermaid#7002).
     answer = sanitize_mermaid_in_markdown(event.final_answer)
-    events: list[dict] = _close_text(state)
+    events: list[dict] = [*_close_reasoning(state), *_close_text(state)]
     text_id = state.next_id("text")
     events.append({"type": "text-start", "id": text_id})
     events.append({"type": "text-delta", "id": text_id, "delta": answer})
@@ -83,7 +109,7 @@ def _convert_final_answer(event: FinalAnswerStep, state: StreamState) -> list[di
 
 
 def _convert_tool_start(event: ToolStartStep, state: StreamState) -> list[dict]:
-    events: list[dict] = _close_text(state)
+    events: list[dict] = [*_close_reasoning(state), *_close_text(state)]
     for tc in event.tool_calls:
         if tc.id in state.emitted_tool_call_ids:
             continue
@@ -110,29 +136,34 @@ def _convert_tool_result(event: ToolResultStep) -> list[dict]:
 def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
     """Convert an internal StreamEvent to a list of AI SDK wire event dicts.
 
-    Emits: text-start/delta/end, tool-input-start/available, tool-output-available,
-    error, data-agent-question.
-    Dropped: ThinkingStep, SubAgentProgressPart, TaskSnapshotPart.
+    Emits: reasoning-start/delta/end, text-start/delta/end, tool-input-start/available,
+    tool-output-available, error, data-agent-question.
+    Dropped: SubAgentProgressPart, TaskSnapshotPart.
     """
     if isinstance(event, StreamDoneEvent):
         return []
     if isinstance(event, AgentQuestionPart):
         return _convert_agent_question(event)
+    if isinstance(event, ReasoningStep):
+        return _convert_reasoning(event, state)
     if isinstance(event, TextDeltaStep):
         return _convert_text_delta(event, state)
     if isinstance(event, FinalAnswerStep):
         return _convert_final_answer(event, state)
     if isinstance(event, ErrorStep):
-        return [*_close_text(state), {"type": "error", "errorText": event.error or "Unknown error"}]
+        return [
+            *_close_reasoning(state),
+            *_close_text(state),
+            {"type": "error", "errorText": event.error or "Unknown error"},
+        ]
     if isinstance(event, ToolStartStep):
         return _convert_tool_start(event, state)
     if isinstance(event, ToolResultStep):
         return _convert_tool_result(event)
-    # All other event types (ThinkingStep, SubAgentProgressPart, TaskSnapshotPart)
-    # are silently dropped.
+    # SubAgentProgressPart, TaskSnapshotPart are silently dropped.
     return []
 
 
 def build_finish_events(state: StreamState) -> list[dict]:
     """Build the sequence of events that close out a stream."""
-    return [*_close_text(state), {"type": "finish"}]
+    return [*_close_reasoning(state), *_close_text(state), {"type": "finish"}]

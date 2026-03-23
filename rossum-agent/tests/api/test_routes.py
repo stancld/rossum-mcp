@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from rossum_agent.agent.models import FinalAnswerStep, ThinkingStep
+from rossum_agent.agent.models import FinalAnswerStep, ReasoningStep
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import (
     ChatDetail,
@@ -320,7 +320,7 @@ class TestSendMessageEndpoint:
         mock_chat_service.save_messages.return_value = True
 
         async def mock_run_agent(*args, **kwargs):
-            yield ThinkingStep(step_number=1, thinking="Processing...")
+            yield ReasoningStep(step_number=1, reasoning="Processing...")
             yield FinalAnswerStep(step_number=1, final_answer="Done!")
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 

@@ -92,11 +92,11 @@ class ThinkingBlockData:
 
 
 @dataclass
-class ThinkingStep:
-    """Streaming thinking/chain-of-thought tokens."""
+class ReasoningStep:
+    """Streaming reasoning/chain-of-thought tokens."""
 
     step_number: int
-    thinking: str
+    reasoning: str
     is_streaming: bool = True
 
 
@@ -154,7 +154,7 @@ class ErrorStep:
     error: str
 
 
-AgentStep = ThinkingStep | TextDeltaStep | ToolStartStep | ToolResultStep | FinalAnswerStep | ErrorStep
+AgentStep = ReasoningStep | TextDeltaStep | ToolStartStep | ToolResultStep | FinalAnswerStep | ErrorStep
 
 
 # --- Internal queue event types (used by AgentService, not wire protocol) ---

@@ -15,6 +15,10 @@ export function StreamingIndicator({ streaming }: StreamingIndicatorProps) {
     return <Spinner label={label} />;
   }
 
+  if (streaming.type === "reasoning") {
+    return <Spinner label=" Reasoning..." />;
+  }
+
   if (streaming.content) {
     return (
       <Box flexDirection="column">

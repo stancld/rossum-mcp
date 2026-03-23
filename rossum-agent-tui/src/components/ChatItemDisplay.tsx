@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 import { AgentQuestion } from "./AgentQuestion.js";
 import { StreamingIndicator } from "./StreamingIndicator.js";
+import { ThinkingBlock } from "./ThinkingBlock.js";
 import { ToolCallBlock } from "./ToolCallBlock.js";
 import { renderMarkdown } from "../utils/markdown.js";
 import { truncate } from "../utils/format.js";
@@ -104,6 +105,15 @@ export const ChatItemDisplay = React.memo(function ChatItemDisplay({
           expanded={expanded}
           selected={selected}
           feedback={item.feedback}
+        />
+      );
+
+    case "reasoning":
+      return (
+        <ThinkingBlock
+          content={item.content}
+          expanded={expanded}
+          selected={selected}
         />
       );
 

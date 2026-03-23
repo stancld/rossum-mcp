@@ -72,6 +72,22 @@ interface WireAgentQuestion {
   }>;
 }
 
+interface WireReasoningStart {
+  type: "reasoning-start";
+  id: string;
+}
+
+interface WireReasoningDelta {
+  type: "reasoning-delta";
+  id: string;
+  delta: string;
+}
+
+interface WireReasoningEnd {
+  type: "reasoning-end";
+  id: string;
+}
+
 interface WireToolInputStart {
   type: "tool-input-start";
   toolCallId: string;
@@ -94,6 +110,9 @@ interface WireToolOutputAvailable {
 type WireEvent =
   | WireStart
   | WireFinish
+  | WireReasoningStart
+  | WireReasoningDelta
+  | WireReasoningEnd
   | WireTextStart
   | WireTextDelta
   | WireTextEnd
@@ -276,6 +295,44 @@ function handleFinish(prev: ChatState): ChatState {
   };
 }
 
+function handleReasoningEvent(
+  prev: ChatState,
+  wire: WireReasoningStart | WireReasoningDelta | WireReasoningEnd,
+): ChatState {
+  if (wire.type === "reasoning-start") {
+    const committed = commitStreaming(prev);
+    return {
+      ...prev,
+      completedSteps: committed.steps,
+      currentStreaming: { type: "reasoning", content: null },
+    };
+  }
+  if (wire.type === "reasoning-delta") {
+    if (!prev.currentStreaming || prev.currentStreaming.type !== "reasoning")
+      return prev;
+    const newContent = (prev.currentStreaming.content ?? "") + wire.delta;
+    return {
+      ...prev,
+      currentStreaming: { ...prev.currentStreaming, content: newContent },
+    };
+  }
+  // reasoning-end
+  const reasoning = prev.currentStreaming;
+  if (!reasoning || reasoning.type !== "reasoning") return prev;
+  return {
+    ...prev,
+    completedSteps: [
+      ...prev.completedSteps,
+      {
+        stepNumber: nextStepNumber(prev.completedSteps),
+        type: "reasoning",
+        content: reasoning.content,
+      },
+    ],
+    currentStreaming: null,
+  };
+}
+
 function handleTextEvent(
   prev: ChatState,
   wire: WireTextStart | WireTextDelta | WireTextEnd,
@@ -379,6 +436,11 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
   if (t === "finish") return handleFinish(prev);
   if (t === "error")
     return { ...prev, error: wire.errorText, connectionStatus: "error" };
+  if (t.startsWith("reasoning-"))
+    return handleReasoningEvent(
+      prev,
+      wire as WireReasoningStart | WireReasoningDelta | WireReasoningEnd,
+    );
   if (t.startsWith("text-"))
     return handleTextEvent(
       prev,
