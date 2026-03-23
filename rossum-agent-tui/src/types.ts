@@ -17,6 +17,9 @@ export type QuestionOption = Schemas["QuestionOptionSchema"];
 // Task snapshot types
 export type TaskSnapshotTaskSchema = Schemas["TaskSnapshotTaskSchema"];
 
+// File created types
+export type FileCreatedSchema = Schemas["FileCreatedSchema"];
+
 // Agent question wire event (parsed from SSE stream)
 export interface AgentQuestionPart {
   type: "data-agent-question";
@@ -102,7 +105,8 @@ export type ChatItem =
     }
   | { kind: "error"; content: string }
   | { kind: "streaming"; streaming: StreamingStep }
-  | { kind: "task_snapshot"; tasks: TaskSnapshotTaskSchema[] };
+  | { kind: "task_snapshot"; tasks: TaskSnapshotTaskSchema[] }
+  | { kind: "file_created"; filename: string; url: string };
 
 export interface ExpandState {
   [itemIndex: number]: boolean;
@@ -137,4 +141,5 @@ export interface ChatState {
   pendingQuestion: AgentQuestionPart | null;
   pendingToolCalls: Record<string, PendingToolCall>;
   tasks: TaskSnapshotPart | null;
+  files: FileCreatedSchema[];
 }

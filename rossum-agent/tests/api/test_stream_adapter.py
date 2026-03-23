@@ -7,6 +7,7 @@ import json
 from rossum_agent.agent.models import (
     AgentQuestionPart,
     ErrorStep,
+    FileCreatedPart,
     FinalAnswerStep,
     ReasoningStep,
     StepType,
@@ -485,6 +486,26 @@ class TestTaskSnapshotConversion:
         events = convert_agent_event(part, state)
         assert len(events) == 1
         assert events[0]["data"]["tasks"] == []
+
+
+class TestFileCreatedConversion:
+    def test_file_created_emitted(self):
+        state = StreamState()
+        part = FileCreatedPart(filename="report.csv", url="/api/v1/chats/c1/files/report.csv")
+        events = convert_agent_event(part, state)
+        assert len(events) == 1
+        assert events[0]["type"] == "data-file-created"
+        assert events[0]["data"] == {"filename": "report.csv", "url": "/api/v1/chats/c1/files/report.csv"}
+
+    def test_multiple_files(self):
+        state = StreamState()
+        for name in ["a.csv", "b.png"]:
+            events = convert_agent_event(
+                FileCreatedPart(filename=name, url=f"/api/v1/chats/c1/files/{name}"),
+                state,
+            )
+            assert len(events) == 1
+            assert events[0]["data"]["filename"] == name
 
 
 class TestAgentQuestionConversion:

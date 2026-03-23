@@ -205,6 +205,13 @@ class TaskSnapshotTaskSchema(BaseModel):
     description: str = ""
 
 
+class FileCreatedSchema(BaseModel):
+    """A file created during an agent run."""
+
+    filename: str
+    url: str
+
+
 class TokenUsageBySource(BaseModel):
     """Token usage for a specific source (main agent or sub-agent)."""
 

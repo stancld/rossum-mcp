@@ -41,28 +41,42 @@ function stepToItem(
   }
 }
 
+function appendQuestionItem(
+  items: ChatItem[],
+  state: ChatState,
+  questionIndex?: number,
+): void {
+  if (!state.pendingQuestion) return;
+  const qi = questionIndex ?? 0;
+  const currentQ = state.pendingQuestion.questions[qi];
+  if (!currentQ) return;
+  items.push({
+    kind: "agent_question",
+    question: currentQ.question,
+    options: currentQ.options ?? [],
+    multiSelect: currentQ.multi_select,
+    questionIndex: qi,
+    totalQuestions: state.pendingQuestion.questions.length,
+  });
+}
+
 function appendTrailingItems(
   items: ChatItem[],
   state: ChatState,
   questionIndex?: number,
 ): void {
-  if (state.pendingQuestion) {
-    const qi = questionIndex ?? 0;
-    const currentQ = state.pendingQuestion.questions[qi];
-    if (currentQ) {
-      items.push({
-        kind: "agent_question",
-        question: currentQ.question,
-        options: currentQ.options ?? [],
-        multiSelect: currentQ.multi_select,
-        questionIndex: qi,
-        totalQuestions: state.pendingQuestion.questions.length,
-      });
-    }
-  }
+  appendQuestionItem(items, state, questionIndex);
 
   if (state.tasks && state.tasks.tasks.length > 0) {
     items.push({ kind: "task_snapshot", tasks: state.tasks.tasks });
+  }
+
+  for (const file of state.files) {
+    items.push({
+      kind: "file_created",
+      filename: file.filename,
+      url: file.url,
+    });
   }
 
   if (

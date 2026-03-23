@@ -31,6 +31,7 @@ const INITIAL_STATE: ChatState = {
   pendingQuestion: null,
   pendingToolCalls: {},
   tasks: null,
+  files: [],
 };
 
 // --- Wire event types (minimal v1 protocol) ---
@@ -122,6 +123,14 @@ interface WireToolOutputAvailable {
   output: string;
 }
 
+interface WireFileCreated {
+  type: "data-file-created";
+  data: {
+    filename: string;
+    url: string;
+  };
+}
+
 type WireEvent =
   | WireStart
   | WireFinish
@@ -134,6 +143,7 @@ type WireEvent =
   | WireError
   | WireAgentQuestion
   | WireTaskSnapshot
+  | WireFileCreated
   | WireToolInputStart
   | WireToolInputAvailable
   | WireToolOutputAvailable;
@@ -489,6 +499,13 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
       } as TaskSnapshotPart,
     };
   }
+  if (t === "data-file-created") {
+    const { data } = wire as WireFileCreated;
+    return {
+      ...prev,
+      files: [...prev.files, data],
+    };
+  }
   return prev;
 }
 
@@ -532,6 +549,7 @@ export function useChat(config: Config) {
         currentStreaming: null,
         pendingQuestion: null,
         error: null,
+        files: [],
         userMessages: [
           ...prev.userMessages,
           {
