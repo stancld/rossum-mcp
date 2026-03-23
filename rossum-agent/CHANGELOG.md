@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.7.0] - 2026-03-23
+
 ### Added
 - `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
 - Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297), [#298](https://github.com/stancld/rossum-agents/pull/298)
