@@ -8,10 +8,87 @@
     <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; }
+        #version-bar {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f8f8f8;
+            border-bottom: 1px solid #e0e0e0;
+            font-family: Montserrat, sans-serif;
+            font-size: 0.85rem;
+        }
+        #version-bar label {
+            font-weight: 500;
+            color: #333;
+        }
+        #version-select {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: inherit;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <redoc spec-url='openapi.json'></redoc>
+    <div id="version-bar">
+        <label for="version-select">Version:</label>
+        <select id="version-select"></select>
+    </div>
+    <div id="redoc-container"></div>
+
     <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+        const LATEST_SPEC = 'openapi.json';
+        const VERSIONS_URL = 'specs/versions.json';
+
+        function renderSpec(url) {
+            document.getElementById('redoc-container').innerHTML = '';
+            Redoc.init(url, {}, document.getElementById('redoc-container'));
+        }
+
+        function specUrlForVersion(version) {
+            return 'specs/' + version + '.json';
+        }
+
+        async function init() {
+            renderSpec(LATEST_SPEC);
+
+            try {
+                const resp = await fetch(VERSIONS_URL);
+                if (!resp.ok) return;
+                const versions = await resp.json();
+                if (!versions.length) return;
+
+                const bar = document.getElementById('version-bar');
+                const select = document.getElementById('version-select');
+
+                const latestOpt = document.createElement('option');
+                latestOpt.value = '';
+                latestOpt.textContent = 'latest';
+                select.appendChild(latestOpt);
+
+                for (const v of versions) {
+                    const opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v;
+                    select.appendChild(opt);
+                }
+
+                select.addEventListener('change', function() {
+                    const url = this.value ? specUrlForVersion(this.value) : LATEST_SPEC;
+                    renderSpec(url);
+                });
+
+                bar.style.display = 'flex';
+            } catch {
+                // No versions available — just show latest
+            }
+        }
+
+        init();
+    </script>
 </body>
 </html>

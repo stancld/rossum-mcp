@@ -47,7 +47,7 @@ jobs:
       - name: Generate OpenAPI spec
         run: |
           cd rossum-agent
-          uv run python scripts/generate_openapi.py openapi.json
+          uv run python scripts/generate_openapi.py
         shell: bash
 
       - name: Prepare site structure
@@ -59,9 +59,26 @@ jobs:
           cp -r docs/build/html _site/source
           # Add OpenAPI spec and Redoc viewer at /api-reference/
           mkdir -p _site/api-reference
-          cp rossum-agent/openapi.json _site/api-reference/
+          cp rossum-agent/rossum_agent/api/openapi.json _site/api-reference/openapi.json
           cp rossum-agent/scripts/openapi_redoc.html _site/api-reference/index.html
         shell: bash
+
+      - name: Collect versioned API specs from GitHub Releases
+        run: |
+          mkdir -p _site/api-reference/specs
+          versions=""
+          for tag in $(gh release list --json tagName --jq '.[].tagName' | grep '^rossum-agent-v' | sort -Vr); do
+            version="${tag#rossum-agent-v}"
+            if gh release download "$tag" --pattern "openapi.json" --output "_site/api-reference/specs/${version}.json" 2>/dev/null; then
+              versions="${versions}\"${version}\","
+            fi
+          done
+          if [ -n "$versions" ]; then
+            echo "[${versions%,}]" > _site/api-reference/specs/versions.json
+          fi
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
