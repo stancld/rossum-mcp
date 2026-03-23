@@ -5,6 +5,7 @@ import type {
   AgentQuestionPart,
   ChatState,
   CompletedStep,
+  TaskSnapshotPart,
   UserMessage,
 } from "../types.js";
 
@@ -18,6 +19,7 @@ interface PersistedState {
   finalAnswer: string | null;
   feedback: Record<number, boolean>;
   pendingQuestion: AgentQuestionPart | null;
+  tasks: TaskSnapshotPart | null;
 }
 
 function hydrateState(p: PersistedState): ChatState {
@@ -35,6 +37,7 @@ function hydrateState(p: PersistedState): ChatState {
         ? p.pendingQuestion
         : null,
     pendingToolCalls: {},
+    tasks: p.tasks && Array.isArray(p.tasks.tasks) ? p.tasks : null,
   };
 }
 
@@ -59,6 +62,7 @@ export function savePersistedState(state: ChatState): void {
       finalAnswer: state.finalAnswer,
       feedback: state.feedback,
       pendingQuestion: state.pendingQuestion,
+      tasks: state.tasks,
     };
     writeFileSync(FILE, JSON.stringify(p));
   } catch {

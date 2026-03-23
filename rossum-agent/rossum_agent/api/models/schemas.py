@@ -196,6 +196,15 @@ class AgentQuestionItemSchema(BaseModel):
     multi_select: bool = False
 
 
+class TaskSnapshotTaskSchema(BaseModel):
+    """A single task within a task snapshot event."""
+
+    id: str
+    subject: str
+    status: Literal["pending", "in_progress", "completed"]
+    description: str = ""
+
+
 class TokenUsageBySource(BaseModel):
     """Token usage for a specific source (main agent or sub-agent)."""
 

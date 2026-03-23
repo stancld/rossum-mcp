@@ -14,13 +14,14 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 from rossum_agent.api.main import app
-from rossum_agent.api.models.schemas import AgentQuestionItemSchema, QuestionOptionSchema
+from rossum_agent.api.models.schemas import AgentQuestionItemSchema, QuestionOptionSchema, TaskSnapshotTaskSchema
 
 # Models used in SSE events that must appear in the OpenAPI spec even though
 # no endpoint references them directly.
 _SSE_EVENT_MODELS: list[type] = [
     QuestionOptionSchema,
     AgentQuestionItemSchema,
+    TaskSnapshotTaskSchema,
 ]
 
 

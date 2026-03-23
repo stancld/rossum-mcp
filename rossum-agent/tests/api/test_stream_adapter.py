@@ -450,14 +450,41 @@ class TestToolConversion:
         assert all_types == ["tool-input-start", "tool-input-available", "tool-output-available"]
 
 
-class TestDroppedEvents:
-    def test_task_snapshot_dropped(self):
+class TestTaskSnapshotConversion:
+    def test_task_snapshot_emitted(self):
         state = StreamState()
         part = TaskSnapshotPart(
             tasks=[TaskSnapshotTask(id="1", subject="Deploy schema", status=TaskStatus.COMPLETED, description="Done")]
         )
         events = convert_agent_event(part, state)
-        assert events == []
+        assert len(events) == 1
+        assert events[0]["type"] == "data-task-snapshot"
+        assert len(events[0]["tasks"]) == 1
+        task = events[0]["tasks"][0]
+        assert task == {"id": "1", "subject": "Deploy schema", "status": "completed", "description": "Done"}
+
+    def test_task_snapshot_multiple_tasks(self):
+        state = StreamState()
+        part = TaskSnapshotPart(
+            tasks=[
+                TaskSnapshotTask(id="1", subject="Analyze queue", status=TaskStatus.COMPLETED),
+                TaskSnapshotTask(id="2", subject="Deploy schema", status=TaskStatus.IN_PROGRESS),
+                TaskSnapshotTask(id="3", subject="Verify results", status=TaskStatus.PENDING),
+            ]
+        )
+        events = convert_agent_event(part, state)
+        assert len(events) == 1
+        assert len(events[0]["tasks"]) == 3
+        assert events[0]["tasks"][0]["status"] == "completed"
+        assert events[0]["tasks"][1]["status"] == "in_progress"
+        assert events[0]["tasks"][2]["status"] == "pending"
+
+    def test_task_snapshot_empty_tasks(self):
+        state = StreamState()
+        part = TaskSnapshotPart(tasks=[])
+        events = convert_agent_event(part, state)
+        assert len(events) == 1
+        assert events[0]["tasks"] == []
 
 
 class TestAgentQuestionConversion:

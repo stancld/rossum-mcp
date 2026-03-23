@@ -691,6 +691,26 @@ export interface components {
        */
       multi_select: boolean;
     };
+    /**
+     * TaskSnapshotTaskSchema
+     * @description A single task within a task snapshot event.
+     */
+    TaskSnapshotTaskSchema: {
+      /** Id */
+      id: string;
+      /** Subject */
+      subject: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "pending" | "in_progress" | "completed";
+      /**
+       * Description
+       * @default
+       */
+      description: string;
+    };
   };
   responses: never;
   parameters: never;

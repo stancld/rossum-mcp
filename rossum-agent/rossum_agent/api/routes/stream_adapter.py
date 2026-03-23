@@ -10,6 +10,7 @@ from rossum_agent.agent.models import (
     ErrorStep,
     FinalAnswerStep,
     ReasoningStep,
+    TaskSnapshotPart,
     TextDeltaStep,
     ToolResultStep,
     ToolStartStep,
@@ -61,6 +62,23 @@ def _convert_agent_question(event: AgentQuestionPart) -> list[dict]:
                     "multi_select": q.multi_select,
                 }
                 for q in event.questions
+            ],
+        }
+    ]
+
+
+def _convert_task_snapshot(event: TaskSnapshotPart) -> list[dict]:
+    return [
+        {
+            "type": "data-task-snapshot",
+            "tasks": [
+                {
+                    "id": t.id,
+                    "subject": t.subject,
+                    "status": t.status.value,
+                    "description": t.description,
+                }
+                for t in event.tasks
             ],
         }
     ]
@@ -140,12 +158,14 @@ def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
     """Convert an internal StreamEvent to a list of AI SDK wire event dicts.
 
     Emits: reasoning-start/delta/end, text-start/delta/end, tool-input-start/available,
-    tool-output-available, error, data-agent-question.
-    Dropped: SubAgentProgressPart, TaskSnapshotPart.
+    tool-output-available, error, data-agent-question, data-task-snapshot.
+    Dropped: SubAgentProgressPart.
     Pre-filtered by caller: StreamDoneEvent.
     """
     if isinstance(event, AgentQuestionPart):
         return _convert_agent_question(event)
+    if isinstance(event, TaskSnapshotPart):
+        return _convert_task_snapshot(event)
     if isinstance(event, ReasoningStep):
         return _convert_reasoning(event, state)
     if isinstance(event, TextDeltaStep):
@@ -162,7 +182,7 @@ def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
         return _convert_tool_start(event, state)
     if isinstance(event, ToolResultStep):
         return _convert_tool_result(event)
-    # SubAgentProgressPart, TaskSnapshotPart are silently dropped.
+    # SubAgentProgressPart is silently dropped.
     return []
 
 

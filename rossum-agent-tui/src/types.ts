@@ -14,10 +14,19 @@ export type ArgumentSuggestion = Schemas["ArgumentSuggestion"];
 export type AgentQuestionItemSchema = Schemas["AgentQuestionItemSchema"];
 export type QuestionOption = Schemas["QuestionOptionSchema"];
 
+// Task snapshot types
+export type TaskSnapshotTaskSchema = Schemas["TaskSnapshotTaskSchema"];
+
 // Agent question wire event (parsed from SSE stream)
 export interface AgentQuestionPart {
   type: "data-agent-question";
   questions: AgentQuestionItemSchema[];
+}
+
+// Task snapshot wire event (parsed from SSE stream)
+export interface TaskSnapshotPart {
+  type: "data-task-snapshot";
+  tasks: TaskSnapshotTaskSchema[];
 }
 
 // Alias for backward compatibility with question handling code
@@ -94,7 +103,8 @@ export type ChatItem =
       totalQuestions: number;
     }
   | { kind: "error"; content: string }
-  | { kind: "streaming"; streaming: StreamingStep };
+  | { kind: "streaming"; streaming: StreamingStep }
+  | { kind: "task_snapshot"; tasks: TaskSnapshotTaskSchema[] };
 
 export interface ExpandState {
   [itemIndex: number]: boolean;
@@ -129,4 +139,5 @@ export interface ChatState {
   feedback: Record<number, boolean>;
   pendingQuestion: AgentQuestionPart | null;
   pendingToolCalls: Record<string, PendingToolCall>;
+  tasks: TaskSnapshotPart | null;
 }
