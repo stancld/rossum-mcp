@@ -61,7 +61,6 @@ export interface CompletedStep {
   type: StepType;
   content: string | null;
   toolName?: string;
-  toolCallId?: string;
   toolArgs?: Record<string, unknown>;
 }
 
@@ -90,7 +89,6 @@ export type ChatItem =
   | {
       kind: "tool_call";
       toolName: string;
-      toolCallId: string;
       args: Record<string, unknown>;
       result: string;
     }
@@ -133,7 +131,6 @@ export interface ChatState {
   connectionStatus: ConnectionStatus;
   completedSteps: CompletedStep[];
   currentStreaming: StreamingStep | null;
-  finalAnswer: string | null;
   error: string | null;
   userMessages: UserMessage[];
   feedback: Record<number, boolean>;

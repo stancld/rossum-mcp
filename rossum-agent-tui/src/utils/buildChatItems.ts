@@ -17,7 +17,6 @@ function makeToolCall(step: CompletedStep): ChatItem {
   return {
     kind: "tool_call",
     toolName: step.toolName ?? "unknown",
-    toolCallId: step.toolCallId ?? "",
     args: step.toolArgs ?? {},
     result: step.content || "",
   };

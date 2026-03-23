@@ -25,7 +25,6 @@ const INITIAL_STATE: ChatState = {
   connectionStatus: "disconnected",
   completedSteps: [],
   currentStreaming: null,
-  finalAnswer: null,
   error: null,
   userMessages: [],
   feedback: {},
@@ -365,7 +364,6 @@ function handleTextEvent(
     return {
       ...prev,
       currentStreaming: { ...prev.currentStreaming, content: newContent },
-      finalAnswer: newContent,
     };
   }
   // text-end
@@ -434,7 +432,6 @@ function handleToolEvent(
         type: "tool_call" as const,
         content: wire.output,
         toolName: tc.toolName,
-        toolCallId: tc.toolCallId,
         toolArgs: tc.input ?? {},
       },
     ],
@@ -517,7 +514,6 @@ export function useChat(config: Config) {
         completedSteps: prev.chatId ? prev.completedSteps : [],
         currentStreaming: null,
         pendingQuestion: null,
-        finalAnswer: null,
         error: null,
         userMessages: [
           ...prev.userMessages,
