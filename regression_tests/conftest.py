@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from regression_tests.framework.models import RegressionTestCase
 
 ENV_FILE = Path(__file__).parent / ".env"
-_KB_DATA_PATH = Path(__file__).resolve().parent.parent / "rossum-agent" / "data" / "rossum-kb.json"
 
 
 def try_connect_redis() -> redis.Redis | None:
@@ -193,9 +192,6 @@ def create_live_agent(
                 f"Test '{case.name}' uses {{sandbox_api_token}} placeholder but no sandbox token provided. "
                 "Use --sandbox-api-token flag or set DEFAULT_SANDBOX_API_TOKEN in .env"
             )
-
-        if _KB_DATA_PATH.exists():
-            os.environ.setdefault("ROSSUM_KB_DATA_PATH", str(_KB_DATA_PATH))
 
         config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
 

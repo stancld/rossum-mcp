@@ -40,7 +40,6 @@ services:
     environment:
       - AWS_PROFILE=${AWS_PROFILE}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - CHAT_STORAGE_BACKEND=postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=rossum_agent
@@ -48,7 +47,6 @@ services:
       - POSTGRES_PASSWORD=rossum
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - ROSSUM_KB_DATA_PATH=/app/rossum-agent/data/rossum-kb.json
     ports:
       - 127.0.0.1:8000:8000
     volumes:

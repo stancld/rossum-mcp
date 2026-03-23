@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import openpyxl
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_exec import execute_python, get_execute_python_definition
 
@@ -279,6 +280,63 @@ class TestExecPython:
 
         assert parsed["status"] == "success"
         assert parsed["result"] is True
+
+    def test_allows_import_pandas(self) -> None:
+        result = execute_python(code="import pandas as pd\nresult = pd.DataFrame({'a': [1, 2]}).shape")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == [2, 1]
+
+    def test_allows_import_openpyxl(self) -> None:
+        result = execute_python(code="from openpyxl import Workbook\nwb = Workbook()\nresult = len(wb.sheetnames)")
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == 1
+
+    def test_read_excel_helper(self, tmp_path: Path) -> None:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["name", "value"])
+        ws.append(["a", 1])
+        ws.append(["b", 2])
+        xlsx_path = tmp_path / "test.xlsx"
+        wb.save(xlsx_path)
+
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result = execute_python(code=f'df = read_excel("{xlsx_path}")\nresult = list(df.columns)')
+        finally:
+            set_context(AgentContext())
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == ["name", "value"]
+
+    def test_read_excel_rejects_non_spreadsheet(self) -> None:
+        result = execute_python(code='result = read_excel("/mock/data.txt")')
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "error"
+        assert "only supports .xlsx and .xls" in parsed["error"]
+
+    def test_read_excel_allows_path_outside_workspace(self, tmp_path: Path) -> None:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["col1"])
+        xlsx_path = tmp_path / "test.xlsx"
+        wb.save(xlsx_path)
+
+        set_context(AgentContext(output_dir=tmp_path / "workspace"))
+        try:
+            result = execute_python(code=f'df = read_excel("{xlsx_path}")\nresult = list(df.columns)')
+        finally:
+            set_context(AgentContext())
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == ["col1"]
 
     def test_execute_python_alias_matches_execute_python(self) -> None:
         assert json.loads(execute_python(code="1 + 2"))["result"] == 3

@@ -1,6 +1,18 @@
 # Rossum Agent TUI
 
-Terminal UI for interacting with the Rossum Agent API. Development test-bed for the [Rossum Agent](../rossum-agent/).
+<div align="center">
+
+**Terminal UI for interacting with the Rossum Agent API. Development test-bed for the [Rossum Agent](../rossum-agent/).**
+
+[![Node.js](https://img.shields.io/badge/Node.js-22+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
+> [!NOTE]
+> This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
 
 > [!NOTE]
 > This is a development tool, not a production application. Tests are not required for this package.

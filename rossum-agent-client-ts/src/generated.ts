@@ -414,9 +414,15 @@ export interface components {
       type: "document";
       /**
        * Media Type
-       * @constant
+       * @enum {string}
        */
-      media_type: "application/pdf";
+      media_type:
+        | "application/pdf"
+        | "text/csv"
+        | "text/plain"
+        | "text/markdown"
+        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        | "application/vnd.ms-excel";
       /**
        * Data
        * @description Base64-encoded document data
@@ -570,7 +576,7 @@ export interface components {
      *
      *     Supports text-only messages or multimodal messages with images and documents.
      *     For image messages, use the `images` field with base64-encoded image data.
-     *     For document messages, use the `documents` field with base64-encoded PDF data.
+     *     For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
      */
     MessageRequest: {
       /**
@@ -585,7 +591,7 @@ export interface components {
       images?: components["schemas"]["ImageContent"][] | null;
       /**
        * Documents
-       * @description Optional list of PDF documents (max 5) to include with the message
+       * @description Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.
        */
       documents?: components["schemas"]["DocumentContent"][] | null;
       /**

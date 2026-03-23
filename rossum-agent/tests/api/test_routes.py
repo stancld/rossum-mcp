@@ -24,18 +24,18 @@ from .conftest import create_mock_httpx_client
 
 
 @pytest.fixture
-def mock_redis_storage():
-    """Create a mock RedisStorage for change tracking."""
+def mock_redis_connection():
+    """Create a mock RedisConnection for change tracking."""
     return MagicMock()
 
 
 @pytest.fixture
-def client(mock_chat_service, mock_agent_service, mock_file_service, mock_redis_storage):
+def client(mock_chat_service, mock_agent_service, mock_file_service, mock_redis_connection):
     """Create test client with mocked services injected via app.state."""
     app.state.chat_service = mock_chat_service
     app.state.agent_service = mock_agent_service
     app.state.file_service = mock_file_service
-    app.state.redis_storage = mock_redis_storage
+    app.state.redis_connection = mock_redis_connection
 
     with TestClient(app, raise_server_exceptions=False) as client:
         yield client
@@ -71,26 +71,7 @@ class TestHealthEndpoint:
         """Test health check includes storage_backend field."""
         mock_chat_service.is_connected.return_value = True
 
-        with patch.dict("os.environ", {"CHAT_STORAGE_BACKEND": "postgres"}):
-            response = client.get("/api/v1/health")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "storage_backend" in data
-        assert data["storage_backend"] == "postgres"
-
-    def test_health_storage_backend_defaults_to_postgres(self, client, mock_chat_service):
-        """Test health check defaults storage_backend to postgres."""
-        mock_chat_service.is_connected.return_value = True
-
-        with patch.dict("os.environ", {}, clear=False):
-            # Remove CHAT_STORAGE_BACKEND if set
-            import os
-
-            env = dict(os.environ)
-            env.pop("CHAT_STORAGE_BACKEND", None)
-            with patch.dict("os.environ", env, clear=True):
-                response = client.get("/api/v1/health")
+        response = client.get("/api/v1/health")
 
         assert response.status_code == 200
         data = response.json()
@@ -516,10 +497,10 @@ class TestListChatCommitsEndpoint:
         assert response.status_code == 404
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_no_commits(self, mock_httpx, client, mock_chat_service, mock_redis_storage, valid_headers):
+    def test_no_commits(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
         mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=ChatMetadata())
-        mock_redis_storage.is_connected.return_value = False
+        mock_redis_connection.is_connected.return_value = False
 
         response = client.get("/api/v1/chats/chat_123/commits", headers=valid_headers)
 
@@ -527,12 +508,12 @@ class TestListChatCommitsEndpoint:
         assert response.json() == {"commits": []}
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_with_commits(self, mock_httpx, client, mock_chat_service, mock_redis_storage, valid_headers):
+    def test_with_commits(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
         mock_httpx.return_value = create_mock_httpx_client()
 
         metadata = ChatMetadata(config_commits=["abc123"])
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=metadata)
-        mock_redis_storage.is_connected.return_value = True
+        mock_redis_connection.is_connected.return_value = True
 
         commit = ConfigCommit(
             hash="abc123",
@@ -574,12 +555,12 @@ class TestListChatCommitsEndpoint:
         }
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_expired_commit_skipped(self, mock_httpx, client, mock_chat_service, mock_redis_storage, valid_headers):
+    def test_expired_commit_skipped(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
         mock_httpx.return_value = create_mock_httpx_client()
 
         metadata = ChatMetadata(config_commits=["expired"])
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=metadata)
-        mock_redis_storage.is_connected.return_value = True
+        mock_redis_connection.is_connected.return_value = True
 
         mock_commit_store = MagicMock()
         mock_commit_store.get_commit.return_value = None
@@ -637,28 +618,28 @@ class TestServiceDependencies:
         with pytest.raises(RuntimeError, match="File service not initialized"):
             get_file_service(mock_request)
 
-    def test_get_redis_storage_not_initialized_error(self):
-        """Test that accessing redis_storage without initialization raises RuntimeError."""
-        from rossum_agent.api.dependencies import get_redis_storage
+    def test_get_redis_connection_not_initialized_error(self):
+        """Test that accessing redis_connection without initialization raises RuntimeError."""
+        from rossum_agent.api.dependencies import get_redis_connection
         from starlette.datastructures import State
 
         mock_request = MagicMock()
         mock_request.app = MagicMock()
         mock_request.app.state = State()
 
-        with pytest.raises(RuntimeError, match="Redis storage not initialized"):
-            get_redis_storage(mock_request)
+        with pytest.raises(RuntimeError, match="Redis connection not initialized"):
+            get_redis_connection(mock_request)
 
-    def test_get_redis_storage_returns_instance(self):
-        """Test that get_redis_storage returns the redis_storage from app state."""
-        from rossum_agent.api.dependencies import get_redis_storage
+    def test_get_redis_connection_returns_instance(self):
+        """Test that get_redis_connection returns the redis_connection from app state."""
+        from rossum_agent.api.dependencies import get_redis_connection
         from starlette.datastructures import State
 
         mock_redis = MagicMock()
         mock_request = MagicMock()
         mock_request.app = MagicMock()
         mock_request.app.state = State()
-        mock_request.app.state.redis_storage = mock_redis
+        mock_request.app.state.redis_connection = mock_redis
 
-        result = get_redis_storage(mock_request)
+        result = get_redis_connection(mock_request)
         assert result is mock_redis

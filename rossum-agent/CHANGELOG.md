@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+- `execute_python`: Add `pandas` and `openpyxl` to allowed imports for Excel spreadsheet processing [#295](https://github.com/stancld/rossum-agents/pull/295)
+- Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297), [#298](https://github.com/stancld/rossum-agents/pull/298)
+- Alembic migrations for PostgreSQL schema management — initial migration creates `chats` and `messages` tables, with `alembic upgrade head` / `alembic downgrade` support [#286](https://github.com/stancld/rossum-agents/pull/286)
+
+### Removed
+- Redis as chat persistence backend — PostgreSQL is now the only storage backend; `CHAT_STORAGE_BACKEND` env var is no longer used [#294](https://github.com/stancld/rossum-agents/pull/294)
+- `ROSSUM_KB_DATA_PATH` env var override from knowledge base cache — KB data now resolves only via explicit `cache_path` or the bundled package resource
+
 ## [1.6.1] - 2026-03-20
 
 ### Added

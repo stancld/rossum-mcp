@@ -26,7 +26,7 @@
 
 | Capability | Description |
 |------------|-------------|
-| **Rossum MCP Integration** | Full access to 32 MCP tools for document processing |
+| **Rossum MCP Integration** | Full access to 30 MCP tools for document processing |
 | **Hook Debugging** | Test hooks via native Rossum API endpoints |
 | **Deployment Tools** | Pull, push, diff, copy configs across environments |
 | **Knowledge Base Search** | AI-powered Rossum documentation search |
@@ -74,17 +74,15 @@ uv sync --extra api        # REST API (FastAPI, PostgreSQL, Redis)
 | `AWS_REGION` | No | AWS region for Bedrock (default: `us-east-1`) |
 | `AWS_BEDROCK_MODEL_ARN` | No | Custom ARN for the Opus model in Bedrock |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | No | Custom ARN for the Haiku model in Bedrock |
-| `CHAT_STORAGE_BACKEND` | No | Chat persistence backend: `postgres` (default) or `redis` |
-| `POSTGRES_HOST` | No | PostgreSQL host (default: `localhost`) |
+| `POSTGRES_HOST` | No | PostgreSQL host for chat storage (default: `localhost`) |
 | `POSTGRES_PORT` | No | PostgreSQL port (default: `5432`) |
 | `POSTGRES_DB` | No | PostgreSQL database name (default: `rossum_agent`) |
 | `POSTGRES_USER` | No | PostgreSQL user (default: `rossum`) |
 | `POSTGRES_PASSWORD` | No | PostgreSQL password (default: `rossum`) |
 | `REDIS_HOST` | No | Redis host for change tracking (default: `localhost`) |
 | `REDIS_PORT` | No | Redis port for change tracking (default: `6379`) |
-| `ROSSUM_MCP_MODE` | No | MCP mode: `read-only` (default) or `read-write` |
+| `ROSSUM_MCP_MODE` | No | MCP mode: `read-write` (default) or `read-only` |
 | `ROSSUM_AGENT_PERSONA` | No | Agent persona: `default` (default) or `cautious` — read by the TUI client, not the server |
-| `ROSSUM_KB_DATA_PATH` | No | Path to local knowledge base JSON file |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | No | Comma-separated regex patterns for additional allowed Rossum API hosts |
 | `SLACK_BOT_TOKEN` | No | Slack bot token for report integration |
 | `SLACK_CHANNEL` | No | Slack channel for posting reports |
@@ -129,7 +127,7 @@ asyncio.run(main())
 
 ## Available Tools
 
-The agent provides internal tools and access to 32 MCP tools via dynamic loading.
+The agent provides internal tools and access to 30 MCP tools via dynamic loading.
 
 <details>
 <summary><strong>Internal Tools</strong></summary>
@@ -144,7 +142,7 @@ The agent provides internal tools and access to 32 MCP tools via dynamic loading
 - `run_grep` - Regex search in text content or file paths
 
 **Copilot Execution:**
-- `execute_python` - Run constrained Python snippets; load the relevant skill first and use `write_file(...)` for large outputs
+- `execute_python` - Run constrained Python snippets; load the relevant skill first and use `write_file(...)` for large outputs. Allowed imports include `pandas` and `openpyxl`; use the built-in `read_excel(path)` helper to read `.xlsx`/`.xls` files into a DataFrame
 
 **Schema:**
 - `patch_schema_with_subagent` - Safe schema modifications via Opus
@@ -202,7 +200,7 @@ flowchart TB
     end
 
     subgraph MCP["Rossum MCP Server"]
-        Tools[32 MCP Tools]
+        Tools[30 MCP Tools]
     end
 
     API[Rossum API]

@@ -21,7 +21,7 @@ dependencies = [
     "cryptography>=46.0.5",
     "fastmcp>=3.0.0",
     "mcp>=1.0.0",
-    "rossum-api>=3.12.0",
+    "rossum-api>=3.12.1",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +34,8 @@ agent = [
     "fastmcp>=3.0.0",
     "fpdf2>=2.8.0",
     "jinja2>=3.0",
+    "openpyxl>=3.1.0",
+    "pandas>=2.0.0",
     "python-dotenv",
     "pyyaml>=6.0",
     "requests>=2.32",
@@ -41,6 +43,7 @@ agent = [
 ]
 # Agent API server
 api = [
+    "alembic>=1.13.0",
     "fastapi>=0.115.0",
     "gunicorn>=23.0.0",
     "psycopg[binary]>=3.1.0",
@@ -78,6 +81,7 @@ tests = [
 ]
 # All dependencies
 all = [
+    "alembic>=1.13.0",
     "anthropic>=0.79.0",
     "boto3>=1.0",
     "coverage>=7.0.0",
@@ -102,7 +106,7 @@ all = [
     "pyyaml>=6.0",
     "redis>=7.0.0",
     "requests>=2.32",
-    "rossum-api>=3.12.0",
+    "rossum-api>=3.12.1",
     "slack-sdk[optional]>=3.27.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.0",
@@ -171,5 +175,11 @@ possibly-missing-attribute = "ignore"
 # jq is a C extension without type stubs
 [[tool.ty.overrides]]
 include = ["**/subagents/elis_docs.py"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
+
+# Alembic doesn't ship type stubs that ty can resolve
+[[tool.ty.overrides]]
+include = ["**/alembic/**", "**/postgres_storage.py"]
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
 
     from regression_tests.framework.models import RegressionTestCase
 
-_KB_DATA_PATH = Path(__file__).resolve().parent.parent / "rossum-agent" / "data" / "rossum-kb.json"
 _ENV_FILE = Path(__file__).parent / ".env"
 
 MAX_ATTEMPTS = 3
@@ -104,9 +102,6 @@ def _get_token(case: RegressionTestCase, env_tokens: dict[str, str], cli_token: 
 
 @asynccontextmanager
 async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Path) -> AsyncIterator[RossumAgent]:
-    if _KB_DATA_PATH.exists():
-        os.environ.setdefault("ROSSUM_KB_DATA_PATH", str(_KB_DATA_PATH))
-
     config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
 
     async with connect_mcp_server(

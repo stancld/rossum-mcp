@@ -219,7 +219,6 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 |----------|---------|
 | `ROSSUM_API_TOKEN` | Required - API authentication |
 | `ROSSUM_API_BASE_URL` | Required - API endpoint |
-| `CHAT_STORAGE_BACKEND` | Optional - `postgres` (default) or `redis` for chat persistence |
 | `POSTGRES_HOST`, `POSTGRES_PORT` | Optional - PostgreSQL connection (default: localhost:5432) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Optional - PostgreSQL credentials (default: rossum_agent/rossum/rossum) |
 | `REDIS_HOST`, `REDIS_PORT` | Optional - Redis connection for change tracking (default: localhost:6379) |
@@ -228,7 +227,6 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 | `AWS_REGION` | Optional - AWS region for Bedrock (default: us-east-1) |
 | `AWS_BEDROCK_MODEL_ARN` | Optional - Custom ARN for Opus model |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | Optional - Custom ARN for Haiku model |
-| `ROSSUM_KB_DATA_PATH` | Optional - Path to local knowledge base JSON |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | Optional - Comma-separated regex for extra allowed API hosts |
 | `SLACK_BOT_TOKEN` | Optional - Slack bot token for reports |
 | `SLACK_CHANNEL` | Optional - Slack channel for reports |

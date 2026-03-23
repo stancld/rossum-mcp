@@ -1,3 +1,4 @@
+import path from "node:path";
 import React, {
   useState,
   useCallback,
@@ -23,6 +24,7 @@ import {
   type DocumentAttachment,
   type TextAttachment,
 } from "./utils/fileAttachments.js";
+import { Buffer } from "node:buffer";
 import { getClipboardImage } from "./utils/clipboard.js";
 import type {
   AgentQuestionItem,
@@ -31,6 +33,8 @@ import type {
   ExpandState,
   InteractionMode,
 } from "./types.js";
+
+const MAX_INLINE_LINES = 2000;
 
 interface ProcessedAttachments {
   images: ImageAttachment[];
@@ -83,24 +87,59 @@ function processAttachments(paths: string[]): ProcessedAttachments {
   return { images, documents, textFiles, attachmentInfos, errors };
 }
 
+function splitTextFilesByLineCount(textFiles: TextAttachment[]): {
+  inlineable: TextAttachment[];
+  oversized: TextAttachment[];
+} {
+  const inlineable: TextAttachment[] = [];
+  const oversized: TextAttachment[] = [];
+  for (const f of textFiles) {
+    const lineCount = f.content.split("\n").length;
+    if (lineCount <= MAX_INLINE_LINES) {
+      inlineable.push(f);
+    } else {
+      oversized.push(f);
+    }
+  }
+  return { inlineable, oversized };
+}
+
+const MARKDOWN_EXTENSIONS = new Set([".md", ".markdown"]);
+
+function textAttachmentToDocument(f: TextAttachment): DocumentAttachment {
+  const ext = path.extname(f.filename).toLowerCase();
+  return {
+    type: "document",
+    media_type: MARKDOWN_EXTENSIONS.has(ext) ? "text/markdown" : "text/plain",
+    data: Buffer.from(f.content, "utf-8").toString("base64"),
+    filename: f.filename,
+  };
+}
+
 function buildMessageContent(
   message: string,
-  textFiles: TextAttachment[],
+  inlineableFiles: TextAttachment[],
+  oversizedFiles: TextAttachment[],
   errors: string[],
 ): string {
   let content = message.replace(/\s+/g, " ").trim();
-  if (!content && textFiles.length === 0) {
+  if (!content && inlineableFiles.length === 0 && oversizedFiles.length === 0) {
     content = "See attached files.";
   }
 
-  if (textFiles.length > 0) {
-    const inlined = textFiles
+  if (inlineableFiles.length > 0) {
+    const inlined = inlineableFiles
       .map(
         (f) =>
           `<file_content path="${f.filename}">\n${f.content}\n</file_content>`,
       )
       .join("\n\n");
     content = content ? `${content}\n\n${inlined}` : inlined;
+  }
+
+  if (oversizedFiles.length > 0) {
+    const names = oversizedFiles.map((f) => f.filename).join(", ");
+    content += `\n\n[Large text files attached as documents (>${MAX_INLINE_LINES} lines): ${names}]`;
   }
 
   if (errors.length > 0) {
@@ -250,17 +289,28 @@ export function App({ config }: AppProps) {
         ...processed.attachmentInfos,
       ];
 
+      // Split text files: inline small ones, send large ones as documents
+      const { inlineable, oversized } = splitTextFilesByLineCount(
+        processed.textFiles,
+      );
+      const oversizedDocs = oversized.map(textAttachmentToDocument);
+      const allDocuments = [...processed.documents, ...oversizedDocs].slice(
+        0,
+        5,
+      );
+
       const hasAttachments =
         allImages.length > 0 ||
-        processed.documents.length > 0 ||
-        processed.textFiles.length > 0;
+        allDocuments.length > 0 ||
+        inlineable.length > 0;
 
       if (!hasAttachments) {
         sendMessage(message);
       } else {
         const content = buildMessageContent(
           message,
-          processed.textFiles,
+          inlineable,
+          oversized,
           processed.errors,
         );
         const displayMessage = buildDisplayMessage(message);
@@ -268,8 +318,7 @@ export function App({ config }: AppProps) {
         sendMessage(content, {
           displayMessage,
           images: allImages.length > 0 ? allImages : undefined,
-          documents:
-            processed.documents.length > 0 ? processed.documents : undefined,
+          documents: allDocuments.length > 0 ? allDocuments : undefined,
           attachmentInfos: allInfos.length > 0 ? allInfos : undefined,
         });
       }

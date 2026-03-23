@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import importlib.resources
 import json
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from importlib.resources.abc import Traversable
     from typing import Any
-
-_KB_DATA_PATH_ENV = "ROSSUM_KB_DATA_PATH"
 
 
 def _bundled_kb_path() -> Traversable:
@@ -40,12 +37,6 @@ class KBCache:
         return data
 
     def _resolve_path(self) -> Path | Traversable:
-        local_path = os.environ.get(_KB_DATA_PATH_ENV)
-        if local_path:
-            p = Path(local_path)
-            if p.exists():
-                return p
-            raise FileNotFoundError(f"{_KB_DATA_PATH_ENV} points to non-existent file: {local_path}")
         if self._cache_path is not None:
             return self._cache_path
         return _bundled_kb_path()
