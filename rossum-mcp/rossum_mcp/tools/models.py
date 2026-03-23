@@ -82,6 +82,7 @@ class SchemaDatapoint:
     context: list[str] | None = None
     matching: dict | None = None
     enum_value_type: str | None = None
+    format: str | None = None
     width: int | None = None
     stretch: bool | None = None
 

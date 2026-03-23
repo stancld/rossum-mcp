@@ -172,6 +172,20 @@ wheels = [
 ]
 
 [[package]]
+name = "alembic"
+version = "1.18.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mako" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/13/8b084e0f2efb0275a1d534838844926f798bd766566b1375174e2448cd31/alembic-1.18.4.tar.gz", hash = "sha256:cb6e1fd84b6174ab8dbb2329f86d631ba9559dd78df550b57804d607672cedbc", size = 2056725, upload-time = "2026-02-10T16:00:47.195Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/29/6533c317b74f707ea28f8d633734dbda2119bbadfc61b2f3640ba835d0f7/alembic-1.18.4-py3-none-any.whl", hash = "sha256:a5ed4adcf6d8a4cb575f3d759f071b03cd6e5c7618eb796cb52497be25bfe19a", size = 263893, upload-time = "2026-02-10T16:00:49.997Z" },
+]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1336,6 +1350,18 @@ wheels = [
 ]
 
 [[package]]
+name = "mako"
+version = "1.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474, upload-time = "2025-04-10T12:44:31.16Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509, upload-time = "2025-04-10T12:50:53.297Z" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2446,6 +2472,7 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "alembic" },
     { name = "coverage" },
     { name = "fastapi" },
     { name = "furo" },
@@ -2471,6 +2498,7 @@ all = [
     { name = "wsproto" },
 ]
 api = [
+    { name = "alembic" },
     { name = "fastapi" },
     { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
@@ -2499,6 +2527,7 @@ slack = [
     { name = "slack-sdk", extra = ["optional"] },
 ]
 tests = [
+    { name = "alembic" },
     { name = "coverage" },
     { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
@@ -2517,6 +2546,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", marker = "extra == 'all'", specifier = ">=1.13.0" },
+    { name = "alembic", marker = "extra == 'api'", specifier = ">=1.13.0" },
+    { name = "alembic", marker = "extra == 'tests'", specifier = ">=1.13.0" },
     { name = "anthropic", specifier = ">=0.79.0" },
     { name = "boto3", specifier = ">=1.0" },
     { name = "coverage", marker = "extra == 'all'", specifier = ">=7.0.0" },
@@ -2589,7 +2621,7 @@ dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "rossum-api"
-version = "3.12.0"
+version = "3.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -2597,9 +2629,9 @@ dependencies = [
     { name = "httpx" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/25/b01ff581340b7c87a0e2647bd1453eb32adf821335e789ebb10d1052833e/rossum_api-3.12.0.tar.gz", hash = "sha256:bd579b6acee02fef3b68541caad90cc8b465a4bbbdf8946198d7b5875b7aed40", size = 161138, upload-time = "2026-03-17T14:50:48.192Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/d0/3b9892bfe142f10975ab55ab4816641f943fc27e8df4b7a4dc49ab470a6a/rossum_api-3.12.1.tar.gz", hash = "sha256:cf8c1a405106dd2e552ce63ea5ab074a3814d08bd87a0a3b8fc10bbd86f85a2c", size = 161518, upload-time = "2026-03-23T08:51:13.103Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/94/8e315917a75a897dd1954a2e3242fcc022ea2e747bdb224f813cc8777d08/rossum_api-3.12.0-py3-none-any.whl", hash = "sha256:f49ba4cad439d32b13bc157c5867ef1579354f91937fd3fdd24b77b4cd758323", size = 77769, upload-time = "2026-03-17T14:50:47.143Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/0c/e2ccb1fabcd855bd905823916fdab3445c783acd8b62a12079a173b6a9c1/rossum_api-3.12.1-py3-none-any.whl", hash = "sha256:d74360f945a3fe8a7ad6566930366c7550c7ee851ca39e32d9e33b1c876732f3", size = 78041, upload-time = "2026-03-23T08:51:11.806Z" },
 ]
 
 [[package]]

@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- Added missing `format` field to `SchemaDatapoint` and `SchemaNodeUpdate` — date fields with custom formats (e.g. `M/D/YYYY`) can now be created and updated via `patch_schema` without losing their format configuration [#299](https://github.com/stancld/rossum-agents/pull/299)
+
 ## [2.0.3] - 2026-03-18
 
 ### Fixed
