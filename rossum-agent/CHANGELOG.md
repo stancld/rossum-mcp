@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- `execute_python`: Add `xlrd` to dependencies for reading legacy `.xls` Excel files
+
 ## [1.7.0] - 2026-03-23
 
 ### Added
