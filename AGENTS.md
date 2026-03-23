@@ -125,6 +125,8 @@ cd rossum-agent && python scripts/generate_openapi.py
 cd rossum-agent-client-ts && npm run generate
 ```
 
+The API reference page at `/api-reference/` has a version selector dropdown. CI collects versioned specs from GitHub Release assets (uploaded by the release workflow).
+
 Note: `rossum-agent-tui` imports OpenAPI types from `rossum-agent-client` (no duplicate `generated.ts`).
 
 ### rossum-agent-tui Type Generation
