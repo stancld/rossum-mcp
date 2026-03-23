@@ -66,21 +66,25 @@ interface WireStart {
 
 interface WireAgentQuestion {
   type: "data-agent-question";
-  questions: Array<{
-    question: string;
-    options: Array<{ value: string; label: string; description: string }>;
-    multi_select: boolean;
-  }>;
+  data: {
+    questions: Array<{
+      question: string;
+      options: Array<{ value: string; label: string; description: string }>;
+      multi_select: boolean;
+    }>;
+  };
 }
 
 interface WireTaskSnapshot {
   type: "data-task-snapshot";
-  tasks: Array<{
-    id: string;
-    subject: string;
-    status: "pending" | "in_progress" | "completed";
-    description: string;
-  }>;
+  data: {
+    tasks: Array<{
+      id: string;
+      subject: string;
+      status: "pending" | "in_progress" | "completed";
+      description: string;
+    }>;
+  };
 }
 
 interface WireReasoningStart {
@@ -464,14 +468,27 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
         | WireToolInputAvailable
         | WireToolOutputAvailable,
     );
-  if (t === "data-agent-question")
+  if (t === "data-agent-question") {
+    const { data } = wire as WireAgentQuestion;
     return {
       ...prev,
-      pendingQuestion: wire as AgentQuestionPart,
+      pendingQuestion: {
+        type: "data-agent-question",
+        questions: data.questions,
+      } as AgentQuestionPart,
       connectionStatus: "idle",
     };
-  if (t === "data-task-snapshot")
-    return { ...prev, tasks: wire as TaskSnapshotPart };
+  }
+  if (t === "data-task-snapshot") {
+    const { data } = wire as WireTaskSnapshot;
+    return {
+      ...prev,
+      tasks: {
+        type: "data-task-snapshot",
+        tasks: data.tasks,
+      } as TaskSnapshotPart,
+    };
+  }
   return prev;
 }
 

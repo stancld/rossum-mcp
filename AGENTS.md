@@ -180,8 +180,8 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | `tool-input-available` | Tool call args ready (`toolCallId`, `toolName`, `input`) |
 | `tool-output-available` | Tool result ready (`toolCallId`, `output`) |
 | `error` | Error event |
-| `data-agent-question` | Structured question from agent |
-| `data-task-snapshot` | Full task list snapshot (after create/update) |
+| `data-agent-question` | Structured question from agent (payload in `data` field) |
+| `data-task-snapshot` | Full task list snapshot (payload in `data` field) |
 
 ### Stream Lifecycle
 

@@ -459,8 +459,8 @@ class TestTaskSnapshotConversion:
         events = convert_agent_event(part, state)
         assert len(events) == 1
         assert events[0]["type"] == "data-task-snapshot"
-        assert len(events[0]["tasks"]) == 1
-        task = events[0]["tasks"][0]
+        assert len(events[0]["data"]["tasks"]) == 1
+        task = events[0]["data"]["tasks"][0]
         assert task == {"id": "1", "subject": "Deploy schema", "status": "completed", "description": "Done"}
 
     def test_task_snapshot_multiple_tasks(self):
@@ -474,17 +474,17 @@ class TestTaskSnapshotConversion:
         )
         events = convert_agent_event(part, state)
         assert len(events) == 1
-        assert len(events[0]["tasks"]) == 3
-        assert events[0]["tasks"][0]["status"] == "completed"
-        assert events[0]["tasks"][1]["status"] == "in_progress"
-        assert events[0]["tasks"][2]["status"] == "pending"
+        assert len(events[0]["data"]["tasks"]) == 3
+        assert events[0]["data"]["tasks"][0]["status"] == "completed"
+        assert events[0]["data"]["tasks"][1]["status"] == "in_progress"
+        assert events[0]["data"]["tasks"][2]["status"] == "pending"
 
     def test_task_snapshot_empty_tasks(self):
         state = StreamState()
         part = TaskSnapshotPart(tasks=[])
         events = convert_agent_event(part, state)
         assert len(events) == 1
-        assert events[0]["tasks"] == []
+        assert events[0]["data"]["tasks"] == []
 
 
 class TestAgentQuestionConversion:
@@ -502,9 +502,9 @@ class TestAgentQuestionConversion:
         events = convert_agent_event(part, state)
         assert len(events) == 1
         assert events[0]["type"] == "data-agent-question"
-        assert len(events[0]["questions"]) == 1
-        assert events[0]["questions"][0]["question"] == "Which queue?"
-        assert events[0]["questions"][0]["options"][0]["value"] == "q1"
+        assert len(events[0]["data"]["questions"]) == 1
+        assert events[0]["data"]["questions"][0]["question"] == "Which queue?"
+        assert events[0]["data"]["questions"][0]["options"][0]["value"] == "q1"
 
 
 class TestFinishEvents:
