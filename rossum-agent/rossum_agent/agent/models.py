@@ -180,11 +180,17 @@ class TaskSnapshotPart:
 
 
 @dataclass
+class FileCreatedPart:
+    filename: str
+    url: str
+
+
+@dataclass
 class AgentQuestionPart:
     questions: list[AgentQuestionItemSchema]
 
 
-type QueuedAgentEvent = TaskSnapshotPart | AgentQuestionPart
+type QueuedAgentEvent = TaskSnapshotPart | AgentQuestionPart | FileCreatedPart
 
 
 @dataclass

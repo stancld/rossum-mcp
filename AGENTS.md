@@ -182,6 +182,7 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | `error` | Error event |
 | `data-agent-question` | Structured question from agent (payload in `data` field) |
 | `data-task-snapshot` | Full task list snapshot (payload in `data` field) |
+| `data-file-created` | File created during agent run (payload in `data` field) |
 
 ### Stream Lifecycle
 
@@ -207,6 +208,7 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `ToolResultStep` | `tool-output-available` (per result) |
 | `AgentQuestionPart` | `data-agent-question` |
 | `TaskSnapshotPart` | `data-task-snapshot` |
+| `FileCreatedPart` | `data-file-created` |
 | `SubAgentProgressPart` | Dropped |
 | `StreamDoneEvent` | Captured for metadata; not emitted directly |
 

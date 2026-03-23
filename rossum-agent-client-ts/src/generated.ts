@@ -711,6 +711,16 @@ export interface components {
        */
       description: string;
     };
+    /**
+     * FileCreatedSchema
+     * @description A file created during an agent run.
+     */
+    FileCreatedSchema: {
+      /** Filename */
+      filename: string;
+      /** Url */
+      url: string;
+    };
   };
   responses: never;
   parameters: never;

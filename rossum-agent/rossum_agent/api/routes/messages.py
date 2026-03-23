@@ -7,6 +7,7 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from rossum_agent.agent.models import FinalAnswerStep, StepType, TextDeltaStep
+from rossum_agent.agent.models import FileCreatedPart, FinalAnswerStep, StepType, TextDeltaStep
 from rossum_agent.api.commands import CommandContext, ParsedCommand, execute_command, parse_command
 from rossum_agent.api.dependencies import (
     RossumCredentials,
@@ -52,6 +53,24 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.url_context import extract_url_context
 
 STREAM_DONE = "data: [DONE]\n\n"
+
+
+def _iter_file_created_events(output_dir: Path | None, chat_id: str) -> list[dict]:
+    """Build data-file-created wire events for files in the output directory."""
+    if output_dir is None or not output_dir.exists():
+        return []
+    events: list[dict] = []
+    for wire in (
+        convert_agent_event(
+            FileCreatedPart(filename=f.name, url=f"/api/v1/chats/{chat_id}/files/{f.name}"),
+            StreamState(),
+        )
+        for f in sorted(output_dir.iterdir())
+        if f.is_file()
+    ):
+        events.extend(wire)
+    return events
+
 
 RESPONSE_HEADERS = {
     "Cache-Control": "no-cache",
@@ -261,6 +280,9 @@ async def send_message(
             done_event=meta.done_event,
             summary=summary,
         )
+
+        for event in _iter_file_created_events(output_dir, chat_id):
+            yield _format_sse(event)
 
         for event in build_finish_events(state):
             yield _format_sse(event)

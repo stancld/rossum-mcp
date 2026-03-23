@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from rossum_agent.agent.models import (
     AgentQuestionPart,
     ErrorStep,
+    FileCreatedPart,
     FinalAnswerStep,
     ReasoningStep,
     TaskSnapshotPart,
@@ -67,6 +68,15 @@ def _convert_agent_question(event: AgentQuestionPart) -> list[dict]:
                     for q in event.questions
                 ],
             },
+        }
+    ]
+
+
+def _convert_file_created(event: FileCreatedPart) -> list[dict]:
+    return [
+        {
+            "type": "data-file-created",
+            "data": {"filename": event.filename, "url": event.url},
         }
     ]
 
@@ -164,10 +174,12 @@ def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
     """Convert an internal StreamEvent to a list of AI SDK wire event dicts.
 
     Emits: reasoning-start/delta/end, text-start/delta/end, tool-input-start/available,
-    tool-output-available, error, data-agent-question, data-task-snapshot.
+    tool-output-available, error, data-agent-question, data-task-snapshot, data-file-created.
     Dropped: SubAgentProgressPart.
     Pre-filtered by caller: StreamDoneEvent.
     """
+    if isinstance(event, FileCreatedPart):
+        return _convert_file_created(event)
     if isinstance(event, AgentQuestionPart):
         return _convert_agent_question(event)
     if isinstance(event, TaskSnapshotPart):
