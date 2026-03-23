@@ -2588,7 +2588,7 @@ requires-dist = [
     { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
     { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
-    { name = "rossum-api", specifier = ">=3.12.0" },
+    { name = "rossum-api", specifier = ">=3.12.1" },
     { name = "rossum-mcp", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'slack'", specifier = ">=3.27.0" },
@@ -2637,7 +2637,7 @@ wheels = [
 [[package]]
 name = "rossum-mcp"
 version = "2.1.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#c90395ae984437397e8600cfb4b888f762d32b20" }
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#56811c45243a21fca79b230aa550c7a6302c5479" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },
