@@ -45,6 +45,7 @@ from rossum_agent.api.services.agent_service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_small_model_id
 from rossum_agent.change_tracking.store import CommitStore
+from rossum_agent.mermaid_sanitizer import sanitize_mermaid_in_markdown
 from rossum_agent.redis_client import RedisConnection
 from rossum_agent.storage import ChatData
 from rossum_agent.url_context import extract_url_context
@@ -126,6 +127,14 @@ def _process_agent_event(event: AgentEvent) -> ProcessedEvent:
         return ProcessedEvent(done_event=event)
 
     event_name = _SSE_EVENT_NAMES.get(type(event), "step")
+
+    # Sanitize mermaid blocks in final answers to fix common LLM syntax mistakes
+    # (e.g. unquoted labels with parens/braces — see mermaid-js/mermaid#7002).
+    if isinstance(event, StepEvent) and event.type == "final_answer" and not event.is_streaming and event.content:
+        sanitized = sanitize_mermaid_in_markdown(event.content)
+        if sanitized != event.content:
+            event = event.model_copy(update={"content": sanitized})
+
     final_response = event.content if isinstance(event, StepEvent) and event.type == "final_answer" else None
     return ProcessedEvent(
         sse_event=_format_sse_event(event_name, event.model_dump_json()),
