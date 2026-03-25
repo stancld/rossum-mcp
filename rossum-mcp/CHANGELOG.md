@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.0.5] - 2026-03-25
 
 ### Changed
 - Moved `get_mcp_mode` tool from `server.py` into `tools/discovery.py` alongside other discovery tools — no functional change, aligns with the existing tool registration pattern [#304](https://github.com/stancld/rossum-agents/pull/304)
