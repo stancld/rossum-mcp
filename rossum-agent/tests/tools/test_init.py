@@ -6,7 +6,13 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from rossum_agent.tools import INTERNAL_TOOLS, execute_tool, get_internal_tool_names, get_internal_tools
+from rossum_agent.tools import (
+    INTERNAL_TOOLS,
+    INTERNAL_WRITE_TOOL_NAMES,
+    execute_tool,
+    get_internal_tool_names,
+    get_internal_tools,
+)
 from rossum_agent.tools.core import AgentContext, set_context
 
 if TYPE_CHECKING:
@@ -87,6 +93,27 @@ class TestInternalToolsRegistration:
             tool_names = {t["name"] for t in tools}
             assert "execute_python" in tool_names
             assert "execute_python" in get_internal_tool_names()
+        finally:
+            set_context(AgentContext())
+
+    def test_write_tools_hidden_in_read_only_mode(self) -> None:
+        """Write tools (patch_schema_with_subagent, etc.) are hidden in read-only mode."""
+        set_context(AgentContext(mcp_mode="read-only"))
+        try:
+            tools = get_internal_tools()
+            tool_names = {t["name"] for t in tools}
+            for name in INTERNAL_WRITE_TOOL_NAMES:
+                assert name not in tool_names, f"{name} should be hidden in read-only mode"
+        finally:
+            set_context(AgentContext())
+
+    def test_write_tools_visible_in_read_write_mode(self) -> None:
+        """Write tools are visible in read-write mode."""
+        set_context(AgentContext(mcp_mode="read-write"))
+        try:
+            tools = get_internal_tools()
+            tool_names = {t["name"] for t in tools}
+            assert "patch_schema_with_subagent" in tool_names
         finally:
             set_context(AgentContext())
 
