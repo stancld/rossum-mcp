@@ -43,7 +43,7 @@ def create_app() -> FastMCP:
 
     if mcp_mode not in VALID_MODES:
         raise ValueError(f"Invalid ROSSUM_MCP_MODE: {mcp_mode}. Must be one of: {VALID_MODES}")
-    validated_mode: McpMode = mcp_mode  # type: ignore[assignment] - validated above
+    validated_mode: McpMode = mcp_mode  # ty:ignore[invalid-assignment] - validated above
 
     logger.info(f"Rossum MCP Server starting in {validated_mode} mode")
 

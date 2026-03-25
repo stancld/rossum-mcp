@@ -252,7 +252,7 @@ class AgentMemory:
             for block_idx, block in enumerate(content):
                 if not isinstance(block, dict):
                     continue
-                block_dict: dict[str, object] = block  # type: ignore[assignment]
+                block_dict: dict[str, object] = block  # ty:ignore[invalid-assignment]
                 if block_dict.get("type") == "tool_result":
                     tool_use_id = str(block_dict.get("tool_use_id", ""))
                     tool_name = tool_use_id_to_name.get(tool_use_id)

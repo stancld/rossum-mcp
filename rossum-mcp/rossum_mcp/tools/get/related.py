@@ -83,7 +83,7 @@ async def _get_schema_tree_structure(
     if queue_id:
         queue = await client.retrieve_queue(queue_id)
         schema_id = extract_id_from_url(queue.schema)
-    schema = await _get_schema(client, schema_id)  # type: ignore[arg-type]
+    schema = await _get_schema(client, schema_id)  # ty:ignore[invalid-argument-type]
     return extract_schema_tree(schema)
 
 

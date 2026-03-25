@@ -110,7 +110,7 @@ class KnowledgeBaseSubAgent(SubAgent):
             SubAgentConfig(
                 tool_name="search_knowledge_base",
                 system_prompt=_SYSTEM_PROMPT,
-                tools=_TOOLS,  # type: ignore[arg-type] - BetaToolParam + dict[str, object] mix
+                tools=_TOOLS,  # ty:ignore[invalid-argument-type] - BetaToolParam + dict[str, object] mix
                 max_iterations=4,
             )
         )

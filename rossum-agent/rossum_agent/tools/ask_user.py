@@ -111,7 +111,7 @@ def _build_question_items(
         return [
             AgentQuestionItem(
                 question=str(q["question"]),
-                options=_parse_options(q.get("options")),  # type: ignore[arg-type]
+                options=_parse_options(q.get("options")),  # ty:ignore[invalid-argument-type]
                 multi_select=bool(q.get("multi_select", False)),
             )
             for q in questions

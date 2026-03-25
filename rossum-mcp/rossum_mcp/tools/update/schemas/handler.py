@@ -145,7 +145,7 @@ async def _prune_schema_fields(
             # Sections explicitly listed in fields_to_keep are preserved as empty containers
             keep_empty_sections = set(fields_to_keep) & section_ids
         else:
-            remove_set = set(fields_to_remove) - section_ids  # type: ignore[arg-type]
+            remove_set = set(fields_to_remove) - section_ids  # ty:ignore[invalid-argument-type]
             keep_empty_sections = set()
 
         if not remove_set:

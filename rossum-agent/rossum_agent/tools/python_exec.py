@@ -215,9 +215,9 @@ def _validate_ast(tree: ast.AST) -> None:
 def _json_wrapper(fn: object) -> object:
     """Wrap a copilot function so its JSON string return is parsed into a Python object."""
 
-    @functools.wraps(fn)  # type: ignore[arg-type]
+    @functools.wraps(fn)  # ty:ignore[invalid-argument-type]
     def wrapper(*args: object, **kwargs: object) -> object:
-        return _parse_json_result(fn(*args, **kwargs))  # type: ignore[operator]
+        return _parse_json_result(fn(*args, **kwargs))  # ty:ignore[call-non-callable]
 
     return wrapper
 

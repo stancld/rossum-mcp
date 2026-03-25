@@ -62,7 +62,7 @@ def generate_commit_message(changes: list[EntityChange], user_request: str) -> s
         )
 
         first_block = response.content[0]
-        message = first_block.text.strip()  # type: ignore[union-attr] - first block is always TextBlock for this prompt
+        message = first_block.text.strip()  # ty:ignore[unresolved-attribute] - first block is always TextBlock for this prompt
         if len(message) > 72:
             message = message[:69] + "..."
         return message

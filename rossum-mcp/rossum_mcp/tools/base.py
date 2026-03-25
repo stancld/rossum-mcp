@@ -55,7 +55,7 @@ def filter_by_name_regex[T](items: list[T], name: str | None, use_regex: bool) -
     return [
         item
         for item in items
-        if (item_name := item.name) and re.search(name, item_name, re.IGNORECASE)  # type: ignore[unresolved-attribute] - all callers pass items with .name
+        if (item_name := item.name) and re.search(name, item_name, re.IGNORECASE)  # ty:ignore[unresolved-attribute] - all callers pass items with .name
     ]
 
 

@@ -51,7 +51,7 @@ class TaskTracker:
         """Return tasks sorted by numbered prefix if all have one, else by creation order."""
         tasks = list(self.tasks.values())
         if tasks and all(_NUMBERED_PREFIX.match(t.subject) for t in tasks):
-            tasks.sort(key=lambda t: int(_NUMBERED_PREFIX.match(t.subject).group(1)))  # type: ignore[union-attr]
+            tasks.sort(key=lambda t: int(_NUMBERED_PREFIX.match(t.subject).group(1)))  # ty:ignore[unresolved-attribute]
             return tasks
         return tasks
 

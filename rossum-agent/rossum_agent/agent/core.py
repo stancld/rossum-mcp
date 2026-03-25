@@ -274,10 +274,10 @@ class RossumAgent:
         # Cache breakpoints: last tool definition
         if tools:
             tools = [*tools]  # shallow copy
-            tools[-1] = {**tools[-1], "cache_control": {"type": "ephemeral"}}  # type: ignore[assignment]  # runtime addition of cache_control
+            tools[-1] = {**tools[-1], "cache_control": {"type": "ephemeral"}}  # ty:ignore[invalid-assignment] - runtime addition of cache_control
 
         # Cache breakpoints: last message content block
-        add_message_cache_breakpoint(messages)  # type: ignore[arg-type]  # MessageParam is dict at runtime
+        add_message_cache_breakpoint(messages)  # ty:ignore[invalid-argument-type] - MessageParam is dict at runtime
 
         async with self.client.messages.stream(
             model=model_id,
@@ -290,7 +290,7 @@ class RossumAgent:
             output_config={"effort": self.config.effort},
         ) as stream:
             # Yield #5: Forward all streaming steps from process_stream_events (yields #1-4)
-            async for step in process_stream_events(step_num, stream, state):  # type: ignore[arg-type]  # AsyncMessageStream implements AsyncIterator protocol
+            async for step in process_stream_events(step_num, stream, state):  # ty:ignore[invalid-argument-type] - AsyncMessageStream implements AsyncIterator protocol
                 yield step
             state.final_message = await stream.get_final_message()
 

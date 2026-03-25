@@ -416,10 +416,10 @@ class Workspace:
         """Pull objects linked to queues via a queues field."""
         for item in items:
             if get_queues(item) & queue_urls:
-                data = dataclasses.asdict(item)  # type: ignore[call-overload]
+                data = dataclasses.asdict(item)  # ty:ignore[invalid-argument-type]
                 modified_at = getattr(item, "modified_at", None)
-                self._save_object(obj_type, item.id, item.name, data, modified_at)  # type: ignore[attr-defined]
-                result.pulled.append((obj_type, item.id, item.name))  # type: ignore[attr-defined]
+                self._save_object(obj_type, item.id, item.name, data, modified_at)  # ty:ignore[unresolved-attribute]
+                result.pulled.append((obj_type, item.id, item.name))  # ty:ignore[unresolved-attribute]
 
     def _pull_hooks(self, client: SyncRossumAPIClient, result: PullResult) -> None:
         self._pull_queue_linked_objects(
