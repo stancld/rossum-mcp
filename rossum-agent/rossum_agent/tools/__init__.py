@@ -69,10 +69,13 @@ _INTERNAL_TOOL_REGISTRY: dict[str, BetaTool[..., str]] = {
 
 
 def _get_active_internal_tools() -> list[BetaTool[..., str]]:
-    """Get internal tools based on loaded skills."""
+    """Get internal tools based on loaded skills and mode."""
+    ctx = get_context()
     tools = _ALWAYS_INTERNAL_TOOLS
-    if get_context().commit_store is not None:
+    if ctx.commit_store is not None:
         tools = tools + _CHANGE_HISTORY_TOOLS
+    if ctx.is_read_only:
+        tools = [t for t in tools if t.name not in INTERNAL_WRITE_TOOL_NAMES]
     return tools
 
 
