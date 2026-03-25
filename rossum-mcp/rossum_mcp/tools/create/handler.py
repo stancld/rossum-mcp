@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003 - needed at runtime for FastMCP
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from rossum_api.models.connector import Connector
 from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine, EngineField, EngineFieldType
 from rossum_api.models.hook import Hook, HookEventAndAction, HookType
+from rossum_api.models.inbox import Inbox
 from rossum_api.models.queue import Queue
 from rossum_api.models.rule import Rule, RuleAction
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.create.annotations import _copy_annotations, _upload_document
+from rossum_mcp.tools.create.connectors import _create_connector
 from rossum_mcp.tools.create.email_templates import _create_email_template
 from rossum_mcp.tools.create.engines import _create_engine, _create_engine_field
 from rossum_mcp.tools.create.hooks import _create_hook, _create_hook_from_template
+from rossum_mcp.tools.create.inboxes import _create_inbox
 from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.create.rules import _create_rule
 from rossum_mcp.tools.create.users import _create_user
@@ -193,6 +197,58 @@ def register_create_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
     )
     async def create_workspace(name: str, organization_id: int, metadata: dict | None = None) -> Workspace | dict:
         return await _create_workspace(client, base_url, name, organization_id, metadata)
+
+    # --- Inboxes ---
+    @mcp.tool(
+        description="Create an inbox for email ingestion on a queue. email_prefix sets the local part of the Rossum email address (max 57 chars). dmarc_check_action controls handling of emails failing DMARC.",
+        tags={"inboxes", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_inbox(
+        name: str,
+        queue_id: int,
+        email_prefix: str | None = None,
+        bounce_email_to: str | None = None,
+        filters: dict | None = None,
+        dmarc_check_action: Literal["accept", "drop"] = "accept",
+        metadata: dict | None = None,
+    ) -> Inbox:
+        return await _create_inbox(
+            client, base_url, name, queue_id, email_prefix, bounce_email_to, filters, dmarc_check_action, metadata
+        )
+
+    # --- Connectors ---
+    @mcp.tool(
+        description="Create a connector for external validation/export. service_url is the endpoint called by Rossum. authorization_token authenticates requests to the connector. asynchronous=True makes export calls non-blocking.",
+        tags={"connectors", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_connector(
+        name: str,
+        queue_id: int,
+        service_url: str,
+        authorization_token: str | None = None,
+        params: str | None = None,
+        asynchronous: bool = True,
+        authorization_type: str = "secret_key",
+        client_ssl_certificate: str | None = None,
+        client_ssl_key: str | None = None,
+        metadata: dict | None = None,
+    ) -> Connector:
+        return await _create_connector(
+            client,
+            base_url,
+            name,
+            queue_id,
+            service_url,
+            authorization_token,
+            params,
+            asynchronous,
+            authorization_type,
+            client_ssl_certificate,
+            client_ssl_key,
+            metadata,
+        )
 
     # --- Email Templates ---
     @mcp.tool(

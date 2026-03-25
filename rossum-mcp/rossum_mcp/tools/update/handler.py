@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+from rossum_api.models.connector import Connector
 from rossum_api.models.engine import Engine
 from rossum_api.models.hook import Hook, HookAction, HookEvent, HookEventAndAction
+from rossum_api.models.inbox import Inbox
 from rossum_api.models.queue import Queue
 from rossum_api.models.rule import Rule, RuleAction
 from rossum_api.models.user import User
@@ -13,8 +15,10 @@ from rossum_mcp.tools.models import (
     SchemaNode,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 )
 from rossum_mcp.tools.update.annotations import _bulk_update_annotation_fields, _confirm_annotation, _start_annotation
+from rossum_mcp.tools.update.connectors import _update_connector
 from rossum_mcp.tools.update.engines import _update_engine
 from rossum_mcp.tools.update.hooks import _test_hook, _update_hook
+from rossum_mcp.tools.update.inboxes import _update_inbox
 from rossum_mcp.tools.update.models import (  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
     EngineUpdateData,
     QueueUpdateData,
@@ -147,6 +151,57 @@ def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
         config: dict | None = None,
     ) -> dict:
         return await _test_hook(client, hook_id, event, action, annotation, status, previous_status, config)
+
+    # --- Inboxes ---
+    @mcp.tool(
+        description="Patch an inbox; only provided fields change.",
+        tags={"inboxes", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def update_inbox(
+        inbox_id: int,
+        name: str | None = None,
+        email_prefix: str | None = None,
+        bounce_email_to: str | None = None,
+        filters: dict | None = None,
+        dmarc_check_action: Literal["accept", "drop"] | None = None,
+        metadata: dict | None = None,
+    ) -> Inbox:
+        return await _update_inbox(
+            client, inbox_id, name, email_prefix, bounce_email_to, filters, dmarc_check_action, metadata
+        )
+
+    # --- Connectors ---
+    @mcp.tool(
+        description="Patch a connector; only provided fields change.",
+        tags={"connectors", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def update_connector(
+        connector_id: int,
+        name: str | None = None,
+        service_url: str | None = None,
+        authorization_token: str | None = None,
+        params: str | None = None,
+        asynchronous: bool | None = None,
+        authorization_type: str | None = None,
+        client_ssl_certificate: str | None = None,
+        client_ssl_key: str | None = None,
+        metadata: dict | None = None,
+    ) -> Connector:
+        return await _update_connector(
+            client,
+            connector_id,
+            name,
+            service_url,
+            authorization_token,
+            params,
+            asynchronous,
+            authorization_type,
+            client_ssl_certificate,
+            client_ssl_key,
+            metadata,
+        )
 
     # --- Rules ---
     @mcp.tool(

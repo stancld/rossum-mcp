@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
+
+from rossum_api.domain_logic.resources import Resource
 
 from rossum_mcp.tools.base import delete_resource
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
+logger = logging.getLogger(__name__)
 DeleteRegistry = dict[str, Callable[[int], Awaitable[dict]]]
 
 
@@ -39,6 +43,18 @@ async def _delete_annotation(client: AsyncRossumAPIClient, annotation_id: int) -
     )
 
 
+async def _delete_inbox(client: AsyncRossumAPIClient, inbox_id: int) -> dict:
+    logger.debug(f"Deleting inbox: inbox_id={inbox_id}")
+    await client._http_client.delete(Resource.Inbox, inbox_id)
+    return {"message": f"Inbox {inbox_id} deleted successfully"}
+
+
+async def _delete_connector(client: AsyncRossumAPIClient, connector_id: int) -> dict:
+    logger.debug(f"Deleting connector: connector_id={connector_id}")
+    await client._http_client.delete(Resource.Connector, connector_id)
+    return {"message": f"Connector {connector_id} deleted successfully"}
+
+
 def build_delete_registry(client: AsyncRossumAPIClient) -> DeleteRegistry:
     return {
         "queue": lambda eid: _delete_queue(client, eid),
@@ -47,4 +63,6 @@ def build_delete_registry(client: AsyncRossumAPIClient) -> DeleteRegistry:
         "rule": lambda eid: _delete_rule(client, eid),
         "workspace": lambda eid: _delete_workspace(client, eid),
         "annotation": lambda eid: _delete_annotation(client, eid),
+        "inbox": lambda eid: _delete_inbox(client, eid),
+        "connector": lambda eid: _delete_connector(client, eid),
     }

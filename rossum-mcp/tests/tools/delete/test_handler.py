@@ -171,7 +171,7 @@ class TestDeleteErrors:
 class TestDeleteRegistry:
     def test_all_entities_in_registry(self, mock_client: AsyncMock, setup_env: None) -> None:
         registry = build_delete_registry(mock_client)
-        expected = {"queue", "schema", "hook", "rule", "workspace", "annotation"}
+        expected = {"queue", "schema", "hook", "rule", "workspace", "annotation", "inbox", "connector"}
         assert set(registry.keys()) == expected
 
     def test_all_entities_have_delete_fn(self, mock_client: AsyncMock, setup_env: None) -> None:

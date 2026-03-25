@@ -30,7 +30,15 @@ CATEGORY_META: dict[str, CategoryMeta] = {
     ),
     "queues": CategoryMeta(
         description="Queue management: create, configure, and list document processing queues",
-        keywords=["queue", "inbox", "connector"],
+        keywords=["queue"],
+    ),
+    "inboxes": CategoryMeta(
+        description="Inbox management: configure email ingestion endpoints for queues",
+        keywords=["inbox", "email", "ingestion", "dmarc"],
+    ),
+    "connectors": CategoryMeta(
+        description="Connector management: configure external validation/export endpoints",
+        keywords=["connector", "export", "validation", "service_url", "webhook"],
     ),
     "schemas": CategoryMeta(
         description="Schema management: define and modify document field structures",

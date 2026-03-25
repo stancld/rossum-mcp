@@ -30,7 +30,9 @@ def register_delete_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
             "queue → deletion begins after ~24h, cascades to annotations/documents; "
             "annotation → soft-delete (status 'deleted'); "
             "workspace → fails if it still contains queues; "
-            "schema → fails with 409 if linked to any queue/annotation."
+            "schema → fails with 409 if linked to any queue/annotation; "
+            "inbox → removes email ingestion for the linked queue; "
+            "connector → removes external validation/export endpoint."
         ),
         tags={"write"},
         annotations={"readOnlyHint": False, "destructiveHint": True},

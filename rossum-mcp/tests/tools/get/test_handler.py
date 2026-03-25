@@ -519,6 +519,8 @@ class TestRegistry:
             "hook_log",
             "hook_template",
             "user_role",
+            "inbox",
+            "connector",
             "queue_template_name",
             "hook_secrets_keys",
         }

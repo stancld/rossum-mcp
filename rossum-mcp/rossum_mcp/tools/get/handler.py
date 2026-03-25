@@ -39,6 +39,8 @@ class EntityType(StrEnum):
     RELATION = "relation"
     DOCUMENT_RELATION = "document_relation"
     ORGANIZATION_LIMIT = "organization_limit"
+    INBOX = "inbox"
+    CONNECTOR = "connector"
     HOOK_SECRETS_KEYS = "hook_secrets_keys"
 
 

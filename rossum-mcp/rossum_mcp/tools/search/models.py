@@ -137,6 +137,19 @@ class UserRoleSearch(BaseModel):
     entity: Literal["user_role"] = "user_role"
 
 
+class InboxSearch(BaseModel):
+    entity: Literal["inbox"] = "inbox"
+    name: str | None = None
+    queue_id: int | None = None
+    use_regex: bool = False
+
+
+class ConnectorSearch(BaseModel):
+    entity: Literal["connector"] = "connector"
+    name: str | None = None
+    service_url: str | None = None
+
+
 class QueueTemplateNameSearch(BaseModel):
     entity: Literal["queue_template_name"] = "queue_template_name"
 
@@ -157,6 +170,8 @@ SearchQuery = Annotated[
     | HookLogSearch
     | HookTemplateSearch
     | UserRoleSearch
+    | InboxSearch
+    | ConnectorSearch
     | QueueTemplateNameSearch,
     Field(discriminator="entity"),
 ]

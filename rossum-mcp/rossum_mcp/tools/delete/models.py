@@ -10,3 +10,5 @@ class DeleteEntityType(StrEnum):
     RULE = "rule"
     WORKSPACE = "workspace"
     ANNOTATION = "annotation"
+    INBOX = "inbox"
+    CONNECTOR = "connector"

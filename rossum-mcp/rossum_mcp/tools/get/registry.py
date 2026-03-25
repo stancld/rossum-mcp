@@ -8,10 +8,12 @@ from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.annotation import Annotation
+from rossum_api.models.connector import Connector
 from rossum_api.models.document_relation import DocumentRelation
 from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine
 from rossum_api.models.hook import Hook
+from rossum_api.models.inbox import Inbox
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
 from rossum_api.models.queue import Queue
@@ -102,6 +104,17 @@ async def _get_document_relation(client: AsyncRossumAPIClient, document_relation
     return await client.retrieve_document_relation(document_relation_id)
 
 
+async def _get_inbox(client: AsyncRossumAPIClient, inbox_id: int) -> Inbox:
+    logger.debug(f"Retrieving inbox: inbox_id={inbox_id}")
+    inbox_data = await client._http_client.fetch_one(Resource.Inbox, inbox_id)
+    return cast("Inbox", client._deserializer(Resource.Inbox, inbox_data))
+
+
+async def _get_connector(client: AsyncRossumAPIClient, connector_id: int) -> Connector:
+    logger.debug(f"Retrieving connector: connector_id={connector_id}")
+    return await client.retrieve_connector(connector_id)
+
+
 async def _get_hook_secrets_keys(client: AsyncRossumAPIClient, hook_id: int) -> list[str]:
     result = await client._http_client.request_json("GET", f"hooks/{hook_id}/secrets_keys")
     return cast("list[str]", result)
@@ -166,6 +179,14 @@ def build_get_registry(client: AsyncRossumAPIClient) -> dict[str, EntityConfig]:
         "document_relation": EntityConfig(
             retrieve_fn=lambda id: _get_document_relation(client, id),
             search_fn=search_reg["document_relation"],
+        ),
+        "inbox": EntityConfig(
+            retrieve_fn=lambda id: _get_inbox(client, id),
+            search_fn=search_reg["inbox"],
+        ),
+        "connector": EntityConfig(
+            retrieve_fn=lambda id: _get_connector(client, id),
+            search_fn=search_reg["connector"],
         ),
         "hook_log": EntityConfig(
             retrieve_fn=None,

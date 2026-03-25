@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING, Annotated
 
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.annotation import Annotation
+from rossum_api.models.connector import Connector
 from rossum_api.models.engine import Engine
 from rossum_api.models.group import Group
 from rossum_api.models.hook import Hook, HookRunData
 from rossum_api.models.hook_template import HookTemplate
+from rossum_api.models.inbox import Inbox
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.queue import Queue
 from rossum_api.models.rule import Rule
@@ -287,6 +289,29 @@ async def _list_document_relations(client: AsyncRossumAPIClient, **kwargs: objec
     return result.items
 
 
+async def _list_inboxes(
+    client: AsyncRossumAPIClient,
+    name: str | None = None,
+    queue_id: int | None = None,
+    use_regex: bool = False,
+) -> list[Inbox]:
+    logger.debug(f"Listing inboxes: name={name}, queue_id={queue_id}")
+    filters = build_filters(name=None if use_regex else name, queue=queue_id)
+    result = await graceful_list(client, Resource.Inbox, "inbox", **filters)
+    return filter_by_name_regex(result.items, name, use_regex)
+
+
+async def _list_connectors(
+    client: AsyncRossumAPIClient,
+    name: str | None = None,
+    service_url: str | None = None,
+) -> list[Connector]:
+    logger.debug(f"Listing connectors: name={name}, service_url={service_url}")
+    filters = build_filters(name=name, service_url=service_url)
+    result = await graceful_list(client, Resource.Connector, "connector", **filters)
+    return result.items
+
+
 async def _list_queue_template_names() -> list[str]:
     return list(QUEUE_TEMPLATE_NAMES)
 
@@ -309,6 +334,8 @@ def build_search_registry(client: AsyncRossumAPIClient) -> dict[str, Callable[..
         "hook_log": lambda **kw: _list_hook_logs(client, **kw),
         "hook_template": lambda **_kw: _list_hook_templates(client),
         "user_role": lambda **_kw: _list_user_roles(client),
+        "inbox": lambda **kw: _list_inboxes(client, **kw),
+        "connector": lambda **kw: _list_connectors(client, **kw),
         "queue_template_name": lambda **_kw: _list_queue_template_names(),
     }
 

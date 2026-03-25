@@ -16,6 +16,8 @@ class TestCategoryMeta:
             "read",
             "annotations",
             "queues",
+            "inboxes",
+            "connectors",
             "schemas",
             "engines",
             "hooks",
