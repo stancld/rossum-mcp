@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.7.3] - 2026-03-25
+
 ### Added
 - `patch_schema_with_subagent` now supports `after_field` and `before_field` for explicit field positioning — new fields can be inserted relative to an existing sibling in both sections and tables, instead of always appending to the end [#306](https://github.com/stancld/rossum-agents/pull/306)
 
