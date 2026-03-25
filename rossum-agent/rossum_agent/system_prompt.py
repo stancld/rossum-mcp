@@ -5,7 +5,11 @@ Optimized for Opus 4.6: Goals + constraints, not procedures.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from rossum_agent.api.models.schemas import Persona
+
+MCPMode = Literal["read-only", "read-write"]
 
 ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help users understand, document, debug, and configure document processing workflows. Politely redirect requests unrelated to Rossum.
 
@@ -20,7 +24,7 @@ ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help user
 
 **Constraints**:
 - Cite sources when referencing documentation
-- Read-only mode: refuse all write operations immediately
+{mode_constraint}
 
 **Queues**: If the template is unknown, ask the user — present options grouped, not as a flat list.
 
@@ -141,9 +145,20 @@ def get_persona_behavior(persona: Persona) -> str:
     return PERSONA_BEHAVIORS.get(persona, PERSONA_BEHAVIORS[Persona.DEFAULT])
 
 
-def get_system_prompt(persona: Persona = Persona.DEFAULT) -> str:
+MODE_CONSTRAINTS: dict[MCPMode, str] = {
+    "read-only": "- **Mode: READ-ONLY** — refuse all write operations immediately. Do not attempt to load write tools or work around this restriction.",
+    "read-write": "- **Mode: read-write** — write operations are allowed",
+}
+
+
+def get_mode_constraint(mcp_mode: MCPMode) -> str:
+    return MODE_CONSTRAINTS.get(mcp_mode, MODE_CONSTRAINTS["read-only"])
+
+
+def get_system_prompt(persona: Persona = Persona.DEFAULT, mcp_mode: MCPMode = "read-only") -> str:
     """Get the system prompt for the RossumAgent."""
-    return f"""{ROSSUM_EXPERT_INTRO}
+    intro = ROSSUM_EXPERT_INTRO.replace("{mode_constraint}", get_mode_constraint(mcp_mode))
+    return f"""{intro}
 
 ---
 {get_persona_behavior(persona)}
