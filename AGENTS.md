@@ -9,6 +9,7 @@
 - **YAGNI** - Don't add functionality until needed. Remove unused code proactively.
 - **Tests required** - New features and bug fixes must include tests
 - **Docs in sync** - Tool changes require documentation updates
+- **Changelog PR references** - When adding changelog entries, include the PR hyperlink (e.g. `[#123](https://github.com/stancld/rossum-agents/pull/123)`) if available
 
 ## Commands
 
