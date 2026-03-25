@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [1.7.2] - 2026-03-25
+
 ### Changed
 - System prompt now includes the actual MCP mode (`read-only` / `read-write`) so the agent can promptly reject write operations in read-only mode instead of relying on tool-level filtering alone [#304](https://github.com/stancld/rossum-agents/pull/304)
 
