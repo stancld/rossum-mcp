@@ -19,6 +19,7 @@ interface InputAreaProps {
   onHeightChange?: (rows: number) => void;
   pendingImageCount?: number;
   onEscape?: () => void;
+  onCtrlKey?: (key: string) => void;
 }
 
 function getSuggestionRows(visible: boolean, count: number): number {
@@ -110,6 +111,7 @@ export function InputArea({
   onHeightChange,
   pendingImageCount = 0,
   onEscape,
+  onCtrlKey,
 }: InputAreaProps) {
   const [currentText, setCurrentText] = useState("");
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
@@ -290,6 +292,7 @@ export function InputArea({
             onChange={handleTextChange}
             onCursorChange={handleCursorChange}
             onEscape={onEscape}
+            onCtrlKey={onCtrlKey}
           />
         )}
       </Box>

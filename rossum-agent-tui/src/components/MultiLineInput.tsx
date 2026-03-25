@@ -15,6 +15,7 @@ interface MultiLineInputProps {
   onChange?: (text: string) => void;
   onCursorChange?: (row: number, col: number) => void;
   onEscape?: () => void;
+  onCtrlKey?: (key: string) => void;
 }
 
 export interface MultiLineInputHandle {
@@ -46,7 +47,15 @@ export const MultiLineInput = forwardRef<
   MultiLineInputHandle,
   MultiLineInputProps
 >(function MultiLineInput(
-  { onSubmit, isActive, placeholder, onChange, onCursorChange, onEscape },
+  {
+    onSubmit,
+    isActive,
+    placeholder,
+    onChange,
+    onCursorChange,
+    onEscape,
+    onCtrlKey,
+  },
   ref,
 ) {
   const [lines, setLines] = useState<string[]>([""]);
@@ -201,6 +210,16 @@ export const MultiLineInput = forwardRef<
         return;
       }
 
+      // Kitty-protocol Ctrl+<key> (\x1b[<code>;5u) — Ink can't parse CSI-u,
+      // so useInput Ctrl handlers won't fire. Decode and forward to parent.
+      // eslint-disable-next-line no-control-regex
+      const ctrlMatch = str.match(/^\x1b\[(\d+);5u$/);
+      if (ctrlMatch) {
+        onCtrlKey?.(String.fromCharCode(parseInt(ctrlMatch[1]!, 10)));
+        consumedRef.current = true;
+        return;
+      }
+
       // Ignore single-char inputs and control sequences — handled by useInput
       if (str.length <= 1 || str.startsWith("\x1b")) return;
 
@@ -222,6 +241,7 @@ export const MultiLineInput = forwardRef<
     handleSingleLinePaste,
     handleNewLine,
     onEscape,
+    onCtrlKey,
   ]);
 
   const handleBackspace = useCallback(() => {

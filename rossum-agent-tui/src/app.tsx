@@ -565,28 +565,52 @@ export function App({ config }: AppProps) {
 
   // Ctrl+V: paste image from clipboard
   const isPastingRef = useRef(false);
+  const handlePasteImage = useCallback(() => {
+    if (isPastingRef.current) return;
+    const isDisabled =
+      state.connectionStatus === "connecting" ||
+      state.connectionStatus === "streaming";
+    if (isDisabled) return;
+
+    isPastingRef.current = true;
+    getClipboardImage()
+      .then((image) => {
+        if (image) {
+          setPendingImages((prev) =>
+            prev.length < 5 ? [...prev, image] : prev,
+          );
+        }
+      })
+      .finally(() => {
+        isPastingRef.current = false;
+      });
+  }, [state.connectionStatus]);
+
+  const handleNewChat = useCallback(() => {
+    resetChat();
+    setExpandState({});
+    setSelectedIndex(0);
+    setAutoScroll(true);
+    setIntraScrollOffset(0);
+    setMode("input");
+    setPendingImages([]);
+  }, [resetChat]);
+
+  // Kitty keyboard protocol encodes Ctrl+key as CSI-u sequences that Ink
+  // can't parse. MultiLineInput detects these and forwards the key here.
+  const handleCtrlKey = useCallback(
+    (key: string) => {
+      if (key === "v") handlePasteImage();
+      if (key === "u" && pendingImages.length > 0) setPendingImages([]);
+      if (key === "n") handleNewChat();
+      if (key === "x") abortStreaming();
+    },
+    [handlePasteImage, pendingImages.length, handleNewChat, abortStreaming],
+  );
+
   useInput(
     (input, key) => {
-      if (input === "v" && key.ctrl && !isPastingRef.current) {
-        const isDisabled =
-          state.connectionStatus === "connecting" ||
-          state.connectionStatus === "streaming";
-        if (isDisabled) return;
-
-        isPastingRef.current = true;
-        getClipboardImage()
-          .then((image) => {
-            if (image) {
-              setPendingImages((prev) =>
-                prev.length < 5 ? [...prev, image] : prev,
-              );
-            }
-          })
-          .finally(() => {
-            isPastingRef.current = false;
-          });
-      }
-      // Ctrl+U: clear pending images
+      if (input === "v" && key.ctrl) handlePasteImage();
       if (input === "u" && key.ctrl && pendingImages.length > 0) {
         setPendingImages([]);
       }
@@ -595,15 +619,7 @@ export function App({ config }: AppProps) {
   );
 
   useInput((input, key) => {
-    if (input === "n" && key.ctrl) {
-      resetChat();
-      setExpandState({});
-      setSelectedIndex(0);
-      setAutoScroll(true);
-      setIntraScrollOffset(0);
-      setMode("input");
-      setPendingImages([]);
-    }
+    if (input === "n" && key.ctrl) handleNewChat();
   });
 
   useInput((input, key) => {
@@ -667,6 +683,7 @@ export function App({ config }: AppProps) {
           onHeightChange={setInputAreaRows}
           pendingImageCount={pendingImages.length}
           onEscape={handleEscapeFromInput}
+          onCtrlKey={handleCtrlKey}
         />
       )}
       {state.tasks.length > 0 && <TaskList tasks={state.tasks} />}
