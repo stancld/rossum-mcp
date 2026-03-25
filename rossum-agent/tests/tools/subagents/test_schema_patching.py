@@ -14,11 +14,12 @@ from rossum_agent.tools.subagents.schema_patching import (
     _GET_SCHEMA_TREE_STRUCTURE_TOOL,
     _OPUS_TOOLS,
     _SCHEMA_PATCHING_SYSTEM_PROMPT,
+    SchemaFieldType,
     _add_fields_to_content,
     _apply_schema_changes,
     _build_field_node,
     _call_opus_for_patching,
-    _coerce_type_to_string,
+    _coerce_field_type,
     _collect_field_ids,
     _execute_opus_tool,
     _extract_schema_content,
@@ -485,24 +486,34 @@ class TestBuildFieldNode:
 
 
 class TestCoerceTypeToString:
-    """Test _coerce_type_to_string function."""
+    """Test _coerce_field_type function."""
 
     def test_string_passes_through(self):
-        assert _coerce_type_to_string("number") == "number"
+        assert _coerce_field_type("number") == SchemaFieldType.NUMBER
+
+    def test_enum_passes_through(self):
+        assert _coerce_field_type(SchemaFieldType.DATE) == SchemaFieldType.DATE
 
     def test_dict_with_type_key_extracts_value(self):
-        assert _coerce_type_to_string({"type": "number"}) == "number"
+        assert _coerce_field_type({"type": "number"}) == SchemaFieldType.NUMBER
 
     def test_dict_without_type_key_falls_back_to_string(self):
-        assert _coerce_type_to_string({"foo": "bar"}) == "string"
+        assert _coerce_field_type({"foo": "bar"}) == SchemaFieldType.STRING
 
     def test_none_falls_back_to_string(self):
-        assert _coerce_type_to_string(None) == "string"
+        assert _coerce_field_type(None) == SchemaFieldType.STRING
+
+    def test_invalid_string_falls_back_to_string(self):
+        assert _coerce_field_type("bogus") == SchemaFieldType.STRING
+
+    def test_returns_schema_field_type_instance(self):
+        result = _coerce_field_type("number")
+        assert isinstance(result, SchemaFieldType)
 
     def test_build_field_node_coerces_dict_type(self):
         spec = {"id": "amount", "label": "Amount", "type": {"type": "number"}}
         node = _build_field_node(spec)
-        assert node["type"] == "number"
+        assert node["type"] == SchemaFieldType.NUMBER
 
     def test_update_fields_coerces_dict_type(self):
         content = [
@@ -515,7 +526,7 @@ class TestCoerceTypeToString:
         updates = [{"id": "field1", "type": {"type": "number"}}]
         modified, updated_ids = _update_fields_in_content(content, updates)
         assert "field1" in updated_ids
-        assert modified[0]["children"][0]["type"] == "number"
+        assert modified[0]["children"][0]["type"] == SchemaFieldType.NUMBER
 
 
 class TestAddFieldsToContent:

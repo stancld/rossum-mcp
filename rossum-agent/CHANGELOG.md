@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- Formula field creation and update now respect `field_type` parameter (`string`, `number`, `date`, `enum`) instead of always defaulting to `string`; introduced `SchemaFieldType` enum for type-safe coercion in schema patching [#302](https://github.com/stancld/rossum-agents/pull/302)
+
 ## [1.7.1] - 2026-03-23
 
 ### Added

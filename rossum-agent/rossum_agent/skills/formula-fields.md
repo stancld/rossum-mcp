@@ -15,8 +15,11 @@ result = suggest_formula_field(
     schema_id=9389721,
     section_id="basic_info",
     field_schema_id="net_terms",
+    field_type="number",  # string (default), number, date, enum — must match the formula's output
 )
 ```
+
+When updating an existing field, preserve its original type by passing the matching `field_type`.
 
 Then apply via `patch_schema_with_subagent(schema_id, changes)` using `result["formula"]` or `result["field_definition"]`.
 
