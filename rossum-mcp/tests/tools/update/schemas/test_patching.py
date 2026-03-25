@@ -59,6 +59,181 @@ class TestApplySchemaPatch:
 
         assert result[0]["children"][1]["id"] == "field2"
 
+    def test_add_with_after_field(self) -> None:
+        """Test adding a datapoint after a specific field by ID."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                    {"id": "field3", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field2",
+            node_data={"label": "Field 2", "category": "datapoint"},
+            parent_id="section1",
+            after_field="field1",
+        )
+
+        assert len(result[0]["children"]) == 3
+        assert result[0]["children"][0]["id"] == "field1"
+        assert result[0]["children"][1]["id"] == "field2"
+        assert result[0]["children"][2]["id"] == "field3"
+
+    def test_add_with_after_field_last(self) -> None:
+        """Test adding after the last field appends correctly."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                    {"id": "field2", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field3",
+            node_data={"label": "Field 3", "category": "datapoint"},
+            parent_id="section1",
+            after_field="field2",
+        )
+
+        assert len(result[0]["children"]) == 3
+        assert result[0]["children"][2]["id"] == "field3"
+
+    def test_add_with_after_field_not_found_appends(self) -> None:
+        """Test that after_field with nonexistent ID falls back to append."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field2",
+            node_data={"label": "Field 2", "category": "datapoint"},
+            parent_id="section1",
+            after_field="nonexistent",
+        )
+
+        assert len(result[0]["children"]) == 2
+        assert result[0]["children"][1]["id"] == "field2"
+
+    def test_add_with_before_field(self) -> None:
+        """Test adding a datapoint before a specific field by ID."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                    {"id": "field3", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field2",
+            node_data={"label": "Field 2", "category": "datapoint"},
+            parent_id="section1",
+            before_field="field3",
+        )
+
+        assert len(result[0]["children"]) == 3
+        assert result[0]["children"][0]["id"] == "field1"
+        assert result[0]["children"][1]["id"] == "field2"
+        assert result[0]["children"][2]["id"] == "field3"
+
+    def test_add_with_before_field_first(self) -> None:
+        """Test adding before the first field inserts at position 0."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field2", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field1",
+            node_data={"label": "Field 1", "category": "datapoint"},
+            parent_id="section1",
+            before_field="field2",
+        )
+
+        assert len(result[0]["children"]) == 2
+        assert result[0]["children"][0]["id"] == "field1"
+        assert result[0]["children"][1]["id"] == "field2"
+
+    def test_add_with_before_field_not_found_appends(self) -> None:
+        """Test that before_field with nonexistent ID falls back to append."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        result = apply_schema_patch(
+            content=content,
+            operation="add",
+            node_id="field2",
+            node_data={"label": "Field 2", "category": "datapoint"},
+            parent_id="section1",
+            before_field="nonexistent",
+        )
+
+        assert len(result[0]["children"]) == 2
+        assert result[0]["children"][1]["id"] == "field2"
+
+    def test_add_with_conflicting_position_params_raises(self) -> None:
+        """Test that providing both position and after_field raises ValueError."""
+        content = [
+            {
+                "id": "section1",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint"},
+                ],
+            }
+        ]
+
+        with pytest.raises(ValueError, match="at most one"):
+            apply_schema_patch(
+                content=content,
+                operation="add",
+                node_id="field0",
+                node_data={"label": "Field 0", "category": "datapoint"},
+                parent_id="section1",
+                position=0,
+                after_field="field1",
+            )
+
     def test_update_existing_node(self) -> None:
         """Test updating an existing node's properties."""
         content = [

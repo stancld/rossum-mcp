@@ -80,6 +80,8 @@ async def _patch_schema(
     node_data: SchemaNode | SchemaNodeUpdate | None = None,
     parent_id: str | None = None,
     position: int | None = None,
+    after_field: str | None = None,
+    before_field: str | None = None,
 ) -> dict:
     if operation not in ("add", "update", "remove"):
         raise ToolError(f"Invalid operation '{operation}'. Must be 'add', 'update', or 'remove'.")
@@ -103,6 +105,8 @@ async def _patch_schema(
             node_data=node_data_dict,
             parent_id=parent_id,
             position=position,
+            after_field=after_field,
+            before_field=before_field,
         )
 
     try:
