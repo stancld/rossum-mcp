@@ -15,6 +15,24 @@ class TestSystemPromptPersona:
         assert "# Persona: default" not in prompt
 
 
+class TestSystemPromptMCPMode:
+    def test_read_only_by_default(self):
+        prompt = get_system_prompt("default")
+        assert "Mode: READ-ONLY" in prompt
+        assert "refuse all write operations immediately" in prompt
+
+    def test_read_only_explicit(self):
+        prompt = get_system_prompt("default", mcp_mode="read-only")
+        assert "Mode: READ-ONLY" in prompt
+        assert "refuse all write operations immediately" in prompt
+
+    def test_read_write(self):
+        prompt = get_system_prompt("default", mcp_mode="read-write")
+        assert "Mode: read-write" in prompt
+        assert "write operations are allowed" in prompt
+        assert "READ-ONLY" not in prompt
+
+
 class TestSystemPromptTaskTracking:
     def test_requires_update_task_transitions(self):
         prompt = get_system_prompt("default")

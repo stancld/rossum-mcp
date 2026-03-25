@@ -13,8 +13,14 @@ from rossum_mcp.tools.catalog import CATEGORY_META
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
+    from rossum_mcp.tools.base import McpMode
 
-def register_discovery_tools(mcp: FastMCP) -> None:
+
+def register_discovery_tools(mcp: FastMCP, mcp_mode: McpMode) -> None:
+    @mcp.tool(description="Get the current MCP operation mode (read-only or read-write).")
+    async def get_mcp_mode() -> dict:
+        return {"mode": mcp_mode}
+
     @mcp.tool(
         description="List tool categories (descriptions, tool names, keywords). Use load_tool to load tools by name. read_only=false indicates write tools."
     )

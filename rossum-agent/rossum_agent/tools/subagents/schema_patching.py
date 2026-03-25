@@ -16,6 +16,7 @@ import logging
 import re
 import time
 from dataclasses import asdict, is_dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -34,6 +35,14 @@ from rossum_agent.tools.subagents.base import (
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool
 
 logger = logging.getLogger(__name__)
+
+
+class SchemaFieldType(StrEnum):
+    STRING = "string"
+    NUMBER = "number"
+    DATE = "date"
+    ENUM = "enum"
+
 
 _ENGINE_RESTRICTION_RE = re.compile(r"extracted field '(\w+)' is not present among names of engine fields")
 
@@ -279,18 +288,26 @@ def _collect_field_ids(content: list[dict[str, Any]]) -> set[str]:
     return ids
 
 
-def _coerce_type_to_string(value: Any) -> str:
-    """Coerce a type value to a string, handling LLM-generated dicts like {"type": "number"}."""
-    if isinstance(value, str):
+def _coerce_field_type(value: Any) -> SchemaFieldType:
+    """Coerce a type value to SchemaFieldType, handling LLM-generated dicts like {"type": "number"}."""
+    raw: str
+    if isinstance(value, SchemaFieldType):
         return value
-    if isinstance(value, dict) and isinstance(value.get("type"), str):
-        return value["type"]
-    return "string"
+    if isinstance(value, str):
+        raw = value
+    elif isinstance(value, dict) and isinstance(value.get("type"), str):
+        raw = value["type"]
+    else:
+        return SchemaFieldType.STRING
+    try:
+        return SchemaFieldType(raw)
+    except ValueError:
+        return SchemaFieldType.STRING
 
 
 def _build_field_node(spec: dict[str, Any]) -> dict[str, Any]:
     """Build a schema field node from specification."""
-    field_type = _coerce_type_to_string(spec.get("type", "string"))
+    field_type = _coerce_field_type(spec.get("type", "string"))
     node: dict[str, Any] = {
         "id": spec["id"],
         "label": spec.get("label", spec["id"]),
@@ -484,7 +501,7 @@ def _update_fields_in_content(
             if key == "id":
                 continue
             if key == "type":
-                value = _coerce_type_to_string(value)
+                value = _coerce_field_type(value)
             target[key] = value
 
     def _apply_updates(nodes: list[dict[str, Any]]) -> None:

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ---
 
 
+## [Unreleased] - YYYY-MM-DD
+
+### Changed
+- System prompt now includes the actual MCP mode (`read-only` / `read-write`) so the agent can promptly reject write operations in read-only mode instead of relying on tool-level filtering alone [#304](https://github.com/stancld/rossum-agents/pull/304)
+
+### Fixed
+- Formula field creation and update now respect `field_type` parameter (`string`, `number`, `date`, `enum`) instead of always defaulting to `string`; introduced `SchemaFieldType` enum for type-safe coercion in schema patching [#302](https://github.com/stancld/rossum-agents/pull/302)
+- Hide `patch_schema_with_subagent` (and other internal write tools) from tool list in read-only MCP mode [#303](https://github.com/stancld/rossum-agents/pull/303)
+
 ## [1.7.1] - 2026-03-23
 
 ### Added
