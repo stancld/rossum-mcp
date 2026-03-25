@@ -50,15 +50,16 @@ tests = [
 all = [
     "coverage>=7.0.0",
     "fastmcp>=3.0.0",
+    "furo",
     "myst-parser>=2.0.0",
     "pydantic>2.0.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
     "rossum-api>=3.12.1",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
-    "furo",
 ]
 
 [tool.setuptools.packages.find]
