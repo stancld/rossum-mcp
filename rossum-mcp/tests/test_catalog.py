@@ -56,7 +56,7 @@ class TestDiscoveryTools:
     def mcp_with_tools(self) -> FastMCP:
         """Create FastMCP instance with discovery + a few tagged tools registered."""
         mcp = FastMCP("test-discovery")
-        register_discovery_tools(mcp)
+        register_discovery_tools(mcp, mcp_mode="read-write")
 
         # Register a few tagged tools to test dynamic grouping
         @mcp.tool(tags={"queues"}, annotations={"readOnlyHint": True})
@@ -114,6 +114,23 @@ class TestDiscoveryTools:
         hooks_cat = next(cat for cat in result if cat["name"] == "hooks")
         assert "hook" in hooks_cat["keywords"]
         assert "webhook" in hooks_cat["keywords"]
+
+    async def test_get_mcp_mode_returns_current_mode(self, mcp_with_tools: FastMCP) -> None:
+        tool = await mcp_with_tools.get_tool("get_mcp_mode")
+
+        result = await tool.fn()
+
+        assert result == {"mode": "read-write"}
+
+    async def test_get_mcp_mode_returns_read_only(self) -> None:
+        mcp = FastMCP("test-mode")
+        register_discovery_tools(mcp, mcp_mode="read-only")
+
+        tool = await mcp.get_tool("get_mcp_mode")
+
+        result = await tool.fn()
+
+        assert result == {"mode": "read-only"}
 
     async def test_list_tool_categories_empty_categories_have_zero_tools(self, mcp_with_tools: FastMCP) -> None:
         list_categories_tool = await mcp_with_tools.get_tool("list_tool_categories")

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
 from rossum_api.domain_logic.resources import Resource
 
@@ -25,7 +25,9 @@ class GracefulListResult(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-aut
     skipped_ids: list[int | str] = field(default_factory=list)
 
 
-VALID_MODES = ("read-only", "read-write")
+type McpMode = Literal["read-only", "read-write"]
+
+VALID_MODES: tuple[McpMode, ...] = ("read-only", "read-write")
 
 
 def extract_id_from_url(url: str) -> int:

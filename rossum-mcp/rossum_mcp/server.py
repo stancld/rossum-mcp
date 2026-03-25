@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import TYPE_CHECKING
 
 from fastmcp import FastMCP
 from rossum_api import AsyncRossumAPIClient
@@ -17,6 +18,9 @@ from rossum_mcp.tools import (
     register_update_tools,
 )
 from rossum_mcp.tools.base import VALID_MODES
+
+if TYPE_CHECKING:
+    from rossum_mcp.tools.base import McpMode
 
 logger = logging.getLogger(__name__)
 
@@ -39,24 +43,21 @@ def create_app() -> FastMCP:
 
     if mcp_mode not in VALID_MODES:
         raise ValueError(f"Invalid ROSSUM_MCP_MODE: {mcp_mode}. Must be one of: {VALID_MODES}")
+    validated_mode: McpMode = mcp_mode  # type: ignore[assignment] - validated above
 
-    logger.info(f"Rossum MCP Server starting in {mcp_mode} mode")
+    logger.info(f"Rossum MCP Server starting in {validated_mode} mode")
 
     mcp = FastMCP("rossum-mcp-server")
     client = AsyncRossumAPIClient(base_url=base_url, credentials=Token(token=api_token))
 
-    register_discovery_tools(mcp)
+    register_discovery_tools(mcp, validated_mode)
     register_get_tools(mcp, client)
     register_delete_tools(mcp, client)
     register_create_tools(mcp, client, base_url)
     register_update_tools(mcp, client, base_url)
 
-    @mcp.tool(description="Get the current MCP operation mode (read-only or read-write).")
-    async def get_mcp_mode() -> dict:
-        return {"mode": mcp_mode}
-
     # Enforce read-only mode by hiding write tools via FastMCP visibility
-    if mcp_mode == "read-only":
+    if validated_mode == "read-only":
         mcp.disable(tags={"write"})
 
     return mcp
