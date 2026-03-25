@@ -53,6 +53,18 @@ class TestCreateFormulaFieldDefinition:
         assert field["id"] == "net_terms"
         assert field["label"] == "Net Terms"
 
+    def test_default_type_is_string(self) -> None:
+        field = _create_formula_field_definition("Test")
+        assert field["type"] == "string"
+
+    def test_respects_field_type(self) -> None:
+        field = _create_formula_field_definition("Amount", field_type="number")
+        assert field["type"] == "number"
+
+    def test_respects_field_type_date(self) -> None:
+        field = _create_formula_field_definition("Due Date", field_type="date")
+        assert field["type"] == "date"
+
 
 class TestSuggestFormulaField:
     """Tests for suggest_formula_field tool."""
@@ -97,7 +109,38 @@ class TestSuggestFormulaField:
         assert parsed["summary"] == "Calculates payment terms"
         assert parsed["field_definition"]["id"] == "net_terms"
         assert parsed["field_definition"]["formula"] == parsed["formula"]
+        assert parsed["field_definition"]["type"] == "string"
         mock_fetch.assert_called_once_with("https://api.rossum.ai/v1", "test_token", 123456)
+
+    @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
+    @patch("rossum_agent.python_tools.copilot.formula._fetch_schema_content")
+    @patch("rossum_agent.python_tools.copilot.formula.httpx.Client")
+    def test_field_type_propagates_to_definition(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
+        mock_fetch.return_value = [{"id": "basic_info", "category": "section", "children": []}]
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "results": [{"formula": "field.date_due - field.date_issue", "summary": "", "description": ""}]
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        result = suggest_formula_field(
+            label="Net Terms",
+            hint="days between dates",
+            schema_id=123456,
+            section_id="basic_info",
+            field_type="number",
+        )
+
+        parsed = json.loads(result)
+        assert parsed["status"] == "success"
+        assert parsed["field_definition"]["type"] == "number"
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
     @patch("rossum_agent.python_tools.copilot.formula._fetch_schema_content")

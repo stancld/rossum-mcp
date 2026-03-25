@@ -9,11 +9,14 @@ from __future__ import annotations
 import json
 import logging
 import re
+from typing import Literal
 
 import httpx
 
 from rossum_agent.python_tools.copilot._shared import _fetch_schema_content, _inject_field_into_schema, _json_headers
 from rossum_agent.tools.core import get_context
+
+FormulaFieldType = Literal["string", "number", "date", "enum"]
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +32,18 @@ def _build_suggest_formula_url(api_base_url: str) -> str:
     return f"{api_base_url.rstrip('/')}/internal/schemas/suggest_formula"
 
 
-def _create_formula_field_definition(label: str, field_schema_id: str | None = None) -> dict:
+def _create_formula_field_definition(
+    label: str,
+    field_schema_id: str | None = None,
+    field_type: FormulaFieldType = "string",
+) -> dict:
     """Create a properly structured formula field definition."""
     if not field_schema_id:
         field_schema_id = label.lower().replace(" ", "_")
     return {
         "id": field_schema_id,
         "label": label,
-        "type": "string",
+        "type": field_type,
         "category": "datapoint",
         "can_export": True,
         "constraints": {"required": False},
@@ -51,7 +58,12 @@ def _create_formula_field_definition(label: str, field_schema_id: str | None = N
 
 
 def suggest_formula_field(
-    label: str, hint: str, schema_id: int, section_id: str, field_schema_id: str | None = None
+    label: str,
+    hint: str,
+    schema_id: int,
+    section_id: str,
+    field_schema_id: str | None = None,
+    field_type: FormulaFieldType = "string",
 ) -> str:
     """Get AI-generated formula suggestions for a new formula field.
 
@@ -61,6 +73,7 @@ def suggest_formula_field(
         schema_id: The numeric schema ID (e.g., 9389721). Get this from get(entity="queue", id=queue_id) or search(query={"entity": "queue"}).
         section_id: Section ID where the field belongs. Ask the user if not specified.
         field_schema_id: Optional ID for the formula field. Defaults to label.lower().replace(" ", "_").
+        field_type: Schema field type for the formula field (string, number, date, enum). Defaults to string.
 
     Returns:
         JSON with formula suggestion and field_definition for use with patch_schema.
@@ -73,7 +86,7 @@ def suggest_formula_field(
         url = _build_suggest_formula_url(api_base_url)
 
         schema_content = _fetch_schema_content(api_base_url, token, schema_id)
-        field_def = _create_formula_field_definition(label, field_schema_id)
+        field_def = _create_formula_field_definition(label, field_schema_id, field_type)
         enriched_schema = _inject_field_into_schema(schema_content, field_def, section_id)
 
         payload = {"field_schema_id": field_schema_id, "hint": hint, "schema_content": enriched_schema}
@@ -98,7 +111,7 @@ def suggest_formula_field(
         if summary:
             summary = _clean_html(summary)
 
-        field_definition = _create_formula_field_definition(label, field_schema_id)
+        field_definition = _create_formula_field_definition(label, field_schema_id, field_type)
         field_definition["formula"] = formula
 
         return json.dumps(
