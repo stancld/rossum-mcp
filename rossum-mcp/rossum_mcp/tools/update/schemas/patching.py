@@ -88,8 +88,29 @@ def _find_parent_children_list(content: list[dict], parent_id: str) -> tuple[lis
     return None, False
 
 
+def _resolve_relative_field_position(
+    parent_children: list[dict], after_field: str | None, before_field: str | None
+) -> int | None:
+    """Resolve after_field/before_field to a numeric insertion index. Returns None if reference not found."""
+    if after_field is not None:
+        for i, child in enumerate(parent_children):
+            if child.get("id") == after_field:
+                return i + 1
+    if before_field is not None:
+        for i, child in enumerate(parent_children):
+            if child.get("id") == before_field:
+                return i
+    return None
+
+
 def _apply_add_operation(
-    content: list[dict], node_id: str, node_data: dict | None, parent_id: str | None, position: int | None
+    content: list[dict],
+    node_id: str,
+    node_data: dict | None,
+    parent_id: str | None,
+    position: int | None,
+    after_field: str | None = None,
+    before_field: str | None = None,
 ) -> list[dict]:
     if node_data is None:
         raise ValueError("node_data is required for 'add' operation")
@@ -108,6 +129,13 @@ def _apply_add_operation(
         )
     if parent_children is None:
         raise ValueError(f"Parent node '{parent_id}' not found in schema")
+
+    positioning_params = sum(p is not None for p in (position, after_field, before_field))
+    if positioning_params > 1:
+        raise ValueError("Specify at most one of position, after_field, or before_field")
+
+    if position is None and (after_field is not None or before_field is not None):
+        position = _resolve_relative_field_position(parent_children, after_field, before_field)
 
     if position is not None and 0 <= position <= len(parent_children):
         parent_children.insert(position, node_data)
@@ -192,12 +220,14 @@ def apply_schema_patch(
     node_data: dict | None = None,
     parent_id: str | None = None,
     position: int | None = None,
+    after_field: str | None = None,
+    before_field: str | None = None,
 ) -> list[dict]:
     """Apply a patch operation to schema content."""
     content = copy.deepcopy(content)
 
     if operation == "add":
-        return _apply_add_operation(content, node_id, node_data, parent_id, position)
+        return _apply_add_operation(content, node_id, node_data, parent_id, position, after_field, before_field)
     if operation == "update":
         return _apply_update_operation(content, node_id, node_data)
     if operation == "remove":

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     import redis
     from mcp.types import Tool as MCPTool
 
+    from rossum_agent.api.models.schemas import MCPMode
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 
 logger = logging.getLogger(__name__)
@@ -415,7 +416,7 @@ class MCPConnection:
 
 
 def create_mcp_transport(
-    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: Literal["read-only", "read-write"] = "read-only"
+    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: MCPMode = "read-only"
 ) -> StdioTransport:
     """Create a StdioTransport for the rossum-mcp server."""
     return StdioTransport(
@@ -432,7 +433,7 @@ def create_mcp_transport(
 
 @asynccontextmanager
 async def connect_mcp_server(
-    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: Literal["read-only", "read-write"] = "read-only"
+    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: MCPMode = "read-only"
 ) -> AsyncIterator[MCPConnection]:
     """Connect to the rossum-mcp server and yield an MCPConnection.
 

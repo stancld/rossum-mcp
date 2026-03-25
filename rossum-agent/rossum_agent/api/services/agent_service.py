@@ -10,7 +10,7 @@ import dataclasses
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.memory import AgentMemory
@@ -32,6 +32,7 @@ from rossum_agent.api.models.schemas import (
     AgentQuestionItemSchema,
     DocumentContent,
     ImageContent,
+    MCPMode,
     Persona,
     QuestionOptionSchema,
     StepEvent,
@@ -480,7 +481,7 @@ class AgentService:
         conversation_history: list[dict[str, Any]],
         rossum_api_token: str,
         rossum_api_base_url: str,
-        mcp_mode: Literal["read-only", "read-write"] = "read-only",
+        mcp_mode: MCPMode = "read-only",
         persona: Persona = Persona.DEFAULT,
         rossum_url: str | None = None,
         images: list[ImageContent] | None = None,
@@ -641,7 +642,7 @@ class AgentService:
     def _build_system_prompt(
         rossum_url: str | None,
         persona: Persona = Persona.DEFAULT,
-        mcp_mode: Literal["read-only", "read-write"] = "read-only",
+        mcp_mode: MCPMode = "read-only",
     ) -> str:
         system_prompt = get_system_prompt(persona, mcp_mode)
         url_context = extract_url_context(rossum_url)

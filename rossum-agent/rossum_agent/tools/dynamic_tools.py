@@ -77,7 +77,7 @@ def _parse_catalog_result(result: object) -> CatalogData:
     if isinstance(result, str):
         result = json.loads(result)
     if isinstance(result, dict) and "result" in result:
-        result = result["result"]  # type: ignore[assignment] - unwrapping FastMCP wrapper
+        result = result["result"]  # ty:ignore[invalid-argument-type] - unwrapping FastMCP wrapper
     if isinstance(result, str):
         result = json.loads(result)
     if not isinstance(result, list):

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 import httpx
 from anthropic import beta_tool
+from rossum_mcp.tools.update.schemas.patching import _resolve_relative_field_position
 from rossum_mcp.tools.validation import sanitize_schema_content
 
 from rossum_agent.tools.core import get_context
@@ -118,6 +119,8 @@ Use get_schema_tree_structure / get_full_schema only if you need to verify or re
 | parent_section | Yes | Section ID to add field to |
 | type | Yes | string, number, date, enum |
 | table_id | If table | Multivalue ID for table columns |
+| after_field | No | Insert after this field ID (within same parent). Without this, fields append to end. |
+| before_field | No | Insert before this field ID (within same parent). |
 
 Optional: format, options (for enum), rir_field_names, hidden, can_export, ui_configuration, prompt, context, matching
 
@@ -193,6 +196,14 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                         "parent_section": {"type": "string"},
                         "type": {"type": "string"},
                         "table_id": {"type": "string"},
+                        "after_field": {
+                            "type": "string",
+                            "description": "Insert after this field ID within the same parent section/table",
+                        },
+                        "before_field": {
+                            "type": "string",
+                            "description": "Insert before this field ID within the same parent section/table",
+                        },
                         "format": {"type": "string"},
                         "options": {"type": "array"},
                         "rir_field_names": {"type": "array"},
@@ -451,6 +462,20 @@ def _find_or_create_section(
     return section
 
 
+def _insert_field_into_list(
+    children: list[dict[str, Any]],
+    field_node: dict[str, Any],
+    after_field: str | None = None,
+    before_field: str | None = None,
+) -> None:
+    """Insert a field node into a children list, optionally relative to a specific field."""
+    position = _resolve_relative_field_position(children, after_field, before_field)
+    if position is not None:
+        children.insert(position, field_node)
+    else:
+        children.append(field_node)
+
+
 def _add_fields_to_content(
     content: list[dict[str, Any]],
     fields_to_add: list[dict[str, Any]],
@@ -462,6 +487,8 @@ def _add_fields_to_content(
     for spec in fields_to_add:
         parent_section = spec.get("parent_section")
         table_id = spec.get("table_id")
+        after_field = spec.get("after_field")
+        before_field = spec.get("before_field")
         field_node = _build_field_node(spec)
 
         section = _find_or_create_section(modified, parent_section)
@@ -474,13 +501,13 @@ def _add_fields_to_content(
                 if child.get("category") == "multivalue" and child.get("id") == table_id:
                     tuple_node = child.get("children", {})
                     if isinstance(tuple_node, dict) and "children" in tuple_node:
-                        tuple_node["children"].append(field_node)
+                        _insert_field_into_list(tuple_node["children"], field_node, after_field, before_field)
                         added.append(spec["id"])
                         break
         else:
             if "children" not in section:
                 section["children"] = []
-            section["children"].append(field_node)
+            _insert_field_into_list(section["children"], field_node, after_field, before_field)
             added.append(spec["id"])
 
     return modified, added

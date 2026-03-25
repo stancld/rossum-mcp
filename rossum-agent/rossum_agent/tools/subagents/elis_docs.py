@@ -290,7 +290,7 @@ class ElisDocsSubAgent(SubAgent):
             SubAgentConfig(
                 tool_name="search_elis_docs",
                 system_prompt=_SYSTEM_PROMPT,
-                tools=_TOOLS,  # type: ignore[arg-type] - BetaToolParam is structurally dict[str, Any]
+                tools=_TOOLS,  # ty:ignore[invalid-argument-type] - BetaToolParam is structurally dict[str, Any]
                 max_iterations=5,
             )
         )

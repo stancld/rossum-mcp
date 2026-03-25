@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [2.0.6] - 2026-03-25
+
+### Added
+- Added `after_field` and `before_field` parameters to `patch_schema` — fields can now be inserted relative to an existing sibling instead of only by numeric `position` or appending to the end; at most one positioning parameter (`position`, `after_field`, `before_field`) may be specified per call [#308](https://github.com/stancld/rossum-agents/pull/308)
+
 ## [2.0.5] - 2026-03-25
 
 ### Changed

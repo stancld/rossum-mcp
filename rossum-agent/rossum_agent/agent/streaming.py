@@ -259,7 +259,7 @@ async def process_stream_events(
                     yield step
                 break
 
-            event: MessageStreamEvent = item  # type: ignore[assignment]  # narrowed after _STREAM_END sentinel check
+            event: MessageStreamEvent = item  # ty:ignore[invalid-assignment] - narrowed after _STREAM_END sentinel check
             delta = process_stream_event(event, state.pending_tools, state.tool_calls)
             if not delta:
                 continue

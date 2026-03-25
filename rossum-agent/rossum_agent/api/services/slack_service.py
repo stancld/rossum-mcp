@@ -7,8 +7,8 @@ try:
     from slack_sdk.errors import SlackApiError
     from slack_sdk.web.async_client import AsyncWebClient
 except ImportError:
-    AsyncWebClient = None  # type: ignore[assignment, misc]
-    SlackApiError = None  # type: ignore[assignment, misc]
+    AsyncWebClient = None  # ty:ignore[invalid-assignment]
+    SlackApiError = None  # ty:ignore[invalid-assignment]
 
 logger = logging.getLogger(__name__)
 

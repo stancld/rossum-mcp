@@ -80,6 +80,8 @@ async def _patch_schema(
     node_data: SchemaNode | SchemaNodeUpdate | None = None,
     parent_id: str | None = None,
     position: int | None = None,
+    after_field: str | None = None,
+    before_field: str | None = None,
 ) -> dict:
     if operation not in ("add", "update", "remove"):
         raise ToolError(f"Invalid operation '{operation}'. Must be 'add', 'update', or 'remove'.")
@@ -103,6 +105,8 @@ async def _patch_schema(
             node_data=node_data_dict,
             parent_id=parent_id,
             position=position,
+            after_field=after_field,
+            before_field=before_field,
         )
 
     try:
@@ -145,7 +149,7 @@ async def _prune_schema_fields(
             # Sections explicitly listed in fields_to_keep are preserved as empty containers
             keep_empty_sections = set(fields_to_keep) & section_ids
         else:
-            remove_set = set(fields_to_remove) - section_ids  # type: ignore[arg-type]
+            remove_set = set(fields_to_remove) - section_ids  # ty:ignore[invalid-argument-type]
             keep_empty_sections = set()
 
         if not remove_set:

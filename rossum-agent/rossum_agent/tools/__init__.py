@@ -124,9 +124,9 @@ def execute_internal_tool(name: str, arguments: dict[str, object]) -> str:
         q = arguments.get("question")
         return ask_user_question(
             question=str(q) if q is not None else None,
-            options=arguments.get("options"),  # type: ignore[arg-type]
+            options=arguments.get("options"),  # ty:ignore[invalid-argument-type]
             multi_select=bool(arguments.get("multi_select", False)),
-            questions=arguments.get("questions"),  # type: ignore[arg-type]
+            questions=arguments.get("questions"),  # ty:ignore[invalid-argument-type]
         )
 
     if tool := _INTERNAL_TOOL_REGISTRY.get(name):

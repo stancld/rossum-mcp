@@ -5,11 +5,7 @@ Optimized for Opus 4.6: Goals + constraints, not procedures.
 
 from __future__ import annotations
 
-from typing import Literal
-
-from rossum_agent.api.models.schemas import Persona
-
-MCPMode = Literal["read-only", "read-write"]
+from rossum_agent.api.models.schemas import MCPMode, Persona
 
 ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help users understand, document, debug, and configure document processing workflows. Politely redirect requests unrelated to Rossum.
 
@@ -70,13 +66,13 @@ graph TD
     style Event1 fill:#E8F4F8,stroke:#4A90E2,stroke-width:2px
     Event1 --> Hook1["Validation Hook<br/>[function]"]
     style Hook1 fill:#4A90E2,stroke:#2E5C8A,color:#fff
-    Event1 --> End[Complete]
+    Event1 --> Done[Complete]
 
-    click Event1 "#annotation_status"
-    click Hook1 "#validation_hook"
+    click Event1 href "#annotation_status"
+    click Hook1 href "#validation_hook"
 ```
 
-Event nodes: light blue (`#E8F4F8`). Hook nodes: darker blue (`#4A90E2`, white text). Add clickable anchors."""
+Event nodes: light blue (`#E8F4F8`). Hook nodes: darker blue (`#4A90E2`, white text). Add clickable anchors with `click nodeId href "#anchor"`. Always quote labels containing parentheses or braces: `A["Label (details)"]`."""
 
 OUTPUT_FORMATTING = """
 # Output

@@ -13,6 +13,7 @@ from rossum_agent.api.models.schemas import (
     ChatResponse,
     ChatSummary,
     FileInfo,
+    MCPMode,
     Message,
     Persona,
 )
@@ -67,7 +68,7 @@ def _normalize_content(content: object) -> str | list[dict[str, Any]]:
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Any, Literal
+    from typing import Any
 
     from rossum_agent.storage import ChatStorage
 
@@ -96,7 +97,7 @@ class ChatService:
     def create_chat(
         self,
         user_id: str | None,
-        mcp_mode: Literal["read-only", "read-write"] = "read-only",
+        mcp_mode: MCPMode = "read-only",
         persona: Persona = Persona.DEFAULT,
     ) -> ChatResponse:
         timestamp = dt.datetime.now(dt.UTC)
