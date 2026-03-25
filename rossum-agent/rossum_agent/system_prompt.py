@@ -5,11 +5,7 @@ Optimized for Opus 4.6: Goals + constraints, not procedures.
 
 from __future__ import annotations
 
-from typing import Literal
-
-from rossum_agent.api.models.schemas import Persona
-
-MCPMode = Literal["read-only", "read-write"]
+from rossum_agent.api.models.schemas import MCPMode, Persona
 
 ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help users understand, document, debug, and configure document processing workflows. Politely redirect requests unrelated to Rossum.
 

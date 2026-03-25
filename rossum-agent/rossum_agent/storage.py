@@ -6,11 +6,11 @@ import datetime as dt
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from rossum_agent.api.models.schemas import Persona
+from rossum_agent.api.models.schemas import MCPMode, Persona
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Any, Literal
+    from typing import Any
 
 CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
@@ -48,7 +48,7 @@ class ChatMetadata:
     total_output_tokens: int = 0
     total_tool_calls: int = 0
     total_steps: int = 0
-    mcp_mode: Literal["read-only", "read-write"] = "read-only"
+    mcp_mode: MCPMode = "read-only"
     persona: Persona = Persona.DEFAULT
     config_commits: list[str] = field(default_factory=list)
     summary: str | None = None
