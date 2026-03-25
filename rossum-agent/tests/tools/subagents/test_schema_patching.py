@@ -688,6 +688,168 @@ class TestAddFieldsToContent:
         assert set(added) == {"field1", "field2"}
 
 
+class TestAddFieldsPositioning:
+    """Test _add_fields_to_content with after_field and before_field positioning."""
+
+    def test_add_field_after_existing_field(self):
+        """Test adding field after a specific field in a section."""
+        content = [
+            {
+                "id": "header",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint", "type": "string", "label": "F1"},
+                    {"id": "field3", "category": "datapoint", "type": "string", "label": "F3"},
+                ],
+            }
+        ]
+        fields_to_add = [
+            {
+                "id": "field2",
+                "label": "Field 2",
+                "parent_section": "header",
+                "type": "string",
+                "after_field": "field1",
+            }
+        ]
+
+        modified, added = _add_fields_to_content(content, fields_to_add)
+
+        assert [c["id"] for c in modified[0]["children"]] == ["field1", "field2", "field3"]
+        assert "field2" in added
+
+    def test_add_field_before_existing_field(self):
+        """Test adding field before a specific field in a section."""
+        content = [
+            {
+                "id": "header",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint", "type": "string", "label": "F1"},
+                    {"id": "field3", "category": "datapoint", "type": "string", "label": "F3"},
+                ],
+            }
+        ]
+        fields_to_add = [
+            {
+                "id": "field2",
+                "label": "Field 2",
+                "parent_section": "header",
+                "type": "string",
+                "before_field": "field3",
+            }
+        ]
+
+        modified, added = _add_fields_to_content(content, fields_to_add)
+
+        assert [c["id"] for c in modified[0]["children"]] == ["field1", "field2", "field3"]
+        assert "field2" in added
+
+    def test_add_field_after_nonexistent_field_appends(self):
+        """Test that after_field with nonexistent ID falls back to append."""
+        content = [
+            {
+                "id": "header",
+                "category": "section",
+                "children": [
+                    {"id": "field1", "category": "datapoint", "type": "string", "label": "F1"},
+                ],
+            }
+        ]
+        fields_to_add = [
+            {
+                "id": "field2",
+                "label": "Field 2",
+                "parent_section": "header",
+                "type": "string",
+                "after_field": "nonexistent",
+            }
+        ]
+
+        modified, added = _add_fields_to_content(content, fields_to_add)
+
+        assert [c["id"] for c in modified[0]["children"]] == ["field1", "field2"]
+        assert "field2" in added
+
+    def test_add_field_after_in_table(self):
+        """Test adding a table column after a specific column."""
+        content = [
+            {
+                "id": "items_section",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "row",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "col1", "category": "datapoint", "type": "string", "label": "C1"},
+                                {"id": "col3", "category": "datapoint", "type": "string", "label": "C3"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+        fields_to_add = [
+            {
+                "id": "col2",
+                "label": "Column 2",
+                "parent_section": "items_section",
+                "table_id": "line_items",
+                "type": "string",
+                "after_field": "col1",
+            }
+        ]
+
+        modified, added = _add_fields_to_content(content, fields_to_add)
+
+        tuple_children = modified[0]["children"][0]["children"]["children"]
+        assert [c["id"] for c in tuple_children] == ["col1", "col2", "col3"]
+        assert "col2" in added
+
+    def test_add_field_before_in_table(self):
+        """Test adding a table column before a specific column."""
+        content = [
+            {
+                "id": "items_section",
+                "category": "section",
+                "children": [
+                    {
+                        "id": "line_items",
+                        "category": "multivalue",
+                        "children": {
+                            "id": "row",
+                            "category": "tuple",
+                            "children": [
+                                {"id": "col1", "category": "datapoint", "type": "string", "label": "C1"},
+                                {"id": "col3", "category": "datapoint", "type": "string", "label": "C3"},
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+        fields_to_add = [
+            {
+                "id": "col2",
+                "label": "Column 2",
+                "parent_section": "items_section",
+                "table_id": "line_items",
+                "type": "string",
+                "before_field": "col3",
+            }
+        ]
+
+        modified, added = _add_fields_to_content(content, fields_to_add)
+
+        tuple_children = modified[0]["children"][0]["children"]["children"]
+        assert [c["id"] for c in tuple_children] == ["col1", "col2", "col3"]
+        assert "col2" in added
+
+
 class TestUpdateFieldsInContent:
     """Test _update_fields_in_content function."""
 

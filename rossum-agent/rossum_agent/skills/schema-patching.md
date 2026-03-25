@@ -22,6 +22,8 @@ Each change object in the `changes` array:
 | `type` | For add | string, number, date, enum |
 | `label` | No | Defaults to id |
 | `table_id` | For table | Multivalue ID if adding column to table |
+| `after_field` | No | Insert after this field ID (within same parent). Without this, fields append to end. |
+| `before_field` | No | Insert before this field ID (within same parent). |
 
 ## Optional Field Properties
 
