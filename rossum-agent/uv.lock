@@ -2639,7 +2639,7 @@ wheels = [
 [[package]]
 name = "rossum-mcp"
 version = "2.1.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#fb52994f885714e246d256f77bfa707cce07e32d" }
+source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#5b4ce461e1fc8e366cf206bf50c01395ce1252f3" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },
