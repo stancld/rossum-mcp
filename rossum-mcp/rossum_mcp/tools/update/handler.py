@@ -70,7 +70,7 @@ def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
 
     # --- Schemas ---
     @mcp.tool(
-        description="Patch schema nodes (add/update/remove). Prereq: load schema-patching skill. Ops: add (parent_id + node_data), update (node_id + node_data), remove (node_id only). Tuple datapoints require explicit id; section-level datapoints use the passed node_id.",
+        description="Patch schema nodes (add/update/remove). Prereq: load schema-patching skill. Ops: add (parent_id + node_data), update (node_id + node_data), remove (node_id only). Tuple datapoints require explicit id; section-level datapoints use the passed node_id. Use after_field/before_field to control insertion position.",
         tags={"schemas", "write"},
         annotations={"readOnlyHint": False},
     )
@@ -81,8 +81,12 @@ def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
         node_data: SchemaNode | SchemaNodeUpdate | None = None,
         parent_id: str | None = None,
         position: int | None = None,
+        after_field: str | None = None,
+        before_field: str | None = None,
     ) -> dict:
-        return await _patch_schema(client, schema_id, operation, node_id, node_data, parent_id, position)
+        return await _patch_schema(
+            client, schema_id, operation, node_id, node_data, parent_id, position, after_field, before_field
+        )
 
     @mcp.tool(
         description="Remove many fields at once. Provide fields_to_keep (keep only these leaf IDs; parent containers preserved automatically; list section IDs to preserve them as empty containers) or fields_to_remove (remove these leaf IDs). Returns {removed_fields, remaining_fields}.",
