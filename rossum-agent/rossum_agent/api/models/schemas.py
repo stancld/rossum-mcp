@@ -15,10 +15,13 @@ class Persona(StrEnum):
     CAUTIOUS = "cautious"
 
 
+MCPMode = Literal["read-only", "read-write"]
+
+
 class CreateChatRequest(BaseModel):
     """Request body for creating a new chat session."""
 
-    mcp_mode: Literal["read-only", "read-write"] = "read-only"
+    mcp_mode: MCPMode = "read-only"
     persona: Persona = Persona.DEFAULT
 
 
@@ -164,7 +167,7 @@ class MessageRequest(BaseModel):
         description="Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.",
     )
     rossum_url: str | None = Field(default=None, description="Optional Rossum app URL for context")
-    mcp_mode: Literal["read-only", "read-write"] | None = Field(
+    mcp_mode: MCPMode | None = Field(
         default=None,
         description="MCP mode to use for this message and all subsequent messages. If not specified, uses the chat's current mode.",
     )

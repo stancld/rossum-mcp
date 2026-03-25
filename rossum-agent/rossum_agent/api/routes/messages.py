@@ -9,7 +9,7 @@ import logging
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from anthropic.types import TextBlock
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -32,6 +32,7 @@ from rossum_agent.api.models.schemas import (
     ErrorResponse,
     FileCreatedEvent,
     ImageContent,
+    MCPMode,
     MessageRequest,
     Persona,
     StepEvent,
@@ -192,7 +193,7 @@ async def _stream_agent_response(
     history: list[dict],
     credentials: RossumCredentials,
     agent_service: AgentService,
-    mcp_mode: Literal["read-only", "read-write"],
+    mcp_mode: MCPMode,
     persona: Persona,
     images: list[ImageContent] | None,
     documents: list[DocumentContent] | None,
@@ -242,7 +243,7 @@ async def _watch_disconnect(request: Request, chat_id: str, agent_service: Agent
         logger.debug(f"Disconnect watcher for chat {chat_id} cancelled")
 
 
-def _resolve_mcp_mode(message: MessageRequest, chat_data: ChatData) -> Literal["read-only", "read-write"]:
+def _resolve_mcp_mode(message: MessageRequest, chat_data: ChatData) -> MCPMode:
     """Resolve the effective MCP mode from the message and chat metadata."""
     if message.mcp_mode is not None:
         chat_data.metadata.mcp_mode = message.mcp_mode

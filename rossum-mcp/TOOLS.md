@@ -572,7 +572,7 @@ Creates a new email template.
 
 Get the current MCP operation mode (read-only or read-write).
 
-**Returns:** `{"mode": "read-only" | "read-write"}`
+**Returns:** `{"mode": "read-only"}` or `{"mode": "read-write"}`
 
 ---
 
