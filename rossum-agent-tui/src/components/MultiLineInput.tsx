@@ -39,6 +39,37 @@ function isModifierKey(key: {
   return key.tab || key.ctrl || key.meta;
 }
 
+// eslint-disable-next-line no-control-regex
+const KITTY_CTRL_RE = /^\x1b\[(\d+);5u$/;
+
+/** Try to handle a Kitty CSI-u sequence. Returns true if consumed. */
+function handleKittySequence(
+  str: string,
+  handlers: {
+    onNewLine: () => void;
+    onEscape?: () => void;
+    onCtrlKey?: (key: string) => void;
+  },
+): boolean {
+  // Shift+Enter, Ctrl+Enter, or Alt+Enter — insert newline
+  if (str === "\x1b[13;2u" || str === "\x1b[13;5u" || str === "\x1b\r") {
+    handlers.onNewLine();
+    return true;
+  }
+  // Escape (\x1b[27u)
+  if (str === "\x1b[27u") {
+    handlers.onEscape?.();
+    return true;
+  }
+  // Ctrl+<key> (\x1b[<code>;5u)
+  const ctrlMatch = str.match(KITTY_CTRL_RE);
+  if (ctrlMatch) {
+    handlers.onCtrlKey?.(String.fromCharCode(parseInt(ctrlMatch[1]!, 10)));
+    return true;
+  }
+  return false;
+}
+
 function getLineLen(lines: string[], row: number): number {
   return (lines[row] ?? "").length;
 }
@@ -64,6 +95,13 @@ export const MultiLineInput = forwardRef<
   const { stdin } = useStdin();
   const { stdout } = useStdout();
 
+  // Refs for immediate cursor tracking. Paste handlers read these to avoid
+  // stale closures when multiple stdin chunks arrive before React re-renders.
+  const cursorRowRef = useRef(0);
+  const cursorColRef = useRef(0);
+  cursorRowRef.current = cursorRow;
+  cursorColRef.current = cursorCol;
+
   // Notify parent when text changes via useEffect (React 18 batches setState
   // updaters, so capturing values from inside setLines is unreliable).
   const onChangeRef = useRef(onChange);
@@ -88,8 +126,11 @@ export const MultiLineInput = forwardRef<
         const newLines = newText.split("\n");
         setLines(newLines);
         const lastRow = newLines.length - 1;
+        const lastCol = newLines[lastRow]!.length;
         setCursorRow(lastRow);
-        setCursorCol(newLines[lastRow]!.length);
+        setCursorCol(lastCol);
+        cursorRowRef.current = lastRow;
+        cursorColRef.current = lastCol;
       },
     }),
     [],
@@ -99,69 +140,70 @@ export const MultiLineInput = forwardRef<
     setLines([""]);
     setCursorRow(0);
     setCursorCol(0);
+    cursorRowRef.current = 0;
+    cursorColRef.current = 0;
   }, []);
 
-  const handleMultiLinePaste = useCallback(
-    (pastedLines: string[]) => {
-      setLines((prev) => {
-        const before = prev.slice(0, cursorRow);
-        const currentLine = prev[cursorRow] ?? "";
-        const leftOfCursor = currentLine.slice(0, cursorCol);
-        const rightOfCursor = currentLine.slice(cursorCol);
-
-        const merged: string[] = [...before];
-        for (let i = 0; i < pastedLines.length; i++) {
-          if (i === 0) {
-            merged.push(leftOfCursor + pastedLines[i]!);
-          } else if (i === pastedLines.length - 1) {
-            merged.push(pastedLines[i]! + rightOfCursor);
-          } else {
-            merged.push(pastedLines[i]!);
-          }
-        }
-        merged.push(...prev.slice(cursorRow + 1));
-
-        const newRow = before.length + pastedLines.length - 1;
-        const newCol = pastedLines[pastedLines.length - 1]!.length;
-        setTimeout(() => {
-          setCursorRow(newRow);
-          setCursorCol(newCol);
-        }, 0);
-
-        return merged;
-      });
-    },
-    [cursorRow, cursorCol],
-  );
-
-  const handleSingleLinePaste = useCallback(
-    (str: string) => {
-      setLines((prev) => {
-        const updated = [...prev];
-        const currentLine = updated[cursorRow] ?? "";
-        updated[cursorRow] =
-          currentLine.slice(0, cursorCol) + str + currentLine.slice(cursorCol);
-        setTimeout(() => {
-          setCursorCol(cursorCol + str.length);
-        }, 0);
-        return updated;
-      });
-    },
-    [cursorRow, cursorCol],
-  );
-
-  const handleNewLine = useCallback(() => {
+  const handleMultiLinePaste = useCallback((pastedLines: string[]) => {
+    const row = cursorRowRef.current;
+    const col = cursorColRef.current;
     setLines((prev) => {
-      const currentLine = prev[cursorRow] ?? "";
-      const before = currentLine.slice(0, cursorCol);
-      const after = currentLine.slice(cursorCol);
+      const before = prev.slice(0, row);
+      const currentLine = prev[row] ?? "";
+      const leftOfCursor = currentLine.slice(0, col);
+      const rightOfCursor = currentLine.slice(col);
+
+      const merged: string[] = [...before];
+      for (let i = 0; i < pastedLines.length; i++) {
+        if (i === 0) {
+          merged.push(leftOfCursor + pastedLines[i]!);
+        } else if (i === pastedLines.length - 1) {
+          merged.push(pastedLines[i]! + rightOfCursor);
+        } else {
+          merged.push(pastedLines[i]!);
+        }
+      }
+      merged.push(...prev.slice(row + 1));
+      return merged;
+    });
+    const newRow = row + pastedLines.length - 1;
+    const newCol = pastedLines[pastedLines.length - 1]!.length;
+    cursorRowRef.current = newRow;
+    cursorColRef.current = newCol;
+    setCursorRow(newRow);
+    setCursorCol(newCol);
+  }, []);
+
+  const handleSingleLinePaste = useCallback((str: string) => {
+    const row = cursorRowRef.current;
+    const col = cursorColRef.current;
+    setLines((prev) => {
       const updated = [...prev];
-      updated.splice(cursorRow, 1, before, after);
+      const currentLine = updated[row] ?? "";
+      updated[row] = currentLine.slice(0, col) + str + currentLine.slice(col);
       return updated;
     });
-    setCursorRow((r) => r + 1);
+    const newCol = col + str.length;
+    cursorColRef.current = newCol;
+    setCursorCol(newCol);
+  }, []);
+
+  const handleNewLine = useCallback(() => {
+    const row = cursorRowRef.current;
+    const col = cursorColRef.current;
+    setLines((prev) => {
+      const currentLine = prev[row] ?? "";
+      const before = currentLine.slice(0, col);
+      const after = currentLine.slice(col);
+      const updated = [...prev];
+      updated.splice(row, 1, before, after);
+      return updated;
+    });
+    cursorRowRef.current = row + 1;
+    cursorColRef.current = 0;
+    setCursorRow(row + 1);
     setCursorCol(0);
-  }, [cursorRow, cursorCol]);
+  }, []);
 
   const handleSubmit = useCallback(() => {
     const trimmed = lines.join("\n").trim();
@@ -191,37 +233,29 @@ export const MultiLineInput = forwardRef<
   useEffect(() => {
     if (!isActive || !stdin) return;
 
+    const kittyHandlers = {
+      onNewLine: handleNewLine,
+      onEscape,
+      onCtrlKey,
+    };
+
     const onData = (data: Buffer) => {
-      const str = data.toString("utf-8");
+      let str = data.toString("utf-8");
 
-      // Kitty-protocol Shift+Enter (\x1b[13;2u), Ctrl+Enter (\x1b[13;5u),
-      // or Alt+Enter (\x1b\r) — all insert a newline
-      if (str === "\x1b[13;2u" || str === "\x1b[13;5u" || str === "\x1b\r") {
-        handleNewLine();
+      if (handleKittySequence(str, kittyHandlers)) {
         consumedRef.current = true;
         return;
       }
 
-      // Kitty-protocol Escape (\x1b[27u) — Ink can't parse CSI-u, so we
-      // handle it directly instead of relying on useInput key.escape.
-      if (str === "\x1b[27u") {
-        onEscape?.();
-        consumedRef.current = true;
-        return;
-      }
-
-      // Kitty-protocol Ctrl+<key> (\x1b[<code>;5u) — Ink can't parse CSI-u,
-      // so useInput Ctrl handlers won't fire. Decode and forward to parent.
+      // Strip bracketed paste markers (\x1b[200~ start, \x1b[201~ end).
+      // Terminals may send these when bracketed paste mode was left enabled
+      // (e.g., from a prior shell session or terminal configuration).
       // eslint-disable-next-line no-control-regex
-      const ctrlMatch = str.match(/^\x1b\[(\d+);5u$/);
-      if (ctrlMatch) {
-        onCtrlKey?.(String.fromCharCode(parseInt(ctrlMatch[1]!, 10)));
-        consumedRef.current = true;
-        return;
-      }
+      str = str.replace(/\x1b\[200~/g, "").replace(/\x1b\[201~/g, "");
 
-      // Ignore single-char inputs and control sequences — handled by useInput
-      if (str.length <= 1 || str.startsWith("\x1b")) return;
+      // Ignore empty (marker-only chunks), single-char inputs, and
+      // control sequences — handled by useInput
+      if (!str || str.length <= 1 || str.startsWith("\x1b")) return;
 
       if (str.includes("\n") || str.includes("\r")) {
         handleMultiLinePaste(str.split(/\r\n|\r|\n/));
@@ -237,9 +271,9 @@ export const MultiLineInput = forwardRef<
   }, [
     isActive,
     stdin,
+    handleNewLine,
     handleMultiLinePaste,
     handleSingleLinePaste,
-    handleNewLine,
     onEscape,
     onCtrlKey,
   ]);
