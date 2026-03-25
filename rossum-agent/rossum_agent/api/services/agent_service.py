@@ -537,7 +537,7 @@ class AgentService:
         chat_run_state.cautious_unconsumed_preapprovals.clear()
         ctx_token = set_context(agent_ctx)
 
-        system_prompt = self._build_system_prompt(rossum_url, persona)
+        system_prompt = self._build_system_prompt(rossum_url, persona, mcp_mode)
         system_prompt = self._inject_preapproval_into_system_prompt(
             system_prompt, agent_ctx.cautious_preapproved_writes
         )
@@ -638,8 +638,12 @@ class AgentService:
             await self._clear_run(chat_id, run_id)
 
     @staticmethod
-    def _build_system_prompt(rossum_url: str | None, persona: Persona = Persona.DEFAULT) -> str:
-        system_prompt = get_system_prompt(persona)
+    def _build_system_prompt(
+        rossum_url: str | None,
+        persona: Persona = Persona.DEFAULT,
+        mcp_mode: Literal["read-only", "read-write"] = "read-only",
+    ) -> str:
+        system_prompt = get_system_prompt(persona, mcp_mode)
         url_context = extract_url_context(rossum_url)
         if not url_context.is_empty():
             context_section = format_context_for_prompt(url_context)
