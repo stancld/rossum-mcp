@@ -14,6 +14,7 @@ interface MultiLineInputProps {
   placeholder?: string;
   onChange?: (text: string) => void;
   onCursorChange?: (row: number, col: number) => void;
+  onEscape?: () => void;
 }
 
 export interface MultiLineInputHandle {
@@ -45,7 +46,7 @@ export const MultiLineInput = forwardRef<
   MultiLineInputHandle,
   MultiLineInputProps
 >(function MultiLineInput(
-  { onSubmit, isActive, placeholder, onChange, onCursorChange },
+  { onSubmit, isActive, placeholder, onChange, onCursorChange, onEscape },
   ref,
 ) {
   const [lines, setLines] = useState<string[]>([""]);
@@ -140,12 +141,65 @@ export const MultiLineInput = forwardRef<
     [cursorRow, cursorCol],
   );
 
-  // Multi-char paste bypasses useInput, so we handle it via raw stdin
+  const handleNewLine = useCallback(() => {
+    setLines((prev) => {
+      const currentLine = prev[cursorRow] ?? "";
+      const before = currentLine.slice(0, cursorCol);
+      const after = currentLine.slice(cursorCol);
+      const updated = [...prev];
+      updated.splice(cursorRow, 1, before, after);
+      return updated;
+    });
+    setCursorRow((r) => r + 1);
+    setCursorCol(0);
+  }, [cursorRow, cursorCol]);
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = lines.join("\n").trim();
+    if (!trimmed) return;
+    onSubmit(trimmed);
+    reset();
+  }, [lines, onSubmit, reset]);
+
+  // Track when the raw stdin handler consumed an event so useInput skips it
+  const consumedRef = useRef(false);
+
+  // Enable Kitty keyboard protocol (flag 1: disambiguate escape codes) so the
+  // terminal sends \x1b[13;2u for Shift+Enter instead of plain \r.
+  // Terminals that don't support it silently ignore the sequence.
+  useEffect(() => {
+    if (!isActive || !stdout) return;
+    stdout.write("\x1b[>1u");
+    return () => {
+      stdout.write("\x1b[<u");
+    };
+  }, [isActive, stdout]);
+
+  // Raw stdin handler for paste and newline key combos that Ink can't parse.
+  // Most terminals send identical \r for Enter and Shift+Enter, so useInput
+  // cannot distinguish them. We intercept Kitty-protocol Shift+Enter and
+  // Alt+Enter here instead.
   useEffect(() => {
     if (!isActive || !stdin) return;
 
     const onData = (data: Buffer) => {
       const str = data.toString("utf-8");
+
+      // Kitty-protocol Shift+Enter (\x1b[13;2u), Ctrl+Enter (\x1b[13;5u),
+      // or Alt+Enter (\x1b\r) — all insert a newline
+      if (str === "\x1b[13;2u" || str === "\x1b[13;5u" || str === "\x1b\r") {
+        handleNewLine();
+        consumedRef.current = true;
+        return;
+      }
+
+      // Kitty-protocol Escape (\x1b[27u) — Ink can't parse CSI-u, so we
+      // handle it directly instead of relying on useInput key.escape.
+      if (str === "\x1b[27u") {
+        onEscape?.();
+        consumedRef.current = true;
+        return;
+      }
 
       // Ignore single-char inputs and control sequences — handled by useInput
       if (str.length <= 1 || str.startsWith("\x1b")) return;
@@ -161,27 +215,14 @@ export const MultiLineInput = forwardRef<
     return () => {
       stdin.off("data", onData);
     };
-  }, [isActive, stdin, handleMultiLinePaste, handleSingleLinePaste]);
-
-  const handleSubmit = useCallback(() => {
-    const trimmed = lines.join("\n").trim();
-    if (!trimmed) return;
-    onSubmit(trimmed);
-    reset();
-  }, [lines, onSubmit, reset]);
-
-  const handleNewLine = useCallback(() => {
-    setLines((prev) => {
-      const currentLine = prev[cursorRow] ?? "";
-      const before = currentLine.slice(0, cursorCol);
-      const after = currentLine.slice(cursorCol);
-      const updated = [...prev];
-      updated.splice(cursorRow, 1, before, after);
-      return updated;
-    });
-    setCursorRow((r) => r + 1);
-    setCursorCol(0);
-  }, [cursorRow, cursorCol]);
+  }, [
+    isActive,
+    stdin,
+    handleMultiLinePaste,
+    handleSingleLinePaste,
+    handleNewLine,
+    onEscape,
+  ]);
 
   const handleBackspace = useCallback(() => {
     if (cursorCol > 0) {
@@ -259,11 +300,20 @@ export const MultiLineInput = forwardRef<
 
   useInput(
     (input, key) => {
+      // Skip if the raw stdin handler already consumed this event
+      if (consumedRef.current) {
+        consumedRef.current = false;
+        return;
+      }
       if (key.return) return key.shift ? handleNewLine() : handleSubmit();
+      // Ctrl+J sends \n which Ink parses as name:'enter' (not 'return')
+      if (input === "\n") return handleNewLine();
       if (key.backspace || key.delete) return handleBackspace();
       if (isArrowKey(key)) return handleArrowKeys(key);
       if (isModifierKey(key)) return;
-      if (input.length === 1) handleCharInput(input);
+      // Only insert printable characters — filter control chars (\r, \n, etc.)
+      if (input.length === 1 && input.charCodeAt(0) >= 0x20)
+        handleCharInput(input);
     },
     { isActive },
   );

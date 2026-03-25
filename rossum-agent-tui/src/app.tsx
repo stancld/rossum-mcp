@@ -547,14 +547,18 @@ export function App({ config }: AppProps) {
     { isActive: mode === "browse" },
   );
 
+  const handleEscapeFromInput = useCallback(() => {
+    setMode("browse");
+    if (items.length > 0) {
+      setSelectedIndex(items.length - 1);
+    }
+  }, [items.length]);
+
+  // Legacy Escape handling for terminals without Kitty protocol support.
+  // Kitty-protocol Escape (\x1b[27u) is handled via onEscape prop instead.
   useInput(
     (_input, key) => {
-      if (key.escape) {
-        setMode("browse");
-        if (items.length > 0) {
-          setSelectedIndex(items.length - 1);
-        }
-      }
+      if (key.escape) handleEscapeFromInput();
     },
     { isActive: mode === "input" },
   );
@@ -662,6 +666,7 @@ export function App({ config }: AppProps) {
           commands={state.pendingQuestion ? [] : commands}
           onHeightChange={setInputAreaRows}
           pendingImageCount={pendingImages.length}
+          onEscape={handleEscapeFromInput}
         />
       )}
       {state.tasks.length > 0 && <TaskList tasks={state.tasks} />}
