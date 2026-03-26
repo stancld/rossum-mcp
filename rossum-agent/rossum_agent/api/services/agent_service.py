@@ -406,6 +406,11 @@ class AgentService:
         state = self._chat_runs.get(chat_id)
         return state.output_dir if state else None
 
+    def get_last_memory(self, chat_id: str) -> AgentMemory | None:
+        """Get the last memory for a chat's run without clearing it."""
+        state = self._chat_runs.get(chat_id)
+        return state.last_memory if state else None
+
     def pop_last_memory(self, chat_id: str) -> AgentMemory | None:
         """Get and clear the last memory for a chat's run."""
         state = self._chat_runs.get(chat_id)
@@ -591,6 +596,9 @@ class AgentService:
                                 total_steps = step.step_number
                                 total_input_tokens = agent.tokens.total_input
                                 total_output_tokens = agent.tokens.total_output
+                                # Update memory after each completed step so intermediate
+                                # saves in the route layer can persist progress.
+                                chat_run_state.last_memory = agent.memory
 
                         for sub_event in self._drain_queue(req_ctx.event_queue):
                             yield sub_event
