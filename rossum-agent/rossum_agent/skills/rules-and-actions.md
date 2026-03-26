@@ -29,6 +29,6 @@ To preview which actions would trigger, call `execute_python` with `evaluate_rul
 | Constraint | Detail |
 |------------|--------|
 | No hand-written rules | Always generate via `suggest_rule` |
-| One rule per check | One `suggest_rule` + one `create_rule` per independent validation |
+| One rule per check | One `suggest_rule` + one `create_rule` per independent validation. The API allows at most one action of each type per rule — multiple checks require separate rules. |
 | Concise `user_query` | Field, condition, error message — one sentence |
 | `queue_ids` required | Scope every rule to at least one queue |

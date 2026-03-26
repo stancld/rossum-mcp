@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Updated `rossum-kb.json` with latest Knowledge Base scrape (2026-03-26) — 1 new article ("Customer & Partner User Setup"), 186 articles updated, +3.7% content growth
+- Rules & Actions skill: Clarified one-action-per-type API constraint — multiple independent checks now explicitly require separate rules
 
 ### Fixed
 - `run_jq` tool now accepts top-level JSON arrays (lists) as `data` input — previously only dicts and strings were supported, causing failures on annotation content and other list-shaped API responses [#317](https://github.com/stancld/rossum-agents/pull/317)
