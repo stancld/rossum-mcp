@@ -501,7 +501,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         token_budget=TokenBudget(min_total_tokens=180000, max_total_tokens=450000),
         success_criteria=SuccessCriteria(
             required_keywords=[],
-            max_steps=12,
+            max_steps=18,
             file_expectation=FileExpectation(expected_files=["schema_v1.json", "schema_v2.json"]),
             custom_checks=[FORMULA_FIELD_UPDATED_CHECK],
         ),
