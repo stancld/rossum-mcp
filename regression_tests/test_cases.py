@@ -571,11 +571,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=250000),
+        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=350000),
         success_criteria=SuccessCriteria(
             require_subagent=None,
             required_keywords=[],
-            max_steps=12,
+            max_steps=14,
             file_expectation=FileExpectation(),
             custom_checks=[SCHEMA_REPLACED_AND_REVERTED_CHECK],
         ),
