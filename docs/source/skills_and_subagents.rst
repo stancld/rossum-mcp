@@ -56,6 +56,8 @@ Available Skills
      - TxScript language reference for formula fields, serverless functions, and rule trigger conditions
    * - ``lookup-fields``
      - Create lookup fields matching against Master Data Hub datasets
+   * - ``master-data-hub``
+     - Explore and query MDH datasets: list datasets, search entries, debug matching issues
    * - ``document-testing``
      - Generate mock PDFs, upload to queues, verify extraction, test hooks end-to-end
    * - ``automation-setup``

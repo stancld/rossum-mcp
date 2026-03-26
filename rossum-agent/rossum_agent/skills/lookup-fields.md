@@ -85,7 +85,7 @@ Lookup fields return a match if and only if the result is unequivocal — exactl
 
 ## Debugging Non-Matches
 
-**First step**: Always check the connected dataset from MDH — use `get_lookup_dataset_raw_values` and `query_lookup_dataset` to verify data exists and columns match expectations.
+**First step**: Always check the connected dataset from MDH — load `master-data-hub` skill and use `list_datasets()`, `search_dataset(...)` to verify data exists and columns match expectations. For bulk jq analysis, use `get_lookup_dataset_raw_values` + `query_lookup_dataset`.
 
 A lookup field without a `matching` property or with empty `options` is **not broken** — it simply hasn't been configured yet. Use `suggest_lookup_field` to add the configuration. Do not report missing `matching` or empty `options` as errors.
 

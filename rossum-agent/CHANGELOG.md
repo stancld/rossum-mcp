@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Intermediate chat history saves after each completed agent step — progress is persisted even if the stream is interrupted mid-run [#311](https://github.com/stancld/rossum-agents/pull/311)
+- New `master-data-hub` skill with `list_datasets` and `search_dataset` helpers for exploring and querying MDH datasets directly from `execute_python` [#312](https://github.com/stancld/rossum-agents/pull/312)
 
 ### Fixed
 - Schema-patching skill: Agent attempted direct `patch_schema` calls without loading the tool first — restructured the skill prompt to place `load_tool` inside the code example and added explicit failure-mode note [#313](https://github.com/stancld/rossum-agents/pull/313)
