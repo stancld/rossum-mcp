@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- `run_jq` tool now accepts top-level JSON arrays (lists) as `data` input — previously only dicts and strings were supported, causing failures on annotation content and other list-shaped API responses [#317](https://github.com/stancld/rossum-agents/pull/317)
+
 ## [1.8.0] - 2026-03-26
 
 ### Added
