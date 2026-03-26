@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.8.0] - 2026-03-26
 
 ### Added
 - Intermediate chat history saves after each completed agent step — progress is persisted even if the stream is interrupted mid-run [#311](https://github.com/stancld/rossum-agents/pull/311)
