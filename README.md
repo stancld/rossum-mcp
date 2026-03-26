@@ -13,6 +13,7 @@
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 [![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
+[![npm - rossum-agent-client](https://img.shields.io/npm/v/rossum-agent-client?label=rossum-agent-client)](https://www.npmjs.com/package/rossum-agent-client)
 
 [![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
 [![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
@@ -281,6 +282,10 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 | `formula-fields` | Create/configure formula fields with TxScript |
 | `reasoning-fields` | Create AI-powered reasoning fields with prompt + context |
 | `lookup-fields` | Create/configure lookup fields backed by Master Data Hub datasets |
+| `master-data-hub` | Configure and manage Master Data Hub datasets |
+| `document-testing` | End-to-end document extraction testing workflows |
+| `automation-setup` | Set up automation pipelines for document processing |
+| `customer-email` | Draft client-facing emails about Rossum topics |
 
 **Sub-Agents** - Opus-powered components for complex iterative tasks:
 
@@ -326,7 +331,7 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [ros
 
 - [Rossum API](https://rossum.app/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
-- [Rossum SDK](https://github.com/rossumai/rossum-sdk) - Python SDK
+- [Rossum API SDK](https://github.com/rossumai/rossum-api) - Python SDK
 - [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
 
 
@@ -350,7 +355,7 @@ See [regression_tests/README.md](regression_tests/README.md) for the agent quali
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## Contributing
 

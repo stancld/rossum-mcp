@@ -166,7 +166,7 @@ The agent provides internal tools and access to 30 MCP tools via dynamic loading
 <details>
 <summary><strong>Dynamic MCP Tool Loading</strong></summary>
 
-Tools are loaded on-demand to reduce context usage. Use `load_tool` to load tools by name:
+Tools are loaded on-demand to reduce context usage. Categories are auto-loaded based on keywords in the user's message:
 
 | Category | Description |
 |----------|-------------|
@@ -181,8 +181,6 @@ Tools are loaded on-demand to reduce context usage. Use `load_tool` to load tool
 | `rules` | Schema validation rules |
 | `users` | User and role management |
 | `workspaces` | Workspace management |
-
-Categories are auto-loaded based on keywords in the user's message.
 
 </details>
 
