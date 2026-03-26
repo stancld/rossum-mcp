@@ -226,7 +226,7 @@ def create_live_agent(
             token_ref = set_context(ctx)
 
             client = create_async_bedrock_client()
-            system_prompt = get_system_prompt(persona=case.persona)
+            system_prompt = get_system_prompt(persona=case.persona, mcp_mode=case.mode)
 
             if case.rossum_url:
                 url_context = extract_url_context(case.rossum_url)

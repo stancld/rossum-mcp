@@ -11,6 +11,7 @@ import json
 import logging
 import random
 import string
+import unicodedata
 from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -61,6 +62,46 @@ _ITEM_DESCRIPTIONS = [
     "Cable management kit",
 ]
 _CURRENCIES = ["USD", "EUR", "GBP", "CZK"]
+
+# Unicode font support — fpdf2's built-in Helvetica only supports Latin-1 (ISO-8859-1).
+# Characters like Czech "Č" or "ě" (Latin Extended-A) require a TTF font.
+_UNICODE_FONT_CANDIDATES: list[dict[str, str]] = [
+    {  # DejaVu Sans — common on Debian/Ubuntu Docker images
+        "": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "B": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "I": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
+    },
+    {  # macOS — Arial from Supplemental
+        "": "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "B": "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "I": "/System/Library/Fonts/Supplemental/Arial Italic.ttf",
+    },
+]
+
+
+def _detect_unicode_font() -> tuple[str, dict[str, str]]:
+    """Find a Unicode TTF font for PDF rendering. Falls back to Helvetica (Latin-1 only)."""
+    for family in _UNICODE_FONT_CANDIDATES:
+        regular = family.get("")
+        if not regular or not Path(regular).is_file():
+            continue
+        paths: dict[str, str] = {"": regular}
+        for style in ("B", "I"):
+            path = family.get(style)
+            # Use regular as fallback for missing bold/italic variants
+            paths[style] = path if path and Path(path).is_file() else regular
+        return "UniFont", paths
+    return "Helvetica", {}
+
+
+_FONT_NAME, _FONT_PATHS = _detect_unicode_font()
+
+
+def _sanitize_latin1(text: str) -> str:
+    """Strip diacritics and replace non-Latin-1 chars for Helvetica compatibility."""
+    nfkd = unicodedata.normalize("NFKD", text)
+    stripped = "".join(c for c in nfkd if unicodedata.category(c) != "Mn")
+    return stripped.encode("latin-1", errors="replace").decode("latin-1")
 
 
 def _random_date(days_back: int = 30) -> date:
@@ -517,17 +558,17 @@ def _render_header_section(
 
     # Left column: vendor info
     pdf.set_xy(left_col_x, y_start)
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(_FONT_NAME, "B", 11)
     pdf.cell(100, 6, "From:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
     _render_field_list(pdf, _VENDOR_FIELDS, header_values, label_map, x=left_col_x)
     left_end_y = pdf.get_y()
 
     # Right column: document ID, dates
     pdf.set_xy(right_col_x, y_start)
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(_FONT_NAME, "B", 11)
     pdf.cell(80, 6, "Details:")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
     right_y = y_start + 6
     for df in _DOC_FIELDS:
         if df in header_values:
@@ -547,9 +588,9 @@ def _render_buyer_section(
     """Render buyer/recipient info block."""
     if not any(bf in header_values for bf in _BUYER_FIELDS):
         return
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(_FONT_NAME, "B", 11)
     pdf.cell(0, 6, "Bill To:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
     _render_field_list(pdf, _BUYER_FIELDS, header_values, label_map)
     pdf.ln(4)
 
@@ -563,14 +604,14 @@ def _render_line_items_table(
     if not line_items or not line_item_fields:
         return
 
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_font(_FONT_NAME, "B", 10)
     pdf.cell(0, 8, "Line Items", new_x="LMARGIN", new_y="NEXT")
 
     n_cols = len(line_item_fields)
     col_width = 190 / max(n_cols, 1)
 
     # Header row
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font(_FONT_NAME, "B", 9)
     pdf.set_fill_color(230, 230, 230)
     for f in line_item_fields:
         lbl = f.get("label", f.get("id", ""))
@@ -578,7 +619,7 @@ def _render_line_items_table(
     pdf.ln()
 
     # Data rows
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(_FONT_NAME, "", 9)
     for item in line_items:
         for f in line_item_fields:
             fid = f.get("id", "")
@@ -598,18 +639,18 @@ def _render_totals_section(
     if not any(tf in header_values for tf in _TOTAL_FIELDS):
         return
 
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(_FONT_NAME, "B", 11)
     pdf.cell(0, 8, "Totals", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
     for tf in _TOTAL_FIELDS:
         if tf in header_values:
             lbl = label_map.get(tf, tf)
             is_total = tf in ("amount_total", "amount_due")
             if is_total:
-                pdf.set_font("Helvetica", "B", 11)
+                pdf.set_font(_FONT_NAME, "B", 11)
             pdf.cell(0, 6, f"{lbl}: {header_values[tf]}", new_x="LMARGIN", new_y="NEXT")
             if is_total:
-                pdf.set_font("Helvetica", "", 10)
+                pdf.set_font(_FONT_NAME, "", 10)
     pdf.ln(4)
 
 
@@ -621,9 +662,9 @@ def _render_payment_section(
     """Render payment details block."""
     if not any(pf in header_values for pf in _PAYMENT_FIELDS):
         return
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(_FONT_NAME, "B", 11)
     pdf.cell(0, 8, "Payment Details", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
     _render_field_list(pdf, _PAYMENT_FIELDS, header_values, label_map)
     pdf.ln(4)
 
@@ -638,16 +679,21 @@ def _render_pdf(
     """Render a PDF with header info and line items table."""
     title = _DOCUMENT_TITLES.get(document_type, "INVOICE")
     pdf = FPDF(orientation="P", unit="mm", format="A4")
+
+    # Register Unicode TTF font if available
+    for style, path in _FONT_PATHS.items():
+        pdf.add_font(_FONT_NAME, style, path)
+
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Title
-    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_font(_FONT_NAME, "B", 20)
     pdf.cell(0, 12, title, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
 
     label_map = _build_label_map(header_fields, line_item_fields)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(_FONT_NAME, "", 10)
 
     _render_header_section(pdf, header_values, label_map)
     _render_buyer_section(pdf, header_values, label_map)
@@ -657,14 +703,14 @@ def _render_pdf(
 
     # Notes
     if "notes" in header_values:
-        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_font(_FONT_NAME, "I", 9)
         pdf.multi_cell(0, 5, header_values["notes"])
 
     # Remaining header fields not covered by known sections
     remaining = {fid: val for fid, val in header_values.items() if fid not in _KNOWN_SECTION_FIELDS}
     if remaining:
         pdf.ln(2)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(_FONT_NAME, "", 9)
         for fid, val in remaining.items():
             lbl = label_map.get(fid, fid)
             pdf.cell(0, 5, f"{lbl}: {val}", new_x="LMARGIN", new_y="NEXT")
@@ -800,6 +846,11 @@ def generate_mock_pdf(
             _make_line_items_internally_consistent(line_items, all_line_item_fields, explicit_line_item_fields)
         if consistent_amounts:
             _make_amounts_consistent(header_values, line_items, header_fields, all_line_item_fields)
+
+        # Sanitize text for Latin-1 Helvetica when no Unicode font is available
+        if not _FONT_PATHS:
+            header_values = {k: _sanitize_latin1(v) for k, v in header_values.items()}
+            line_items = [{k: _sanitize_latin1(v) for k, v in item.items()} for item in line_items]
 
         # Render PDF with only visible (non-hidden) line item columns
         pdf_bytes = _render_pdf(document_type, header_values, line_items, header_fields, visible_line_item_fields)

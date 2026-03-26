@@ -81,7 +81,9 @@ def assert_files_created(expectation: FileExpectation, output_dir: Path | None =
         return
 
     actual_files = list(output_dir.rglob("*")) if output_dir.exists() else []
-    actual_files = [f for f in actual_files if f.is_file()]
+    # Exclude workspace/ spillover files (jq, search, etc.) from file expectations
+    workspace_dir = output_dir / "workspace"
+    actual_files = [f for f in actual_files if f.is_file() and not f.is_relative_to(workspace_dir)]
     actual_filenames = [f.name for f in actual_files]
 
     unmatched_patterns = []

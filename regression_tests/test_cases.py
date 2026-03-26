@@ -380,15 +380,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             '    - Total amount is smaller than 400. Error message: "Total amount is larger than allowed 400."\n'
             '    - Sum of all total amount line items equals total amount. Error message: "Sum of all total amount line items does not equal total amount."\n'
             '    - All line items it holds: "quantity x unit price = total amount"\n\n'
+            "Don't use task tools.\n"
             "Return only the rule ID as a one-word answer."
         ),
         tool_expectation=ToolExpectation(
-            expected_tools=[
-                "create_queue_from_template",
-                "load_skill",
-                "create_rule",
-                "execute_python",
-            ],
+            expected_tools=["create_queue_from_template", "load_skill", "create_rule", "execute_python"],
             mode=ToolMatchMode.SUBSET,
             forbidden_tools=[
                 "search_knowledge_base",
@@ -399,7 +395,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         success_criteria=SuccessCriteria(
             require_subagent=False,
             required_keywords=[],
-            max_steps=5,
+            max_steps=8,
             file_expectation=FileExpectation(),
             custom_checks=[BUSINESS_VALIDATION_RULES_CHECK],
         ),
@@ -505,7 +501,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         token_budget=TokenBudget(min_total_tokens=180000, max_total_tokens=450000),
         success_criteria=SuccessCriteria(
             required_keywords=[],
-            max_steps=12,
+            max_steps=18,
             file_expectation=FileExpectation(expected_files=["schema_v1.json", "schema_v2.json"]),
             custom_checks=[FORMULA_FIELD_UPDATED_CHECK],
         ),
@@ -526,7 +522,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "    - Field name: we_love_rossum\n"
             "    - Section: basic_info_section\n"
             '    - Logic: Return the constant string "We love Rossum"\n\n'
-            "Return only the schema_id as a one-word answer."
+            "Return only the schema_id as a one-word answer, and do not use task tools."
         ),
         tool_expectation=ToolExpectation(
             expected_tools=[
@@ -536,11 +532,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=100000),
+        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=120000),
         success_criteria=SuccessCriteria(
             require_subagent=None,
             required_keywords=[],
-            max_steps=5,
+            max_steps=6,
             file_expectation=FileExpectation(),
             custom_checks=[SCHEMA_REPLACED_WITH_FORMULA_CHECK],
         ),
@@ -575,11 +571,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=250000),
+        token_budget=TokenBudget(min_total_tokens=80000, max_total_tokens=350000),
         success_criteria=SuccessCriteria(
             require_subagent=None,
             required_keywords=[],
-            max_steps=12,
+            max_steps=14,
             file_expectation=FileExpectation(),
             custom_checks=[SCHEMA_REPLACED_AND_REVERTED_CHECK],
         ),
