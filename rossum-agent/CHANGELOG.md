@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.8.1] - 2026-03-26
 
 ### Changed
 - Updated `rossum-kb.json` with latest Knowledge Base scrape (2026-03-26) — 1 new article ("Customer & Partner User Setup"), 186 articles updated, +3.7% content growth
