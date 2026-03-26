@@ -1,3 +1,8 @@
+---
+name: Schema Patching
+description: modify schemas, add/remove fields, formulas
+---
+
 # Schema Patching Skill
 
 **Goal**: Add, update, or remove individual schema fields.

@@ -1,3 +1,8 @@
+---
+name: Hooks
+description: hook templates, token_owner, testing, debugging
+---
+
 # Hooks Skill
 
 **Goal**: Create, configure, and test hooks — prefer Rossum Store templates over custom code.

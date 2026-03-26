@@ -1,19 +1,40 @@
 """Skills module for loading and managing agent skills.
 
-Skills are markdown files that provide domain-specific instructions and workflow to the agent. They are loaded
-from the skills directory and injected into the agent's system prompt.
+Skills are markdown files with YAML frontmatter that provide domain-specific instructions
+and workflow to the agent. Frontmatter supplies metadata (name, description); the body
+after the closing ``---`` is the skill content delivered to the agent.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 # Default skills directory path relative to rossum_agent package
 _SKILLS_DIR = Path(__file__).parent.parent / "skills"
+
+_FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+
+
+def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """Parse YAML frontmatter from markdown text.
+
+    Returns ``(metadata, body)``.  If no frontmatter is found the full text
+    is returned as the body with an empty metadata dict.
+    """
+    match = _FRONTMATTER_RE.match(text)
+    if not match:
+        return {}, text
+    meta: dict[str, str] = {}
+    for line in match.group(1).strip().splitlines():
+        key, _, value = line.partition(":")
+        if key.strip():
+            meta[key.strip()] = value.strip()
+    return meta, text[match.end() :]
 
 
 @dataclass
@@ -23,6 +44,7 @@ class Skill:
     name: str
     content: str
     file_path: Path
+    description: str = field(default="")
 
     @property
     def slug(self) -> str:
@@ -53,10 +75,16 @@ class SkillRegistry:
 
         for skill_file in self.skills_dir.glob("*.md"):
             try:
-                content = skill_file.read_text(encoding="utf-8")
+                raw = skill_file.read_text(encoding="utf-8")
+                meta, body = _parse_frontmatter(raw)
+                name = meta.get(
+                    "name",
+                    skill_file.stem.replace("-", " ").replace("_", " ").title(),
+                )
                 skill = Skill(
-                    name=skill_file.stem.replace("-", " ").replace("_", " ").title(),
-                    content=content,
+                    name=name,
+                    description=meta.get("description", ""),
+                    content=body,
                     file_path=skill_file,
                 )
                 self._skills[skill.slug] = skill

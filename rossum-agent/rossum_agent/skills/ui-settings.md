@@ -1,3 +1,8 @@
+---
+name: UI Settings
+description: update queue UI settings, annotation list columns
+---
+
 # UI Settings Skill
 
 **Goal**: Update queue UI settings (`settings.annotation_list_table.columns`) without corrupting structure.

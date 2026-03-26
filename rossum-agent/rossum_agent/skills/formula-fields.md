@@ -1,3 +1,8 @@
+---
+name: Formula Fields
+description: create/configure formula fields with TxScript
+---
+
 # Formula Fields Skill
 
 **Goal**: Create or update formula fields that compute deterministic values from other fields using TxScript.

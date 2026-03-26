@@ -1,3 +1,8 @@
+---
+name: Python Execution
+description: constrained Python snippets, schema export of bulky structured outputs, use `execute_python` + `write_file(...)` to save the fetched payload directly
+---
+
 # Python Execution Skill
 
 **Goal**: Use `execute_python` efficiently for data shaping, MCP result transformation, and Rossum copilot helpers.

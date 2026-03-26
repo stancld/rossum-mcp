@@ -1,3 +1,8 @@
+---
+name: Reasoning Fields
+description: create AI-powered reasoning fields with prompt + context
+---
+
 # Reasoning Fields Skill
 
 **Goal**: Create reasoning fields that use AI to interpret document context and generate values from natural language instructions.
