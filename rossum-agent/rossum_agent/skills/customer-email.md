@@ -1,3 +1,8 @@
+---
+name: Customer Email
+description: draft professional customer-facing emails summarizing investigation findings, changes, or resolutions
+---
+
 # Customer Email Skill
 
 **Goal**: Draft professional customer-facing emails summarizing investigation findings, configuration changes, or issue resolutions.
