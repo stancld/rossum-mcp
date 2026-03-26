@@ -1,6 +1,6 @@
 """URL context extraction for Rossum application URLs.
 
-This module provides utilities to extract context (queue_id, document_id, hook_id, engine_id)
+This module provides utilities to extract context (queue_id, annotation_id, hook_id, engine_id)
 from Rossum application URLs, enabling the agent to understand the user's current
 context when they paste a URL.
 """
@@ -18,7 +18,7 @@ class RossumUrlContext:
     """Extracted context from a Rossum application URL."""
 
     queue_id: int | None = None
-    document_id: int | None = None
+    annotation_id: int | None = None
     hook_id: int | None = None
     engine_id: int | None = None
     raw_url: str | None = None
@@ -27,15 +27,15 @@ class RossumUrlContext:
 
     def is_empty(self) -> bool:
         """Check if no context was extracted."""
-        return self.queue_id is None and self.document_id is None and self.hook_id is None and self.engine_id is None
+        return self.queue_id is None and self.annotation_id is None and self.hook_id is None and self.engine_id is None
 
     def to_context_string(self) -> str:
         """Convert the context to a human-readable string for the agent."""
         parts = []
         if self.queue_id:
             parts.append(f"Queue ID: {self.queue_id}")
-        if self.document_id:
-            parts.append(f"Document ID: {self.document_id}")
+        if self.annotation_id:
+            parts.append(f"Annotation ID: {self.annotation_id}")
         if self.hook_id:
             parts.append(f"Hook ID: {self.hook_id}")
         if self.engine_id:
@@ -50,8 +50,8 @@ class RossumUrlContext:
 # URL patterns for different Rossum pages
 # Format: /queues/{queue_id}/...
 QUEUE_PATTERN = re.compile(r"/queues/(\d+)")
-# Format: /document/{document_id}
-DOCUMENT_PATTERN = re.compile(r"/document/(\d+)")
+# Format: /document/{id} — Rossum UI uses "document" in URLs but the ID is an annotation ID
+ANNOTATION_PATTERN = re.compile(r"/document/(\d+)")
 # Format: /hooks/{hook_id} or /extensions/{hook_id} or /extensions/my-extensions/{hook_id}
 HOOK_PATTERN = re.compile(r"/(hooks|extensions|extensions/my-extensions)/(\d+)")
 # Format: /engines/{engine_id} or /automation/engines/{engine_id}
@@ -124,8 +124,8 @@ def extract_url_context(url: str | None) -> RossumUrlContext:
     if match := QUEUE_PATTERN.search(url):
         context.queue_id = int(match.group(1))
 
-    if match := DOCUMENT_PATTERN.search(url):
-        context.document_id = int(match.group(1))
+    if match := ANNOTATION_PATTERN.search(url):
+        context.annotation_id = int(match.group(1))
 
     if match := HOOK_PATTERN.search(url):
         context.hook_id = int(match.group(2))

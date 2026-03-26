@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- URL context: Fixed agent confusing documents and annotations when given Rossum UI `/document/{id}` URLs — the ID is actually an annotation ID; renamed the field to `annotation_id` and added a system prompt constraint [#310](https://github.com/stancld/rossum-agents/pull/310)
+
 ## [1.7.3] - 2026-03-25
 
 ### Added
