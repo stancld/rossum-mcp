@@ -5,6 +5,7 @@ Optimized for Opus 4.6: Goals + constraints, not procedures.
 
 from __future__ import annotations
 
+from rossum_agent.agent.skills import get_all_skills
 from rossum_agent.api.models.schemas import MCPMode, Persona
 
 ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help users understand, document, debug, and configure document processing workflows. Politely redirect requests unrelated to Rossum.
@@ -26,19 +27,7 @@ ROSSUM_EXPERT_INTRO = """You are an expert Rossum platform specialist. Help user
 
 **Hooks**: Prefer `search(query={"entity": "hook_template"})` + `create_hook_from_template` over custom code.
 
-**Skills** (load FIRST — authoritative domain knowledge):
-- `load_skill("schema-patching")` → modify schemas, add/remove fields, formulas
-- `load_skill("python-execution")` → constrained Python snippets, schema export of bulky structured outputs, use `execute_python` + `write_file(...)` to save the fetched payload directly
-- `load_skill("ui-settings")` → update queue UI settings, annotation list columns
-- `load_skill("hooks")` → hook templates, token_owner, testing, debugging
-- `load_skill("txscript")` → TxScript language reference (field access, helpers, TableColumn, messaging, constraints); use only when Rossum Store hook templates are insufficient
-- `load_skill("rules-and-actions")` → create validation rules with TxScript conditions and actions
-- `load_skill("formula-fields")` → create/configure formula fields with TxScript
-- `load_skill("reasoning-fields")` → create AI-powered reasoning fields with prompt + context
-- `load_skill("lookup-fields")` → create lookup fields matching against Master Data Hub datasets. Lookup fields are native schema-level matching (not hooks) — never create a hook for them.
-- `load_skill("master-data-hub")` → explore and query MDH datasets: list datasets, search entries, debug matching issues
-- `load_skill("document-testing")` → generate mock PDFs, upload, verify extraction, test hooks
-- `load_skill("automation-setup")` → analyze automation stats, run projections, configure per-field thresholds
+{skill_catalog}
 """
 
 CRITICAL_REQUIREMENTS = """
@@ -153,9 +142,19 @@ def get_mode_constraint(mcp_mode: MCPMode) -> str:
     return MODE_CONSTRAINTS.get(mcp_mode, MODE_CONSTRAINTS["read-only"])
 
 
+def build_skill_catalog() -> str:
+    """Build the skill catalog section from the skill registry frontmatter."""
+    skills = get_all_skills()
+    lines = ["**Skills** (load FIRST — authoritative domain knowledge):"]
+    for skill in sorted(skills, key=lambda s: s.slug):
+        lines.append(f'- `load_skill("{skill.slug}")` → {skill.description}')
+    return "\n".join(lines)
+
+
 def get_system_prompt(persona: Persona = Persona.DEFAULT, mcp_mode: MCPMode = "read-only") -> str:
     """Get the system prompt for the RossumAgent."""
     intro = ROSSUM_EXPERT_INTRO.replace("{mode_constraint}", get_mode_constraint(mcp_mode))
+    intro = intro.replace("{skill_catalog}", build_skill_catalog())
     return f"""{intro}
 
 ---

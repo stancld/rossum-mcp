@@ -1,3 +1,8 @@
+---
+name: Master Data Hub
+description: explore and query MDH datasets. list datasets, search entries, debug matching issues
+---
+
 # Master Data Hub Skill
 
 **Goal**: Explore and query Master Data Hub (MDH) datasets to debug matching issues and understand available data.

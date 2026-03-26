@@ -1,3 +1,8 @@
+---
+name: TxScript
+description: TxScript language reference (field access, helpers, TableColumn, messaging, constraints); use only when Rossum Store hook templates are insufficient
+---
+
 # TxScript Reference Skill
 
 **Goal**: Provide the complete TxScript language reference for writing formula fields, serverless functions, and rule trigger conditions. **IMPORTANT:** Use only if hooks from Rossum Store templates are not sufficient.

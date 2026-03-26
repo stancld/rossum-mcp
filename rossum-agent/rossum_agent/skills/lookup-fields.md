@@ -1,3 +1,8 @@
+---
+name: Lookup Fields
+description: create lookup fields matching against Master Data Hub datasets. Lookup fields are native schema-level matching (not hooks) — never create a hook for them.
+---
+
 # Lookup Fields Skill
 
 **Goal**: Create or update lookup fields that fetch values from external datasets (Master Data Hub).

@@ -1,3 +1,8 @@
+---
+name: Automation Setup
+description: analyze automation stats, run projections, configure per-field thresholds
+---
+
 # Automation Setup Skill
 
 **Goal**: Analyze, project, and configure automation thresholds for document processing queues.
