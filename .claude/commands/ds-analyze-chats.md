@@ -21,12 +21,47 @@ Each line is a PostgreSQL tuple: `(db_id, chat_id, messages_jsonb, output_dir, m
 
 | Type | Contains |
 |------|----------|
-| `task_step` | `task` (user message text), `preload_info` |
+| `task_step` | `task` (user message — see note below), `preload_info` |
 | `memory_step` | `step_number`, `text`, `tool_calls[{name, arguments}]`, `tool_results[{name, content, is_error}]`, `thinking_blocks`, `input_tokens`, `output_tokens` |
+
+**`task` field**: Can be a `str` or a `list` of content blocks (e.g., `[{"type": "text", "text": "..."}, {"type": "image", ...}]`). Extract text by joining all `text`-type items. Always normalize to string before classification.
 
 ## Analysis Pipeline
 
-Run the analysis using Python scripts via Bash. Parse the PostgreSQL tuple format (not standard CSV). Use `""` → `"` unescaping for embedded JSON.
+Write a single Python script via `cat << 'PYEOF' > $TMPDIR/analyze_chats.py ... PYEOF` (avoids Write tool guard issues), then run it. All phases in one script, output results to stdout.
+
+### Parsing Requirements
+
+The export is PostgreSQL `COPY` format with JSONB fields. Parsing is non-trivial:
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Field size | `csv.field_size_limit(sys.maxsize)` — JSONB fields exceed default 131072 limit |
+| CSV dialect | `csv.reader(f)` — fields are comma-separated, quoted with `""` escaping |
+| Backslash unescaping | Iteratively replace `\\\\` → `\\` until stable before `json.loads()` |
+| Quote unescaping | Replace `""` → `"` within quoted fields (handled by `csv.reader`) |
+
+```python
+import csv, json, sys
+
+csv.field_size_limit(sys.maxsize)
+
+def unescape_jsonb(raw: str) -> any:
+    """Unescape PostgreSQL JSONB and parse."""
+    s = raw.strip()
+    # Iterative backslash unescaping
+    while '\\\\' in s:
+        s = s.replace('\\\\', '\\')
+    return json.loads(s)
+
+def extract_task_text(task) -> str:
+    """Normalize task field to string."""
+    if isinstance(task, str):
+        return task
+    if isinstance(task, list):
+        return " ".join(b.get("text", "") for b in task if isinstance(b, dict) and b.get("type") == "text")
+    return str(task)
+```
 
 ### Phase 1: Overview Statistics
 
@@ -38,7 +73,7 @@ Run the analysis using Python scripts via Bash. Parse the PostgreSQL tuple forma
 | Persona distribution | Count `persona` values in metadata |
 | MCP mode distribution | Count `mcp_mode` values in metadata |
 | Config commits | Chats with non-empty `config_commits` |
-| Token usage | Sum `total_input_tokens`, `total_output_tokens` from metadata; fall back to summing per-step `input_tokens`/`output_tokens` from `memory_step` if metadata totals are zero |
+| Token usage | Sum per-step `input_tokens`/`output_tokens` from `memory_step` entries (primary source). Fall back to `total_input_tokens`/`total_output_tokens` from metadata. Note: metadata totals are often zero for older chats. |
 
 ### Phase 2: Tool Usage Analysis
 
@@ -117,7 +152,20 @@ Present results as structured markdown with tables. End with the ranked improvem
 | Constraint | Rationale |
 |------------|-----------|
 | No modifications to any source files | Analysis only |
-| Use Python via Bash for parsing | PostgreSQL tuple format needs custom parsing |
+| Single Python script via Bash | Write script with `cat << 'PYEOF' > $TMPDIR/analyze.py` then `python $TMPDIR/analyze.py <csv_path>`. All phases in one script. |
+| Use parsing recipe above | Includes `csv.field_size_limit`, iterative backslash unescaping, task text normalization |
 | Handle large files | Process line-by-line; don't load entire file into memory for JSON parsing |
-| Escape-aware parsing | Handle `""` escaping in PostgreSQL JSONB text |
-| Cross-reference with codebase | When identifying improvement opportunities, check current tools/skills/prompts to confirm gaps are real |
+
+### Cross-referencing (Phase 6 only)
+
+When identifying improvement opportunities, validate gaps against these specific locations — do NOT spawn an open-ended codebase exploration agent:
+
+| What to check | Where |
+|----------------|-------|
+| MCP tool existence | `rossum-mcp/rossum_mcp/tools/` — grep for tool function names |
+| Agent tools | `rossum-agent/rossum_agent/tools/` |
+| Skills | `rossum-agent/rossum_agent/skills/` — check `__init__.py` for registry |
+| Dynamic tool loading | `rossum-agent/rossum_agent/tools/dynamic_tools.py` |
+| Prompts | `rossum-agent/rossum_agent/prompts/base_prompt.py` |
+
+Use targeted Grep/Glob calls, not a general-purpose Agent subagent.
