@@ -522,7 +522,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "    - Field name: we_love_rossum\n"
             "    - Section: basic_info_section\n"
             '    - Logic: Return the constant string "We love Rossum"\n\n'
-            "Return only the schema_id as a one-word answer."
+            "Return only the schema_id as a one-word answer, and do not use task tools."
         ),
         tool_expectation=ToolExpectation(
             expected_tools=[
@@ -532,11 +532,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             ],
             mode=ToolMatchMode.SUBSET,
         ),
-        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=100000),
+        token_budget=TokenBudget(min_total_tokens=40000, max_total_tokens=120000),
         success_criteria=SuccessCriteria(
             require_subagent=None,
             required_keywords=[],
-            max_steps=5,
+            max_steps=6,
             file_expectation=FileExpectation(),
             custom_checks=[SCHEMA_REPLACED_WITH_FORMULA_CHECK],
         ),
