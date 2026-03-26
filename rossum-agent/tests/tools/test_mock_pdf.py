@@ -9,6 +9,7 @@ from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.mock_pdf import (
     _apply_base_tax_split,
     _build_header_rir_resolver,
+    _detect_unicode_font,
     _find_item_column,
     _find_item_total_key,
     _generate_value_for_field,
@@ -17,6 +18,7 @@ from rossum_agent.tools.mock_pdf import (
     _make_amounts_consistent,
     _make_line_items_internally_consistent,
     _render_pdf,
+    _sanitize_latin1,
     generate_mock_pdf,
 )
 
@@ -1288,5 +1290,74 @@ class TestHiddenFieldHandling:
             # Hidden field not in output
             for item in result["line_items"]:
                 assert "item_amount_base" not in item
+        finally:
+            set_context(AgentContext())
+
+
+class TestUnicodeFontSupport:
+    """Tests for Unicode font detection and Latin-1 sanitization."""
+
+    def test_sanitize_latin1_strips_diacritics(self) -> None:
+        assert _sanitize_latin1("Česká firma") == "Ceska firma"
+        assert _sanitize_latin1("naïve résumé") == "naive resume"
+
+    def test_sanitize_latin1_noop_for_ascii(self) -> None:
+        assert _sanitize_latin1("Acme Corp") == "Acme Corp"
+        assert _sanitize_latin1("INV-2024-00001") == "INV-2024-00001"
+
+    def test_sanitize_latin1_replaces_non_latin1(self) -> None:
+        result = _sanitize_latin1("日本語テスト")
+        # CJK characters replaced with ? by latin-1 encoding
+        assert "?" in result
+
+    def test_detect_unicode_font_returns_valid_tuple(self) -> None:
+        name, paths = _detect_unicode_font()
+        assert isinstance(name, str)
+        assert isinstance(paths, dict)
+        if paths:
+            assert name == "UniFont"
+            assert "" in paths  # regular style must be present
+
+    def test_render_pdf_with_unicode_text(self) -> None:
+        """PDF renders successfully with Unicode characters (diacritics)."""
+        header_values = {
+            "sender_name": "Česká firma s.r.o.",
+            "invoice_id": "INV-2024-00001",
+        }
+        header_fields = [
+            _field("sender_name", "Vendor", ["sender_name"]),
+            _field("invoice_id", "Invoice", ["invoice_id"]),
+        ]
+        pdf_bytes = _render_pdf("invoice", header_values, [], header_fields, [])
+        assert pdf_bytes[:5] == b"%PDF-"
+
+    def test_render_pdf_with_unicode_line_items(self) -> None:
+        """Line items with Unicode text render successfully."""
+        header_values = {"invoice_id": "INV-2024-00001"}
+        line_items = [
+            {"item_description": "Služby poradenství", "item_quantity": "5", "item_amount_total": "100.00"},
+        ]
+        li_fields = [
+            _field("item_description", "Description"),
+            _field("item_quantity", "Qty"),
+            _field("item_amount_total", "Amount"),
+        ]
+        pdf_bytes = _render_pdf("invoice", header_values, line_items, [_field("invoice_id", "Invoice")], li_fields)
+        assert pdf_bytes[:5] == b"%PDF-"
+
+    def test_generate_mock_pdf_with_unicode_overrides(self, tmp_path: Path) -> None:
+        """End-to-end: Unicode overrides produce a valid PDF without errors."""
+        set_context(AgentContext(output_dir=tmp_path))
+        try:
+            result_json = generate_mock_pdf(
+                fields=INVOICE_FIELDS,
+                overrides={"sender_name": "Společnost s.r.o.", "invoice_id": "FAK-2024-00001"},
+            )
+            result = json.loads(result_json)
+            assert result["status"] == "success"
+            assert "file_path" in result
+            # Vendor name preserved (Unicode font) or sanitized (Helvetica fallback)
+            name = result["expected_values"]["sender_name"]
+            assert "spole" in name.lower() or "Společnost" in name
         finally:
             set_context(AgentContext())
