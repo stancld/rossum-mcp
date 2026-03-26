@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- `get_output_dir` and `generate_mock_pdf` now resolve paths to absolute, preventing file-not-found errors when the MCP server subprocess has a different working directory than the agent [#316](https://github.com/stancld/rossum-agents/pull/316)
+
 ## [1.8.0] - 2026-03-26
 
 ### Added

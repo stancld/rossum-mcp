@@ -18,9 +18,16 @@ logger = logging.getLogger(__name__)
 
 async def _upload_document(client: AsyncRossumAPIClient, file_path: str, queue_id: int) -> dict:
     path = anyio.Path(file_path)
-    if not await path.exists():
-        logger.error(f"File not found: {file_path}")
-        raise FileNotFoundError(f"File not found: {file_path}")
+    # Resolve to absolute so relative paths from other processes work
+    resolved = anyio.Path(await path.resolve())
+    if not await resolved.exists():
+        logger.error(f"File not found: {file_path} (resolved: {resolved})")
+        raise ToolError(
+            f"File not found: {file_path}\n"
+            f"Resolved path: {resolved}\n"
+            f"If using generate_mock_pdf, pass the exact file_path value from its output."
+        )
+    path = resolved
 
     try:
         task = (await client.upload_document(queue_id, [(str(path), path.name)]))[0]

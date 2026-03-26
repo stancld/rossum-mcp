@@ -825,7 +825,7 @@ def generate_mock_pdf(
         return json.dumps(
             {
                 "status": "success",
-                "file_path": str(file_path),
+                "file_path": str(file_path.resolve()),
                 "expected_values": {k: v for k, v in header_values.items() if k in visible_header_ids},
                 "line_items": [{k: v for k, v in item.items() if k in visible_line_item_ids} for item in line_items],
             }

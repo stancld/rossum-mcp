@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 def register_create_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
     # --- Annotations ---
     @mcp.tool(
-        description="Upload a document; use search(entity='annotation', queue_id=...) to find the created annotation.",
+        description="Upload a document from a local file path (absolute path recommended). Use search(entity='annotation', queue_id=...) to find the created annotation.",
         tags={"annotations", "write"},
         annotations={"readOnlyHint": False},
     )

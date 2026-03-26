@@ -77,7 +77,7 @@ class TestUploadDocument:
 
         upload_document = mock_mcp._tools["upload_document"]
 
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(ToolError) as exc_info:
             await upload_document(file_path="/nonexistent/file.pdf", queue_id=100)
 
         assert "File not found" in str(exc_info.value)

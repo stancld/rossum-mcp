@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- `upload_document` now resolves file paths to absolute before passing to the API client, preventing file-not-found errors when the MCP server runs in a different working directory than the caller [#316](https://github.com/stancld/rossum-agents/pull/316)
+
 ## [2.0.6] - 2026-03-25
 
 ### Added

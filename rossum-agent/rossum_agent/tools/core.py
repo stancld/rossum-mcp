@@ -154,10 +154,14 @@ class AgentContext:
         return self.mcp_mode != "read-write"
 
     def get_output_dir(self) -> Path:
-        """Get the output directory, falling back to ./outputs."""
+        """Get the output directory, falling back to ./outputs.
+
+        Always returns an absolute path so file paths are portable across processes
+        (e.g. agent → MCP server subprocess).
+        """
         if self.output_dir is not None:
-            return self.output_dir
-        fallback = Path("./outputs")
+            return self.output_dir.resolve()
+        fallback = Path("./outputs").resolve()
         fallback.mkdir(exist_ok=True)
         return fallback
 
