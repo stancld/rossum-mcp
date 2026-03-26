@@ -18,17 +18,17 @@ if TYPE_CHECKING:
 
 def register_discovery_tools(mcp: FastMCP, mcp_mode: McpMode) -> None:
     @mcp.tool(description="Get the current MCP operation mode (read-only or read-write).")
-    async def get_mcp_mode() -> dict:
+    async def get_mcp_mode() -> dict[str, str]:
         return {"mode": mcp_mode}
 
     @mcp.tool(
         description="List tool categories (descriptions, tool names, keywords). Use load_tool to load tools by name. read_only=false indicates write tools."
     )
-    async def list_tool_categories() -> list[dict]:
+    async def list_tool_categories() -> list[dict[str, str | int | list]]:
         all_tools = await mcp.local_provider.list_tools()
 
         # Group tools by category tag
-        categories: dict[str, list[dict]] = {}
+        categories: dict[str, list[dict[str, str | bool]]] = {}
         for tool in all_tools:
             tool_tags = tool.tags or set()
             for cat_name in CATEGORY_META:

@@ -1,6 +1,6 @@
 # Rossum MCP Tools Reference
 
-Complete API reference for all 31 MCP tools. For quick start and setup, see [README.md](README.md).
+Complete API reference for all 30 MCP tools. For quick start and setup, see [README.md](README.md).
 
 ---
 
@@ -426,7 +426,7 @@ Tests a hook by auto-generating a realistic payload and executing it. For `annot
 
 ---
 
-## Rules & Actions (3 tools)
+## Rules & Actions (2 tools)
 
 ### create_rule
 
