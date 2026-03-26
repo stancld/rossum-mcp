@@ -1,3 +1,8 @@
+---
+name: Document Testing
+description: generate mock PDFs, upload, verify extraction, test hooks
+---
+
 # Document Testing Skill
 
 **Goal**: Test document processing end-to-end — generate a schema-aware mock PDF, upload it, verify extraction, optionally trigger hooks.

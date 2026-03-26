@@ -20,7 +20,7 @@ The examples in this folder work with the `rossum-agent` package, which uses Ant
 - AI-powered agent that understands natural language commands
 - Automatic detection of invoice files in the data folder
 - Batch processing support
-- Interactive CLI interface
+- REST API and Terminal UI interfaces
 - Proper error handling and user feedback
 
 ### Setup
@@ -89,27 +89,25 @@ When documents are uploaded to Rossum, they go through a processing workflow:
 
 ### Architecture
 
-```
-┌─────────────┐
-│    User     │
-│  Interface  │
-│ (CLI/Web)   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│ Rossum Agent    │
-│ (Claude)        │
-├─────────────────┤
-│ • Write File    │
-│ • MCP Tools     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│  Rossum MCP     │─────▶│  Rossum API  │
-│    Server       │      └──────────────┘
-└─────────────────┘
+```mermaid
+flowchart TB
+    subgraph UI["User Interface"]
+        A[REST API / TUI]
+    end
+
+    subgraph Agent["Rossum Agent (Claude Bedrock)"]
+        IT[Internal Tools]
+    end
+
+    subgraph MCP["Rossum MCP Server"]
+        Tools[MCP Tools]
+    end
+
+    API[Rossum API]
+
+    UI --> Agent
+    Agent --> MCP
+    MCP --> API
 ```
 
 ## Troubleshooting
@@ -126,8 +124,8 @@ Add some PDF, PNG, or JPG files to the `examples/data/` folder.
 ### "Connection refused"
 Ensure the Rossum MCP server is running. Start it with:
 ```bash
-cd rossum_mcp
-python server.py
+cd rossum-mcp
+python rossum_mcp/server.py
 ```
 
 Or use the installed script:
@@ -144,10 +142,10 @@ uv sync --extra all
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) file for details.
+MIT License - see [LICENSE](../LICENSE) for details.
 
 ## Resources
 
+- [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [Rossum Agent README](../rossum-agent/README.md)
 - [Rossum MCP README](../rossum-mcp/README.md)
-- [Full Documentation](https://stancld.github.io/rossum-agents/)

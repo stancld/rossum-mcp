@@ -50,12 +50,12 @@ class TestExtractUrlContext:
 
         assert context.engine_id == 77777
 
-    def test_extract_document_id(self):
-        """Test extracting document_id from annotation URL."""
+    def test_extract_annotation_id(self):
+        """Test extracting annotation_id from annotation URL."""
         url = "https://elis.rossum.ai/document/54321"
         context = extract_url_context(url)
 
-        assert context.document_id == 54321
+        assert context.annotation_id == 54321
 
     def test_documents_view_with_invalid_json_filtering(self):
         """Test documents view with malformed JSON in filtering parameter."""
@@ -159,9 +159,9 @@ class TestRossumUrlContext:
         context = RossumUrlContext(queue_id=12345)
         assert not context.is_empty()
 
-    def test_is_empty_false_when_document_id_set(self):
-        """Test is_empty returns False when document_id is set."""
-        context = RossumUrlContext(document_id=12345)
+    def test_is_empty_false_when_annotation_id_set(self):
+        """Test is_empty returns False when annotation_id is set."""
+        context = RossumUrlContext(annotation_id=12345)
         assert not context.is_empty()
 
     def test_is_empty_false_when_hook_id_set(self):
@@ -174,11 +174,11 @@ class TestRossumUrlContext:
         context = RossumUrlContext(engine_id=12345)
         assert not context.is_empty()
 
-    def test_to_context_string_with_document_id(self):
+    def test_to_context_string_with_annotation_id(self):
         """Test context string includes document ID."""
-        context = RossumUrlContext(document_id=99999)
+        context = RossumUrlContext(annotation_id=99999)
         result = context.to_context_string()
-        assert "Document ID: 99999" in result
+        assert "Annotation ID: 99999" in result
 
     def test_to_context_string_with_engine_id(self):
         """Test context string includes engine ID."""

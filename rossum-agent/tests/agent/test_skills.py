@@ -6,16 +6,52 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from rossum_agent.agent.skills import Skill, SkillRegistry, get_skill, get_skill_registry
+from rossum_agent.agent.skills import (
+    Skill,
+    SkillRegistry,
+    _parse_frontmatter,
+    get_skill,
+    get_skill_registry,
+)
 from rossum_agent.tools import INTERNAL_TOOLS, execute_tool, get_internal_tool_names
 from rossum_agent.tools.skills import load_skill
+
+
+class TestParseFrontmatter:
+    """Test YAML frontmatter parsing."""
+
+    def test_parses_valid_frontmatter(self):
+        text = "---\nname: My Skill\ndescription: does things\n---\n# Body\n"
+        meta, body = _parse_frontmatter(text)
+        assert meta == {"name": "My Skill", "description": "does things"}
+        assert body == "# Body\n"
+
+    def test_returns_empty_meta_when_no_frontmatter(self):
+        text = "# Just a heading\n\nSome content."
+        meta, body = _parse_frontmatter(text)
+        assert meta == {}
+        assert body == text
+
+    def test_handles_values_with_colons(self):
+        text = "---\ndescription: list datasets, search entries, debug matching\n---\nBody\n"
+        meta, _body = _parse_frontmatter(text)
+        assert meta["description"] == "list datasets, search entries, debug matching"
+
+    def test_handles_backticks_in_values(self):
+        text = "---\ndescription: use `execute_python` + `write_file(...)` to save\n---\nBody\n"
+        meta, _body = _parse_frontmatter(text)
+        assert "`execute_python`" in meta["description"]
+
+    def test_strips_whitespace_from_keys_and_values(self):
+        text = "---\n  name  :  Spaced Skill  \n---\nBody\n"
+        meta, _body = _parse_frontmatter(text)
+        assert meta["name"] == "Spaced Skill"
 
 
 class TestSkill:
     """Test Skill dataclass."""
 
     def test_skill_creation(self):
-        """Test Skill dataclass creation."""
         skill = Skill(
             name="Test Skill",
             content="# Test Content",
@@ -26,7 +62,6 @@ class TestSkill:
         assert skill.slug == "test-skill"
 
     def test_slug_removes_extension(self):
-        """Test that slug is filename without extension."""
         skill = Skill(
             name="My Skill",
             content="content",
@@ -34,12 +69,19 @@ class TestSkill:
         )
         assert skill.slug == "my-skill"
 
+    def test_description_defaults_to_empty(self):
+        skill = Skill(name="X", content="Y", file_path=Path("/x.md"))
+        assert skill.description == ""
+
+    def test_description_from_constructor(self):
+        skill = Skill(name="X", content="Y", file_path=Path("/x.md"), description="does X")
+        assert skill.description == "does X"
+
 
 class TestSkillRegistry:
     """Test SkillRegistry class."""
 
     def test_loads_skills_from_directory(self):
-        """Test that registry loads skills from directory."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "test-skill.md"
             skill_file.write_text("# Test Skill\n\nThis is a test.")
@@ -51,8 +93,33 @@ class TestSkillRegistry:
             assert skills[0].slug == "test-skill"
             assert "This is a test" in skills[0].content
 
+    def test_loads_frontmatter_metadata(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "my-skill.md"
+            skill_file.write_text("---\nname: Custom Name\ndescription: does custom things\n---\n# Body\n")
+
+            registry = SkillRegistry(Path(tmpdir))
+            skill = registry.get_skill("my-skill")
+
+            assert skill is not None
+            assert skill.name == "Custom Name"
+            assert skill.description == "does custom things"
+            assert skill.content == "# Body\n"
+
+    def test_falls_back_to_filename_when_no_frontmatter(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "my-cool-skill.md"
+            skill_file.write_text("# No frontmatter here")
+
+            registry = SkillRegistry(Path(tmpdir))
+            skill = registry.get_skill("my-cool-skill")
+
+            assert skill is not None
+            assert skill.name == "My Cool Skill"
+            assert skill.description == ""
+            assert skill.content == "# No frontmatter here"
+
     def test_get_skill_by_slug(self):
-        """Test getting a skill by its slug."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "my-skill.md"
             skill_file.write_text("# My Skill")
@@ -64,14 +131,12 @@ class TestSkillRegistry:
             assert skill.slug == "my-skill"
 
     def test_get_skill_returns_none_for_unknown(self):
-        """Test that get_skill returns None for unknown skills."""
         with TemporaryDirectory() as tmpdir:
             registry = SkillRegistry(Path(tmpdir))
             skill = registry.get_skill("nonexistent")
             assert skill is None
 
     def test_get_skill_names(self):
-        """Test getting list of skill names."""
         with TemporaryDirectory() as tmpdir:
             (Path(tmpdir) / "skill-a.md").write_text("A")
             (Path(tmpdir) / "skill-b.md").write_text("B")
@@ -82,7 +147,6 @@ class TestSkillRegistry:
             assert set(names) == {"skill-a", "skill-b"}
 
     def test_reload_clears_cache(self):
-        """Test that reload clears and reloads skills."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "original.md"
             skill_file.write_text("Original")
@@ -100,13 +164,11 @@ class TestSkillRegistry:
             assert "original" not in names
 
     def test_handles_missing_directory(self):
-        """Test that registry handles missing directory gracefully."""
         registry = SkillRegistry(Path("/nonexistent/path"))
         skills = registry.get_all_skills()
         assert skills == []
 
     def test_skills_are_cached(self):
-        """Test that skills are only loaded once until reload."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "cached.md"
             skill_file.write_text("content")
@@ -123,11 +185,9 @@ class TestLoadSkillTool:
     """Test load_skill internal tool."""
 
     def test_load_skill_is_registered(self):
-        """Test that load_skill is in internal tools."""
         assert "load_skill" in get_internal_tool_names()
 
     def test_load_skill_returns_skill_content(self):
-        """Test loading an existing skill."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "test-skill.md"
             skill_file.write_text("# Test Instructions\n\nDo this.")
@@ -147,8 +207,24 @@ class TestLoadSkillTool:
                 assert "success" in result
                 assert "Test Instructions" in result
 
+    def test_load_skill_strips_frontmatter_from_content(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "fm-skill.md"
+            skill_file.write_text("---\nname: FM Skill\ndescription: test\n---\n# Instructions\n\nBody here.")
+
+            with (
+                patch("rossum_agent.agent.skills._SKILLS_DIR", Path(tmpdir)),
+                patch("rossum_agent.agent.skills._default_registry", None),
+            ):
+                result = load_skill(name="fm-skill")
+
+                assert "success" in result
+                assert "Instructions" in result
+                assert "Body here" in result
+                # Frontmatter should not appear in the instructions
+                assert "description: test" not in result
+
     def test_load_skill_returns_error_for_unknown(self):
-        """Test loading a nonexistent skill returns error."""
         with (
             TemporaryDirectory() as tmpdir,
             patch(
@@ -166,7 +242,6 @@ class TestLoadSkillTool:
             assert "not found" in result
 
     def test_execute_tool_integration(self):
-        """Test load_skill via execute_tool."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "deploy.md"
             skill_file.write_text("# Deploy Guide")
@@ -191,7 +266,6 @@ class TestModuleLevelFunctions:
     """Test module-level convenience functions."""
 
     def test_get_skill_returns_skill(self):
-        """Test get_skill module function."""
         with TemporaryDirectory() as tmpdir:
             skill_file = Path(tmpdir) / "my-skill.md"
             skill_file.write_text("Content")
@@ -211,7 +285,6 @@ class TestModuleLevelFunctions:
                 assert skill.content == "Content"
 
     def test_get_skill_registry_creates_default(self):
-        """Test get_skill_registry creates default registry."""
         with patch(
             "rossum_agent.agent.skills._default_registry",
             None,
@@ -224,7 +297,6 @@ class TestSkillRegistryErrorHandling:
     """Test SkillRegistry error handling."""
 
     def test_handles_corrupted_skill_file(self, tmp_path, caplog):
-        """Test that registry handles unreadable skill files gracefully."""
         import logging
 
         skill_file = tmp_path / "broken-skill.md"

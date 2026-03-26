@@ -528,7 +528,7 @@ but pull/diff/push still work normally.
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) file for details.
+MIT License - see [LICENSE](../LICENSE) for details.
 
 ## Resources
 

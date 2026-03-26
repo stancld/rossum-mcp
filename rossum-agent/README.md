@@ -148,7 +148,7 @@ The agent provides internal tools and access to 30 MCP tools via dynamic loading
 - `patch_schema_with_subagent` - Safe schema modifications via Opus
 
 **Skills:**
-- `load_skill` - Load domain-specific workflows (`schema-patching`, `python-execution`, `ui-settings`, `hooks`, `txscript`, `rules-and-actions`, `formula-fields`, `reasoning-fields`, `lookup-fields`, `document-testing`, `automation-setup`)
+- `load_skill` - Load domain-specific workflows (`schema-patching`, `python-execution`, `ui-settings`, `hooks`, `txscript`, `rules-and-actions`, `formula-fields`, `reasoning-fields`, `lookup-fields`, `master-data-hub`, `document-testing`, `automation-setup`, `customer-email`)
 
 **Document Testing:**
 - `generate_mock_pdf` - Generate schema-aware mock PDFs with realistic field values and optional header/row consistency checks for end-to-end extraction testing, while preserving explicit overrides
@@ -166,7 +166,7 @@ The agent provides internal tools and access to 30 MCP tools via dynamic loading
 <details>
 <summary><strong>Dynamic MCP Tool Loading</strong></summary>
 
-Tools are loaded on-demand to reduce context usage. Use `load_tool` to load tools by name:
+Tools are loaded on-demand to reduce context usage. Categories are auto-loaded based on keywords in the user's message:
 
 | Category | Description |
 |----------|-------------|
@@ -181,8 +181,6 @@ Tools are loaded on-demand to reduce context usage. Use `load_tool` to load tool
 | `rules` | Schema validation rules |
 | `users` | User and role management |
 | `workspaces` | Workspace management |
-
-Categories are auto-loaded based on keywords in the user's message.
 
 </details>
 

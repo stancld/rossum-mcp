@@ -196,7 +196,7 @@ confirm_annotation(annotation_id=12345)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](../LICENSE) for details.
 
 ## Resources
 

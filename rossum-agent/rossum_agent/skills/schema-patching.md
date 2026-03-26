@@ -1,3 +1,8 @@
+---
+name: Schema Patching
+description: modify schemas, add/remove fields, formulas
+---
+
 # Schema Patching Skill
 
 **Goal**: Add, update, or remove individual schema fields.
@@ -76,10 +81,11 @@ For formula updates, provide the full formula code in the `formula` property.
 
 ## Direct Field Updates via MCP
 
-For simple property updates (formula text, label, hidden), use MCP `patch_schema` directly:
+For simple property updates (formula text, label, hidden), `patch_schema` is more efficient than the sub-agent. It is an MCP tool — you **must** load it before use:
 
 ```
+load_tool(tool_names=["patch_schema"])
 patch_schema(schema_id=12345, operation="update", node_id="field_id", node_data={"formula": "new_code"})
 ```
 
-Load the schema tools first: `load_tool(tool_names=["patch_schema"])`
+Calling `patch_schema` without `load_tool` first will fail with "Unknown tool".

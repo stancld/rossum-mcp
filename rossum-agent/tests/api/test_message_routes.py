@@ -289,6 +289,7 @@ class TestProcessAgentEvent:
         assert result.sse_event is not None
         assert "step" in result.sse_event
         assert result.final_response_update is None
+        assert result.is_step_complete is False
 
     def test_process_step_event_final_answer(self):
         """Test processing StepEvent with final_answer type."""
@@ -299,6 +300,15 @@ class TestProcessAgentEvent:
         assert result.sse_event is not None
         assert "step" in result.sse_event
         assert result.final_response_update == "Done!"
+        assert result.is_step_complete is True
+
+    def test_process_step_event_final_answer_streaming(self):
+        """Test that a streaming final_answer is not marked as step complete."""
+        event = StepEvent(type="final_answer", step_number=2, content="Partial...", is_streaming=True)
+
+        result = _process_agent_event(event)
+
+        assert result.is_step_complete is False
 
     def test_process_step_event_thinking(self):
         """Test processing StepEvent with thinking type."""
@@ -309,6 +319,7 @@ class TestProcessAgentEvent:
         assert result.sse_event is not None
         assert "step" in result.sse_event
         assert result.final_response_update is None
+        assert result.is_step_complete is False
 
     def test_process_step_event_tool_start(self):
         """Test processing StepEvent with tool_start type."""
@@ -319,6 +330,15 @@ class TestProcessAgentEvent:
         assert result.sse_event is not None
         assert "step" in result.sse_event
         assert result.final_response_update is None
+        assert result.is_step_complete is False
+
+    def test_process_step_event_tool_result(self):
+        """Test that a finalized tool_result is marked as step complete."""
+        event = StepEvent(type="tool_result", step_number=1, tool_name="list_annotations", result="OK")
+
+        result = _process_agent_event(event)
+
+        assert result.is_step_complete is True
 
     def test_process_step_event_final_answer_with_none_content(self):
         """Test processing StepEvent with final_answer type but None content."""
@@ -349,6 +369,25 @@ class TestProcessAgentEvent:
         assert result.sse_event is not None
         assert "step" in result.sse_event
         assert result.final_response_update is None
+        assert result.is_step_complete is True
+
+    def test_process_stream_done_event_not_step_complete(self):
+        """Test that StreamDoneEvent is not marked as step complete."""
+        event = StreamDoneEvent(total_steps=5, input_tokens=100, output_tokens=50)
+
+        result = _process_agent_event(event)
+
+        assert result.is_step_complete is False
+
+    def test_process_non_step_event_not_step_complete(self):
+        """Test that non-StepEvent types are not marked as step complete."""
+        event = SubAgentProgressEvent(
+            tool_name="analyze_hook", iteration=1, max_iterations=3, tool_calls=[], status="running"
+        )
+
+        result = _process_agent_event(event)
+
+        assert result.is_step_complete is False
 
 
 class TestWithSSEKeepalive:

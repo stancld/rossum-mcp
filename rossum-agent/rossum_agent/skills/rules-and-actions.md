@@ -1,3 +1,8 @@
+---
+name: Rules & Actions
+description: create validation rules with TxScript conditions and actions
+---
+
 # Rules & Actions Skill
 
 **Goal**: Translate user-described validations into Rossum rules via `execute_python` helper → `create_rule`.

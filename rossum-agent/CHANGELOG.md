@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+- Intermediate chat history saves after each completed agent step — progress is persisted even if the stream is interrupted mid-run [#311](https://github.com/stancld/rossum-agents/pull/311)
+- New `master-data-hub` skill with `list_datasets` and `search_dataset` helpers for exploring and querying MDH datasets directly from `execute_python` [#312](https://github.com/stancld/rossum-agents/pull/312)
+- New `customer-email` skill — drafts professional customer-facing emails summarizing investigation findings, configuration changes, or issue resolutions [#315](https://github.com/stancld/rossum-agents/pull/315)
+
+### Changed
+- Skill catalog in system prompt is now generated from YAML frontmatter in each skill file instead of a hardcoded list — adding a new skill only requires creating the `.md` file with frontmatter [#314](https://github.com/stancld/rossum-agents/pull/314)
+
+### Fixed
+- Schema-patching skill: Agent attempted direct `patch_schema` calls without loading the tool first — restructured the skill prompt to place `load_tool` inside the code example and added explicit failure-mode note [#313](https://github.com/stancld/rossum-agents/pull/313)
+- URL context: Fixed agent confusing documents and annotations when given Rossum UI `/document/{id}` URLs — the ID is actually an annotation ID; renamed the field to `annotation_id` and added a system prompt constraint [#310](https://github.com/stancld/rossum-agents/pull/310)
 
 ## [1.7.3] - 2026-03-25
 
