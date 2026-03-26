@@ -62,6 +62,8 @@ Available Skills
      - Generate mock PDFs, upload to queues, verify extraction, test hooks end-to-end
    * - ``automation-setup``
      - Analyze automation stats, run projections, configure per-field thresholds
+   * - ``customer-email``
+     - Draft professional customer-facing emails summarizing investigation findings, changes, or resolutions
 
 Hooks Skill
 """"""""""""
