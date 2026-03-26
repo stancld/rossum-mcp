@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Intermediate chat history saves after each completed agent step — progress is persisted even if the stream is interrupted mid-run [#311](https://github.com/stancld/rossum-agents/pull/311)
+
 ### Fixed
 - URL context: Fixed agent confusing documents and annotations when given Rossum UI `/document/{id}` URLs — the ID is actually an annotation ID; renamed the field to `annotation_id` and added a system prompt constraint [#310](https://github.com/stancld/rossum-agents/pull/310)
 

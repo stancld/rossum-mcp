@@ -1124,6 +1124,80 @@ class TestAgentServiceRunAgent:
         service = AgentService()
         assert service.get_output_dir("test-chat") is None
 
+    def test_get_last_memory_returns_none_for_unknown_chat(self):
+        """Test that get_last_memory returns None for a chat with no run state."""
+        service = AgentService()
+        assert service.get_last_memory("unknown-chat") is None
+
+    def test_get_last_memory_returns_memory_without_clearing(self):
+        """Test that get_last_memory returns memory but does not clear it."""
+        service = AgentService()
+        state = service._get_chat_run_state("test-chat")
+        memory = AgentMemory()
+        state.last_memory = memory
+
+        assert service.get_last_memory("test-chat") is memory
+        # Memory is still available after get (unlike pop)
+        assert service.get_last_memory("test-chat") is memory
+
+    @pytest.mark.asyncio
+    async def test_run_agent_memory_updated_after_each_completed_step(self, tmp_path):
+        """Test that last_memory is updated after each completed step during streaming."""
+        service = AgentService()
+
+        mock_mcp_connection = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.tokens.total_input = 0
+        mock_agent.tokens.total_output = 0
+        mock_agent.tokens.total_cache_creation = 0
+        mock_agent.tokens.total_cache_read = 0
+        mock_agent.tokens.last_main_input = 0
+        mock_agent.get_token_usage_breakdown.return_value = {}
+        mock_agent.log_token_usage_summary = MagicMock()
+
+        memory = AgentMemory()
+        mock_agent.memory = memory
+
+        async def mock_run(prompt):
+            yield ToolResultStep(
+                step_number=1,
+                tool_calls=[ToolCall(id="tc_1", name="list_queues", arguments={})],
+                tool_results=[ToolResult(tool_call_id="tc_1", name="list_queues", content="[queue1]")],
+            )
+            yield FinalAnswerStep(step_number=2, final_answer="Done")
+
+        mock_agent.run = mock_run
+
+        with (
+            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch.object(
+                AgentService,
+                "_setup_change_tracking",
+                new_callable=AsyncMock,
+                return_value=(None, None, "https://api.rossum.ai"),
+            ),
+        ):
+            mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
+            mock_connect.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_create_agent.return_value = mock_agent
+
+            memories_seen = []
+            async for _ in service.run_agent(
+                chat_id="test-chat",
+                prompt="Test",
+                conversation_history=[],
+                rossum_api_token="token",
+                rossum_api_base_url="https://api.rossum.ai",
+            ):
+                # Capture memory state after each yielded event
+                mem = service.get_last_memory("test-chat")
+                memories_seen.append(mem)
+
+            # Memory should have been set during streaming (at least once non-None)
+            assert any(m is memory for m in memories_seen)
+
 
 class TestAgentServiceBuildUserContent:
     """Tests for AgentService._build_user_content method."""

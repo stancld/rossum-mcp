@@ -70,7 +70,10 @@ def mock_chat_service() -> MagicMock:
 @pytest.fixture
 def mock_agent_service() -> MagicMock:
     """Create a mock AgentService."""
-    return MagicMock()
+    mock = MagicMock()
+    # Intermediate saves use get_last_memory; return None so they are skipped in tests
+    mock.get_last_memory.return_value = None
+    return mock
 
 
 @pytest.fixture

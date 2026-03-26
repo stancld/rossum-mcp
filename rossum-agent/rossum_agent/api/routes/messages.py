@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import contextvars
 import logging
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -114,6 +114,7 @@ class ProcessedEvent:
     sse_event: str | None = None
     done_event: StreamDoneEvent | None = None
     final_response_update: str | None = None
+    is_step_complete: bool = False
 
 
 @dataclass
@@ -136,9 +137,15 @@ def _process_agent_event(event: AgentEvent) -> ProcessedEvent:
             event = event.model_copy(update={"content": sanitized})
 
     final_response = event.content if isinstance(event, StepEvent) and event.type == "final_answer" else None
+    is_step_complete = (
+        isinstance(event, StepEvent)
+        and not event.is_streaming
+        and event.type in ("tool_result", "final_answer", "error")
+    )
     return ProcessedEvent(
         sse_event=_format_sse_event(event_name, event.model_dump_json()),
         final_response_update=final_response,
+        is_step_complete=is_step_complete,
     )
 
 
@@ -207,6 +214,7 @@ async def _stream_agent_response(
     images: list[ImageContent] | None,
     documents: list[DocumentContent] | None,
     state: StreamState,
+    on_step_complete: Callable[[], None] | None = None,
 ) -> AsyncIterator[str]:
     watcher = asyncio.create_task(_watch_disconnect(request, chat_id, agent_service))
 
@@ -235,6 +243,8 @@ async def _stream_agent_response(
                 state.final_response = result.final_response_update
             if result.sse_event is not None:
                 yield result.sse_event
+            if result.is_step_complete and on_step_complete is not None:
+                on_step_complete()
     finally:
         watcher.cancel()
 
@@ -391,6 +401,26 @@ async def send_message(
     async def event_generator() -> AsyncIterator[str]:
         state = StreamState()
 
+        def _save_intermediate() -> None:
+            """Persist current agent memory after each completed step."""
+            memory = agent_service.get_last_memory(chat_id)
+            if memory is None:
+                return
+            _save_chat_history(
+                chat_service=chat_service,
+                agent_service=agent_service,
+                credentials=credentials,
+                chat_id=chat_id,
+                chat_data=chat_data,
+                history=history,
+                user_prompt=user_prompt,
+                final_response=state.final_response,
+                images=images,
+                documents=documents,
+                output_dir=agent_service.get_output_dir(chat_id),
+                memory=memory,
+            )
+
         try:
             async for chunk in _stream_agent_response(
                 request=request,
@@ -405,6 +435,7 @@ async def send_message(
                 images=images,
                 documents=documents,
                 state=state,
+                on_step_complete=_save_intermediate,
             ):
                 yield chunk
         except asyncio.CancelledError:
