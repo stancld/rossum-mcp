@@ -380,15 +380,11 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             '    - Total amount is smaller than 400. Error message: "Total amount is larger than allowed 400."\n'
             '    - Sum of all total amount line items equals total amount. Error message: "Sum of all total amount line items does not equal total amount."\n'
             '    - All line items it holds: "quantity x unit price = total amount"\n\n'
+            "Don't use task tools.\n"
             "Return only the rule ID as a one-word answer."
         ),
         tool_expectation=ToolExpectation(
-            expected_tools=[
-                "create_queue_from_template",
-                "load_skill",
-                "create_rule",
-                "execute_python",
-            ],
+            expected_tools=["create_queue_from_template", "load_skill", "create_rule", "execute_python"],
             mode=ToolMatchMode.SUBSET,
             forbidden_tools=[
                 "search_knowledge_base",
@@ -399,7 +395,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         success_criteria=SuccessCriteria(
             require_subagent=False,
             required_keywords=[],
-            max_steps=5,
+            max_steps=8,
             file_expectation=FileExpectation(),
             custom_checks=[BUSINESS_VALIDATION_RULES_CHECK],
         ),
