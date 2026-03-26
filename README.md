@@ -12,8 +12,6 @@
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
-[![PyPI - rossum-deploy](https://img.shields.io/pypi/v/rossum-deploy?label=rossum-deploy)](https://pypi.org/project/rossum-deploy/)
-[![npm - rossum-agent-client](https://img.shields.io/npm/v/rossum-agent-client?label=rossum-agent-client)](https://www.npmjs.com/package/rossum-agent-client)
 
 [![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
 [![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
