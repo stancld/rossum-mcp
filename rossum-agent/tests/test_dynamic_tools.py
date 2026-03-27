@@ -203,6 +203,32 @@ class TestLoadCategoriesImpl:
         finally:
             set_context(AgentContext())
 
+    @patch("rossum_agent.tools.dynamic_tools.get_write_tools")
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    @patch("rossum_agent.tools.dynamic_tools.get_category_tool_names")
+    def test_no_tools_in_read_only_mode_mentions_write_tools(
+        self,
+        mock_get_catalog: MagicMock,
+        mock_run_coro: MagicMock,
+        mock_get_write: MagicMock,
+    ) -> None:
+        """When all category tools are filtered out in read-only mode, error hints about write tools."""
+        reset_dynamic_tools()
+        mock_get_catalog.return_value = {"update": {"patch_schema", "update_hook"}}
+        mock_get_write.return_value = {"patch_schema", "update_hook"}
+
+        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock(), mcp_mode="read-only"))
+        try:
+            mock_future = MagicMock()
+            mock_future.result.return_value = []
+            mock_run_coro.return_value = mock_future
+
+            result = _load_categories_impl(["update"])
+            assert "No tools found for categories" in result
+            assert "Write tools are not available in read-only mode" in result
+        finally:
+            set_context(AgentContext())
+
 
 class TestPreloadCategoriesForRequest:
     """Tests for preload_categories_for_request function."""
@@ -523,7 +549,7 @@ class TestLoadToolsByName:
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     def test_returns_error_for_unknown_tool(self, mock_run_coro: MagicMock) -> None:
         reset_dynamic_tools()
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
+        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock(), mcp_mode="read-write"))
         try:
             mock_tool = MagicMock()
             mock_tool.name = "get_queue"
@@ -533,6 +559,24 @@ class TestLoadToolsByName:
 
             result = load_tool(["nonexistent_tool"])
             assert "Error: Unknown tools" in result
+        finally:
+            set_context(AgentContext())
+
+    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
+    def test_unknown_tool_in_read_only_mode_mentions_write_tools(self, mock_run_coro: MagicMock) -> None:
+        """When a tool is not found in read-only mode, error hints about write tools being disabled."""
+        reset_dynamic_tools()
+        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock(), mcp_mode="read-only"))
+        try:
+            mock_tool = MagicMock()
+            mock_tool.name = "get_queue"
+            mock_future = MagicMock()
+            mock_future.result.return_value = [mock_tool]
+            mock_run_coro.return_value = mock_future
+
+            result = load_tool(["patch_schema"])
+            assert "patch_schema" in result
+            assert "Write tools are not available in read-only mode" in result
         finally:
             set_context(AgentContext())
 

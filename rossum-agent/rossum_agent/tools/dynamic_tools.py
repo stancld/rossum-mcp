@@ -243,6 +243,8 @@ def _load_categories_impl(categories: list[str]) -> str:
     tools_to_add = _filter_mcp_tools_by_names(mcp_tools, tool_names_to_load)
 
     if not tools_to_add:
+        if read_only:
+            return f"No tools found for categories: {to_load}. Write tools are not available in read-only mode."
         return f"No tools found for categories: {to_load}"
 
     anthropic_tools = mcp_tools_to_anthropic_format(tools_to_add)
@@ -310,6 +312,8 @@ def load_tool(tool_names: list[str]) -> str:
 
     invalid = [name for name in tool_names if name not in available_tool_names]
     if invalid:
+        if ctx.is_read_only:
+            return f"Error: Tools not available: {invalid}. Write tools are not available in read-only mode."
         return f"Error: Unknown tools {invalid}"
 
     read_only = ctx.is_read_only

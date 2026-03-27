@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+- Dynamic tool loading error messages now hint that write tools are disabled when running in read-only mode, helping the agent self-correct instead of retrying [#320](https://github.com/stancld/rossum-agents/pull/320)
+
 ## [1.8.1] - 2026-03-26
 
 ### Changed
