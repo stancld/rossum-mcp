@@ -64,8 +64,6 @@ Available Skills
      - Analyze automation stats, run projections, configure per-field thresholds
    * - ``customer-email``
      - Draft professional customer-facing emails summarizing investigation findings, changes, or resolutions
-   * - ``investigation``
-     - Systematically investigate document processing issues — trace annotations through hooks, match failures, automation blocks, and export errors
 
 Hooks Skill
 """"""""""""
@@ -111,15 +109,6 @@ UI Settings Skill
 **Goal**: Update queue UI settings (``settings.annotation_list_table.columns``) without corrupting structure.
 
 Workflow: Fetch current settings → Modify only ``columns`` array → Patch via ``update_queue``.
-
-Investigation Skill
-"""""""""""""""""""
-
-**Goal**: Diagnose why a document was processed incorrectly — wrong matches, automation blocks, hook errors, export failures, or unexpected field values.
-
-Workflow: Extract annotation ID from URL/reference → parallel fetch annotation, content, and queue → search hook logs → trace root cause by symptom (matching failure, automation blocker, hook error, export failure, wrong field value, stuck document) → report findings.
-
-Cross-references: ``hooks``, ``master-data-hub``, ``lookup-fields``, ``automation-setup``, ``customer-email`` skills.
 
 Document Testing Skill
 """"""""""""""""""""""
