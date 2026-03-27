@@ -47,6 +47,20 @@ class TestParseFrontmatter:
         meta, _body = _parse_frontmatter(text)
         assert meta["name"] == "Spaced Skill"
 
+    def test_parses_yaml_list_values(self):
+        text = "---\nname: My Skill\ntools:\n  - get\n  - patch_schema\n  - search\n---\nBody\n"
+        meta, body = _parse_frontmatter(text)
+        assert meta["name"] == "My Skill"
+        assert meta["tools"] == ["get", "patch_schema", "search"]
+        assert body == "Body\n"
+
+    def test_parses_yaml_list_at_end_of_frontmatter(self):
+        text = "---\nname: My Skill\ndescription: test\ntools:\n  - alpha\n  - beta\n---\nBody\n"
+        meta, _body = _parse_frontmatter(text)
+        assert meta["tools"] == ["alpha", "beta"]
+        assert meta["name"] == "My Skill"
+        assert meta["description"] == "test"
+
 
 class TestSkill:
     """Test Skill dataclass."""
@@ -77,6 +91,14 @@ class TestSkill:
         skill = Skill(name="X", content="Y", file_path=Path("/x.md"), description="does X")
         assert skill.description == "does X"
 
+    def test_mcp_tools_defaults_to_empty_list(self):
+        skill = Skill(name="X", content="Y", file_path=Path("/x.md"))
+        assert skill.mcp_tools == []
+
+    def test_mcp_tools_from_constructor(self):
+        skill = Skill(name="X", content="Y", file_path=Path("/x.md"), mcp_tools=["patch_schema", "get"])
+        assert skill.mcp_tools == ["patch_schema", "get"]
+
 
 class TestSkillRegistry:
     """Test SkillRegistry class."""
@@ -105,6 +127,42 @@ class TestSkillRegistry:
             assert skill.name == "Custom Name"
             assert skill.description == "does custom things"
             assert skill.content == "# Body\n"
+            assert skill.mcp_tools == []
+
+    def test_loads_mcp_tools_from_frontmatter_inline(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "my-skill.md"
+            skill_file.write_text("---\nname: My Skill\nmcp_tools: patch_schema, get, search\n---\n# Body\n")
+
+            registry = SkillRegistry(Path(tmpdir))
+            skill = registry.get_skill("my-skill")
+
+            assert skill is not None
+            assert skill.mcp_tools == ["patch_schema", "get", "search"]
+
+    def test_loads_mcp_tools_from_frontmatter_bullet_list(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "my-skill.md"
+            skill_file.write_text(
+                "---\nname: My Skill\nmcp_tools:\n  - get\n  - patch_schema\n  - search\n---\n# Body\n"
+            )
+
+            registry = SkillRegistry(Path(tmpdir))
+            skill = registry.get_skill("my-skill")
+
+            assert skill is not None
+            assert skill.mcp_tools == ["get", "patch_schema", "search"]
+
+    def test_loads_single_mcp_tool_from_frontmatter(self):
+        with TemporaryDirectory() as tmpdir:
+            skill_file = Path(tmpdir) / "my-skill.md"
+            skill_file.write_text("---\nname: My Skill\nmcp_tools: patch_schema\n---\n# Body\n")
+
+            registry = SkillRegistry(Path(tmpdir))
+            skill = registry.get_skill("my-skill")
+
+            assert skill is not None
+            assert skill.mcp_tools == ["patch_schema"]
 
     def test_falls_back_to_filename_when_no_frontmatter(self):
         with TemporaryDirectory() as tmpdir:

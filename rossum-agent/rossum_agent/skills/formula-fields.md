@@ -1,6 +1,10 @@
 ---
 name: Formula Fields
 description: create/configure formula fields with TxScript
+mcp_tools:
+  - get
+  - get_schema_tree_structure
+  - patch_schema
 ---
 
 # Formula Fields Skill
