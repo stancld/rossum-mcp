@@ -1,6 +1,12 @@
 ---
 name: Document Testing
 description: generate mock PDFs, upload, verify extraction, test hooks
+mcp_tools:
+  - get_annotation_content
+  - get_schema_tree_structure
+  - search
+  - test_hook
+  - upload_document
 ---
 
 # Document Testing Skill

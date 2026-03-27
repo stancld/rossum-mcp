@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Skills now auto-load their required MCP tools on activation — agents no longer need an explicit `load_tool` step before using skill-specific tools [#323](https://github.com/stancld/rossum-agents/pull/323)
+
 ## [1.8.1] - 2026-03-26
 
 ### Changed
