@@ -8,11 +8,10 @@ from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.engine import Engine, EngineField, EngineFieldType
 
 from rossum_mcp.tools.base import build_resource_url
+from rossum_mcp.tools.models import EngineType
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
-
-    from rossum_mcp.tools.models import EngineType
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,8 @@ logger = logging.getLogger(__name__)
 async def _create_engine(
     client: AsyncRossumAPIClient, base_url: str, name: str, organization_id: int, engine_type: EngineType
 ) -> Engine:
-    if engine_type not in ("extractor", "splitter"):
-        raise ToolError(f"Invalid engine_type '{engine_type}'. Must be 'extractor' or 'splitter'")
+    if engine_type not in tuple(EngineType):
+        raise ToolError(f"Invalid engine_type '{engine_type}'. Must be one of: {', '.join(EngineType)}")
 
     logger.debug(f"Creating engine: name={name}, organization_id={organization_id}, type={engine_type}")
     engine_data = {
