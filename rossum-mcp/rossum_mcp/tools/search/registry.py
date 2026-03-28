@@ -8,7 +8,7 @@ from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.annotation import Annotation
 from rossum_api.models.engine import Engine
 from rossum_api.models.group import Group
-from rossum_api.models.hook import Hook, HookRunData
+from rossum_api.models.hook import HookRunData
 from rossum_api.models.hook_template import HookTemplate
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.queue import Queue
@@ -18,7 +18,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, LogLevel
+from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, Hook, LogLevel
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:
@@ -100,13 +100,27 @@ async def _list_schemas(
 async def _list_hooks(
     client: AsyncRossumAPIClient,
     queue_id: int | None = None,
+    workspace_id: int | None = None,
     active: bool | None = None,
     first_n: int | None = None,
 ) -> list[Hook]:
-    logger.info(f"Listing hooks: queue_id={queue_id}, active={active}, first_n={first_n}")
+    logger.info(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}, first_n={first_n}")
     filters = build_filters(queue=queue_id, active=active)
     result = await graceful_list(client, Resource.Hook, "hook", max_items=first_n, **filters)
-    return result.items
+
+    all_queue_urls = {url for hook in result.items for url in hook.queues}
+    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
+
+    items = [
+        Hook.from_base(
+            hook, workspaces=list({queue_workspace_map[q] for q in hook.queues if q in queue_workspace_map})
+        )
+        for hook in result.items
+    ]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [h for h in items if h.workspaces and any(w.endswith(workspace_url_suffix) for w in h.workspaces)]
+    return items
 
 
 async def _list_hook_logs(
