@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Schema responses (`get_schema`, `list_schemas`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a schema belongs to [#324](https://github.com/stancld/rossum-agents/pull/324)
+- Added `workspace_id` filter to `list_schemas` — schemas can now be scoped to a specific workspace, filtering by the workspace associations derived from linked queues [#324](https://github.com/stancld/rossum-agents/pull/324)
 
 ## [2.0.6] - 2026-03-25
 

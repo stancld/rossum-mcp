@@ -98,7 +98,7 @@ search
    * - ``queue``
      - ``id``, ``workspace_id``, ``name``, ``use_regex``
    * - ``schema``
-     - ``name``, ``queue_id``, ``use_regex``
+     - ``name``, ``queue_id``, ``workspace_id``, ``use_regex``
    * - ``hook``
      - ``queue_id``, ``active``, ``first_n``
    * - ``engine``

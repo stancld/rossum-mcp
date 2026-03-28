@@ -265,6 +265,83 @@ class TestListSchemas:
         assert len(result) == 1
         assert result[0].workspaces is None
 
+    @pytest.mark.asyncio
+    async def test_list_schemas_filter_by_workspace_id(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id filters schemas to those belonging to the workspace."""
+        mock_schemas = [
+            create_mock_schema(
+                id=1,
+                name="Schema A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+            create_mock_schema(
+                id=2,
+                name="Schema B",
+                queues=["https://api.test.rossum.ai/v1/queues/20"],
+            ),
+            create_mock_schema(
+                id=3,
+                name="Schema C",
+                queues=[
+                    "https://api.test.rossum.ai/v1/queues/10",
+                    "https://api.test.rossum.ai/v1/queues/20",
+                ],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_schemas if resource == Resource.Schema else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_schemas(mock_client, workspace_id=100)
+
+        assert len(result) == 2
+        assert {s.id for s in result} == {1, 3}
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_filter_by_workspace_id_no_match(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id returns empty list when no schemas belong to the workspace."""
+        mock_schemas = [
+            create_mock_schema(
+                id=1,
+                name="Schema A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_schemas if resource == Resource.Schema else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_schemas(mock_client, workspace_id=999)
+
+        assert len(result) == 0
+
 
 @pytest.mark.unit
 class TestPatchSchema:

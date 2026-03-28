@@ -77,9 +77,13 @@ def _truncate_schema_for_list(schema: Schema, queue_workspace_map: dict[str, str
 
 
 async def _list_schemas(
-    client: AsyncRossumAPIClient, name: str | None = None, queue_id: int | None = None, use_regex: bool = False
+    client: AsyncRossumAPIClient,
+    name: str | None = None,
+    queue_id: int | None = None,
+    workspace_id: int | None = None,
+    use_regex: bool = False,
 ) -> list[SchemaListItem]:
-    logger.debug(f"Listing schemas: name={name}, queue_id={queue_id}")
+    logger.debug(f"Listing schemas: name={name}, queue_id={queue_id}, workspace_id={workspace_id}")
     filters = build_filters(name=None if use_regex else name, queue=queue_id)
     result = await graceful_list(client, Resource.Schema, "schema", **filters)
 
@@ -87,6 +91,9 @@ async def _list_schemas(
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
     items = [_truncate_schema_for_list(schema, queue_workspace_map) for schema in result.items]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [s for s in items if s.workspaces and any(w.endswith(workspace_url_suffix) for w in s.workspaces)]
     return filter_by_name_regex(items, name, use_regex)
 
 
