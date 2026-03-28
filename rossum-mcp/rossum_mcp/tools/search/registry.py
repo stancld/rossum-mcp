@@ -49,14 +49,13 @@ def _queue_to_list_item(queue: Queue) -> QueueListItem:
 
 async def _list_queues(
     client: AsyncRossumAPIClient,
-    id: str | None = None,
     workspace_id: int | None = None,
     name: str | None = None,
     use_regex: bool = False,
     max_items: int | None = None,
 ) -> list[QueueListItem]:
-    logger.debug(f"Listing queues: id={id}, workspace_id={workspace_id}, name={name}")
-    filters = build_filters(id=id, workspace=workspace_id, name=None if use_regex else name)
+    logger.debug(f"Listing queues: workspace_id={workspace_id}, name={name}")
+    filters = build_filters(workspace=workspace_id, name=None if use_regex else name)
     result = await graceful_list(client, Resource.Queue, "queue", max_items=max_items, **filters)
     items = [_queue_to_list_item(queue) for queue in result.items]
     return filter_by_name_regex(items, name, use_regex)
@@ -198,13 +197,12 @@ async def _list_hook_templates(client: AsyncRossumAPIClient, max_items: int | No
 
 async def _list_engines(
     client: AsyncRossumAPIClient,
-    id: int | None = None,
     engine_type: EngineType | None = None,
     agenda_id: str | None = None,
     max_items: int | None = None,
 ) -> list[Engine]:
-    logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")
-    filters = build_filters(id=id, type=engine_type, agenda_id=agenda_id)
+    logger.debug(f"Listing engines: type={engine_type}, agenda_id={agenda_id}")
+    filters = build_filters(type=engine_type, agenda_id=agenda_id)
     result = await graceful_list(client, Resource.Engine, "engine", max_items=max_items, **filters)
     return result.items
 
