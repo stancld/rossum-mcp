@@ -1,3 +1,9 @@
+"""Entity fetch functions and config registry.
+
+Maps entity names to retrieve/search callables (EntityConfig). Consumed by handler.py to
+wire up MCP tools, and by the search layer for shared search_fn references.
+"""
+
 from __future__ import annotations
 
 import logging

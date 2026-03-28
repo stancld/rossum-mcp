@@ -1,3 +1,9 @@
+"""MCP tool registrations for get/search operations.
+
+Builds on the entity registry (registry.py) to expose get, search, and specialized
+read-only tools to the MCP server.
+"""
+
 from __future__ import annotations
 
 import asyncio
