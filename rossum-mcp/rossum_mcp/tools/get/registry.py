@@ -17,7 +17,6 @@ from rossum_api.models.annotation import Annotation
 from rossum_api.models.document_relation import DocumentRelation
 from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine
-from rossum_api.models.hook import Hook
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
 from rossum_api.models.queue import Queue
@@ -26,7 +25,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import resolve_queue_workspaces
-from rossum_mcp.tools.models import Schema
+from rossum_mcp.tools.models import Hook, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -66,7 +65,10 @@ async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
 
 
 async def _get_hook(client: AsyncRossumAPIClient, hook_id: int) -> Hook:
-    return await client.retrieve_hook(hook_id)
+    base_hook = await client.retrieve_hook(hook_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_hook.queues))
+    workspaces = list({queue_workspace_map[q] for q in base_hook.queues if q in queue_workspace_map})
+    return Hook.from_base(base_hook, workspaces=workspaces)
 
 
 async def _get_engine(client: AsyncRossumAPIClient, engine_id: int) -> Engine:

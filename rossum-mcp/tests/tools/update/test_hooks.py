@@ -5,8 +5,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from conftest import create_mock_hook
+from conftest import create_mock_hook, create_mock_queue
 from fastmcp.exceptions import ToolError
+from rossum_api.domain_logic.resources import Resource
+from rossum_mcp.tools.search.registry import _list_hooks
 from rossum_mcp.tools.update.handler import register_update_tools
 from rossum_mcp.tools.update.hooks import (
     _generate_hook_payload,
@@ -297,3 +299,71 @@ class TestGenerateHookPayload:
             "hooks/123/generate_payload",
             json={"event": "invocation", "action": "scheduled"},
         )
+
+
+@pytest.mark.unit
+class TestListHooks:
+    """Tests for _list_hooks workspace resolution."""
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_resolves_workspaces(self, mock_client: AsyncMock) -> None:
+        """Test that workspace URLs are resolved from queue data."""
+        mock_hooks = [
+            create_mock_hook(
+                id=1,
+                name="Hook 1",
+                queues=[
+                    "https://api.test.rossum.ai/v1/queues/10",
+                    "https://api.test.rossum.ai/v1/queues/20",
+                ],
+            ),
+            create_mock_hook(
+                id=2,
+                name="Hook 2",
+                queues=["https://api.test.rossum.ai/v1/queues/20"],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_hooks if resource == Resource.Hook else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_hooks(mock_client)
+
+        assert len(result) == 2
+        assert sorted(result[0].workspaces) == [
+            "https://api.test.rossum.ai/v1/workspaces/100",
+            "https://api.test.rossum.ai/v1/workspaces/200",
+        ]
+        assert result[1].workspaces == ["https://api.test.rossum.ai/v1/workspaces/200"]
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_empty_workspaces_when_no_queues(self, mock_client: AsyncMock) -> None:
+        """Test that workspaces is empty when hook has no queues."""
+        mock_hooks = [create_mock_hook(id=1, name="Hook 1", queues=[])]
+
+        async def mock_fetch_all(resource, **filters):
+            for hook in mock_hooks:
+                yield hook
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_hooks(mock_client)
+
+        assert len(result) == 1
+        assert result[0].workspaces == []
