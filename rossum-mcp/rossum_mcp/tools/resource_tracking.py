@@ -12,12 +12,7 @@ logger = logging.getLogger(__name__)
 TRACKED_RESOURCES_KEY = "_tracked_resources"
 
 
-def track_resource(
-    tracked: list[dict[str, Any]],
-    entity_type: str,
-    entity_id: int | str,
-    data: Any,
-) -> None:
+def track_resource(tracked: list[dict[str, Any]], entity_type: str, entity_id: int | str, data: Any) -> None:
     """Append a side-effect resource to the tracked list.
 
     Converts dataclass/dict data to a plain dict for serialization.

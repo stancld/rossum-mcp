@@ -60,11 +60,7 @@ def filter_by_name_regex[T](items: list[T], name: str | None, use_regex: bool) -
 
 
 async def graceful_list(
-    client: AsyncRossumAPIClient,
-    resource: Resource,
-    resource_label: str,
-    max_items: int | None = None,
-    **filters: Any,
+    client: AsyncRossumAPIClient, resource: Resource, resource_label: str, max_items: int | None = None, **filters: Any
 ) -> GracefulListResult:
     """List resources gracefully, skipping items that fail deserialization.
 

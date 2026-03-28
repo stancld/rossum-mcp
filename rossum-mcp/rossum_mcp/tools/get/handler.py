@@ -49,11 +49,7 @@ def _serialize(obj: object) -> object:
 
 
 async def _get_one(
-    client: AsyncRossumAPIClient,
-    config: EntityConfig,
-    entity: str,
-    entity_id: int,
-    include_related: bool,
+    client: AsyncRossumAPIClient, config: EntityConfig, entity: str, entity_id: int, include_related: bool
 ) -> dict[str, object]:
     if config.retrieve_fn is None:
         raise RuntimeError(f"Entity '{entity}' has no retrieve_fn — use search instead")
@@ -71,11 +67,7 @@ async def _get_one(
 
 
 async def _get_many(
-    client: AsyncRossumAPIClient,
-    config: EntityConfig,
-    entity: str,
-    entity_ids: list[int],
-    include_related: bool,
+    client: AsyncRossumAPIClient, config: EntityConfig, entity: str, entity_ids: list[int], include_related: bool
 ) -> list[dict[str, object]]:
     tasks = [_get_one(client, config, entity, eid, include_related) for eid in entity_ids]
     return list(await asyncio.gather(*tasks))
