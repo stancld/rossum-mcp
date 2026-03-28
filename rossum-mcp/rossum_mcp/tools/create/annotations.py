@@ -18,12 +18,11 @@ logger = logging.getLogger(__name__)
 
 async def _upload_document(client: AsyncRossumAPIClient, file_path: str, queue_id: int) -> dict:
     path = anyio.Path(file_path)
-    if not await path.exists():
-        logger.error(f"File not found: {file_path}")
-        raise FileNotFoundError(f"File not found: {file_path}")
 
     try:
         task = (await client.upload_document(queue_id, [(str(path), path.name)]))[0]
+    except FileNotFoundError as e:
+        raise ToolError(f"File not found: {file_path}") from e
     except KeyError as e:
         logger.error(f"Upload failed - unexpected API response format: {e!s}")
         error_msg = (
