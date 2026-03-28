@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from conftest import create_mock_schema
+from conftest import create_mock_queue, create_mock_schema
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_mcp.tools.get.handler import register_get_tools
@@ -65,6 +65,47 @@ class TestGetSchema:
         assert result.name == "Invoice Schema"
         assert len(result.content) == 1
         mock_client.retrieve_schema.assert_called_once_with(50)
+
+    @pytest.mark.asyncio
+    async def test_get_schema_resolves_workspaces(self, mock_client: AsyncMock) -> None:
+        """Test that workspace URLs are resolved from queue data."""
+        mock_schema = create_mock_schema(
+            id=50,
+            name="Invoice Schema",
+            queues=[
+                "https://api.test.rossum.ai/v1/queues/10",
+                "https://api.test.rossum.ai/v1/queues/20",
+            ],
+        )
+        mock_client.retrieve_schema.return_value = mock_schema
+
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _get_schema(mock_client, 50)
+
+        assert result.id == 50
+        assert result.name == "Invoice Schema"
+        assert sorted(result.workspaces) == [
+            "https://api.test.rossum.ai/v1/workspaces/100",
+            "https://api.test.rossum.ai/v1/workspaces/200",
+        ]
 
     @pytest.mark.asyncio
     async def test_get_schema_not_found(self, mock_client: AsyncMock) -> None:

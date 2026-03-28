@@ -2,9 +2,24 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+import dataclasses
+from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Literal, TypedDict
+
+from rossum_api.models.schema import Schema as RossumSchema
+
+
+@dataclass
+class Schema(RossumSchema):
+    """Enriched Schema with resolved workspace URLs."""
+
+    workspaces: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_base(cls, schema: RossumSchema, workspaces: list[str]) -> Schema:
+        base_fields = {f.name: getattr(schema, f.name) for f in dataclasses.fields(schema)}
+        return cls(**base_fields, workspaces=workspaces)
 
 
 class AutomationLevel(StrEnum):

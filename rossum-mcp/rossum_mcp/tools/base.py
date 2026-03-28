@@ -87,6 +87,14 @@ async def graceful_list(
     return GracefulListResult(items=items, skipped_ids=skipped_ids)
 
 
+async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set[str]) -> dict[str, str]:
+    """Map queue URLs to their workspace URLs by fetching queue data."""
+    if not queue_urls:
+        return {}
+    queue_result = await graceful_list(client, Resource.Queue, "queue")
+    return {q.url: q.workspace for q in queue_result.items if q.workspace}
+
+
 async def delete_resource(
     resource_type: str,
     resource_id: int,

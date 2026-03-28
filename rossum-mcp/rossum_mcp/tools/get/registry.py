@@ -22,9 +22,11 @@ from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
 from rossum_api.models.queue import Queue
 from rossum_api.models.rule import Rule
-from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
+
+from rossum_mcp.tools.base import resolve_queue_workspaces
+from rossum_mcp.tools.models import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -53,11 +55,14 @@ async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
 
 async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
     try:
-        return await client.retrieve_schema(schema_id)
+        base_schema = await client.retrieve_schema(schema_id)
     except APIClientError as e:
         if e.status_code == 404:
             raise ToolError(f"Schema {schema_id} not found") from e
         raise
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_schema.queues))
+    workspaces = list({queue_workspace_map[q] for q in base_schema.queues if q in queue_workspace_map})
+    return Schema.from_base(base_schema, workspaces=workspaces)
 
 
 async def _get_hook(client: AsyncRossumAPIClient, hook_id: int) -> Hook:

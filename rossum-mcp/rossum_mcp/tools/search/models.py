@@ -27,6 +27,7 @@ class SchemaSearch(BaseModel):
     entity: Literal["schema"] = "schema"
     name: str | None = None
     queue_id: int | None = None
+    workspace_id: int | None = None
     use_regex: bool = False
 
 
@@ -187,6 +188,7 @@ class SchemaListItem:
     id: int
     name: str | None = None
     queues: list[str] | None = None
+    workspaces: list[str] | None = None
     url: str | None = None
     content: str = "<omitted>"
     metadata: dict | None = None
