@@ -103,6 +103,15 @@ async def graceful_list(
     return GracefulListResult(items=items, skipped_ids=skipped_ids)
 
 
+def get_queue_engine_url(queue: object) -> str | None:
+    """Get the engine URL from a queue, checking dedicated, generic, then default engine."""
+    for attr in ("dedicated_engine", "generic_engine", "engine"):
+        value = getattr(queue, attr, None)
+        if value and isinstance(value, str):
+            return value
+    return None
+
+
 async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set[str]) -> dict[str, str]:
     """Map queue URLs to their workspace URLs by fetching queue data."""
     if not queue_urls:

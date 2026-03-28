@@ -17,7 +17,7 @@ from rossum_api.models.engine import Engine
 from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
 
-from rossum_mcp.tools.base import build_filters, extract_id_from_url, graceful_list
+from rossum_mcp.tools.base import build_filters, extract_id_from_url, get_queue_engine_url, graceful_list
 from rossum_mcp.tools.get.schemas import extract_schema_tree
 from rossum_mcp.tools.search.registry import _list_hooks
 
@@ -44,14 +44,7 @@ async def _get_queue_engine(client: AsyncRossumAPIClient, queue_id: int) -> Engi
     logger.debug(f"Retrieving queue engine: queue_id={queue_id}")
     queue: Queue = await client.retrieve_queue(queue_id)
 
-    engine_url = None
-    if queue.dedicated_engine:
-        engine_url = queue.dedicated_engine
-    elif queue.generic_engine:
-        engine_url = queue.generic_engine
-    elif queue.engine:
-        engine_url = queue.engine
-
+    engine_url = get_queue_engine_url(queue)
     if not engine_url:
         return {"message": "No engine assigned to this queue"}
 

@@ -7,7 +7,7 @@ from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.queue import Queue
 
-from rossum_mcp.tools.base import build_resource_url, extract_id_from_url
+from rossum_mcp.tools.base import build_resource_url, extract_id_from_url, get_queue_engine_url
 from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, QueueTemplateName
 from rossum_mcp.tools.resource_tracking import embed_tracked_resources, track_resource
 
@@ -16,14 +16,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_engine_url(queue: Queue) -> str | None:
-    for attr in ("dedicated_engine", "generic_engine", "engine"):
-        value = getattr(queue, attr, None)
-        if value and isinstance(value, str):
-            return value
-    return None
 
 
 async def _create_queue_from_template(
@@ -70,7 +62,7 @@ async def _create_queue_from_template(
         logger.warning(f"Failed to fetch schema for tracked resource (queue={queue.id})", exc_info=True)
 
     # Track the engine created as a side effect
-    engine_url = _get_engine_url(queue)
+    engine_url = get_queue_engine_url(queue)
     if engine_url:
         try:
             eid = extract_id_from_url(engine_url)
