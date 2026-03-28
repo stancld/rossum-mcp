@@ -17,7 +17,7 @@ from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
-from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list
+from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
 from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, LogLevel
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
@@ -61,12 +61,14 @@ async def _list_queues(
     return filter_by_name_regex(items, name, use_regex)
 
 
-def _truncate_schema_for_list(schema: Schema) -> SchemaListItem:
-    """Convert to SchemaListItem with content omitted."""
+def _truncate_schema_for_list(schema: Schema, queue_workspace_map: dict[str, str]) -> SchemaListItem:
+    """Convert to SchemaListItem with content omitted and workspaces resolved."""
+    workspaces = list({queue_workspace_map[q] for q in schema.queues if q in queue_workspace_map})
     return SchemaListItem(
         id=schema.id,
         name=schema.name,
         queues=schema.queues,
+        workspaces=workspaces or None,
         url=schema.url,
         metadata=schema.metadata,
         modified_by=schema.modified_by,
@@ -80,7 +82,11 @@ async def _list_schemas(
     logger.debug(f"Listing schemas: name={name}, queue_id={queue_id}")
     filters = build_filters(name=None if use_regex else name, queue=queue_id)
     result = await graceful_list(client, Resource.Schema, "schema", **filters)
-    items = [_truncate_schema_for_list(schema) for schema in result.items]
+
+    all_queue_urls = {url for schema in result.items for url in schema.queues}
+    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
+
+    items = [_truncate_schema_for_list(schema, queue_workspace_map) for schema in result.items]
     return filter_by_name_regex(items, name, use_regex)
 
 

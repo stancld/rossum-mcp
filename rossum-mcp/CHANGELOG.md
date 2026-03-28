@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- Schema responses (`get_schema`, `list_schemas`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a schema belongs to [#324](https://github.com/stancld/rossum-agents/pull/324)
+
 ## [2.0.6] - 2026-03-25
 
 ### Added

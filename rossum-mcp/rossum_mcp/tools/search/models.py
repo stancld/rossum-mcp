@@ -187,6 +187,7 @@ class SchemaListItem:
     id: int
     name: str | None = None
     queues: list[str] | None = None
+    workspaces: list[str] | None = None
     url: str | None = None
     content: str = "<omitted>"
     metadata: dict | None = None

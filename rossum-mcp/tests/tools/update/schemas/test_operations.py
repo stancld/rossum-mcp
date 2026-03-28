@@ -5,9 +5,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from conftest import create_mock_schema
+from conftest import create_mock_queue, create_mock_schema
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
+from rossum_api.domain_logic.resources import Resource
 from rossum_mcp.tools.search.models import SchemaListItem
 from rossum_mcp.tools.search.registry import _list_schemas
 from rossum_mcp.tools.update.handler import register_update_tools
@@ -200,6 +201,69 @@ class TestListSchemas:
         result = await _list_schemas(mock_client, name="^invoice$", use_regex=True)
 
         assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_resolves_workspaces(self, mock_client: AsyncMock) -> None:
+        """Test that workspace URLs are resolved from queue data."""
+        mock_schemas = [
+            create_mock_schema(
+                id=1,
+                name="Schema 1",
+                queues=[
+                    "https://api.test.rossum.ai/v1/queues/10",
+                    "https://api.test.rossum.ai/v1/queues/20",
+                ],
+            ),
+            create_mock_schema(
+                id=2,
+                name="Schema 2",
+                queues=["https://api.test.rossum.ai/v1/queues/20"],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_schemas if resource == Resource.Schema else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_schemas(mock_client)
+
+        assert len(result) == 2
+        assert sorted(result[0].workspaces) == [
+            "https://api.test.rossum.ai/v1/workspaces/100",
+            "https://api.test.rossum.ai/v1/workspaces/200",
+        ]
+        assert result[1].workspaces == ["https://api.test.rossum.ai/v1/workspaces/200"]
+
+    @pytest.mark.asyncio
+    async def test_list_schemas_workspaces_none_when_no_queues(self, mock_client: AsyncMock) -> None:
+        """Test that workspaces is None when schema has no queues."""
+        mock_schemas = [create_mock_schema(id=1, name="Schema 1", queues=[])]
+
+        async def mock_fetch_all(resource, **filters):
+            for schema in mock_schemas:
+                yield schema
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_schemas(mock_client)
+
+        assert len(result) == 1
+        assert result[0].workspaces is None
 
 
 @pytest.mark.unit
