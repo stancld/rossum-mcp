@@ -34,6 +34,7 @@ class SchemaSearch(BaseModel):
 class HookSearch(BaseModel):
     entity: Literal["hook"] = "hook"
     queue_id: int | None = None
+    workspace_id: int | None = None
     active: bool | None = None
     first_n: int | None = None
 

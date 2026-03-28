@@ -100,7 +100,7 @@ search
    * - ``schema``
      - ``name``, ``queue_id``, ``workspace_id``, ``use_regex``
    * - ``hook``
-     - ``queue_id``, ``active``, ``first_n``
+     - ``queue_id``, ``workspace_id``, ``active``, ``first_n``
    * - ``engine``
      - ``id``, ``engine_type``, ``agenda_id``
    * - ``rule``

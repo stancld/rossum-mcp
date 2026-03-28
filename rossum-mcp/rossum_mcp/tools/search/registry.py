@@ -100,22 +100,27 @@ async def _list_schemas(
 async def _list_hooks(
     client: AsyncRossumAPIClient,
     queue_id: int | None = None,
+    workspace_id: int | None = None,
     active: bool | None = None,
     first_n: int | None = None,
 ) -> list[Hook]:
-    logger.info(f"Listing hooks: queue_id={queue_id}, active={active}, first_n={first_n}")
+    logger.info(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}, first_n={first_n}")
     filters = build_filters(queue=queue_id, active=active)
     result = await graceful_list(client, Resource.Hook, "hook", max_items=first_n, **filters)
 
     all_queue_urls = {url for hook in result.items for url in hook.queues}
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
-    return [
+    items = [
         Hook.from_base(
             hook, workspaces=list({queue_workspace_map[q] for q in hook.queues if q in queue_workspace_map})
         )
         for hook in result.items
     ]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [h for h in items if h.workspaces and any(w.endswith(workspace_url_suffix) for w in h.workspaces)]
+    return items
 
 
 async def _list_hook_logs(

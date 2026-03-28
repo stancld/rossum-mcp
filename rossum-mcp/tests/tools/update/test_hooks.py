@@ -367,3 +367,80 @@ class TestListHooks:
 
         assert len(result) == 1
         assert result[0].workspaces == []
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_filter_by_workspace_id(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id filters hooks to those belonging to the workspace."""
+        mock_hooks = [
+            create_mock_hook(
+                id=1,
+                name="Hook A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+            create_mock_hook(
+                id=2,
+                name="Hook B",
+                queues=["https://api.test.rossum.ai/v1/queues/20"],
+            ),
+            create_mock_hook(
+                id=3,
+                name="Hook C",
+                queues=[
+                    "https://api.test.rossum.ai/v1/queues/10",
+                    "https://api.test.rossum.ai/v1/queues/20",
+                ],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_hooks if resource == Resource.Hook else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_hooks(mock_client, workspace_id=100)
+
+        assert len(result) == 2
+        assert {h.id for h in result} == {1, 3}
+
+    @pytest.mark.asyncio
+    async def test_list_hooks_filter_by_workspace_id_no_match(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id returns empty list when no hooks belong to the workspace."""
+        mock_hooks = [
+            create_mock_hook(
+                id=1,
+                name="Hook A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_hooks if resource == Resource.Hook else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_hooks(mock_client, workspace_id=999)
+
+        assert len(result) == 0
