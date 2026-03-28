@@ -19,7 +19,7 @@ mcp_tools:
 2. Filter tree to relevant fields: `required: true`, `hidden: false`, leaf nodes (`category: "datapoint"` or tuple children)
 3. `generate_mock_pdf(fields=[...], document_type="invoice")`
 4. `upload_document(file_path, queue_id)`
-5. Poll: `search(query={"entity": "annotation", "queue_id": queue_id, "ordering": ["-created_at"], "first_n": 1})` every 5s, max 12 attempts
+5. Poll: `search(query={"entity": "annotation", "queue_id": queue_id, "ordering": ["-created_at"]}, first_n=1)` every 5s, max 12 attempts
 6. Verify: `get_annotation_content(annotation_id)` → compare vs `expected_values` and `line_items`
 7. Optional: `test_hook(hook_id, event, action, annotation=annotation_url)`
 
