@@ -17,7 +17,6 @@ from rossum_mcp.tools.models import EmailTemplateType, EngineType, LogLevel
 
 class QueueSearch(BaseModel):
     entity: Literal["queue"] = "queue"
-    id: str | None = None
     workspace_id: int | None = None
     name: str | None = None
     use_regex: bool = False
@@ -40,7 +39,6 @@ class HookSearch(BaseModel):
 
 class EngineSearch(BaseModel):
     entity: Literal["engine"] = "engine"
-    id: int | None = None
     engine_type: EngineType | None = None
     agenda_id: str | None = None
 
@@ -92,7 +90,6 @@ class AnnotationSearch(BaseModel):
 
 class RelationSearch(BaseModel):
     entity: Literal["relation"] = "relation"
-    id: int | None = None
     type: str | None = None
     parent: int | None = None
     key: str | None = None
@@ -101,7 +98,6 @@ class RelationSearch(BaseModel):
 
 class DocumentRelationSearch(BaseModel):
     entity: Literal["document_relation"] = "document_relation"
-    id: int | None = None
     type: str | None = None
     annotation: int | None = None
     key: str | None = None
