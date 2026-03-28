@@ -118,7 +118,7 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
         tags={"read"},
         annotations={"readOnlyHint": True},
     )
-    async def search(query: SearchQuery) -> list[object]:
+    async def search(query: SearchQuery, first_n: int | None = None) -> list[object]:
         entity = query.entity
         config = registry.get(entity)
         if config is None:
@@ -127,6 +127,8 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
             raise ToolError(f"Entity '{entity}' does not support search/list.")
 
         kwargs = extract_search_kwargs(query)
+        if first_n is not None:
+            kwargs["max_items"] = first_n
         result = await config.search_fn(**kwargs)
         return [_serialize(item) for item in result]
 

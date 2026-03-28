@@ -396,6 +396,18 @@ class TestSearchRouting:
             result = await mock_mcp._tools["search"](query=WorkspaceSearch(organization_id=1))
         assert len(result) == 1
 
+    @pytest.mark.asyncio
+    async def test_search_first_n_passes_max_items(
+        self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
+    ) -> None:
+        mock_queue = create_mock_queue(id=1, name="Q1")
+        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+            mock_gl.return_value = Mock(items=[mock_queue])
+            register_get_tools(mock_mcp, mock_client)
+            await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5), first_n=3)
+        mock_gl.assert_called_once()
+        assert mock_gl.call_args.kwargs.get("max_items") == 3
+
 
 # ───────────────────────── include_related ─────────────────────────
 
@@ -474,7 +486,6 @@ class TestExtractSearchKwargs:
         query = HookSearch(queue_id=10)
         kwargs = extract_search_kwargs(query)
         assert "active" not in kwargs
-        assert "first_n" not in kwargs
         assert kwargs["queue_id"] == 10
 
     def test_annotation_keeps_required_field(self) -> None:

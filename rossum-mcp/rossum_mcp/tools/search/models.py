@@ -36,7 +36,6 @@ class HookSearch(BaseModel):
     queue_id: int | None = None
     workspace_id: int | None = None
     active: bool | None = None
-    first_n: int | None = None
 
 
 class EngineSearch(BaseModel):
@@ -75,7 +74,6 @@ class EmailTemplateSearch(BaseModel):
     queue_id: int | None = None
     type: EmailTemplateType | None = None
     name: str | None = None
-    first_n: int | None = None
     use_regex: bool = False
 
 
@@ -90,7 +88,6 @@ class AnnotationSearch(BaseModel):
     queue_id: int
     status: str | None = "importing,to_review,confirmed,exported"
     ordering: Sequence[str] | None = None
-    first_n: int | None = None
 
 
 class RelationSearch(BaseModel):

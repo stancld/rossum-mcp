@@ -168,7 +168,7 @@ For detailed API documentation with parameters and examples, see [TOOLS.md](TOOL
 upload_document(file_path="/path/to/invoice.pdf", queue_id=12345)
 
 # 2. Get annotation ID
-annotations = search(query={"entity": "annotation", "queue_id": 12345, "ordering": ["-created_at"], "first_n": 1})
+annotations = search(query={"entity": "annotation", "queue_id": 12345, "ordering": ["-created_at"]}, first_n=1)
 
 # 3. Check status
 annotation = get(entity="annotation", entity_id=annotations[0]["id"])

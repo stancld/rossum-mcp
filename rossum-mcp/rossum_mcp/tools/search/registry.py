@@ -53,10 +53,11 @@ async def _list_queues(
     workspace_id: int | None = None,
     name: str | None = None,
     use_regex: bool = False,
+    max_items: int | None = None,
 ) -> list[QueueListItem]:
     logger.debug(f"Listing queues: id={id}, workspace_id={workspace_id}, name={name}")
     filters = build_filters(id=id, workspace=workspace_id, name=None if use_regex else name)
-    result = await graceful_list(client, Resource.Queue, "queue", **filters)
+    result = await graceful_list(client, Resource.Queue, "queue", max_items=max_items, **filters)
     items = [_queue_to_list_item(queue) for queue in result.items]
     return filter_by_name_regex(items, name, use_regex)
 
@@ -82,10 +83,11 @@ async def _list_schemas(
     queue_id: int | None = None,
     workspace_id: int | None = None,
     use_regex: bool = False,
+    max_items: int | None = None,
 ) -> list[SchemaListItem]:
     logger.debug(f"Listing schemas: name={name}, queue_id={queue_id}, workspace_id={workspace_id}")
     filters = build_filters(name=None if use_regex else name, queue=queue_id)
-    result = await graceful_list(client, Resource.Schema, "schema", **filters)
+    result = await graceful_list(client, Resource.Schema, "schema", max_items=max_items, **filters)
 
     all_queue_urls = {url for schema in result.items for url in schema.queues}
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
@@ -102,11 +104,11 @@ async def _list_hooks(
     queue_id: int | None = None,
     workspace_id: int | None = None,
     active: bool | None = None,
-    first_n: int | None = None,
+    max_items: int | None = None,
 ) -> list[Hook]:
-    logger.info(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}, first_n={first_n}")
+    logger.info(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}")
     filters = build_filters(queue=queue_id, active=active)
-    result = await graceful_list(client, Resource.Hook, "hook", max_items=first_n, **filters)
+    result = await graceful_list(client, Resource.Hook, "hook", max_items=max_items, **filters)
 
     all_queue_urls = {url for hook in result.items for url in hook.queues}
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
@@ -141,6 +143,7 @@ async def _list_hook_logs(
     end_after: Timestamp | None = None,
     search: str | None = None,
     page_size: int | None = None,
+    max_items: int | None = None,
 ) -> list[HookRunData]:
     logger.info(
         f"Listing hook logs: hook_id={hook_id}, queue_id={queue_id}, annotation_id={annotation_id}, email_id={email_id}, log_level={log_level}, status={status}, status_code={status_code}, request_id={request_id}, timestamp_before={timestamp_before}, timestamp_after={timestamp_after}, start_before={start_before}, start_after={start_after}, end_before={end_before}, end_after={end_after}, search={search}, page_size={page_size}"
@@ -163,7 +166,7 @@ async def _list_hook_logs(
         search=search,
         page_size=page_size,
     )
-    result = await graceful_list(client, Resource.HookRunData, "hook_log", **filters)
+    result = await graceful_list(client, Resource.HookRunData, "hook_log", max_items=max_items, **filters)
     return result.items
 
 
@@ -187,9 +190,9 @@ def _truncate_hook_template_for_list(template: HookTemplate) -> HookTemplate:
     )
 
 
-async def _list_hook_templates(client: AsyncRossumAPIClient) -> list[HookTemplate]:
+async def _list_hook_templates(client: AsyncRossumAPIClient, max_items: int | None = None) -> list[HookTemplate]:
     logger.info("Listing hook templates")
-    result = await graceful_list(client, Resource.HookTemplate, "hook_template")
+    result = await graceful_list(client, Resource.HookTemplate, "hook_template", max_items=max_items)
     return [_truncate_hook_template_for_list(t) for t in result.items]
 
 
@@ -198,10 +201,11 @@ async def _list_engines(
     id: int | None = None,
     engine_type: EngineType | None = None,
     agenda_id: str | None = None,
+    max_items: int | None = None,
 ) -> list[Engine]:
     logger.debug(f"Listing engines: id={id}, type={engine_type}, agenda_id={agenda_id}")
     filters = build_filters(id=id, type=engine_type, agenda_id=agenda_id)
-    result = await graceful_list(client, Resource.Engine, "engine", **filters)
+    result = await graceful_list(client, Resource.Engine, "engine", max_items=max_items, **filters)
     return result.items
 
 
@@ -210,10 +214,11 @@ async def _list_rules(
     schema_id: int | None = None,
     organization_id: int | None = None,
     enabled: bool | None = None,
+    max_items: int | None = None,
 ) -> list[Rule]:
     logger.debug(f"Listing rules: schema_id={schema_id}, organization_id={organization_id}, enabled={enabled}")
     filters = build_filters(schema=schema_id, organization=organization_id, enabled=enabled)
-    result = await graceful_list(client, Resource.Rule, "rule", **filters)
+    result = await graceful_list(client, Resource.Rule, "rule", max_items=max_items, **filters)
     return result.items
 
 
@@ -225,6 +230,7 @@ async def _list_users(
     last_name: str | None = None,
     is_active: bool | None = None,
     is_organization_group_admin: bool | None = None,
+    max_items: int | None = None,
 ) -> list[User]:
     logger.info(
         f"Listing users: username={username}, email={email}, first_name={first_name}, last_name={last_name}, is_active={is_active}, is_organization_group_admin={is_organization_group_admin}"
@@ -232,7 +238,7 @@ async def _list_users(
     filters = build_filters(
         username=username, email=email, first_name=first_name, last_name=last_name, is_active=is_active
     )
-    result = await graceful_list(client, Resource.User, "user", **filters)
+    result = await graceful_list(client, Resource.User, "user", max_items=max_items, **filters)
     users_list = result.items
 
     if is_organization_group_admin is not None:
@@ -248,9 +254,9 @@ async def _list_users(
     return users_list
 
 
-async def _list_user_roles(client: AsyncRossumAPIClient) -> list[Group]:
+async def _list_user_roles(client: AsyncRossumAPIClient, max_items: int | None = None) -> list[Group]:
     logger.info("Listing user roles")
-    result = await graceful_list(client, Resource.Group, "user_role")
+    result = await graceful_list(client, Resource.Group, "user_role", max_items=max_items)
     return result.items
 
 
@@ -259,10 +265,11 @@ async def _list_workspaces(
     organization_id: int | None = None,
     name: str | None = None,
     use_regex: bool = False,
+    max_items: int | None = None,
 ) -> list[Workspace]:
     logger.debug(f"Listing workspaces: organization_id={organization_id}, name={name}")
     filters = build_filters(organization=organization_id, name=None if use_regex else name)
-    items = (await graceful_list(client, Resource.Workspace, "workspace", **filters)).items
+    items = (await graceful_list(client, Resource.Workspace, "workspace", max_items=max_items, **filters)).items
     return filter_by_name_regex(items, name, use_regex)
 
 
@@ -271,21 +278,26 @@ async def _list_email_templates(
     queue_id: int | None = None,
     type: str | None = None,
     name: str | None = None,
-    first_n: int | None = None,
     use_regex: bool = False,
+    max_items: int | None = None,
 ) -> list[EmailTemplate]:
-    logger.info(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}, first_n={first_n}")
+    logger.info(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}")
     filters = build_filters(queue=queue_id, type=type, name=None if use_regex else name)
-    result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=first_n, **filters)
+    result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=max_items, **filters)
     return filter_by_name_regex(result.items, name, use_regex)
 
 
 async def _list_organization_groups(
-    client: AsyncRossumAPIClient, name: str | None = None, use_regex: bool = False
+    client: AsyncRossumAPIClient,
+    name: str | None = None,
+    use_regex: bool = False,
+    max_items: int | None = None,
 ) -> list[OrganizationGroup]:
     logger.debug(f"Listing organization groups: name={name}")
     filters = build_filters(name=None if use_regex else name)
-    items = (await graceful_list(client, Resource.OrganizationGroup, "organization_group", **filters)).items
+    items = (
+        await graceful_list(client, Resource.OrganizationGroup, "organization_group", max_items=max_items, **filters)
+    ).items
     return filter_by_name_regex(items, name, use_regex)
 
 
@@ -294,28 +306,35 @@ async def _list_annotations(
     queue_id: int,
     status: str | None = "importing,to_review,confirmed,exported",
     ordering: Sequence[str] = (),
-    first_n: int | None = None,
+    max_items: int | None = None,
 ) -> list[Annotation]:
-    logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}, ordering={ordering}, first_n={first_n}")
+    logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}, ordering={ordering}")
     filters = build_filters(queue=queue_id, page_size=100, status=status, ordering=ordering or None)
-    result = await graceful_list(client, Resource.Annotation, "annotation", max_items=first_n, **filters)
+    result = await graceful_list(client, Resource.Annotation, "annotation", max_items=max_items, **filters)
     return result.items
 
 
-async def _list_relations(client: AsyncRossumAPIClient, **kwargs: object) -> list[object]:
+async def _list_relations(
+    client: AsyncRossumAPIClient, max_items: int | None = None, **kwargs: object
+) -> list[object]:
     filters = build_filters(**kwargs)
-    result = await graceful_list(client, Resource.Relation, "relation", **filters)
+    result = await graceful_list(client, Resource.Relation, "relation", max_items=max_items, **filters)
     return result.items
 
 
-async def _list_document_relations(client: AsyncRossumAPIClient, **kwargs: object) -> list[object]:
+async def _list_document_relations(
+    client: AsyncRossumAPIClient, max_items: int | None = None, **kwargs: object
+) -> list[object]:
     filters = build_filters(**kwargs)
-    result = await graceful_list(client, Resource.DocumentRelation, "document_relation", **filters)
+    result = await graceful_list(
+        client, Resource.DocumentRelation, "document_relation", max_items=max_items, **filters
+    )
     return result.items
 
 
-async def _list_queue_template_names() -> list[str]:
-    return list(QUEUE_TEMPLATE_NAMES)
+async def _list_queue_template_names(max_items: int | None = None) -> list[str]:
+    items: list[str] = list(QUEUE_TEMPLATE_NAMES)
+    return items[:max_items] if max_items is not None else items
 
 
 def build_search_registry(client: AsyncRossumAPIClient) -> dict[str, Callable[..., Awaitable[list]] | None]:
@@ -334,9 +353,9 @@ def build_search_registry(client: AsyncRossumAPIClient) -> dict[str, Callable[..
         "relation": lambda **kw: _list_relations(client, **kw),
         "document_relation": lambda **kw: _list_document_relations(client, **kw),
         "hook_log": lambda **kw: _list_hook_logs(client, **kw),
-        "hook_template": lambda **_kw: _list_hook_templates(client),
-        "user_role": lambda **_kw: _list_user_roles(client),
-        "queue_template_name": lambda **_kw: _list_queue_template_names(),
+        "hook_template": lambda **kw: _list_hook_templates(client, max_items=kw.get("max_items")),
+        "user_role": lambda **kw: _list_user_roles(client, max_items=kw.get("max_items")),
+        "queue_template_name": lambda **kw: _list_queue_template_names(max_items=kw.get("max_items")),
     }
 
 

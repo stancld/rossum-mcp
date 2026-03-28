@@ -36,7 +36,7 @@ Batch retrieval (list of IDs) returns an array of the same structure.
 
 ### search
 
-Lists/searches entities with typed, entity-specific filters. Pass a query object with an `entity` discriminator field.
+Lists/searches entities with typed, entity-specific filters. Pass a query object with an `entity` discriminator field. Use the optional `first_n` parameter to limit results across any entity type.
 
 **Supported entities and their filters:**
 
@@ -44,14 +44,14 @@ Lists/searches entities with typed, entity-specific filters. Pass a query object
 |--------|---------|
 | `queue` | `id`, `workspace_id`, `name`, `use_regex` |
 | `schema` | `name`, `queue_id`, `use_regex` |
-| `hook` | `queue_id`, `active`, `first_n` |
+| `hook` | `queue_id`, `active`, `workspace_id` |
 | `engine` | `id`, `engine_type` (`extractor`\|`splitter`), `agenda_id` |
 | `rule` | `schema_id`, `organization_id`, `enabled` |
 | `user` | `username`, `email`, `first_name`, `last_name`, `is_active`, `is_organization_group_admin` |
 | `workspace` | `organization_id`, `name`, `use_regex` |
-| `email_template` | `queue_id`, `type`, `name`, `first_n`, `use_regex` |
+| `email_template` | `queue_id`, `type`, `name`, `use_regex` |
 | `organization_group` | `name`, `use_regex` |
-| `annotation` | `queue_id` (required), `status`, `ordering`, `first_n` |
+| `annotation` | `queue_id` (required), `status`, `ordering` |
 | `relation` | `id`, `type`, `parent`, `key`, `annotation` |
 | `document_relation` | `id`, `type`, `annotation`, `key`, `documents` |
 | `hook_log` | `hook_id`, `queue_id`, `annotation_id`, `email_id`, `log_level`, `status`, `status_code`, `request_id`, `timestamp_before`, `timestamp_after`, `start_before`, `start_after`, `end_before`, `end_after`, `search`, `page_size` |
@@ -60,13 +60,11 @@ Lists/searches entities with typed, entity-specific filters. Pass a query object
 | `queue_template_name` | _(no filters)_ |
 
 **Example:**
-```json
-{
-  "entity": "annotation",
-  "queue_id": 12345,
-  "status": "to_review,confirmed",
-  "first_n": 10
-}
+```python
+search(
+    query={"entity": "annotation", "queue_id": 12345, "status": "to_review,confirmed"},
+    first_n=10,
+)
 ```
 
 **Returns:** Array of entity objects.

@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 - Hook responses (`get_hook`, `list_hooks`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a hook belongs to [#325](https://github.com/stancld/rossum-agents/pull/325)
 - Added `workspace_id` filter to `list_hooks` — hooks can now be scoped to a specific workspace, filtering by the workspace associations derived from linked queues [#325](https://github.com/stancld/rossum-agents/pull/325)
 
+### Changed
+- Lifted `first_n` from per-entity search models to a universal `first_n` parameter on the `search` tool — result limiting now works for all entity types, not just hooks, email templates, and annotations [#326](https://github.com/stancld/rossum-agents/pull/326)
+
 ## [2.0.6] - 2026-03-25
 
 ### Added
