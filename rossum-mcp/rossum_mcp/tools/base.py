@@ -1,22 +1,38 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, Protocol, TypeVar
 
 from rossum_api.domain_logic.resources import Resource
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Any
+    from typing import Any, Self
 
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+
+class RossumResource(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, dataclasses.Field]]
+
+
+T = TypeVar("T", bound=RossumResource)
+
+
+@dataclass
+class RossumResourceWithResolvedWorkspaces(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-autodoc-typehints with PEP 563
+    workspaces: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_base(cls, resource: T, workspaces: list[str]) -> Self:
+        base_fields: dict[str, Any] = {f.name: getattr(resource, f.name) for f in dataclasses.fields(resource)}
+        return cls(**base_fields, workspaces=workspaces)
 
 
 @dataclass

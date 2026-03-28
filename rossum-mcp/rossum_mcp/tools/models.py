@@ -2,37 +2,24 @@
 
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Literal, TypedDict
 
 from rossum_api.models.hook import Hook as RossumHook
 from rossum_api.models.schema import Schema as RossumSchema
 
+from rossum_mcp.tools.base import RossumResourceWithResolvedWorkspaces
+
 
 @dataclass
-class Schema(RossumSchema):
+class Schema(RossumResourceWithResolvedWorkspaces[RossumSchema], RossumSchema):
     """Enriched Schema with resolved workspace URLs."""
 
-    workspaces: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_base(cls, schema: RossumSchema, workspaces: list[str]) -> Schema:
-        base_fields = {f.name: getattr(schema, f.name) for f in dataclasses.fields(schema)}
-        return cls(**base_fields, workspaces=workspaces)
-
 
 @dataclass
-class Hook(RossumHook):
+class Hook(RossumResourceWithResolvedWorkspaces[RossumHook], RossumHook):
     """Enriched Hook with resolved workspace URLs."""
-
-    workspaces: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_base(cls, hook: RossumHook, workspaces: list[str]) -> Hook:
-        base_fields = {f.name: getattr(hook, f.name) for f in dataclasses.fields(hook)}
-        return cls(**base_fields, workspaces=workspaces)
 
 
 class AutomationLevel(StrEnum):
