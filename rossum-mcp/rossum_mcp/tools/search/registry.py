@@ -105,7 +105,7 @@ async def _list_hooks(
     active: bool | None = None,
     max_items: int | None = None,
 ) -> list[Hook]:
-    logger.info(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}")
+    logger.debug(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}")
     filters = build_filters(queue=queue_id, active=active)
     result = await graceful_list(client, Resource.Hook, "hook", max_items=max_items, **filters)
 
@@ -144,9 +144,7 @@ async def _list_hook_logs(
     page_size: int | None = None,
     max_items: int | None = None,
 ) -> list[HookRunData]:
-    logger.info(
-        f"Listing hook logs: hook_id={hook_id}, queue_id={queue_id}, annotation_id={annotation_id}, email_id={email_id}, log_level={log_level}, status={status}, status_code={status_code}, request_id={request_id}, timestamp_before={timestamp_before}, timestamp_after={timestamp_after}, start_before={start_before}, start_after={start_after}, end_before={end_before}, end_after={end_after}, search={search}, page_size={page_size}"
-    )
+    logger.debug(f"Listing hook logs: hook_id={hook_id}, queue_id={queue_id}")
     filters = build_filters(
         hook=hook_id,
         queue=queue_id,
@@ -190,7 +188,7 @@ def _truncate_hook_template_for_list(template: HookTemplate) -> HookTemplate:
 
 
 async def _list_hook_templates(client: AsyncRossumAPIClient, max_items: int | None = None) -> list[HookTemplate]:
-    logger.info("Listing hook templates")
+    logger.debug("Listing hook templates")
     result = await graceful_list(client, Resource.HookTemplate, "hook_template", max_items=max_items)
     return [_truncate_hook_template_for_list(t) for t in result.items]
 
@@ -230,9 +228,7 @@ async def _list_users(
     is_organization_group_admin: bool | None = None,
     max_items: int | None = None,
 ) -> list[User]:
-    logger.info(
-        f"Listing users: username={username}, email={email}, first_name={first_name}, last_name={last_name}, is_active={is_active}, is_organization_group_admin={is_organization_group_admin}"
-    )
+    logger.debug(f"Listing users: username={username}, email={email}")
     filters = build_filters(
         username=username, email=email, first_name=first_name, last_name=last_name, is_active=is_active
     )
@@ -253,7 +249,7 @@ async def _list_users(
 
 
 async def _list_user_roles(client: AsyncRossumAPIClient, max_items: int | None = None) -> list[Group]:
-    logger.info("Listing user roles")
+    logger.debug("Listing user roles")
     result = await graceful_list(client, Resource.Group, "user_role", max_items=max_items)
     return result.items
 
@@ -279,7 +275,7 @@ async def _list_email_templates(
     use_regex: bool = False,
     max_items: int | None = None,
 ) -> list[EmailTemplate]:
-    logger.info(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}")
+    logger.debug(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}")
     filters = build_filters(queue=queue_id, type=type, name=None if use_regex else name)
     result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=max_items, **filters)
     return filter_by_name_regex(result.items, name, use_regex)

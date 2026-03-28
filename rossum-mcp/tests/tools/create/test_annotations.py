@@ -75,12 +75,12 @@ class TestUploadDocument:
         """Test upload fails when file doesn't exist."""
         register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
+        mock_client.upload_document.side_effect = FileNotFoundError("/nonexistent/file.pdf")
+
         upload_document = mock_mcp._tools["upload_document"]
 
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(ToolError, match="File not found"):
             await upload_document(file_path="/nonexistent/file.pdf", queue_id=100)
-
-        assert "File not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_upload_document_key_error(self, mock_mcp: Mock, mock_client: AsyncMock, tmp_path: Path) -> None:

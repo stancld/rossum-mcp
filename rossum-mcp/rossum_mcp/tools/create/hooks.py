@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from fastmcp.exceptions import ToolError
 from rossum_api.models.hook import Hook, HookEventAndAction, HookType
 
+from rossum_mcp.tools.base import build_resource_url
 from rossum_mcp.tools.models import HookSideload  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 from rossum_mcp.tools.validation import validate_hook_events
 
@@ -68,7 +69,9 @@ async def _create_hook_from_template(
 ) -> Hook:
     logger.debug(f"Creating hook from template: name={name}, template_id={hook_template_id}")
 
-    hook_template_url = f"{client._http_client.base_url.rstrip('/')}/hook_templates/{hook_template_id}"
+    hook_template_url = build_resource_url(
+        client._http_client.base_url.rstrip("/"), "hook_templates", hook_template_id
+    )
 
     hook_data: dict[str, Any] = {"name": name, "hook_template": hook_template_url, "queues": queues}
     if events is not None:

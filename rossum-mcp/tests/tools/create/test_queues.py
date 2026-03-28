@@ -9,11 +9,9 @@ from fastmcp.exceptions import ToolError
 from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
+from rossum_mcp.tools.base import get_queue_engine_url
 from rossum_mcp.tools.create.handler import register_create_tools
-from rossum_mcp.tools.create.queues import (
-    _create_queue_from_template,
-    _get_engine_url,
-)
+from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.resource_tracking import TRACKED_RESOURCES_KEY
 
 
@@ -324,8 +322,8 @@ class TestCreateQueueFromTemplate:
 
 
 @pytest.mark.unit
-class TestGetEngineUrl:
-    """Tests for _get_engine_url helper."""
+class TestGetQueueEngineUrl:
+    """Tests for get_queue_engine_url helper."""
 
     def test_dedicated_engine_takes_priority(self) -> None:
         queue = create_mock_queue(
@@ -333,7 +331,7 @@ class TestGetEngineUrl:
             generic_engine="https://api.test.rossum.ai/v1/engines/30",
             engine="https://api.test.rossum.ai/v1/engines/10",
         )
-        assert _get_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/20"
+        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/20"
 
     def test_generic_engine_fallback(self) -> None:
         queue = create_mock_queue(
@@ -341,7 +339,7 @@ class TestGetEngineUrl:
             generic_engine="https://api.test.rossum.ai/v1/engines/30",
             engine="https://api.test.rossum.ai/v1/engines/10",
         )
-        assert _get_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/30"
+        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/30"
 
     def test_engine_fallback(self) -> None:
         queue = create_mock_queue(
@@ -349,7 +347,7 @@ class TestGetEngineUrl:
             generic_engine=None,
             engine="https://api.test.rossum.ai/v1/engines/10",
         )
-        assert _get_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/10"
+        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/10"
 
     def test_all_none_returns_none(self) -> None:
         queue = create_mock_queue(
@@ -357,4 +355,4 @@ class TestGetEngineUrl:
             generic_engine=None,
             engine=None,
         )
-        assert _get_engine_url(queue) is None
+        assert get_queue_engine_url(queue) is None
