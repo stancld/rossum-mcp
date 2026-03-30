@@ -284,12 +284,15 @@ async def _list_workspaces(
 async def _list_email_templates(
     client: AsyncRossumAPIClient,
     queue_id: int | None = None,
+    workspace_id: int | None = None,
     type: str | None = None,
     name: str | None = None,
     use_regex: bool = False,
     max_items: int | None = None,
 ) -> list[EmailTemplate]:
-    logger.debug(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}")
+    logger.debug(
+        f"Listing email templates: queue_id={queue_id}, workspace_id={workspace_id}, type={type}, name={name}"
+    )
     filters = build_filters(queue=queue_id, type=type, name=None if use_regex else name)
     result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=max_items, **filters)
 
@@ -300,6 +303,9 @@ async def _list_email_templates(
         EmailTemplate.from_base(t, workspaces=[queue_workspace_map[t.queue]] if t.queue in queue_workspace_map else [])
         for t in result.items
     ]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [t for t in items if t.workspaces and any(w.endswith(workspace_url_suffix) for w in t.workspaces)]
     return filter_by_name_regex(items, name, use_regex)
 
 

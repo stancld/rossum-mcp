@@ -71,6 +71,7 @@ class WorkspaceSearch(BaseModel):
 class EmailTemplateSearch(BaseModel):
     entity: Literal["email_template"] = "email_template"
     queue_id: int | None = None
+    workspace_id: int | None = None
     type: EmailTemplateType | None = None
     name: str | None = None
     use_regex: bool = False
