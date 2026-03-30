@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Literal, TypedDict
 
+from rossum_api.models.email_template import EmailTemplate as RossumEmailTemplate
 from rossum_api.models.hook import Hook as RossumHook
 from rossum_api.models.rule import Rule as RossumRule
 from rossum_api.models.schema import Schema as RossumSchema
@@ -26,6 +27,11 @@ class Hook(RossumResourceWithResolvedWorkspaces[RossumHook], RossumHook):
 @dataclass
 class Rule(RossumResourceWithResolvedWorkspaces[RossumRule], RossumRule):
     """Enriched Rule with resolved workspace URLs."""
+
+
+@dataclass
+class EmailTemplate(RossumResourceWithResolvedWorkspaces[RossumEmailTemplate], RossumEmailTemplate):
+    """Enriched EmailTemplate with resolved workspace URLs."""
 
 
 class AutomationLevel(StrEnum):

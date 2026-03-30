@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from conftest import (
     create_mock_annotation,
+    create_mock_email_template,
     create_mock_engine,
     create_mock_hook,
     create_mock_queue,
@@ -188,7 +189,16 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_email_template(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_email_template.return_value = Mock(id=15)
+        template = create_mock_email_template(id=15, queue="https://q/1")
+        mock_client.retrieve_email_template.return_value = template
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="email_template", entity_id=15)
