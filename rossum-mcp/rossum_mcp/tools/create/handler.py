@@ -149,7 +149,7 @@ def register_create_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
 
     # --- Rules ---
     @mcp.tool(
-        description="Create a rule: trigger is a TxScript condition; action includes id, type, event, payload. Scope with schema_id and/or queue_ids (at least one required).",
+        description="Create a rule: trigger is a TxScript condition; action includes id, type, event, payload. Optionally scope with queue_ids.",
         tags={"rules", "write"},
         annotations={"readOnlyHint": False},
     )
@@ -158,10 +158,9 @@ def register_create_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: 
         trigger_condition: str,
         actions: list[RuleAction],
         enabled: bool = True,
-        schema_id: int | None = None,
         queue_ids: list[int] | None = None,
     ) -> Rule | dict:
-        return await _create_rule(client, base_url, name, trigger_condition, actions, enabled, schema_id, queue_ids)
+        return await _create_rule(client, base_url, name, trigger_condition, actions, enabled, queue_ids)
 
     # --- Users ---
     @mcp.tool(

@@ -45,7 +45,7 @@ class EngineSearch(BaseModel):
 
 class RuleSearch(BaseModel):
     entity: Literal["rule"] = "rule"
-    schema_id: int | None = None
+    queue_id: int | None = None
     organization_id: int | None = None
     enabled: bool | None = None
 

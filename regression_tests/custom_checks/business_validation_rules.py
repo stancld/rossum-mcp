@@ -47,21 +47,14 @@ def check_business_validation_rules(steps: list[AgentStep], api_base_url: str, a
     except Exception as e:
         return False, f"Failed to retrieve rule {rule_id}: {e}"
 
-    if rule.schema:
-        schema_id_match = re.search(r"/(\d+)$", rule.schema)
-        if not schema_id_match:
-            return False, f"Cannot parse schema ID from: {rule.schema}"
-        schema_id = int(schema_id_match.group(1))
-        rules = list(client.list_rules(schema=schema_id))
-    else:
-        org_id_match = re.search(r"/(\d+)$", rule.organization)
-        if not org_id_match:
-            return False, f"Cannot parse organization ID from: {rule.organization}"
-        org_id = int(org_id_match.group(1))
-        rules = list(client.list_rules(organization=org_id))
-        rule_queues = set(getattr(rule, "queues", None) or [])
-        if rule_queues:
-            rules = [r for r in rules if set(getattr(r, "queues", None) or []) & rule_queues]
+    org_id_match = re.search(r"/(\d+)$", rule.organization)
+    if not org_id_match:
+        return False, f"Cannot parse organization ID from: {rule.organization}"
+    org_id = int(org_id_match.group(1))
+    rules = list(client.list_rules(organization=org_id))
+    rule_queues = set(getattr(rule, "queues", None) or [])
+    if rule_queues:
+        rules = [r for r in rules if set(getattr(r, "queues", None) or []) & rule_queues]
 
     if len(rules) < len(EXPECTED_RULES):
         return False, f"Expected at least {len(EXPECTED_RULES)} rules, got {len(rules)}"

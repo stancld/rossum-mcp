@@ -18,7 +18,6 @@ def create_mock_rule(**kwargs) -> Rule:
         "name": "Test Rule",
         "enabled": True,
         "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "schema": "https://api.test.rossum.ai/v1/schemas/1",
         "trigger_condition": "True",
         "created_by": "https://api.test.rossum.ai/v1/users/1",
         "created_at": "2025-01-01T00:00:00Z",

@@ -207,13 +207,13 @@ async def _list_engines(
 
 async def _list_rules(
     client: AsyncRossumAPIClient,
-    schema_id: int | None = None,
+    queue_id: int | None = None,
     organization_id: int | None = None,
     enabled: bool | None = None,
     max_items: int | None = None,
 ) -> list[Rule]:
-    logger.debug(f"Listing rules: schema_id={schema_id}, organization_id={organization_id}, enabled={enabled}")
-    filters = build_filters(schema=schema_id, organization=organization_id, enabled=enabled)
+    logger.debug(f"Listing rules: queue_id={queue_id}, organization_id={organization_id}, enabled={enabled}")
+    filters = build_filters(queue=queue_id, organization=organization_id, enabled=enabled)
     result = await graceful_list(client, Resource.Rule, "rule", max_items=max_items, **filters)
     return result.items
 
