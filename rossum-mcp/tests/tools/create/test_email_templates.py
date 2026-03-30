@@ -5,30 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_api.models.email_template import EmailTemplate
+from conftest import create_mock_email_template
 from rossum_mcp.tools.create.handler import register_create_tools
-
-
-def create_mock_email_template(**kwargs) -> EmailTemplate:
-    """Create a mock EmailTemplate dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/email_templates/1",
-        "name": "Test Email Template",
-        "queue": "https://api.test.rossum.ai/v1/queues/1",
-        "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "subject": "Test Subject",
-        "message": "<p>Test Message</p>",
-        "type": "custom",
-        "enabled": True,
-        "automate": False,
-        "triggers": [],
-        "to": [],
-        "cc": [],
-        "bcc": [],
-    }
-    defaults.update(kwargs)
-    return EmailTemplate(**defaults)
 
 
 @pytest.fixture

@@ -17,14 +17,13 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, Hook, LogLevel, Rule
+from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EmailTemplate, EngineType, Hook, LogLevel, Rule
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Sequence
 
     from rossum_api import AsyncRossumAPIClient
-    from rossum_api.models.email_template import EmailTemplate
 
 type Timestamp = Annotated[str, "ISO 8601 timestamp (e.g., '2024-01-15T10:30:00Z')"]
 logger = logging.getLogger(__name__)
@@ -293,7 +292,15 @@ async def _list_email_templates(
     logger.debug(f"Listing email templates: queue_id={queue_id}, type={type}, name={name}")
     filters = build_filters(queue=queue_id, type=type, name=None if use_regex else name)
     result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=max_items, **filters)
-    return filter_by_name_regex(result.items, name, use_regex)
+
+    all_queue_urls = {t.queue for t in result.items}
+    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
+
+    items = [
+        EmailTemplate.from_base(t, workspaces=[queue_workspace_map[t.queue]] if t.queue in queue_workspace_map else [])
+        for t in result.items
+    ]
+    return filter_by_name_regex(items, name, use_regex)
 
 
 async def _list_organization_groups(

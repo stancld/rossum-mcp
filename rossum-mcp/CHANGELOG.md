@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Schema responses (`get_schema`, `list_schemas`) now include resolved `workspaces` URLs (derived from linked queues); `list_schemas` also accepts a `workspace_id` filter to scope results to a specific workspace [#324](https://github.com/stancld/rossum-agents/pull/324)
 - Hook responses (`get_hook`, `list_hooks`) now include resolved `workspaces` URLs (derived from linked queues); `list_hooks` also accepts a `workspace_id` filter to scope results to a specific workspace [#325](https://github.com/stancld/rossum-agents/pull/325)
 - Rule responses (`get_rule`, `list_rules`) now include resolved `workspaces` URLs (derived from linked queues); `list_rules` also accepts a `workspace_id` filter to scope results to a specific workspace [#330](https://github.com/stancld/rossum-agents/pull/330)
+- Email template responses (`get_email_template`, `list_email_templates`) now include resolved `workspaces` URLs — workspace association is derived from the linked queue [#331](https://github.com/stancld/rossum-agents/pull/331)
 
 ### Changed
 - Lifted `first_n` from per-entity search models to a universal `first_n` parameter on the `search` tool — result limiting now works for all entity types, not just hooks, email templates, and annotations [#326](https://github.com/stancld/rossum-agents/pull/326)

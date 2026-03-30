@@ -15,7 +15,6 @@ from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.annotation import Annotation
 from rossum_api.models.document_relation import DocumentRelation
-from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
@@ -24,7 +23,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import resolve_queue_workspaces
-from rossum_mcp.tools.models import Hook, Rule, Schema
+from rossum_mcp.tools.models import EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -93,7 +92,10 @@ async def _get_workspace(client: AsyncRossumAPIClient, workspace_id: int) -> Wor
 
 
 async def _get_email_template(client: AsyncRossumAPIClient, email_template_id: int) -> EmailTemplate:
-    return await client.retrieve_email_template(email_template_id)
+    base_template = await client.retrieve_email_template(email_template_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, {base_template.queue})
+    workspaces = [queue_workspace_map[base_template.queue]] if base_template.queue in queue_workspace_map else []
+    return EmailTemplate.from_base(base_template, workspaces=workspaces)
 
 
 async def _get_organization_group(client: AsyncRossumAPIClient, organization_group_id: int) -> OrganizationGroup:

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from rossum_api.models.annotation import Annotation
+from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine, EngineField
 from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
@@ -232,6 +233,28 @@ def create_mock_rule(**kwargs) -> Rule:
     }
     defaults.update(kwargs)
     return Rule(**defaults)
+
+
+def create_mock_email_template(**kwargs) -> EmailTemplate:
+    """Create a mock EmailTemplate dataclass instance with default values."""
+    defaults = {
+        "id": 1,
+        "url": "https://api.test.rossum.ai/v1/email_templates/1",
+        "name": "Test Email Template",
+        "queue": "https://api.test.rossum.ai/v1/queues/1",
+        "organization": "https://api.test.rossum.ai/v1/organizations/1",
+        "subject": "Test Subject",
+        "message": "<p>Test Message</p>",
+        "type": "custom",
+        "enabled": True,
+        "automate": False,
+        "triggers": [],
+        "to": [],
+        "cc": [],
+        "bcc": [],
+    }
+    defaults.update(kwargs)
+    return EmailTemplate(**defaults)
 
 
 def create_mock_engine(**kwargs) -> Engine:
