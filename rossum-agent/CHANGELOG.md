@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- `execute_python`: unified globals/locals namespace so imports and top-level names are visible inside nested functions [#338](https://github.com/stancld/rossum-agents/pull/338)
+
 ## [1.8.2] - 2026-03-30
 
 ### Added
