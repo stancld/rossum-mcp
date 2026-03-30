@@ -120,6 +120,25 @@ async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set
     return {q.url: q.workspace for q in queue_result.items if q.workspace}
 
 
+def resolve_workspaces_from_queues(queue_urls: list[str], queue_workspace_map: dict[str, str]) -> list[str]:
+    return list({queue_workspace_map[q] for q in queue_urls if q in queue_workspace_map})
+
+
+def resolve_workspace_from_queue(queue_url: str | None, queue_workspace_map: dict[str, str]) -> str | None:
+    return queue_workspace_map[queue_url] if queue_url and queue_url in queue_workspace_map else None
+
+
+def filter_by_workspace_id[T](items: list[T], workspace_id: int | None) -> list[T]:
+    if workspace_id is None:
+        return items
+    workspace_url_suffix = f"/workspaces/{workspace_id}"
+    return [
+        item
+        for item in items
+        if (ws := getattr(item, "workspaces", None)) and any(w.endswith(workspace_url_suffix) for w in ws)
+    ]
+
+
 async def delete_resource(
     resource_type: str,
     resource_id: int,

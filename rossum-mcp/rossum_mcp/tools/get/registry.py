@@ -21,7 +21,11 @@ from rossum_api.models.queue import Queue
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
-from rossum_mcp.tools.base import resolve_queue_workspaces
+from rossum_mcp.tools.base import (
+    resolve_queue_workspaces,
+    resolve_workspace_from_queue,
+    resolve_workspaces_from_queues,
+)
 from rossum_mcp.tools.models import Annotation, EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
@@ -44,12 +48,8 @@ async def _get_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> A
     base_annotation = await client.retrieve_annotation(annotation_id)
     queue_urls = {base_annotation.queue} if base_annotation.queue else set()
     queue_workspace_map = await resolve_queue_workspaces(client, queue_urls)
-    workspaces = (
-        [queue_workspace_map[base_annotation.queue]]
-        if base_annotation.queue and base_annotation.queue in queue_workspace_map
-        else []
-    )
-    return Annotation.from_base(base_annotation, workspaces=workspaces)
+    workspace = resolve_workspace_from_queue(base_annotation.queue, queue_workspace_map)
+    return Annotation.from_base(base_annotation, workspaces=[workspace] if workspace else [])
 
 
 async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
@@ -65,15 +65,15 @@ async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
             raise ToolError(f"Schema {schema_id} not found") from e
         raise
     queue_workspace_map = await resolve_queue_workspaces(client, set(base_schema.queues))
-    workspaces = list({queue_workspace_map[q] for q in base_schema.queues if q in queue_workspace_map})
-    return Schema.from_base(base_schema, workspaces=workspaces)
+    return Schema.from_base(
+        base_schema, workspaces=resolve_workspaces_from_queues(base_schema.queues, queue_workspace_map)
+    )
 
 
 async def _get_hook(client: AsyncRossumAPIClient, hook_id: int) -> Hook:
     base_hook = await client.retrieve_hook(hook_id)
     queue_workspace_map = await resolve_queue_workspaces(client, set(base_hook.queues))
-    workspaces = list({queue_workspace_map[q] for q in base_hook.queues if q in queue_workspace_map})
-    return Hook.from_base(base_hook, workspaces=workspaces)
+    return Hook.from_base(base_hook, workspaces=resolve_workspaces_from_queues(base_hook.queues, queue_workspace_map))
 
 
 async def _get_engine(client: AsyncRossumAPIClient, engine_id: int) -> Engine:
@@ -85,8 +85,7 @@ async def _get_rule(client: AsyncRossumAPIClient, rule_id: int) -> Rule:
     logger.debug(f"Retrieving rule: rule_id={rule_id}")
     base_rule = await client.retrieve_rule(rule_id)
     queue_workspace_map = await resolve_queue_workspaces(client, set(base_rule.queues))
-    workspaces = list({queue_workspace_map[q] for q in base_rule.queues if q in queue_workspace_map})
-    return Rule.from_base(base_rule, workspaces=workspaces)
+    return Rule.from_base(base_rule, workspaces=resolve_workspaces_from_queues(base_rule.queues, queue_workspace_map))
 
 
 async def _get_user(client: AsyncRossumAPIClient, user_id: int) -> User:
@@ -101,8 +100,8 @@ async def _get_workspace(client: AsyncRossumAPIClient, workspace_id: int) -> Wor
 async def _get_email_template(client: AsyncRossumAPIClient, email_template_id: int) -> EmailTemplate:
     base_template = await client.retrieve_email_template(email_template_id)
     queue_workspace_map = await resolve_queue_workspaces(client, {base_template.queue})
-    workspaces = [queue_workspace_map[base_template.queue]] if base_template.queue in queue_workspace_map else []
-    return EmailTemplate.from_base(base_template, workspaces=workspaces)
+    workspace = resolve_workspace_from_queue(base_template.queue, queue_workspace_map)
+    return EmailTemplate.from_base(base_template, workspaces=[workspace] if workspace else [])
 
 
 async def _get_organization_group(client: AsyncRossumAPIClient, organization_group_id: int) -> OrganizationGroup:
