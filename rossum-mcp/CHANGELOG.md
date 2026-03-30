@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.1.0] - 2026-03-30
 
 ### Added
 - Schema responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); schema `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#324](https://github.com/stancld/rossum-agents/pull/324)
