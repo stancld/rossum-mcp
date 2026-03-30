@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Chat metadata now tracks cumulative token usage (`total_input_tokens`, `total_output_tokens`) and `total_steps` per conversation — persisted after each agent turn for cost visibility [#332](https://github.com/stancld/rossum-agents/pull/332)
 
 ### Changed
+- Bump `rossum-mcp` dependency from `>=2.0.6` to `>=2.1.0` — picks up rossum-mcp 2.1.0 features
 - Bump `rossum-api` dependency from `>=3.12.1` to `>=3.13.1` — adds support for rule → queues many-to-many relation [#329](https://github.com/stancld/rossum-agents/pull/329)
 
 ### Fixed
