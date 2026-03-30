@@ -5,7 +5,6 @@ import logging
 from typing import TYPE_CHECKING, Annotated
 
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.annotation import Annotation
 from rossum_api.models.engine import Engine
 from rossum_api.models.group import Group
 from rossum_api.models.hook import HookRunData
@@ -17,7 +16,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EmailTemplate, EngineType, Hook, LogLevel, Rule
+from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, Annotation, EmailTemplate, EngineType, Hook, LogLevel, Rule
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:
@@ -326,14 +325,30 @@ async def _list_organization_groups(
 async def _list_annotations(
     client: AsyncRossumAPIClient,
     queue_id: int,
+    workspace_id: int | None = None,
     status: str | None = "importing,to_review,confirmed,exported",
     ordering: Sequence[str] = (),
     max_items: int | None = None,
 ) -> list[Annotation]:
-    logger.debug(f"Listing annotations: queue_id={queue_id}, status={status}, ordering={ordering}")
+    logger.debug(
+        f"Listing annotations: queue_id={queue_id}, workspace_id={workspace_id}, status={status}, ordering={ordering}"
+    )
     filters = build_filters(queue=queue_id, page_size=100, status=status, ordering=ordering or None)
     result = await graceful_list(client, Resource.Annotation, "annotation", max_items=max_items, **filters)
-    return result.items
+
+    all_queue_urls = {a.queue for a in result.items if a.queue}
+    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
+
+    items = [
+        Annotation.from_base(
+            a, workspaces=[queue_workspace_map[a.queue]] if a.queue and a.queue in queue_workspace_map else []
+        )
+        for a in result.items
+    ]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [a for a in items if a.workspaces and any(w.endswith(workspace_url_suffix) for w in a.workspaces)]
+    return items
 
 
 async def _list_relations(

@@ -86,6 +86,7 @@ class OrganizationGroupSearch(BaseModel):
 class AnnotationSearch(BaseModel):
     entity: Literal["annotation"] = "annotation"
     queue_id: int
+    workspace_id: int | None = None
     status: str | None = "importing,to_review,confirmed,exported"
     ordering: Sequence[str] | None = None
 

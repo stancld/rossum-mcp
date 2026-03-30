@@ -382,7 +382,10 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with (
+            patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl,
+            patch("rossum_mcp.tools.search.registry.resolve_queue_workspaces", return_value={}) as _mock_rqw,
+        ):
             mock_gl.return_value = Mock(items=[mock_ann])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
