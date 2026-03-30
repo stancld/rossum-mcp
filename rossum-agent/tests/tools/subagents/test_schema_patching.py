@@ -384,11 +384,11 @@ class TestBuildFieldNode:
 
     def test_integer_field(self):
         """Test building integer field with format."""
-        spec = {"id": "qty", "label": "Quantity", "type": "number", "format": "#"}
+        spec = {"id": "qty", "label": "Quantity", "type": "number", "format": "# ##0"}
         node = _build_field_node(spec)
 
         assert node["type"] == "number"
-        assert node["format"] == "#"
+        assert node["format"] == "# ##0"
 
     def test_enum_field(self):
         """Test building enum field with options."""

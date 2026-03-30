@@ -39,7 +39,7 @@ Each change object in the `changes` array:
 
 | Property | Description |
 |----------|-------------|
-| `format` | Number format (e.g., "#" for integer) |
+| `format` | Number format (e.g., `"# ##0"` for integer, `"# ##0.#"` for decimal) |
 | `options` | For enum: `[{"value": "v1", "label": "Label 1"}]` |
 | `rir_field_names` | AI extraction hints |
 | `hidden` | Hide field from UI |
