@@ -1056,7 +1056,7 @@ class TestCopyWorkspaceInternalMethods:
         mock_rule = Mock()
         mock_rule.id = 1000
         mock_rule.name = "Test Rule"
-        mock_rule.schema = "https://api.example.com/v1/schemas/50"
+        mock_rule.queues = ["https://api.example.com/v1/queues/50"]
         mock_rule.trigger_condition = "True"
         mock_rule.actions = [mock_action]
         mock_rule.enabled = True
@@ -1068,29 +1068,31 @@ class TestCopyWorkspaceInternalMethods:
         mock_client.internal_client.base_url = "https://api.example.com/v1"
         mock_client.create_new_rule.return_value = mock_new_rule
 
+        source_queue_urls = {"https://api.example.com/v1/queues/50"}
         mapping = IdMapping(source_org_id=1, target_org_id=2)
-        mapping.add(ObjectType.SCHEMA, 50, 60)
+        mapping.add(ObjectType.QUEUE, 50, 60)
 
         result = CopyResult()
-        workspace._copy_single_rule(mock_rule, mock_client, mapping, result)
+        workspace._copy_single_rule(mock_rule, mock_client, source_queue_urls, mapping, result)
 
         assert len(result.created) == 1
         assert mapping.get(ObjectType.RULE, 1000) == 1001
 
-    def test_copy_single_rule_no_target_schema(self, workspace: Workspace):
+    def test_copy_single_rule_no_target_queues(self, workspace: Workspace):
         mock_rule = Mock()
         mock_rule.id = 1000
         mock_rule.name = "Test Rule"
-        mock_rule.schema = "https://api.example.com/v1/schemas/999"
+        mock_rule.queues = ["https://api.example.com/v1/queues/999"]
 
         mock_client = MagicMock()
+        source_queue_urls = {"https://api.example.com/v1/queues/999"}
         mapping = IdMapping(source_org_id=1, target_org_id=2)
 
         result = CopyResult()
-        workspace._copy_single_rule(mock_rule, mock_client, mapping, result)
+        workspace._copy_single_rule(mock_rule, mock_client, source_queue_urls, mapping, result)
 
         assert len(result.skipped) == 1
-        assert "no target schema" in result.skipped[0][3]
+        assert "no target queues" in result.skipped[0][3]
 
 
 class TestCopyOrgMethod:
@@ -1450,7 +1452,7 @@ class TestCopyConnectorsAndInboxes:
         mock_rule = Mock()
         mock_rule.id = 1000
         mock_rule.name = "Test Rule"
-        mock_rule.schema = "https://api.example.com/v1/schemas/50"
+        mock_rule.queues = ["https://api.example.com/v1/queues/50"]
         mock_rule.trigger_condition = "True"
         mock_rule.actions = [mock_action]
         mock_rule.enabled = True
@@ -1458,7 +1460,7 @@ class TestCopyConnectorsAndInboxes:
         mock_new_rule = Mock()
         mock_new_rule.id = 1001
 
-        source_schema_urls = {"https://api.example.com/v1/schemas/50"}
+        source_queue_urls = {"https://api.example.com/v1/queues/50"}
 
         with patch.object(workspace, "_client") as mock_source_client:
             mock_source_client.list_rules.return_value = [mock_rule]
@@ -1468,10 +1470,10 @@ class TestCopyConnectorsAndInboxes:
             mock_target_client.create_new_rule.return_value = mock_new_rule
 
             mapping = IdMapping(source_org_id=1, target_org_id=2)
-            mapping.add(ObjectType.SCHEMA, 50, 60)
+            mapping.add(ObjectType.QUEUE, 50, 60)
             result = CopyResult()
 
-            workspace._copy_rules(mock_source_client, mock_target_client, source_schema_urls, mapping, result)
+            workspace._copy_rules(mock_source_client, mock_target_client, source_queue_urls, mapping, result)
 
         assert len(result.created) == 1
 
@@ -1820,15 +1822,15 @@ class TestPullEmailTemplatesMethod:
 class TestPullRulesMethod:
     """Tests for _pull_rules method."""
 
-    def test_pull_rules_linked_to_schemas(self, workspace: Workspace):
+    def test_pull_rules_linked_to_queues(self, workspace: Workspace):
         workspace._save_object(
-            ObjectType.QUEUE, 100, "Queue", {"id": 100, "schema": "https://api.example.com/v1/schemas/50"}
+            ObjectType.QUEUE, 100, "Queue", {"id": 100, "url": "https://api.example.com/v1/queues/100"}
         )
 
         mock_rule = Mock()
         mock_rule.id = 1000
         mock_rule.name = "Rule"
-        mock_rule.schema = "https://api.example.com/v1/schemas/50"
+        mock_rule.queues = ["https://api.example.com/v1/queues/100"]
         mock_rule.modified_at = None
 
         from rossum_deploy.models import PullResult
@@ -2332,48 +2334,49 @@ class TestCopySingleEmailTemplateException:
         assert "auto-created type" in result.skipped[0][3]
 
 
-class TestCopySingleRuleNullSchema:
-    """Tests for _copy_single_rule with null schema handling."""
+class TestCopySingleRuleNoQueues:
+    """Tests for _copy_single_rule with empty queues handling."""
 
-    def test_copy_single_rule_null_schema_skipped(self, workspace: Workspace):
-        """Rule with schema=None should be skipped."""
+    def test_copy_single_rule_no_queues_skipped(self, workspace: Workspace):
+        """Rule with queues=[] should be skipped."""
         mock_rule = Mock()
         mock_rule.id = 1000
-        mock_rule.name = "Rule without schema"
-        mock_rule.schema = None
+        mock_rule.name = "Rule without queues"
+        mock_rule.queues = []
 
         mock_client = MagicMock()
+        source_queue_urls = set()
         mapping = IdMapping(source_org_id=1, target_org_id=2)
 
         result = CopyResult()
-        workspace._copy_single_rule(mock_rule, mock_client, mapping, result)
+        workspace._copy_single_rule(mock_rule, mock_client, source_queue_urls, mapping, result)
 
         assert len(result.skipped) == 1
         assert result.skipped[0][0] == ObjectType.RULE
         assert result.skipped[0][1] == 1000
-        assert result.skipped[0][2] == "Rule without schema"
-        assert "no schema" in result.skipped[0][3]
+        assert result.skipped[0][2] == "Rule without queues"
+        assert "no queues" in result.skipped[0][3]
 
 
-class TestCopyRulesNullSchema:
-    """Tests for _copy_rules filtering rules with null schema."""
+class TestCopyRulesNoQueues:
+    """Tests for _copy_rules filtering rules with no queues."""
 
-    def test_copy_rules_skips_null_schema_rules(self, workspace: Workspace):
-        """Rules with schema=None should be skipped in _copy_rules."""
-        mock_rule_with_schema = Mock()
-        mock_rule_with_schema.id = 1000
-        mock_rule_with_schema.name = "Rule with schema"
-        mock_rule_with_schema.schema = "https://api.example.com/v1/schemas/50"
+    def test_copy_rules_skips_no_queue_rules(self, workspace: Workspace):
+        """Rules with queues=[] should be skipped in _copy_rules."""
+        mock_rule_with_queues = Mock()
+        mock_rule_with_queues.id = 1000
+        mock_rule_with_queues.name = "Rule with queues"
+        mock_rule_with_queues.queues = ["https://api.example.com/v1/queues/50"]
 
-        mock_rule_without_schema = Mock()
-        mock_rule_without_schema.id = 1001
-        mock_rule_without_schema.name = "Rule without schema"
-        mock_rule_without_schema.schema = None
+        mock_rule_without_queues = Mock()
+        mock_rule_without_queues.id = 1001
+        mock_rule_without_queues.name = "Rule without queues"
+        mock_rule_without_queues.queues = []
 
-        source_schema_urls = {"https://api.example.com/v1/schemas/50"}
+        source_queue_urls = {"https://api.example.com/v1/queues/50"}
 
         with patch.object(workspace, "_client") as mock_source_client:
-            mock_source_client.list_rules.return_value = [mock_rule_with_schema, mock_rule_without_schema]
+            mock_source_client.list_rules.return_value = [mock_rule_with_queues, mock_rule_without_queues]
 
             mock_target_client = MagicMock()
             mock_target_client.internal_client.base_url = "https://api.example.com/v1"
@@ -2388,15 +2391,15 @@ class TestCopyRulesNullSchema:
             mock_action.payload = {}
             mock_action.event = "field_changed"
             mock_action.enabled = True
-            mock_rule_with_schema.trigger_condition = "True"
-            mock_rule_with_schema.actions = [mock_action]
-            mock_rule_with_schema.enabled = True
+            mock_rule_with_queues.trigger_condition = "True"
+            mock_rule_with_queues.actions = [mock_action]
+            mock_rule_with_queues.enabled = True
 
             mapping = IdMapping(source_org_id=1, target_org_id=2)
-            mapping.add(ObjectType.SCHEMA, 50, 60)
+            mapping.add(ObjectType.QUEUE, 50, 60)
             result = CopyResult()
 
-            workspace._copy_rules(mock_source_client, mock_target_client, source_schema_urls, mapping, result)
+            workspace._copy_rules(mock_source_client, mock_target_client, source_queue_urls, mapping, result)
 
         assert len(result.created) == 1
         assert result.created[0][0] == ObjectType.RULE
@@ -2417,7 +2420,7 @@ class TestCopySingleRuleException:
         mock_rule = Mock()
         mock_rule.id = 1000
         mock_rule.name = "Test Rule"
-        mock_rule.schema = "https://api.example.com/v1/schemas/50"
+        mock_rule.queues = ["https://api.example.com/v1/queues/50"]
         mock_rule.trigger_condition = "True"
         mock_rule.actions = [mock_action]
         mock_rule.enabled = True
@@ -2426,11 +2429,12 @@ class TestCopySingleRuleException:
         mock_client.internal_client.base_url = "https://api.example.com/v1"
         mock_client.create_new_rule.side_effect = Exception("Rule creation failed")
 
+        source_queue_urls = {"https://api.example.com/v1/queues/50"}
         mapping = IdMapping(source_org_id=1, target_org_id=2)
-        mapping.add(ObjectType.SCHEMA, 50, 60)
+        mapping.add(ObjectType.QUEUE, 50, 60)
 
         result = CopyResult()
-        workspace._copy_single_rule(mock_rule, mock_client, mapping, result)
+        workspace._copy_single_rule(mock_rule, mock_client, source_queue_urls, mapping, result)
 
         assert len(result.failed) == 1
         assert "Rule creation failed" in result.failed[0][3]

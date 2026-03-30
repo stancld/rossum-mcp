@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Lifted `first_n` from per-entity search models to a universal `first_n` parameter on the `search` tool — result limiting now works for all entity types, not just hooks, email templates, and annotations [#326](https://github.com/stancld/rossum-agents/pull/326)
+- Bump `rossum-api` dependency from `>=3.12.1` to `>=3.13.1` — adds support for rule → queues many-to-many relation [#329](https://github.com/stancld/rossum-agents/pull/329)
 
 ### Removed
 - Dropped `id` filter from `queue`, `engine`, `relation`, and `document_relation` search queries — use the `get` tool to fetch a resource by ID instead [#327](https://github.com/stancld/rossum-agents/pull/327)

@@ -305,11 +305,11 @@ wheels = [
 
 [[package]]
 name = "pygments"
-version = "2.19.2"
+version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
 ]
 
 [[package]]
@@ -357,7 +357,7 @@ wheels = [
 
 [[package]]
 name = "rossum-api"
-version = "3.13.0"
+version = "3.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -365,9 +365,9 @@ dependencies = [
     { name = "httpx" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7b/6d/af168c5f25ae489cff28eade9b8139cb1de210e6e197930ddaec817fa7e0/rossum_api-3.13.0.tar.gz", hash = "sha256:336dbc16015c3603da7bfdca29fd71836e9a4a384590ec5860235f7d8ec0df29", size = 162224, upload-time = "2026-03-25T07:51:51.651Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/c6/d34844a87a91ac558a623d072069d65c19e635ea258e5bd7f4a3f8741593/rossum_api-3.13.1.tar.gz", hash = "sha256:5307e272592904a8170a4dd633ce8b1b1f726b63a1af30090353a4fbd43a2a6d", size = 162380, upload-time = "2026-03-30T07:09:33.109Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/41/e32e8e64bdb6ec841320b806f0f002506747b1794bb2176d185ef69bafee/rossum_api-3.13.0-py3-none-any.whl", hash = "sha256:b91f7c8b49fc7a6ee721fadb0586bd90c015de48d89703dbfc30e6546f6105cd", size = 78645, upload-time = "2026-03-25T07:51:50.313Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/de/84ef1adad5809fad7bb95c8338b245ec299df5c9c2c08a61aa58f4be4c0b/rossum_api-3.13.1-py3-none-any.whl", hash = "sha256:22bf0dabc961bb685d9037c1a0ae89c5fe16a34d488a8586114b07b57c2de2f8", size = 78682, upload-time = "2026-03-30T07:09:32.161Z" },
 ]
 
 [[package]]
@@ -392,7 +392,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=4.0.0" },
-    { name = "rossum-api", specifier = ">=3.12.1" },
+    { name = "rossum-api", specifier = ">=3.13.1" },
 ]
 provides-extras = ["tests"]
 

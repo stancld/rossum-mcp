@@ -151,11 +151,6 @@ class Workspace:
             if (data := self._load_object(qp).data).get("schema")
         }
 
-    def _get_schema_urls_from_queues(self) -> set[str]:
-        """Get schema URLs referenced by local queues."""
-        queue_paths = self._list_local_objects(ObjectType.QUEUE)
-        return {data["schema"] for qp in queue_paths if (data := self._load_object(qp).data).get("schema")}
-
     def pull(self, org_id: int) -> PullResult:
         """Pull objects from Rossum to local workspace.
 
@@ -483,10 +478,10 @@ class Workspace:
                 result.pulled.append((ObjectType.EMAIL_TEMPLATE, template.id, template.name))
 
     def _pull_rules(self, client: SyncRossumAPIClient, result: PullResult) -> None:
-        """Pull rules linked to schemas of local queues."""
-        schema_urls = self._get_schema_urls_from_queues()
+        """Pull rules linked to queues of local workspace."""
+        queue_urls = self._get_queue_urls()
         for rule in client.list_rules():
-            if rule.schema in schema_urls:
+            if set(rule.queues) & queue_urls:
                 data = dataclasses.asdict(rule)
                 modified_at = getattr(rule, "modified_at", None)
                 self._save_object(ObjectType.RULE, rule.id, rule.name, data, modified_at)
@@ -853,14 +848,13 @@ class Workspace:
         self._copy_queues(source_queues, source_client, target_client, id_mapping, result)
 
         source_queue_urls = {f"{source_client.internal_client.base_url}/queues/{q.id}" for q, _ in source_queues}
-        source_schema_urls = {q.schema for q, _ in source_queues if q.schema}
 
         self._copy_engines(source_client, target_client, source_queue_urls, id_mapping, result)
         self._copy_hooks(source_client, target_client, source_queue_urls, id_mapping, result)
         self._copy_connectors(source_client, target_client, source_queue_urls, id_mapping, result)
         self._copy_inboxes(source_client, target_client, source_queue_urls, id_mapping, result)
         self._copy_email_templates(source_client, target_client, source_queue_urls, id_mapping, result)
-        self._copy_rules(source_client, target_client, source_schema_urls, id_mapping, result)
+        self._copy_rules(source_client, target_client, source_queue_urls, id_mapping, result)
 
         result.id_mapping = id_mapping
         self._save_id_mapping(id_mapping)
@@ -1076,31 +1070,41 @@ class Workspace:
         self,
         source_client: SyncRossumAPIClient,
         target_client: SyncRossumAPIClient,
-        source_schema_urls: set[str],
+        source_queue_urls: set[str],
         id_mapping: IdMapping,
         result: CopyResult,
     ) -> None:
         for rule in source_client.list_rules():
-            if rule.schema is None or rule.schema not in source_schema_urls:
+            if not rule.queues or not set(rule.queues) & source_queue_urls:
                 continue
 
-            self._copy_single_rule(rule, target_client, id_mapping, result)
+            self._copy_single_rule(rule, target_client, source_queue_urls, id_mapping, result)
 
     def _copy_single_rule(
-        self, rule: Rule, target_client: SyncRossumAPIClient, id_mapping: IdMapping, result: CopyResult
+        self,
+        rule: Rule,
+        target_client: SyncRossumAPIClient,
+        source_queue_urls: set[str],
+        id_mapping: IdMapping,
+        result: CopyResult,
     ) -> None:
-        if rule.schema is None:
-            result.skipped.append((ObjectType.RULE, rule.id, rule.name, "no schema"))
+        if not rule.queues:
+            result.skipped.append((ObjectType.RULE, rule.id, rule.name, "no queues"))
             return
 
         try:
-            source_schema_id = int(rule.schema.split("/")[-1])
-            target_schema_id = id_mapping.get(ObjectType.SCHEMA, source_schema_id)
-            if not target_schema_id:
-                result.skipped.append((ObjectType.RULE, rule.id, rule.name, "no target schema"))
-                return
+            target_queue_urls = []
+            for queue_url in rule.queues:
+                if queue_url not in source_queue_urls:
+                    continue
+                source_queue_id = int(queue_url.split("/")[-1])
+                target_queue_id = id_mapping.get(ObjectType.QUEUE, source_queue_id)
+                if target_queue_id:
+                    target_queue_urls.append(f"{target_client.internal_client.base_url}/queues/{target_queue_id}")
 
-            target_schema_url = f"{target_client.internal_client.base_url}/schemas/{target_schema_id}"
+            if not target_queue_urls:
+                result.skipped.append((ObjectType.RULE, rule.id, rule.name, "no target queues"))
+                return
 
             actions_data = [
                 {
@@ -1116,7 +1120,7 @@ class Workspace:
             new_rule = target_client.create_new_rule(
                 {
                     "name": rule.name,
-                    "schema": target_schema_url,
+                    "queues": target_queue_urls,
                     "trigger_condition": rule.trigger_condition,
                     "actions": actions_data,
                     "enabled": rule.enabled,
