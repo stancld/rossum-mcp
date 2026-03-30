@@ -7,11 +7,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
-- Schema responses (`get_schema`, `list_schemas`) now include resolved `workspaces` URLs (derived from linked queues); `list_schemas` also accepts a `workspace_id` filter to scope results to a specific workspace [#324](https://github.com/stancld/rossum-agents/pull/324)
-- Hook responses (`get_hook`, `list_hooks`) now include resolved `workspaces` URLs (derived from linked queues); `list_hooks` also accepts a `workspace_id` filter to scope results to a specific workspace [#325](https://github.com/stancld/rossum-agents/pull/325)
-- Rule responses (`get_rule`, `list_rules`) now include resolved `workspaces` URLs (derived from linked queues); `list_rules` also accepts a `workspace_id` filter to scope results to a specific workspace [#330](https://github.com/stancld/rossum-agents/pull/330)
-- Email template responses (`get_email_template`, `list_email_templates`) now include resolved `workspaces` URLs — workspace association is derived from the linked queue; `list_email_templates` also accepts a `workspace_id` filter to scope results to a specific workspace [#331](https://github.com/stancld/rossum-agents/pull/331)
-- Annotation responses (`get_annotation`, `list_annotations`) now include resolved `workspaces` URLs — workspace association is derived from the linked queue; `list_annotations` also accepts a `workspace_id` filter to scope results to a specific workspace [#333](https://github.com/stancld/rossum-agents/pull/333)
+- Schema responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); schema `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#324](https://github.com/stancld/rossum-agents/pull/324)
+- Hook responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); hook `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#325](https://github.com/stancld/rossum-agents/pull/325)
+- Rule responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); rule `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#330](https://github.com/stancld/rossum-agents/pull/330)
+- Email template responses from `get` and `search` now include resolved `workspaces` URLs — workspace association is derived from the linked queue; email template `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#331](https://github.com/stancld/rossum-agents/pull/331)
+- Annotation responses from `get` and `search` now include resolved `workspaces` URLs — workspace association is derived from the linked queue; annotation `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#333](https://github.com/stancld/rossum-agents/pull/333)
 
 ### Changed
 - Lifted `first_n` from per-entity search models to a universal `first_n` parameter on the `search` tool — result limiting now works for all entity types, not just hooks, email templates, and annotations [#326](https://github.com/stancld/rossum-agents/pull/326)
