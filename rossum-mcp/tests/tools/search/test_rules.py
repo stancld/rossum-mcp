@@ -85,3 +85,80 @@ class TestListRules:
 
         assert len(result) == 1
         assert result[0].workspaces == []
+
+    @pytest.mark.asyncio
+    async def test_list_rules_filter_by_workspace_id(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id filters rules to those belonging to the workspace."""
+        mock_rules = [
+            create_mock_rule(
+                id=1,
+                name="Rule A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+            create_mock_rule(
+                id=2,
+                name="Rule B",
+                queues=["https://api.test.rossum.ai/v1/queues/20"],
+            ),
+            create_mock_rule(
+                id=3,
+                name="Rule C",
+                queues=[
+                    "https://api.test.rossum.ai/v1/queues/10",
+                    "https://api.test.rossum.ai/v1/queues/20",
+                ],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+            create_mock_queue(
+                id=20,
+                url="https://api.test.rossum.ai/v1/queues/20",
+                workspace="https://api.test.rossum.ai/v1/workspaces/200",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_rules if resource == Resource.Rule else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_rules(mock_client, workspace_id=100)
+
+        assert len(result) == 2
+        assert {r.id for r in result} == {1, 3}
+
+    @pytest.mark.asyncio
+    async def test_list_rules_filter_by_workspace_id_no_match(self, mock_client: AsyncMock) -> None:
+        """Test that workspace_id returns empty list when no rules belong to the workspace."""
+        mock_rules = [
+            create_mock_rule(
+                id=1,
+                name="Rule A",
+                queues=["https://api.test.rossum.ai/v1/queues/10"],
+            ),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10,
+                url="https://api.test.rossum.ai/v1/queues/10",
+                workspace="https://api.test.rossum.ai/v1/workspaces/100",
+            ),
+        ]
+
+        async def mock_fetch_all(resource, **filters):
+            items = mock_rules if resource == Resource.Rule else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
+
+        result = await _list_rules(mock_client, workspace_id=999)
+
+        assert len(result) == 0

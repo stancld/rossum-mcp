@@ -104,7 +104,7 @@ search
    * - ``engine``
      - ``id``, ``engine_type``, ``agenda_id``
    * - ``rule``
-     - ``queue_id``, ``organization_id``, ``enabled``
+     - ``queue_id``, ``workspace_id``, ``organization_id``, ``enabled``
    * - ``user``
      - ``username``, ``email``, ``first_name``, ``last_name``, ``is_active``, ``is_organization_group_admin``
    * - ``workspace``

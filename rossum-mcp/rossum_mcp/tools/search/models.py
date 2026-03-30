@@ -46,6 +46,7 @@ class EngineSearch(BaseModel):
 class RuleSearch(BaseModel):
     entity: Literal["rule"] = "rule"
     queue_id: int | None = None
+    workspace_id: int | None = None
     organization_id: int | None = None
     enabled: bool | None = None
 

@@ -207,23 +207,30 @@ async def _list_engines(
 async def _list_rules(
     client: AsyncRossumAPIClient,
     queue_id: int | None = None,
+    workspace_id: int | None = None,
     organization_id: int | None = None,
     enabled: bool | None = None,
     max_items: int | None = None,
 ) -> list[Rule]:
-    logger.debug(f"Listing rules: queue_id={queue_id}, organization_id={organization_id}, enabled={enabled}")
+    logger.debug(
+        f"Listing rules: queue_id={queue_id}, workspace_id={workspace_id}, organization_id={organization_id}, enabled={enabled}"
+    )
     filters = build_filters(queue=queue_id, organization=organization_id, enabled=enabled)
     result = await graceful_list(client, Resource.Rule, "rule", max_items=max_items, **filters)
 
     all_queue_urls = {url for rule in result.items for url in rule.queues}
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
-    return [
+    items = [
         Rule.from_base(
             rule, workspaces=list({queue_workspace_map[q] for q in rule.queues if q in queue_workspace_map})
         )
         for rule in result.items
     ]
+    if workspace_id is not None:
+        workspace_url_suffix = f"/workspaces/{workspace_id}"
+        items = [r for r in items if r.workspaces and any(w.endswith(workspace_url_suffix) for w in r.workspaces)]
+    return items
 
 
 async def _list_users(
