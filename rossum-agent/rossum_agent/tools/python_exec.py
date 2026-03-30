@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_MAX_CODE_LENGTH = 12000
+_MAX_CODE_LENGTH = 25000
 _SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls"})
 _VAR_DIR = Path("/var").resolve()
 _ALLOWED_OPEN_MODES = {"r", "rt", "w", "wt", "a", "at"}
