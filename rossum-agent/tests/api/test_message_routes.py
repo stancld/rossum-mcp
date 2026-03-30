@@ -22,9 +22,11 @@ from rossum_agent.api.routes.messages import (
     _format_sse_event,
     _generate_chat_summary,
     _process_agent_event,
+    _save_chat_history,
     _with_sse_keepalive,
     _yield_file_events,
 )
+from rossum_agent.storage import ChatData, ChatMetadata
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -558,3 +560,96 @@ class TestGenerateChatSummary:
         call_args = mock_client.messages.create.call_args
         prompt = call_args.kwargs["messages"][0]["content"]
         assert not prompt.startswith("Context:")
+
+
+class TestSaveChatHistoryTokenTracking:
+    """Tests for token usage accumulation in _save_chat_history."""
+
+    def _make_deps(self):
+        """Create mock dependencies for _save_chat_history."""
+
+        chat_service = MagicMock()
+        chat_service.save_messages.return_value = True
+        agent_service = MagicMock()
+        agent_service.build_updated_history.return_value = []
+        credentials = MagicMock()
+        credentials.user_id = "test_user"
+        chat_data = ChatData(messages=[], metadata=ChatMetadata())
+        return chat_service, agent_service, credentials, chat_data
+
+    def test_accumulates_tokens_from_done_event(self):
+        """Token counts from done_event are accumulated into chat metadata."""
+
+        chat_service, agent_service, credentials, chat_data = self._make_deps()
+        done_event = StreamDoneEvent(total_steps=3, input_tokens=1000, output_tokens=500)
+
+        _save_chat_history(
+            chat_service=chat_service,
+            agent_service=agent_service,
+            credentials=credentials,
+            chat_id="chat_1",
+            chat_data=chat_data,
+            history=[],
+            user_prompt="hello",
+            final_response="hi",
+            images=None,
+            documents=None,
+            output_dir=None,
+            memory=None,
+            done_event=done_event,
+        )
+
+        assert chat_data.metadata.total_input_tokens == 1000
+        assert chat_data.metadata.total_output_tokens == 500
+        assert chat_data.metadata.total_steps == 3
+
+    def test_accumulates_tokens_across_multiple_turns(self):
+        """Token counts accumulate across multiple calls (multi-turn chats)."""
+
+        chat_service, agent_service, credentials, chat_data = self._make_deps()
+
+        for i in range(3):
+            done_event = StreamDoneEvent(total_steps=2, input_tokens=100, output_tokens=50)
+            _save_chat_history(
+                chat_service=chat_service,
+                agent_service=agent_service,
+                credentials=credentials,
+                chat_id="chat_1",
+                chat_data=chat_data,
+                history=[],
+                user_prompt=f"turn {i}",
+                final_response=f"response {i}",
+                images=None,
+                documents=None,
+                output_dir=None,
+                memory=None,
+                done_event=done_event,
+            )
+
+        assert chat_data.metadata.total_input_tokens == 300
+        assert chat_data.metadata.total_output_tokens == 150
+        assert chat_data.metadata.total_steps == 6
+
+    def test_no_done_event_leaves_tokens_unchanged(self):
+        """When done_event is None, token counts remain at zero."""
+
+        chat_service, agent_service, credentials, chat_data = self._make_deps()
+
+        _save_chat_history(
+            chat_service=chat_service,
+            agent_service=agent_service,
+            credentials=credentials,
+            chat_id="chat_1",
+            chat_data=chat_data,
+            history=[],
+            user_prompt="hello",
+            final_response="hi",
+            images=None,
+            documents=None,
+            output_dir=None,
+            memory=None,
+        )
+
+        assert chat_data.metadata.total_input_tokens == 0
+        assert chat_data.metadata.total_output_tokens == 0
+        assert chat_data.metadata.total_steps == 0

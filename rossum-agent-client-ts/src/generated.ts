@@ -328,6 +328,21 @@ export interface components {
       preview?: string | null;
       /** Summary */
       summary?: string | null;
+      /**
+       * Total Input Tokens
+       * @default 0
+       */
+      total_input_tokens: number;
+      /**
+       * Total Output Tokens
+       * @default 0
+       */
+      total_output_tokens: number;
+      /**
+       * Total Steps
+       * @default 0
+       */
+      total_steps: number;
     };
     /**
      * CommandInfo
