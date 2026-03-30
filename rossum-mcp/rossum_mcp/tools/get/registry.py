@@ -20,12 +20,11 @@ from rossum_api.models.engine import Engine
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
 from rossum_api.models.queue import Queue
-from rossum_api.models.rule import Rule
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import resolve_queue_workspaces
-from rossum_mcp.tools.models import Hook, Schema
+from rossum_mcp.tools.models import Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -78,7 +77,10 @@ async def _get_engine(client: AsyncRossumAPIClient, engine_id: int) -> Engine:
 
 async def _get_rule(client: AsyncRossumAPIClient, rule_id: int) -> Rule:
     logger.debug(f"Retrieving rule: rule_id={rule_id}")
-    return await client.retrieve_rule(rule_id)
+    base_rule = await client.retrieve_rule(rule_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_rule.queues))
+    workspaces = list({queue_workspace_map[q] for q in base_rule.queues if q in queue_workspace_map})
+    return Rule.from_base(base_rule, workspaces=workspaces)
 
 
 async def _get_user(client: AsyncRossumAPIClient, user_id: int) -> User:
