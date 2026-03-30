@@ -138,8 +138,16 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_annotation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_ann = create_mock_annotation(id=99)
+        mock_ann = create_mock_annotation(id=99, queue="https://q/1")
         mock_client.retrieve_annotation.return_value = mock_ann
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="annotation", entity_id=99)
@@ -374,7 +382,10 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with (
+            patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl,
+            patch("rossum_mcp.tools.search.registry.resolve_queue_workspaces", return_value={}) as _mock_rqw,
+        ):
             mock_gl.return_value = Mock(items=[mock_ann])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
