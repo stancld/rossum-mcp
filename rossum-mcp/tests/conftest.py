@@ -8,9 +8,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from rossum_api.models.annotation import Annotation
+from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine, EngineField
 from rossum_api.models.hook import Hook
 from rossum_api.models.queue import Queue
+from rossum_api.models.rule import Rule
 from rossum_api.models.schema import Schema
 from rossum_api.models.workspace import Workspace
 
@@ -209,6 +211,50 @@ def create_mock_workspace(**kwargs) -> Workspace:
     }
     defaults.update(kwargs)
     return Workspace(**defaults)
+
+
+def create_mock_rule(**kwargs) -> Rule:
+    """Create a mock Rule dataclass instance with default values."""
+    defaults = {
+        "id": 1,
+        "url": "https://api.test.rossum.ai/v1/rules/1",
+        "name": "Test Rule",
+        "enabled": True,
+        "organization": "https://api.test.rossum.ai/v1/organizations/1",
+        "queues": [],
+        "trigger_condition": "True",
+        "created_by": "https://api.test.rossum.ai/v1/users/1",
+        "created_at": "2025-01-01T00:00:00Z",
+        "modified_by": None,
+        "modified_at": "2025-01-01T00:00:00Z",
+        "rule_template": None,
+        "synchronized_from_template": False,
+        "actions": [],
+    }
+    defaults.update(kwargs)
+    return Rule(**defaults)
+
+
+def create_mock_email_template(**kwargs) -> EmailTemplate:
+    """Create a mock EmailTemplate dataclass instance with default values."""
+    defaults = {
+        "id": 1,
+        "url": "https://api.test.rossum.ai/v1/email_templates/1",
+        "name": "Test Email Template",
+        "queue": "https://api.test.rossum.ai/v1/queues/1",
+        "organization": "https://api.test.rossum.ai/v1/organizations/1",
+        "subject": "Test Subject",
+        "message": "<p>Test Message</p>",
+        "type": "custom",
+        "enabled": True,
+        "automate": False,
+        "triggers": [],
+        "to": [],
+        "cc": [],
+        "bcc": [],
+    }
+    defaults.update(kwargs)
+    return EmailTemplate(**defaults)
 
 
 def create_mock_engine(**kwargs) -> Engine:

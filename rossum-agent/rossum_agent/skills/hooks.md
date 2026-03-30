@@ -1,6 +1,13 @@
 ---
 name: Hooks
 description: hook templates, token_owner, testing, debugging
+mcp_tools:
+  - create_hook
+  - create_hook_from_template
+  - get
+  - search
+  - test_hook
+  - update_hook
 ---
 
 # Hooks Skill

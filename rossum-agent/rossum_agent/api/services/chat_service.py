@@ -126,6 +126,9 @@ class ChatService:
                 first_message=_extract_text(chat["first_message"]) or "",
                 preview=_extract_text(chat.get("preview")),
                 summary=chat.get("summary"),
+                total_input_tokens=chat.get("total_input_tokens", 0),
+                total_output_tokens=chat.get("total_output_tokens", 0),
+                total_steps=chat.get("total_steps", 0),
             )
             for chat in paginated
         ]

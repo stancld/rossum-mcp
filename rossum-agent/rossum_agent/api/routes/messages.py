@@ -178,8 +178,12 @@ def _save_chat_history(
     summary: str | None = None,
 ) -> None:
     """Persist updated conversation history after a successful agent run."""
-    if done_event and done_event.config_commit_hash:
-        chat_data.metadata.config_commits.append(done_event.config_commit_hash)
+    if done_event:
+        chat_data.metadata.total_input_tokens += done_event.input_tokens
+        chat_data.metadata.total_output_tokens += done_event.output_tokens
+        chat_data.metadata.total_steps += done_event.total_steps
+        if done_event.config_commit_hash:
+            chat_data.metadata.config_commits.append(done_event.config_commit_hash)
     if summary is not None:
         chat_data.metadata.summary = summary
 

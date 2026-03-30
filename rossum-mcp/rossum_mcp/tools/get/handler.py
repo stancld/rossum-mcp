@@ -1,3 +1,9 @@
+"""MCP tool registrations for get/search operations.
+
+Builds on the entity registry (registry.py) to expose get, search, and specialized
+read-only tools to the MCP server.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -49,11 +55,7 @@ def _serialize(obj: object) -> object:
 
 
 async def _get_one(
-    client: AsyncRossumAPIClient,
-    config: EntityConfig,
-    entity: str,
-    entity_id: int,
-    include_related: bool,
+    client: AsyncRossumAPIClient, config: EntityConfig, entity: str, entity_id: int, include_related: bool
 ) -> dict[str, object]:
     if config.retrieve_fn is None:
         raise RuntimeError(f"Entity '{entity}' has no retrieve_fn — use search instead")
@@ -71,11 +73,7 @@ async def _get_one(
 
 
 async def _get_many(
-    client: AsyncRossumAPIClient,
-    config: EntityConfig,
-    entity: str,
-    entity_ids: list[int],
-    include_related: bool,
+    client: AsyncRossumAPIClient, config: EntityConfig, entity: str, entity_ids: list[int], include_related: bool
 ) -> list[dict[str, object]]:
     tasks = [_get_one(client, config, entity, eid, include_related) for eid in entity_ids]
     return list(await asyncio.gather(*tasks))
@@ -120,7 +118,7 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
         tags={"read"},
         annotations={"readOnlyHint": True},
     )
-    async def search(query: SearchQuery) -> list[object]:
+    async def search(query: SearchQuery, first_n: int | None = None) -> list[object]:
         entity = query.entity
         config = registry.get(entity)
         if config is None:
@@ -129,6 +127,8 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
             raise ToolError(f"Entity '{entity}' does not support search/list.")
 
         kwargs = extract_search_kwargs(query)
+        if first_n is not None:
+            kwargs["max_items"] = first_n
         result = await config.search_fn(**kwargs)
         return [_serialize(item) for item in result]
 

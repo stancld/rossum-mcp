@@ -8,9 +8,11 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from conftest import (
     create_mock_annotation,
+    create_mock_email_template,
     create_mock_engine,
     create_mock_hook,
     create_mock_queue,
+    create_mock_rule,
     create_mock_schema,
     create_mock_workspace,
 )
@@ -136,8 +138,16 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_annotation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_ann = create_mock_annotation(id=99)
+        mock_ann = create_mock_annotation(id=99, queue="https://q/1")
         mock_client.retrieve_annotation.return_value = mock_ann
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="annotation", entity_id=99)
@@ -168,7 +178,16 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_rule(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_rule.return_value = Mock(id=11)
+        rule = create_mock_rule(id=11, queues=["https://q/1"])
+        mock_client.retrieve_rule.return_value = rule
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="rule", entity_id=11)
@@ -178,7 +197,16 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_email_template(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_email_template.return_value = Mock(id=15)
+        template = create_mock_email_template(id=15, queue="https://q/1")
+        mock_client.retrieve_email_template.return_value = template
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="email_template", entity_id=15)
@@ -354,7 +382,10 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with (
+            patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl,
+            patch("rossum_mcp.tools.search.registry.resolve_queue_workspaces", return_value={}) as _mock_rqw,
+        ):
             mock_gl.return_value = Mock(items=[mock_ann])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
@@ -395,6 +426,18 @@ class TestSearchRouting:
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=WorkspaceSearch(organization_id=1))
         assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_search_first_n_passes_max_items(
+        self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
+    ) -> None:
+        mock_queue = create_mock_queue(id=1, name="Q1")
+        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+            mock_gl.return_value = Mock(items=[mock_queue])
+            register_get_tools(mock_mcp, mock_client)
+            await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5), first_n=3)
+        mock_gl.assert_called_once()
+        assert mock_gl.call_args.kwargs.get("max_items") == 3
 
 
 # ───────────────────────── include_related ─────────────────────────
@@ -474,7 +517,6 @@ class TestExtractSearchKwargs:
         query = HookSearch(queue_id=10)
         kwargs = extract_search_kwargs(query)
         assert "active" not in kwargs
-        assert "first_n" not in kwargs
         assert kwargs["queue_id"] == 10
 
     def test_annotation_keeps_required_field(self) -> None:
@@ -625,6 +667,14 @@ class TestIncludeRelatedHook:
     ) -> None:
         hook = create_mock_hook(id=5, queues=["https://q/1"], events=["annotation_status"])
         mock_client.retrieve_hook.return_value = hook
+
+        mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
+
+        async def mock_fetch_all(resource, **filters):
+            for item in mock_queues:
+                yield item
+
+        mock_client._http_client.fetch_all = mock_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="hook", entity_id=5, include_related=True)

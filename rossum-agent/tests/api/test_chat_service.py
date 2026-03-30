@@ -129,6 +129,28 @@ class TestChatServiceListChats:
         assert response.chats[1].chat_id == "chat_2"
         assert response.chats[1].preview is None
 
+    def test_list_chats_includes_token_usage(self):
+        """Test list_chats passes token usage fields to ChatSummary."""
+        mock_storage = MagicMock()
+        mock_storage.list_all_chats.return_value = [
+            {
+                "chat_id": "chat_1",
+                "timestamp": 1702132252,
+                "message_count": 5,
+                "first_message": "Hello",
+                "total_input_tokens": 1500,
+                "total_output_tokens": 800,
+                "total_steps": 7,
+            },
+        ]
+
+        service = ChatService(storage=mock_storage)
+        response = service.list_chats(user_id="user_123")
+
+        assert response.chats[0].total_input_tokens == 1500
+        assert response.chats[0].total_output_tokens == 800
+        assert response.chats[0].total_steps == 7
+
     def test_list_chats_pagination(self):
         """Test list_chats with pagination."""
         mock_storage = MagicMock()

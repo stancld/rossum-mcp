@@ -17,7 +17,6 @@ from rossum_mcp.tools.models import EmailTemplateType, EngineType, LogLevel
 
 class QueueSearch(BaseModel):
     entity: Literal["queue"] = "queue"
-    id: str | None = None
     workspace_id: int | None = None
     name: str | None = None
     use_regex: bool = False
@@ -27,26 +26,27 @@ class SchemaSearch(BaseModel):
     entity: Literal["schema"] = "schema"
     name: str | None = None
     queue_id: int | None = None
+    workspace_id: int | None = None
     use_regex: bool = False
 
 
 class HookSearch(BaseModel):
     entity: Literal["hook"] = "hook"
     queue_id: int | None = None
+    workspace_id: int | None = None
     active: bool | None = None
-    first_n: int | None = None
 
 
 class EngineSearch(BaseModel):
     entity: Literal["engine"] = "engine"
-    id: int | None = None
     engine_type: EngineType | None = None
     agenda_id: str | None = None
 
 
 class RuleSearch(BaseModel):
     entity: Literal["rule"] = "rule"
-    schema_id: int | None = None
+    queue_id: int | None = None
+    workspace_id: int | None = None
     organization_id: int | None = None
     enabled: bool | None = None
 
@@ -71,9 +71,9 @@ class WorkspaceSearch(BaseModel):
 class EmailTemplateSearch(BaseModel):
     entity: Literal["email_template"] = "email_template"
     queue_id: int | None = None
+    workspace_id: int | None = None
     type: EmailTemplateType | None = None
     name: str | None = None
-    first_n: int | None = None
     use_regex: bool = False
 
 
@@ -86,14 +86,13 @@ class OrganizationGroupSearch(BaseModel):
 class AnnotationSearch(BaseModel):
     entity: Literal["annotation"] = "annotation"
     queue_id: int
+    workspace_id: int | None = None
     status: str | None = "importing,to_review,confirmed,exported"
     ordering: Sequence[str] | None = None
-    first_n: int | None = None
 
 
 class RelationSearch(BaseModel):
     entity: Literal["relation"] = "relation"
-    id: int | None = None
     type: str | None = None
     parent: int | None = None
     key: str | None = None
@@ -102,7 +101,6 @@ class RelationSearch(BaseModel):
 
 class DocumentRelationSearch(BaseModel):
     entity: Literal["document_relation"] = "document_relation"
-    id: int | None = None
     type: str | None = None
     annotation: int | None = None
     key: str | None = None
@@ -187,6 +185,7 @@ class SchemaListItem:
     id: int
     name: str | None = None
     queues: list[str] | None = None
+    workspaces: list[str] | None = None
     url: str | None = None
     content: str = "<omitted>"
     metadata: dict | None = None

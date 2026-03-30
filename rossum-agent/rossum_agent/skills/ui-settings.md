@@ -1,6 +1,9 @@
 ---
 name: UI Settings
 description: update queue UI settings, annotation list columns
+mcp_tools:
+  - get
+  - update_queue
 ---
 
 # UI Settings Skill

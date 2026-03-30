@@ -448,7 +448,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "2. Create a serverless function hook that normalizes vendor names to uppercase "
             "on annotation content initialization\n"
             "3. Test it\n\n"
-            "Return the hook_id."
+            "Return the hook_id. Do not use task tools."
         ),
         tool_expectation=ToolExpectation(
             expected_tools=[

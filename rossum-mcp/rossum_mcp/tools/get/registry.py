@@ -1,3 +1,9 @@
+"""Entity fetch functions and config registry.
+
+Maps entity names to retrieve/search callables (EntityConfig). Consumed by handler.py to
+wire up MCP tools, and by the search layer for shared search_fn references.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -7,18 +13,20 @@ from typing import TYPE_CHECKING, cast
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.annotation import Annotation
 from rossum_api.models.document_relation import DocumentRelation
-from rossum_api.models.email_template import EmailTemplate
 from rossum_api.models.engine import Engine
-from rossum_api.models.hook import Hook
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.organization_limit import OrganizationLimit
 from rossum_api.models.queue import Queue
-from rossum_api.models.rule import Rule
-from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
+
+from rossum_mcp.tools.base import (
+    resolve_queue_workspaces,
+    resolve_workspace_from_queue,
+    resolve_workspaces_from_queues,
+)
+from rossum_mcp.tools.models import Annotation, EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -37,7 +45,11 @@ class EntityConfig:
 
 async def _get_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> Annotation:
     logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
-    return await client.retrieve_annotation(annotation_id)
+    base_annotation = await client.retrieve_annotation(annotation_id)
+    queue_urls = {base_annotation.queue} if base_annotation.queue else set()
+    queue_workspace_map = await resolve_queue_workspaces(client, queue_urls)
+    workspace = resolve_workspace_from_queue(base_annotation.queue, queue_workspace_map)
+    return Annotation.from_base(base_annotation, workspaces=[workspace] if workspace else [])
 
 
 async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
@@ -47,15 +59,21 @@ async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
 
 async def _get_schema(client: AsyncRossumAPIClient, schema_id: int) -> Schema:
     try:
-        return await client.retrieve_schema(schema_id)
+        base_schema = await client.retrieve_schema(schema_id)
     except APIClientError as e:
         if e.status_code == 404:
             raise ToolError(f"Schema {schema_id} not found") from e
         raise
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_schema.queues))
+    return Schema.from_base(
+        base_schema, workspaces=resolve_workspaces_from_queues(base_schema.queues, queue_workspace_map)
+    )
 
 
 async def _get_hook(client: AsyncRossumAPIClient, hook_id: int) -> Hook:
-    return await client.retrieve_hook(hook_id)
+    base_hook = await client.retrieve_hook(hook_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_hook.queues))
+    return Hook.from_base(base_hook, workspaces=resolve_workspaces_from_queues(base_hook.queues, queue_workspace_map))
 
 
 async def _get_engine(client: AsyncRossumAPIClient, engine_id: int) -> Engine:
@@ -65,7 +83,9 @@ async def _get_engine(client: AsyncRossumAPIClient, engine_id: int) -> Engine:
 
 async def _get_rule(client: AsyncRossumAPIClient, rule_id: int) -> Rule:
     logger.debug(f"Retrieving rule: rule_id={rule_id}")
-    return await client.retrieve_rule(rule_id)
+    base_rule = await client.retrieve_rule(rule_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, set(base_rule.queues))
+    return Rule.from_base(base_rule, workspaces=resolve_workspaces_from_queues(base_rule.queues, queue_workspace_map))
 
 
 async def _get_user(client: AsyncRossumAPIClient, user_id: int) -> User:
@@ -78,7 +98,10 @@ async def _get_workspace(client: AsyncRossumAPIClient, workspace_id: int) -> Wor
 
 
 async def _get_email_template(client: AsyncRossumAPIClient, email_template_id: int) -> EmailTemplate:
-    return await client.retrieve_email_template(email_template_id)
+    base_template = await client.retrieve_email_template(email_template_id)
+    queue_workspace_map = await resolve_queue_workspaces(client, {base_template.queue})
+    workspace = resolve_workspace_from_queue(base_template.queue, queue_workspace_map)
+    return EmailTemplate.from_base(base_template, workspaces=[workspace] if workspace else [])
 
 
 async def _get_organization_group(client: AsyncRossumAPIClient, organization_group_id: int) -> OrganizationGroup:

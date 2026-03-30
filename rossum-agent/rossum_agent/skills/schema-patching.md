@@ -1,6 +1,11 @@
 ---
 name: Schema Patching
 description: modify schemas, add/remove fields, formulas
+mcp_tools:
+  - get
+  - get_schema_tree_structure
+  - patch_schema
+  - prune_schema_fields
 ---
 
 # Schema Patching Skill
@@ -34,7 +39,7 @@ Each change object in the `changes` array:
 
 | Property | Description |
 |----------|-------------|
-| `format` | Number format (e.g., "#" for integer) |
+| `format` | Number format (e.g., `"# ##0"` for integer, `"# ##0.#"` for decimal) |
 | `options` | For enum: `[{"value": "v1", "label": "Label 1"}]` |
 | `rir_field_names` | AI extraction hints |
 | `hidden` | Hide field from UI |
@@ -81,11 +86,8 @@ For formula updates, provide the full formula code in the `formula` property.
 
 ## Direct Field Updates via MCP
 
-For simple property updates (formula text, label, hidden), `patch_schema` is more efficient than the sub-agent. It is an MCP tool — you **must** load it before use:
+For simple property updates (formula text, label, hidden), `patch_schema` is more efficient than the sub-agent:
 
 ```
-load_tool(tool_names=["patch_schema"])
 patch_schema(schema_id=12345, operation="update", node_id="field_id", node_data={"formula": "new_code"})
 ```
-
-Calling `patch_schema` without `load_tool` first will fail with "Unknown tool".

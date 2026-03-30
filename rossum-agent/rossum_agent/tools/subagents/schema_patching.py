@@ -146,7 +146,7 @@ Lookup fields require ALL of these attributes — omitting any causes API errors
 |--------------|---------------|
 | String | type: "string" |
 | Float/Number | type: "number" |
-| Integer | type: "number", format: "#" |
+| Integer | type: "number", format: "# ##0" |
 | Date | type: "date" |
 | Enum | type: "enum", options: [...] |
 

@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+
+## [2.1.0] - 2026-03-30
+
+### Added
+- Schema responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); schema `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#324](https://github.com/stancld/rossum-agents/pull/324)
+- Hook responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); hook `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#325](https://github.com/stancld/rossum-agents/pull/325)
+- Rule responses from `get` and `search` now include resolved `workspaces` URLs (derived from linked queues); rule `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#330](https://github.com/stancld/rossum-agents/pull/330)
+- Email template responses from `get` and `search` now include resolved `workspaces` URLs — workspace association is derived from the linked queue; email template `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#331](https://github.com/stancld/rossum-agents/pull/331)
+- Annotation responses from `get` and `search` now include resolved `workspaces` URLs — workspace association is derived from the linked queue; annotation `search` also accepts a `workspace_id` filter to scope results to a specific workspace [#333](https://github.com/stancld/rossum-agents/pull/333)
+
+### Changed
+- Lifted `first_n` from per-entity search models to a universal `first_n` parameter on the `search` tool — result limiting now works for all entity types, not just hooks, email templates, and annotations [#326](https://github.com/stancld/rossum-agents/pull/326)
+- Bump `rossum-api` dependency from `>=3.12.1` to `>=3.13.1` — adds support for rule → queues many-to-many relation [#329](https://github.com/stancld/rossum-agents/pull/329)
+
+### Removed
+- Dropped `id` filter from `queue`, `engine`, `relation`, and `document_relation` search queries — use the `get` tool to fetch a resource by ID instead [#327](https://github.com/stancld/rossum-agents/pull/327)
+
 ## [2.0.6] - 2026-03-25
 
 ### Added

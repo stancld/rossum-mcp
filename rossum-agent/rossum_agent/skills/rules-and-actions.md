@@ -1,6 +1,11 @@
 ---
 name: Rules & Actions
 description: create validation rules with TxScript conditions and actions
+mcp_tools:
+  - create_rule
+  - get
+  - patch_rule
+  - search
 ---
 
 # Rules & Actions Skill

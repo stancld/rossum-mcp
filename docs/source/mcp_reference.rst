@@ -98,13 +98,13 @@ search
    * - ``queue``
      - ``id``, ``workspace_id``, ``name``, ``use_regex``
    * - ``schema``
-     - ``name``, ``queue_id``, ``use_regex``
+     - ``name``, ``queue_id``, ``workspace_id``, ``use_regex``
    * - ``hook``
-     - ``queue_id``, ``active``, ``first_n``
+     - ``queue_id``, ``workspace_id``, ``active``, ``first_n``
    * - ``engine``
      - ``id``, ``engine_type``, ``agenda_id``
    * - ``rule``
-     - ``schema_id``, ``organization_id``, ``enabled``
+     - ``queue_id``, ``workspace_id``, ``organization_id``, ``enabled``
    * - ``user``
      - ``username``, ``email``, ``first_name``, ``last_name``, ``is_active``, ``is_organization_group_admin``
    * - ``workspace``
@@ -269,7 +269,7 @@ create_rule
 ^^^^^^^^^^^
 
 **MCP Tool:**
-  ``create_rule(name: str, trigger_condition: str, actions: list[dict], enabled: bool = True, schema_id: int | None = None, queue_ids: list[int] | None = None)``
+  ``create_rule(name: str, trigger_condition: str, actions: list[dict], enabled: bool = True, queue_ids: list[int] | None = None)``
 
 **Rossum SDK Method:**
   ``AsyncRossumAPIClient.create_new_rule(rule_data)``
@@ -282,7 +282,6 @@ create_rule
   - ``trigger_condition``: TxScript formula string (e.g., ``"field.amount > 10000"``)
   - ``actions``: List of actions with required fields: ``id``, ``type``, ``event``, ``payload``
   - ``enabled``: Whether the rule is active (default: True)
-  - ``schema``: Schema URL (optional, at least one of ``schema_id`` or ``queue_ids`` required)
   - ``queues``: List of queue URLs to limit rule to specific queues (optional)
 
 **Action types:** ``show_message``, ``add_automation_blocker``, ``add_validation_source``, ``change_queue``, ``send_email``, ``hide_field``, ``show_field``, ``show_hide_field``, ``change_status``, ``add_label``, ``remove_label``, ``custom``
@@ -292,7 +291,7 @@ create_rule
 **Implementation:**
   Creates a new business rule. Rules automate field operations based on trigger conditions.
   Actions define what happens when conditions are met (e.g., set field value, show message).
-  At least one of ``schema_id`` or ``queue_ids`` must be provided to scope the rule.
+  Optionally scope the rule to specific queues with ``queue_ids``.
 
 **Common Use Cases:**
 
@@ -303,7 +302,7 @@ create_rule
          name="High Value Alert",
          trigger_condition="field.amount > 10000",
          actions=[{"id": "alert1", "type": "show_message", "event": "validation", "payload": {"type": "error", "content": "High value invoice", "schema_id": "amount"}}],
-         schema_id=12345
+         queue_ids=[12345]
      )
 
 patch_rule

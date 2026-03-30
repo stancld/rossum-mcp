@@ -1,22 +1,38 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, Protocol, TypeVar
 
 from rossum_api.domain_logic.resources import Resource
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Any
+    from typing import Any, Self
 
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+
+class RossumResource(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, dataclasses.Field]]
+
+
+T = TypeVar("T", bound=RossumResource)
+
+
+@dataclass
+class RossumResourceWithResolvedWorkspaces(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-autodoc-typehints with PEP 563
+    workspaces: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_base(cls, resource: T, workspaces: list[str]) -> Self:
+        base_fields: dict[str, Any] = {f.name: getattr(resource, f.name) for f in dataclasses.fields(resource)}
+        return cls(**base_fields, workspaces=workspaces)
 
 
 @dataclass
@@ -60,11 +76,7 @@ def filter_by_name_regex[T](items: list[T], name: str | None, use_regex: bool) -
 
 
 async def graceful_list(
-    client: AsyncRossumAPIClient,
-    resource: Resource,
-    resource_label: str,
-    max_items: int | None = None,
-    **filters: Any,
+    client: AsyncRossumAPIClient, resource: Resource, resource_label: str, max_items: int | None = None, **filters: Any
 ) -> GracefulListResult:
     """List resources gracefully, skipping items that fail deserialization.
 
@@ -89,6 +101,42 @@ async def graceful_list(
     if skipped_ids:
         logger.warning(f"Skipped {len(skipped_ids)} {resource_label} item(s) that failed to deserialize")
     return GracefulListResult(items=items, skipped_ids=skipped_ids)
+
+
+def get_queue_engine_url(queue: object) -> str | None:
+    """Get the engine URL from a queue, checking dedicated, generic, then default engine."""
+    for attr in ("dedicated_engine", "generic_engine", "engine"):
+        value = getattr(queue, attr, None)
+        if value and isinstance(value, str):
+            return value
+    return None
+
+
+async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set[str]) -> dict[str, str]:
+    """Map queue URLs to their workspace URLs by fetching queue data."""
+    if not queue_urls:
+        return {}
+    queue_result = await graceful_list(client, Resource.Queue, "queue")
+    return {q.url: q.workspace for q in queue_result.items if q.workspace}
+
+
+def resolve_workspaces_from_queues(queue_urls: list[str], queue_workspace_map: dict[str, str]) -> list[str]:
+    return list({queue_workspace_map[q] for q in queue_urls if q in queue_workspace_map})
+
+
+def resolve_workspace_from_queue(queue_url: str | None, queue_workspace_map: dict[str, str]) -> str | None:
+    return queue_workspace_map[queue_url] if queue_url and queue_url in queue_workspace_map else None
+
+
+def filter_by_workspace_id[T](items: list[T], workspace_id: int | None) -> list[T]:
+    if workspace_id is None:
+        return items
+    workspace_url_suffix = f"/workspaces/{workspace_id}"
+    return [
+        item
+        for item in items
+        if (ws := getattr(item, "workspaces", None)) and any(w.endswith(workspace_url_suffix) for w in ws)
+    ]
 
 
 async def delete_resource(

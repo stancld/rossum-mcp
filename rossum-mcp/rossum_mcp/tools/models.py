@@ -6,6 +6,39 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Literal, TypedDict
 
+from rossum_api.models.annotation import Annotation as RossumAnnotation
+from rossum_api.models.email_template import EmailTemplate as RossumEmailTemplate
+from rossum_api.models.hook import Hook as RossumHook
+from rossum_api.models.rule import Rule as RossumRule
+from rossum_api.models.schema import Schema as RossumSchema
+
+from rossum_mcp.tools.base import RossumResourceWithResolvedWorkspaces
+
+
+@dataclass
+class Annotation(RossumResourceWithResolvedWorkspaces[RossumAnnotation], RossumAnnotation):
+    """Enriched Annotation with resolved workspace URLs."""
+
+
+@dataclass
+class Schema(RossumResourceWithResolvedWorkspaces[RossumSchema], RossumSchema):
+    """Enriched Schema with resolved workspace URLs."""
+
+
+@dataclass
+class Hook(RossumResourceWithResolvedWorkspaces[RossumHook], RossumHook):
+    """Enriched Hook with resolved workspace URLs."""
+
+
+@dataclass
+class Rule(RossumResourceWithResolvedWorkspaces[RossumRule], RossumRule):
+    """Enriched Rule with resolved workspace URLs."""
+
+
+@dataclass
+class EmailTemplate(RossumResourceWithResolvedWorkspaces[RossumEmailTemplate], RossumEmailTemplate):
+    """Enriched EmailTemplate with resolved workspace URLs."""
+
 
 class AutomationLevel(StrEnum):
     NEVER = "never"

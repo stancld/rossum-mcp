@@ -20,8 +20,14 @@ _SKILLS_DIR = Path(__file__).parent.parent / "skills"
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
-def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+def _parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     """Parse YAML frontmatter from markdown text.
+
+    Supports scalar values (``key: value``) and YAML lists::
+
+        tools:
+          - tool_a
+          - tool_b
 
     Returns ``(metadata, body)``.  If no frontmatter is found the full text
     is returned as the body with an empty metadata dict.
@@ -29,11 +35,27 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
     match = _FRONTMATTER_RE.match(text)
     if not match:
         return {}, text
-    meta: dict[str, str] = {}
+    meta: dict[str, str | list[str]] = {}
+    current_key: str | None = None
+    current_list: list[str] | None = None
     for line in match.group(1).strip().splitlines():
-        key, _, value = line.partition(":")
-        if key.strip():
-            meta[key.strip()] = value.strip()
+        stripped = line.strip()
+        if stripped.startswith("- ") and current_key is not None:
+            if current_list is None:
+                current_list = []
+            current_list.append(stripped[2:].strip())
+        else:
+            if current_key is not None and current_list is not None:
+                meta[current_key] = current_list
+                current_list = None
+            key, _, value = line.partition(":")
+            if key.strip():
+                current_key = key.strip()
+                value = value.strip()
+                if value:
+                    meta[current_key] = value
+    if current_key is not None and current_list is not None:
+        meta[current_key] = current_list
     return meta, text[match.end() :]
 
 
@@ -45,6 +67,7 @@ class Skill:
     content: str
     file_path: Path
     description: str = field(default="")
+    mcp_tools: list[str] = field(default_factory=list)
 
     @property
     def slug(self) -> str:
@@ -77,15 +100,27 @@ class SkillRegistry:
             try:
                 raw = skill_file.read_text(encoding="utf-8")
                 meta, body = _parse_frontmatter(raw)
-                name = meta.get(
-                    "name",
-                    skill_file.stem.replace("-", " ").replace("_", " ").title(),
+                name_raw = meta.get("name", "")
+                name = (
+                    name_raw
+                    if isinstance(name_raw, str)
+                    else skill_file.stem.replace("-", " ").replace("_", " ").title()
                 )
+                if not name:
+                    name = skill_file.stem.replace("-", " ").replace("_", " ").title()
+                desc_raw = meta.get("description", "")
+                description = desc_raw if isinstance(desc_raw, str) else ""
+                mcp_tools_raw = meta.get("mcp_tools", "")
+                if isinstance(mcp_tools_raw, list):
+                    mcp_tools = mcp_tools_raw
+                else:
+                    mcp_tools = [t.strip() for t in mcp_tools_raw.split(",") if t.strip()] if mcp_tools_raw else []
                 skill = Skill(
                     name=name,
-                    description=meta.get("description", ""),
+                    description=description,
                     content=body,
                     file_path=skill_file,
+                    mcp_tools=mcp_tools,
                 )
                 self._skills[skill.slug] = skill
                 logger.debug(f"Loaded skill: {skill.name} from {skill_file}")

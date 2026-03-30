@@ -240,7 +240,7 @@ Unified tool to list/filter entities with typed, entity-specific query objects.
    * - ``engine``
      - ``id``, ``engine_type``, ``agenda_id``
    * - ``rule``
-     - ``schema_id``, ``organization_id``, ``enabled``
+     - ``queue_id``, ``workspace_id``, ``organization_id``, ``enabled``
    * - ``user``
      - ``username``, ``email``, ``first_name``, ``last_name``, ``is_active``, ``is_organization_group_admin``
    * - ``workspace``
@@ -288,8 +288,8 @@ Unified tool to list/filter entities with typed, entity-specific query objects.
    # Find user by email for token_owner
    search(query={"entity": "user", "email": "john.doe@example.com", "is_organization_group_admin": False})
 
-   # List enabled rules for a schema
-   search(query={"entity": "rule", "schema_id": 200, "enabled": True})
+   # List enabled rules for a queue
+   search(query={"entity": "rule", "queue_id": 200, "enabled": True})
 
 Delete Layer
 ^^^^^^^^^^^^

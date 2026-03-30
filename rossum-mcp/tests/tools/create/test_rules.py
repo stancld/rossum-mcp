@@ -5,32 +5,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from fastmcp.exceptions import ToolError
-from rossum_api.models.rule import Rule, RuleAction, ShowMessagePayload
+from conftest import create_mock_rule
+from rossum_api.models.rule import RuleAction, ShowMessagePayload
 from rossum_mcp.tools.create.handler import register_create_tools
 from rossum_mcp.tools.validation import actions_to_dicts
-
-
-def create_mock_rule(**kwargs) -> Rule:
-    """Create a mock Rule dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/rules/1",
-        "name": "Test Rule",
-        "enabled": True,
-        "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "schema": "https://api.test.rossum.ai/v1/schemas/1",
-        "trigger_condition": "True",
-        "created_by": "https://api.test.rossum.ai/v1/users/1",
-        "created_at": "2025-01-01T00:00:00Z",
-        "modified_by": None,
-        "modified_at": "2025-01-01T00:00:00Z",
-        "rule_template": None,
-        "synchronized_from_template": False,
-        "actions": [],
-    }
-    defaults.update(kwargs)
-    return Rule(**defaults)
 
 
 @pytest.fixture
@@ -87,10 +65,10 @@ class TestCreateRule:
         create_rule = mock_mcp._tools["create_rule"]
         result = await create_rule(
             name="New Validation Rule",
-            schema_id=100,
             trigger_condition="field.amount > 1000",
             actions=[test_action],
             enabled=True,
+            queue_ids=[100],
         )
 
         assert result.id == 456
@@ -100,46 +78,29 @@ class TestCreateRule:
 
         call_args = mock_client.create_new_rule.call_args[0][0]
         assert call_args["name"] == "New Validation Rule"
-        assert call_args["schema"] == "https://api.test.rossum.ai/v1/schemas/100"
+        assert call_args["queues"] == ["https://api.test.rossum.ai/v1/queues/100"]
         assert call_args["trigger_condition"] == "field.amount > 1000"
         assert call_args["actions"] == [test_action]
         assert call_args["enabled"] is True
 
     @pytest.mark.asyncio
-    async def test_create_rule_without_schema_id(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        """Test creating a rule with only queue_ids (no schema_id)."""
+    async def test_create_rule_without_queue_ids(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
+        """Test creating a rule without queue_ids (org-wide)."""
         register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
-        mock_rule = create_mock_rule(id=457, name="Queue-only Rule", enabled=True)
+        mock_rule = create_mock_rule(id=457, name="Org-wide Rule", enabled=True)
         mock_client.create_new_rule.return_value = mock_rule
 
         create_rule = mock_mcp._tools["create_rule"]
         result = await create_rule(
-            name="Queue-only Rule",
+            name="Org-wide Rule",
             trigger_condition="field.amount > 500",
             actions=[],
-            queue_ids=[101],
         )
 
         assert result.id == 457
         call_args = mock_client.create_new_rule.call_args[0][0]
-        assert "schema" not in call_args
-        assert call_args["queues"] == ["https://api.test.rossum.ai/v1/queues/101"]
-
-    @pytest.mark.asyncio
-    async def test_create_rule_requires_scope(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        """Test create_rule fails when neither schema_id nor queue_ids provided."""
-        register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
-
-        create_rule = mock_mcp._tools["create_rule"]
-        with pytest.raises(ToolError, match="Provide at least one of schema_id or queue_ids"):
-            await create_rule(
-                name="Unscoped Rule",
-                trigger_condition="True",
-                actions=[],
-            )
-
-        mock_client.create_new_rule.assert_not_called()
+        assert "queues" not in call_args
 
     @pytest.mark.asyncio
     async def test_create_rule_with_disabled(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
@@ -152,7 +113,6 @@ class TestCreateRule:
         create_rule = mock_mcp._tools["create_rule"]
         result = await create_rule(
             name="Disabled Rule",
-            schema_id=200,
             trigger_condition="field.vendor_name.changed",
             actions=[],
             enabled=False,
@@ -175,7 +135,6 @@ class TestCreateRule:
         create_rule = mock_mcp._tools["create_rule"]
         result = await create_rule(
             name="Queue Rule",
-            schema_id=100,
             trigger_condition="True",
             actions=[],
             queue_ids=[101, 102],
