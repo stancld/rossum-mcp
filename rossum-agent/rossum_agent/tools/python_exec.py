@@ -331,8 +331,7 @@ def execute_python(code: str, operation_name: str | None = None) -> str:
     except Exception as e:
         return json.dumps({"status": "error", "error": str(e), "operation_name": operation_name})
 
-    globals_dict = {"__builtins__": _SAFE_BUILTINS}
-    locals_dict = _build_helpers()
+    exec_globals = {"__builtins__": _SAFE_BUILTINS, **_build_helpers()}
     stdout = io.StringIO()
     result_value: object = None
 
@@ -341,11 +340,11 @@ def execute_python(code: str, operation_name: str | None = None) -> str:
             if tree.body and isinstance(tree.body[-1], ast.Expr):
                 prefix = ast.fix_missing_locations(ast.Module(body=tree.body[:-1], type_ignores=[]))
                 suffix = ast.fix_missing_locations(ast.Expression(tree.body[-1].value))
-                exec(compile(prefix, "<execute_python>", "exec"), globals_dict, locals_dict)
-                result_value = eval(compile(suffix, "<execute_python>", "eval"), globals_dict, locals_dict)
+                exec(compile(prefix, "<execute_python>", "exec"), exec_globals)
+                result_value = eval(compile(suffix, "<execute_python>", "eval"), exec_globals)
             else:
-                exec(compile(tree, "<execute_python>", "exec"), globals_dict, locals_dict)
-                result_value = locals_dict.get("result")
+                exec(compile(tree, "<execute_python>", "exec"), exec_globals)
+                result_value = exec_globals.get("result")
     except Exception as e:
         logger.exception("execute_python failed")
         return json.dumps(

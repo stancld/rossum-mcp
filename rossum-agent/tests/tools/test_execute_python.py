@@ -192,6 +192,14 @@ class TestExecPython:
         assert parsed["status"] == "success"
         assert parsed["result"] is True
 
+    def test_imports_visible_inside_nested_functions(self) -> None:
+        code = "import re\ndef extract(s):\n    return re.findall(r'\\d+', s)\nresult = extract('a1b2c3')"
+        result = execute_python(code=code)
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "success"
+        assert parsed["result"] == ["1", "2", "3"]
+
     def test_allows_import_pathlib(self) -> None:
         result = execute_python(code='from pathlib import Path\nresult = str(Path("/home") / "test.txt")')
         parsed = json.loads(result)
