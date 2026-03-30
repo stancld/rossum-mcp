@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Skills now auto-load their required MCP tools on activation — agents no longer need an explicit `load_tool` step before using skill-specific tools [#323](https://github.com/stancld/rossum-agents/pull/323)
+- Chat metadata now tracks cumulative token usage (`total_input_tokens`, `total_output_tokens`) and `total_steps` per conversation — persisted after each agent turn for cost visibility [#332](https://github.com/stancld/rossum-agents/pull/332)
 
 ### Changed
 - Bump `rossum-api` dependency from `>=3.12.1` to `>=3.13.1` — adds support for rule → queues many-to-many relation [#329](https://github.com/stancld/rossum-agents/pull/329)
