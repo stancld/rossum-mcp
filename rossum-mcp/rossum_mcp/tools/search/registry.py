@@ -12,13 +12,12 @@ from rossum_api.models.hook import HookRunData
 from rossum_api.models.hook_template import HookTemplate
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_api.models.queue import Queue
-from rossum_api.models.rule import Rule
 from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, Hook, LogLevel
+from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, EngineType, Hook, LogLevel, Rule
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:
@@ -215,7 +214,16 @@ async def _list_rules(
     logger.debug(f"Listing rules: queue_id={queue_id}, organization_id={organization_id}, enabled={enabled}")
     filters = build_filters(queue=queue_id, organization=organization_id, enabled=enabled)
     result = await graceful_list(client, Resource.Rule, "rule", max_items=max_items, **filters)
-    return result.items
+
+    all_queue_urls = {url for rule in result.items for url in rule.queues}
+    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
+
+    return [
+        Rule.from_base(
+            rule, workspaces=list({queue_workspace_map[q] for q in rule.queues if q in queue_workspace_map})
+        )
+        for rule in result.items
+    ]
 
 
 async def _list_users(

@@ -5,30 +5,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_api.models.rule import Rule, RuleAction, ShowMessagePayload
+from conftest import create_mock_rule
+from rossum_api.models.rule import RuleAction, ShowMessagePayload
 from rossum_mcp.tools.create.handler import register_create_tools
 from rossum_mcp.tools.validation import actions_to_dicts
-
-
-def create_mock_rule(**kwargs) -> Rule:
-    """Create a mock Rule dataclass instance with default values."""
-    defaults = {
-        "id": 1,
-        "url": "https://api.test.rossum.ai/v1/rules/1",
-        "name": "Test Rule",
-        "enabled": True,
-        "organization": "https://api.test.rossum.ai/v1/organizations/1",
-        "trigger_condition": "True",
-        "created_by": "https://api.test.rossum.ai/v1/users/1",
-        "created_at": "2025-01-01T00:00:00Z",
-        "modified_by": None,
-        "modified_at": "2025-01-01T00:00:00Z",
-        "rule_template": None,
-        "synchronized_from_template": False,
-        "actions": [],
-    }
-    defaults.update(kwargs)
-    return Rule(**defaults)
 
 
 @pytest.fixture

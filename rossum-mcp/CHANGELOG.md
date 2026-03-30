@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Schema responses (`get_schema`, `list_schemas`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a schema belongs to [#324](https://github.com/stancld/rossum-agents/pull/324)
 - Added `workspace_id` filter to `list_schemas` — schemas can now be scoped to a specific workspace, filtering by the workspace associations derived from linked queues [#324](https://github.com/stancld/rossum-agents/pull/324)
 - Hook responses (`get_hook`, `list_hooks`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a hook belongs to [#325](https://github.com/stancld/rossum-agents/pull/325)
+- Rule responses (`get_rule`, `list_rules`) now include resolved `workspaces` URLs — workspace associations are derived from linked queues, giving the agent direct visibility into which workspaces a rule belongs to [#330](https://github.com/stancld/rossum-agents/pull/330)
 - Added `workspace_id` filter to `list_hooks` — hooks can now be scoped to a specific workspace, filtering by the workspace associations derived from linked queues [#325](https://github.com/stancld/rossum-agents/pull/325)
 
 ### Changed

@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Literal, TypedDict
 
 from rossum_api.models.hook import Hook as RossumHook
+from rossum_api.models.rule import Rule as RossumRule
 from rossum_api.models.schema import Schema as RossumSchema
 
 from rossum_mcp.tools.base import RossumResourceWithResolvedWorkspaces
@@ -20,6 +21,11 @@ class Schema(RossumResourceWithResolvedWorkspaces[RossumSchema], RossumSchema):
 @dataclass
 class Hook(RossumResourceWithResolvedWorkspaces[RossumHook], RossumHook):
     """Enriched Hook with resolved workspace URLs."""
+
+
+@dataclass
+class Rule(RossumResourceWithResolvedWorkspaces[RossumRule], RossumRule):
+    """Enriched Rule with resolved workspace URLs."""
 
 
 class AutomationLevel(StrEnum):
