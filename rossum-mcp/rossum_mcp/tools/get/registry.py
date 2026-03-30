@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, cast
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
-from rossum_api.models.annotation import Annotation
 from rossum_api.models.document_relation import DocumentRelation
 from rossum_api.models.engine import Engine
 from rossum_api.models.organization_group import OrganizationGroup
@@ -23,7 +22,7 @@ from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
 from rossum_mcp.tools.base import resolve_queue_workspaces
-from rossum_mcp.tools.models import EmailTemplate, Hook, Rule, Schema
+from rossum_mcp.tools.models import Annotation, EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -42,7 +41,15 @@ class EntityConfig:
 
 async def _get_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> Annotation:
     logger.debug(f"Retrieving annotation: annotation_id={annotation_id}")
-    return await client.retrieve_annotation(annotation_id)
+    base_annotation = await client.retrieve_annotation(annotation_id)
+    queue_urls = {base_annotation.queue} if base_annotation.queue else set()
+    queue_workspace_map = await resolve_queue_workspaces(client, queue_urls)
+    workspaces = (
+        [queue_workspace_map[base_annotation.queue]]
+        if base_annotation.queue and base_annotation.queue in queue_workspace_map
+        else []
+    )
+    return Annotation.from_base(base_annotation, workspaces=workspaces)
 
 
 async def _get_queue(client: AsyncRossumAPIClient, queue_id: int) -> Queue:
