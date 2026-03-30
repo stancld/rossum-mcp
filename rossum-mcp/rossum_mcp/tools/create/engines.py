@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, get_args
 
 from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
@@ -45,7 +45,7 @@ async def _create_engine_field(
     subtype: str | None = None,
     pre_trained_field_id: str | None = None,
 ) -> EngineField:
-    valid_types = ("string", "number", "date", "enum")
+    valid_types = get_args(EngineFieldType)
     if field_type not in valid_types:
         raise ToolError(f"Invalid field_type '{field_type}'. Must be one of: {', '.join(valid_types)}")
     if not schema_ids:
