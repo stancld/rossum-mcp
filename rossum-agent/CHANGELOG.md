@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Bump `rossum-api` dependency from `>=3.12.1` to `>=3.13.1` — adds support for rule → queues many-to-many relation [#329](https://github.com/stancld/rossum-agents/pull/329)
 
+### Fixed
+- Schema patching: corrected integer number format from `"#"` to `"# ##0"` in subagent prompt and skill docs [#337](https://github.com/stancld/rossum-agents/pull/337)
+
 ## [1.8.1] - 2026-03-26
 
 ### Changed
