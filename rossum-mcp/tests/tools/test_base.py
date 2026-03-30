@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from rossum_mcp.tools.base import filter_by_workspace_id, resolve_workspace_from_queue, resolve_workspaces_from_queues
 
 
 @pytest.mark.unit
@@ -247,3 +248,104 @@ class TestGracefulList:
         assert len(result.skipped_ids) == 1
         assert "Failed to deserialize queue (id=42)" in caplog.text
         assert "Skipped 1 queue item(s)" in caplog.text
+
+
+@pytest.mark.unit
+class TestResolveWorkspacesFromQueues:
+    """Tests for resolve_workspaces_from_queues function."""
+
+    def test_resolves_all_queues(self) -> None:
+        queue_workspace_map = {
+            "https://api.rossum.ai/v1/queues/1": "https://api.rossum.ai/v1/workspaces/10",
+            "https://api.rossum.ai/v1/queues/2": "https://api.rossum.ai/v1/workspaces/20",
+        }
+        result = resolve_workspaces_from_queues(
+            ["https://api.rossum.ai/v1/queues/1", "https://api.rossum.ai/v1/queues/2"], queue_workspace_map
+        )
+        assert sorted(result) == [
+            "https://api.rossum.ai/v1/workspaces/10",
+            "https://api.rossum.ai/v1/workspaces/20",
+        ]
+
+    def test_deduplicates_workspaces(self) -> None:
+        queue_workspace_map = {
+            "https://api.rossum.ai/v1/queues/1": "https://api.rossum.ai/v1/workspaces/10",
+            "https://api.rossum.ai/v1/queues/2": "https://api.rossum.ai/v1/workspaces/10",
+        }
+        result = resolve_workspaces_from_queues(
+            ["https://api.rossum.ai/v1/queues/1", "https://api.rossum.ai/v1/queues/2"], queue_workspace_map
+        )
+        assert result == ["https://api.rossum.ai/v1/workspaces/10"]
+
+    def test_skips_unknown_queues(self) -> None:
+        queue_workspace_map = {
+            "https://api.rossum.ai/v1/queues/1": "https://api.rossum.ai/v1/workspaces/10",
+        }
+        result = resolve_workspaces_from_queues(
+            ["https://api.rossum.ai/v1/queues/1", "https://api.rossum.ai/v1/queues/999"], queue_workspace_map
+        )
+        assert result == ["https://api.rossum.ai/v1/workspaces/10"]
+
+    def test_empty_queue_list(self) -> None:
+        result = resolve_workspaces_from_queues([], {"q1": "w1"})
+        assert result == []
+
+    def test_empty_map(self) -> None:
+        result = resolve_workspaces_from_queues(["https://api.rossum.ai/v1/queues/1"], {})
+        assert result == []
+
+
+@pytest.mark.unit
+class TestResolveWorkspaceFromQueue:
+    """Tests for resolve_workspace_from_queue function."""
+
+    def test_returns_workspace_when_found(self) -> None:
+        queue_workspace_map = {
+            "https://api.rossum.ai/v1/queues/1": "https://api.rossum.ai/v1/workspaces/10",
+        }
+        assert resolve_workspace_from_queue("https://api.rossum.ai/v1/queues/1", queue_workspace_map) == (
+            "https://api.rossum.ai/v1/workspaces/10"
+        )
+
+    def test_returns_none_when_not_found(self) -> None:
+        assert resolve_workspace_from_queue("https://api.rossum.ai/v1/queues/999", {}) is None
+
+    def test_returns_none_when_queue_url_is_none(self) -> None:
+        assert resolve_workspace_from_queue(None, {"q1": "w1"}) is None
+
+    def test_returns_none_for_none_with_empty_map(self) -> None:
+        assert resolve_workspace_from_queue(None, {}) is None
+
+
+@pytest.mark.unit
+class TestFilterByWorkspaceId:
+    """Tests for filter_by_workspace_id function."""
+
+    def test_returns_all_items_when_workspace_id_is_none(self) -> None:
+        items = [Mock(workspaces=["https://api.rossum.ai/v1/workspaces/10"])]
+        assert filter_by_workspace_id(items, None) is items
+
+    def test_filters_by_workspace_id(self) -> None:
+        item_match = Mock(workspaces=["https://api.rossum.ai/v1/workspaces/10"])
+        item_no_match = Mock(workspaces=["https://api.rossum.ai/v1/workspaces/20"])
+        result = filter_by_workspace_id([item_match, item_no_match], 10)
+        assert result == [item_match]
+
+    def test_filters_items_with_multiple_workspaces(self) -> None:
+        item = Mock(workspaces=["https://api.rossum.ai/v1/workspaces/10", "https://api.rossum.ai/v1/workspaces/20"])
+        assert filter_by_workspace_id([item], 20) == [item]
+
+    def test_excludes_items_without_workspaces_attr(self) -> None:
+        item = Mock(spec=[])  # no attributes at all
+        assert filter_by_workspace_id([item], 10) == []
+
+    def test_excludes_items_with_empty_workspaces(self) -> None:
+        item = Mock(workspaces=[])
+        assert filter_by_workspace_id([item], 10) == []
+
+    def test_excludes_items_with_none_workspaces(self) -> None:
+        item = Mock(workspaces=None)
+        assert filter_by_workspace_id([item], 10) == []
+
+    def test_empty_items_list(self) -> None:
+        assert filter_by_workspace_id([], 10) == []

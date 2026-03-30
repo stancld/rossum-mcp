@@ -15,7 +15,15 @@ from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
-from rossum_mcp.tools.base import build_filters, filter_by_name_regex, graceful_list, resolve_queue_workspaces
+from rossum_mcp.tools.base import (
+    build_filters,
+    filter_by_name_regex,
+    filter_by_workspace_id,
+    graceful_list,
+    resolve_queue_workspaces,
+    resolve_workspace_from_queue,
+    resolve_workspaces_from_queues,
+)
 from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, Annotation, EmailTemplate, EngineType, Hook, LogLevel, Rule
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
@@ -60,7 +68,7 @@ async def _list_queues(
 
 def _truncate_schema_for_list(schema: Schema, queue_workspace_map: dict[str, str]) -> SchemaListItem:
     """Convert to SchemaListItem with content omitted and workspaces resolved."""
-    workspaces = list({queue_workspace_map[q] for q in schema.queues if q in queue_workspace_map})
+    workspaces = resolve_workspaces_from_queues(schema.queues, queue_workspace_map)
     return SchemaListItem(
         id=schema.id,
         name=schema.name,
@@ -89,10 +97,7 @@ async def _list_schemas(
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
     items = [_truncate_schema_for_list(schema, queue_workspace_map) for schema in result.items]
-    if workspace_id is not None:
-        workspace_url_suffix = f"/workspaces/{workspace_id}"
-        items = [s for s in items if s.workspaces and any(w.endswith(workspace_url_suffix) for w in s.workspaces)]
-    return filter_by_name_regex(items, name, use_regex)
+    return filter_by_name_regex(filter_by_workspace_id(items, workspace_id), name, use_regex)
 
 
 async def _list_hooks(
@@ -110,15 +115,10 @@ async def _list_hooks(
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
     items = [
-        Hook.from_base(
-            hook, workspaces=list({queue_workspace_map[q] for q in hook.queues if q in queue_workspace_map})
-        )
+        Hook.from_base(hook, workspaces=resolve_workspaces_from_queues(hook.queues, queue_workspace_map))
         for hook in result.items
     ]
-    if workspace_id is not None:
-        workspace_url_suffix = f"/workspaces/{workspace_id}"
-        items = [h for h in items if h.workspaces and any(w.endswith(workspace_url_suffix) for w in h.workspaces)]
-    return items
+    return filter_by_workspace_id(items, workspace_id)
 
 
 async def _list_hook_logs(
@@ -220,15 +220,10 @@ async def _list_rules(
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
     items = [
-        Rule.from_base(
-            rule, workspaces=list({queue_workspace_map[q] for q in rule.queues if q in queue_workspace_map})
-        )
+        Rule.from_base(rule, workspaces=resolve_workspaces_from_queues(rule.queues, queue_workspace_map))
         for rule in result.items
     ]
-    if workspace_id is not None:
-        workspace_url_suffix = f"/workspaces/{workspace_id}"
-        items = [r for r in items if r.workspaces and any(w.endswith(workspace_url_suffix) for w in r.workspaces)]
-    return items
+    return filter_by_workspace_id(items, workspace_id)
 
 
 async def _list_users(
@@ -299,13 +294,12 @@ async def _list_email_templates(
     queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
 
     items = [
-        EmailTemplate.from_base(t, workspaces=[queue_workspace_map[t.queue]] if t.queue in queue_workspace_map else [])
+        EmailTemplate.from_base(
+            t, workspaces=[ws] if (ws := resolve_workspace_from_queue(t.queue, queue_workspace_map)) else []
+        )
         for t in result.items
     ]
-    if workspace_id is not None:
-        workspace_url_suffix = f"/workspaces/{workspace_id}"
-        items = [t for t in items if t.workspaces and any(w.endswith(workspace_url_suffix) for w in t.workspaces)]
-    return filter_by_name_regex(items, name, use_regex)
+    return filter_by_name_regex(filter_by_workspace_id(items, workspace_id), name, use_regex)
 
 
 async def _list_organization_groups(
@@ -341,14 +335,11 @@ async def _list_annotations(
 
     items = [
         Annotation.from_base(
-            a, workspaces=[queue_workspace_map[a.queue]] if a.queue and a.queue in queue_workspace_map else []
+            a, workspaces=[ws] if (ws := resolve_workspace_from_queue(a.queue, queue_workspace_map)) else []
         )
         for a in result.items
     ]
-    if workspace_id is not None:
-        workspace_url_suffix = f"/workspaces/{workspace_id}"
-        items = [a for a in items if a.workspaces and any(w.endswith(workspace_url_suffix) for w in a.workspaces)]
-    return items
+    return filter_by_workspace_id(items, workspace_id)
 
 
 async def _list_relations(
