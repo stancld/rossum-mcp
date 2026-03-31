@@ -31,14 +31,90 @@ export interface ScrollBoxHandle {
 interface ScrollBoxProps {
   /** Viewport height in terminal rows. */
   height: number;
+  /** Viewport width — triggers height cache invalidation on resize. */
+  width?: number;
   children: React.ReactNode;
 }
 
+/** Extra items rendered above/below the viewport for smooth scrolling. */
+const CULL_BUFFER = 3;
+
+/** Fallback height for items not yet measured. */
+const DEFAULT_HEIGHT = 1;
+
+/**
+ * Compute the child index range to render, plus spacer heights for culled
+ * items above and below. Returns full range when no cache exists yet
+ * (first render or after width-change invalidation).
+ */
+function computeVisibleRange(
+  childCount: number,
+  scrollOffset: number,
+  viewportHeight: number,
+  cache: number[],
+): { start: number; end: number; topSpacer: number; bottomSpacer: number } {
+  if (childCount === 0) {
+    return { start: 0, end: -1, topSpacer: 0, bottomSpacer: 0 };
+  }
+
+  // No cache — render everything for the initial measurement pass
+  if (cache.length === 0) {
+    return { start: 0, end: childCount - 1, topSpacer: 0, bottomSpacer: 0 };
+  }
+
+  // Build cumulative offsets from cache + defaults for unmeasured items
+  const offsets = new Array<number>(childCount);
+  const heights = new Array<number>(childCount);
+  let totalHeight = 0;
+  for (let i = 0; i < childCount; i++) {
+    offsets[i] = totalHeight;
+    heights[i] = cache[i] ?? DEFAULT_HEIGHT;
+    totalHeight += heights[i]!;
+  }
+
+  const viewBottom = scrollOffset + viewportHeight;
+
+  // First visible: first item whose bottom edge extends below scrollOffset
+  let start = childCount - 1;
+  for (let i = 0; i < childCount; i++) {
+    if (offsets[i]! + heights[i]! > scrollOffset) {
+      start = i;
+      break;
+    }
+  }
+
+  // Last visible: last item whose top edge is above viewBottom
+  let end = start;
+  for (let i = childCount - 1; i >= start; i--) {
+    if (offsets[i]! < viewBottom) {
+      end = i;
+      break;
+    }
+  }
+
+  // Always include unmeasured items (new items appended beyond cache)
+  if (cache.length < childCount) {
+    end = Math.max(end, childCount - 1);
+  }
+
+  // Apply buffer
+  start = Math.max(0, start - CULL_BUFFER);
+  end = Math.min(childCount - 1, end + CULL_BUFFER);
+
+  const topSpacer = offsets[start]!;
+  const bottomSpacer = Math.max(
+    0,
+    totalHeight - (offsets[end]! + heights[end]!),
+  );
+
+  return { start, end, topSpacer, bottomSpacer };
+}
+
 export const ScrollBox = React.forwardRef<ScrollBoxHandle, ScrollBoxProps>(
-  function ScrollBox({ height, children }, ref) {
+  function ScrollBox({ height, width, children }, ref) {
     const [scrollOffset, setScrollOffset] = useState(0);
 
-    // Refs for imperative reads (avoid stale closures in the handle)
+    // Avoid stale closures in the imperative handle
     const scrollOffsetRef = useRef(0);
     scrollOffsetRef.current = scrollOffset;
 
@@ -46,11 +122,29 @@ export const ScrollBox = React.forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const contentHeightRef = useRef(0);
     const itemOffsetsRef = useRef<number[]>([]);
     const itemHeightsRef = useRef<number[]>([]);
+
+    // Cached heights from prior measurements — drives viewport culling.
+    // Sparse entries (unmeasured) fall back to DEFAULT_HEIGHT via ??.
+    const heightCacheRef = useRef<number[]>([]);
     const itemRefsMap = useRef(new Map<number, DOMElement>());
 
     const childArray = useMemo(
       () => React.Children.toArray(children),
       [children],
+    );
+
+    // Invalidate cache when terminal width changes (text wrapping changes heights)
+    const prevWidthRef = useRef(width);
+    if (width !== undefined && width !== prevWidthRef.current) {
+      heightCacheRef.current = [];
+      prevWidthRef.current = width;
+    }
+
+    const { start, end, topSpacer, bottomSpacer } = computeVisibleRange(
+      childArray.length,
+      scrollOffset,
+      height,
+      heightCacheRef.current,
     );
 
     useImperativeHandle(ref, () => {
@@ -115,16 +209,30 @@ export const ScrollBox = React.forwardRef<ScrollBoxHandle, ScrollBoxProps>(
       };
     }, [height]);
 
-    // Measure children after each render; auto-scroll if sticky
+    // Measure rendered children and rebuild authoritative layout data
     useLayoutEffect(() => {
+      const cache = heightCacheRef.current;
+
+      // Measure items currently in the DOM
+      for (let i = start; i <= end; i++) {
+        const el = itemRefsMap.current.get(i);
+        if (el) {
+          cache[i] = measureElement(el).height;
+        }
+      }
+
+      // Trim cache if children were removed
+      if (cache.length > childArray.length) {
+        cache.length = childArray.length;
+      }
+
+      // Rebuild offsets from cache (measured) + defaults (unmeasured)
       const offsets: number[] = [];
       const heights: number[] = [];
       let cumulative = 0;
-
       for (let i = 0; i < childArray.length; i++) {
         offsets[i] = cumulative;
-        const el = itemRefsMap.current.get(i);
-        const h = el ? measureElement(el).height : 1;
+        const h = cache[i] ?? DEFAULT_HEIGHT;
         heights[i] = h;
         cumulative += h;
       }
@@ -145,18 +253,23 @@ export const ScrollBox = React.forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     return (
       <Box height={height} overflowY="hidden" flexDirection="column">
         <Box flexDirection="column" marginTop={-scrollOffset}>
-          {childArray.map((child, index) => (
-            <Box
-              key={index}
-              ref={(el: DOMElement | null) => {
-                if (el) itemRefsMap.current.set(index, el);
-                else itemRefsMap.current.delete(index);
-              }}
-              flexDirection="column"
-            >
-              {child}
-            </Box>
-          ))}
+          {topSpacer > 0 && <Box height={topSpacer} />}
+          {childArray.slice(start, end + 1).map((child, idx) => {
+            const index = start + idx;
+            return (
+              <Box
+                key={index}
+                ref={(el: DOMElement | null) => {
+                  if (el) itemRefsMap.current.set(index, el);
+                  else itemRefsMap.current.delete(index);
+                }}
+                flexDirection="column"
+              >
+                {child}
+              </Box>
+            );
+          })}
+          {bottomSpacer > 0 && <Box height={bottomSpacer} />}
         </Box>
       </Box>
     );

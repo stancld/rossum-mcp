@@ -142,7 +142,7 @@ export const ChatView = React.memo(function ChatView({
   }
 
   return (
-    <ScrollBox ref={scrollRef} height={height}>
+    <ScrollBox ref={scrollRef} height={height} width={width}>
       {items.map((item, i) => (
         <ChatItemDisplay
           key={i}
