@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 from rossum_agent.bedrock_client import create_bedrock_client, get_model_id
 from rossum_agent.tools.core import (
-    SubAgentProgress,
     SubAgentTokenUsage,
     get_context,
 )
@@ -115,15 +114,6 @@ class SubAgent(ABC):
                     f"{self.config.tool_name} sub-agent: iteration {current_iteration}/{self.config.max_iterations}"
                 )
 
-                get_context().report_progress(
-                    SubAgentProgress(
-                        tool_name=self.config.tool_name,
-                        iteration=current_iteration,
-                        max_iterations=self.config.max_iterations,
-                        status="thinking",
-                    )
-                )
-
                 # Cache breakpoint: last message
                 add_message_cache_breakpoint(messages)
 
@@ -183,14 +173,6 @@ class SubAgent(ABC):
                         f"{self.config.tool_name}: completed after {current_iteration} iterations "
                         f"in {iter_elapsed_ms:.1f}ms (stop_reason={response.stop_reason}, has_tool_use={has_tool_use})"
                     )
-                    get_context().report_progress(
-                        SubAgentProgress(
-                            tool_name=self.config.tool_name,
-                            iteration=current_iteration,
-                            max_iterations=self.config.max_iterations,
-                            status="completed",
-                        )
-                    )
                     text_parts = [block.text for block in response.content if hasattr(block, "text")]
                     return SubAgentResult(
                         analysis="\n".join(text_parts) if text_parts else "No analysis provided",
@@ -203,7 +185,6 @@ class SubAgent(ABC):
                 messages.append({"role": "assistant", "content": response.content})
 
                 tool_results: list[dict[str, Any]] = []
-                iteration_tool_calls: list[str] = []
 
                 for block in response.content:
                     special_result = self.process_response_block(block, current_iteration, self.config.max_iterations)
@@ -215,22 +196,10 @@ class SubAgent(ABC):
                         tool_name = block.name
                         tool_input = block.input
                         display_call = _fmt_tool_call(tool_name, tool_input)
-                        iteration_tool_calls.append(display_call)
                         all_tool_calls.append({"tool": tool_name, "input": tool_input})
 
                         logger.info(
                             f"{self.config.tool_name} [iter {current_iteration}]: calling tool '{display_call}'"
-                        )
-
-                        get_context().report_progress(
-                            SubAgentProgress(
-                                tool_name=self.config.tool_name,
-                                iteration=current_iteration,
-                                max_iterations=self.config.max_iterations,
-                                current_tool=display_call,
-                                tool_calls=iteration_tool_calls.copy(),
-                                status="running_tool",
-                            )
                         )
 
                         try:
@@ -256,15 +225,10 @@ class SubAgent(ABC):
 
                 if tool_results:
                     messages.append({"role": "user", "content": tool_results})
-
-                    get_context().report_progress(
-                        SubAgentProgress(
-                            tool_name=self.config.tool_name,
-                            iteration=current_iteration,
-                            max_iterations=self.config.max_iterations,
-                            tool_calls=iteration_tool_calls.copy(),
-                            status="reasoning",
-                        )
+                    iter_elapsed_ms = (time.perf_counter() - iter_start) * 1000
+                    logger.info(
+                        f"{self.config.tool_name} [iter {current_iteration}]: "
+                        f"{len(tool_results)} tool result(s) collected in {iter_elapsed_ms:.1f}ms, continuing"
                     )
 
             logger.warning(f"{self.config.tool_name}: max iterations ({self.config.max_iterations}) reached")

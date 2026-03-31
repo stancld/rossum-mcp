@@ -1146,38 +1146,6 @@ class TestPatchSchemaWithSubagent:
 class TestCallOpusForPatching:
     """Test _call_opus_for_patching function."""
 
-    def test_reports_progress(self):
-        """Test that progress is reported during patching."""
-        progress_calls: list = []
-
-        mock_response = MagicMock()
-        mock_response.stop_reason = "end_of_turn"
-        mock_response.content = [MagicMock(text="Patching complete", type="text")]
-        mock_response.content[0].text = "Patching complete"
-        mock_response.usage.input_tokens = 100
-        mock_response.usage.output_tokens = 50
-
-        set_context(
-            AgentContext(
-                progress_callback=lambda p: progress_calls.append(p),
-                token_callback=MagicMock(),
-            )
-        )
-        try:
-            with (
-                patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
-                patch("rossum_agent.tools.subagents.schema_patching.call_mcp_tool", return_value=None),
-            ):
-                mock_client.return_value.messages.create.return_value = mock_response
-
-                changes = [{"id": "field1", "parent_section": "header", "type": "string"}]
-                _call_opus_for_patching("123", changes)
-
-                assert len(progress_calls) >= 1
-                assert progress_calls[0].tool_name == "patch_schema"
-        finally:
-            set_context(AgentContext())
-
     def test_iterates_with_tool_use(self):
         """Test that sub-agent iterates when tools are used."""
         tool_use_block = MagicMock()
@@ -1202,7 +1170,7 @@ class TestCallOpusForPatching:
         second_response.usage.input_tokens = 200
         second_response.usage.output_tokens = 100
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1238,7 +1206,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1284,7 +1252,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1312,7 +1280,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1342,7 +1310,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1385,7 +1353,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1412,7 +1380,7 @@ class TestCallOpusForPatching:
         mock_response.usage.input_tokens = 100
         mock_response.usage.output_tokens = 50
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
@@ -1434,7 +1402,7 @@ class TestCallOpusForPatching:
         """Regression: cache must be cleared even if sub-agent run() raises."""
         _schema_content_cache[123] = [{"id": "section1", "category": "section", "children": []}]
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch("rossum_agent.tools.subagents.schema_patching.call_mcp_tool", return_value=None),

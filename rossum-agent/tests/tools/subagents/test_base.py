@@ -159,7 +159,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.return_value = mock_response
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch(
                 "rossum_agent.tools.subagents.base.create_bedrock_client",
@@ -209,7 +209,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = [first_response, second_response]
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch(
                 "rossum_agent.tools.subagents.base.create_bedrock_client",
@@ -251,7 +251,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.return_value = mock_response
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch(
                 "rossum_agent.tools.subagents.base.create_bedrock_client",
@@ -287,7 +287,6 @@ class TestSubAgent:
 
         set_context(
             AgentContext(
-                progress_callback=MagicMock(),
                 token_callback=lambda usage: token_reports.append(usage),
             )
         )
@@ -348,7 +347,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = [first_response, second_response]
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch(
                 "rossum_agent.tools.subagents.base.create_bedrock_client",
@@ -419,7 +418,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = [tool_use_response, synthesis_response]
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch(
                 "rossum_agent.tools.subagents.base.create_bedrock_client",
@@ -485,7 +484,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.side_effect = [tool_use_response, synthesis_response]
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with (
                 patch(
@@ -541,7 +540,7 @@ class TestSubAgent:
         mock_client = MagicMock()
         mock_client.messages.create.return_value = mock_response
 
-        set_context(AgentContext(progress_callback=MagicMock(), token_callback=MagicMock()))
+        set_context(AgentContext(token_callback=MagicMock()))
         try:
             with patch("rossum_agent.tools.subagents.base.create_bedrock_client", return_value=mock_client):
                 agent.run("Test message")
@@ -582,7 +581,6 @@ class TestSubAgent:
 
         set_context(
             AgentContext(
-                progress_callback=MagicMock(),
                 token_callback=lambda usage: token_reports.append(usage),
             )
         )

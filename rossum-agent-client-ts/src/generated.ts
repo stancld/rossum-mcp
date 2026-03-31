@@ -136,14 +136,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Send Message
-     * @description Send a message and stream the agent's response via SSE.
-     *
-     *     If a previous request is still running for this chat, it will be cancelled
-     *     before starting the new one. Client disconnects are also detected and will
-     *     cancel the running agent.
-     */
+    /** Send Message */
     post: operations["send_message_api_v1_chats__chat_id__messages_post"];
     delete?: never;
     options?: never;
@@ -160,10 +153,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Cancel Message
-     * @description Cancel a running agent request for a chat.
-     */
+    /** Cancel Message */
     post: operations["cancel_message_api_v1_chats__chat_id__cancel_post"];
     delete?: never;
     options?: never;
@@ -672,160 +662,19 @@ export interface components {
       ctx?: Record<string, never>;
     };
     /**
-     * StepEvent
-     * @description Event emitted during agent execution via SSE.
-     *
-     *     Extended thinking mode separates the model's internal reasoning from its final response:
-     *     - "thinking": Model's chain-of-thought reasoning (from thinking blocks)
-     *     - "intermediate": Model's response text before tool calls
-     *     - "final_answer": Final response when no more tool calls needed
+     * QuestionOptionSchema
+     * @description A single option for an agent question.
      */
-    StepEvent: {
+    QuestionOptionSchema: {
+      /** Value */
+      value: string;
+      /** Label */
+      label: string;
       /**
-       * Type
-       * @enum {string}
+       * Description
+       * @default
        */
-      type:
-        | "thinking"
-        | "intermediate"
-        | "tool_start"
-        | "tool_result"
-        | "final_answer"
-        | "error";
-      /** Step Number */
-      step_number: number;
-      /**
-       * Content
-       * @default null
-       */
-      content: string | null;
-      /**
-       * Tool Name
-       * @default null
-       */
-      tool_name: string | null;
-      /**
-       * Tool Arguments
-       * @default null
-       */
-      tool_arguments: {
-        [key: string]: unknown;
-      } | null;
-      /**
-       * Tool Progress
-       * @default null
-       */
-      tool_progress: [number, number] | null;
-      /**
-       * Result
-       * @default null
-       */
-      result: string | null;
-      /**
-       * Is Error
-       * @default false
-       */
-      is_error: boolean;
-      /**
-       * Is Streaming
-       * @default false
-       */
-      is_streaming: boolean;
-      /**
-       * Is Final
-       * @default false
-       */
-      is_final: boolean;
-      /**
-       * Tool Call Id
-       * @default null
-       */
-      tool_call_id: string | null;
-      /**
-       * Is Hook Output
-       * @default false
-       */
-      is_hook_output: boolean;
-      /**
-       * Context Usage Fraction
-       * @default null
-       */
-      context_usage_fraction: number | null;
-    };
-    /**
-     * SubAgentProgressEvent
-     * @description Event emitted during sub-agent execution via SSE.
-     */
-    SubAgentProgressEvent: {
-      /**
-       * Type
-       * @default sub_agent_progress
-       * @constant
-       */
-      type: "sub_agent_progress";
-      /** Tool Name */
-      tool_name: string;
-      /** Iteration */
-      iteration: number;
-      /** Max Iterations */
-      max_iterations: number;
-      /**
-       * Current Tool
-       * @default null
-       */
-      current_tool: string | null;
-      /** Tool Calls */
-      tool_calls?: string[];
-      /**
-       * Status
-       * @default running
-       * @enum {string}
-       */
-      status:
-        | "thinking"
-        | "searching"
-        | "analyzing"
-        | "reasoning"
-        | "running_tool"
-        | "completed"
-        | "running";
-    };
-    /**
-     * SubAgentTextEvent
-     * @description Event emitted when sub-agent streams text output via SSE.
-     */
-    SubAgentTextEvent: {
-      /**
-       * Type
-       * @default sub_agent_text
-       * @constant
-       */
-      type: "sub_agent_text";
-      /** Tool Name */
-      tool_name: string;
-      /** Text */
-      text: string;
-      /**
-       * Is Final
-       * @default false
-       */
-      is_final: boolean;
-    };
-    /**
-     * TaskSnapshotEvent
-     * @description Event emitted when task tracker state changes via SSE.
-     */
-    TaskSnapshotEvent: {
-      /**
-       * Type
-       * @default task_snapshot
-       * @constant
-       */
-      type: "task_snapshot";
-      /** Tasks */
-      tasks: {
-        [key: string]: unknown;
-      }[];
+      description: string;
     };
     /**
      * AgentQuestionItemSchema
@@ -843,14 +692,19 @@ export interface components {
       multi_select: boolean;
     };
     /**
-     * QuestionOptionSchema
-     * @description A single option for an agent question.
+     * TaskSnapshotTaskSchema
+     * @description A single task within a task snapshot event.
      */
-    QuestionOptionSchema: {
-      /** Value */
-      value: string;
-      /** Label */
-      label: string;
+    TaskSnapshotTaskSchema: {
+      /** Id */
+      id: string;
+      /** Subject */
+      subject: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "pending" | "in_progress" | "completed";
       /**
        * Description
        * @default
@@ -858,161 +712,15 @@ export interface components {
       description: string;
     };
     /**
-     * AgentQuestionEvent
-     * @description Event emitted when the agent asks the user a structured question.
+     * FileCreatedSchema
+     * @description A file created during an agent run.
      */
-    AgentQuestionEvent: {
-      /**
-       * Type
-       * @default agent_question
-       * @constant
-       */
-      type: "agent_question";
-      /** Questions */
-      questions: components["schemas"]["AgentQuestionItemSchema"][];
-    };
-    /**
-     * FileCreatedEvent
-     * @description Event emitted when a file is created and stored.
-     */
-    FileCreatedEvent: {
-      /**
-       * Type
-       * @default file_created
-       * @constant
-       */
-      type: "file_created";
+    FileCreatedSchema: {
       /** Filename */
       filename: string;
       /** Url */
       url: string;
     };
-    /**
-     * SubAgentTokenUsageDetail
-     * @description Token usage breakdown for sub-agents.
-     */
-    SubAgentTokenUsageDetail: {
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
-      /** Total Tokens */
-      total_tokens: number;
-      /**
-       * Cache Creation Input Tokens
-       * @default 0
-       */
-      cache_creation_input_tokens: number;
-      /**
-       * Cache Read Input Tokens
-       * @default 0
-       */
-      cache_read_input_tokens: number;
-      /** By Tool */
-      by_tool: {
-        [key: string]: components["schemas"]["TokenUsageBySource"];
-      };
-    };
-    /**
-     * TokenUsageBreakdown
-     * @description Token usage breakdown by agent vs sub-agents.
-     */
-    TokenUsageBreakdown: {
-      total: components["schemas"]["TokenUsageBySource"];
-      main_agent: components["schemas"]["TokenUsageBySource"];
-      sub_agents: components["schemas"]["SubAgentTokenUsageDetail"];
-    };
-    /**
-     * TokenUsageBySource
-     * @description Token usage for a specific source (main agent or sub-agent).
-     */
-    TokenUsageBySource: {
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
-      /** Total Tokens */
-      total_tokens: number;
-      /**
-       * Cache Creation Input Tokens
-       * @default 0
-       */
-      cache_creation_input_tokens: number;
-      /**
-       * Cache Read Input Tokens
-       * @default 0
-       */
-      cache_read_input_tokens: number;
-    };
-    /**
-     * StreamDoneEvent
-     * @description Final event emitted when streaming completes.
-     */
-    StreamDoneEvent: {
-      /**
-       * Type
-       * @default done
-       * @constant
-       */
-      type: "done";
-      /** Total Steps */
-      total_steps: number;
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
-      /**
-       * Cache Creation Input Tokens
-       * @default 0
-       */
-      cache_creation_input_tokens: number;
-      /**
-       * Cache Read Input Tokens
-       * @default 0
-       */
-      cache_read_input_tokens: number;
-      /** @default null */
-      token_usage_breakdown:
-        | components["schemas"]["TokenUsageBreakdown"]
-        | null;
-      /**
-       * Max Input Tokens
-       * @default 0
-       */
-      max_input_tokens: number;
-      /**
-       * Context Usage Fraction
-       * @default 0
-       */
-      context_usage_fraction: number;
-      /**
-       * Config Commit Hash
-       * @default null
-       */
-      config_commit_hash: string | null;
-      /**
-       * Config Commit Message
-       * @default null
-       */
-      config_commit_message: string | null;
-      /**
-       * Config Changes Count
-       * @default 0
-       */
-      config_changes_count: number;
-    };
-    /**
-     * SSEEvent
-     * @description Union of all SSE event payloads. The `event:` field in the SSE frame determines the payload type (see x-sse-events).
-     */
-    SSEEvent:
-      | components["schemas"]["StepEvent"]
-      | components["schemas"]["SubAgentProgressEvent"]
-      | components["schemas"]["SubAgentTextEvent"]
-      | components["schemas"]["TaskSnapshotEvent"]
-      | components["schemas"]["AgentQuestionEvent"]
-      | components["schemas"]["FileCreatedEvent"]
-      | components["schemas"]["StreamDoneEvent"];
   };
   responses: never;
   parameters: never;
@@ -1394,13 +1102,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description SSE stream of agent events. Each SSE message has an `event:` field (one of: step, sub_agent_progress, sub_agent_text, task_snapshot, agent_question, file_created, done) and a `data:` field containing the JSON-serialized event payload. */
+      /** @description AI SDK UI Message Stream v1 compatible SSE stream */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "text/event-stream": components["schemas"]["SSEEvent"];
+          "text/event-stream": unknown;
         };
       };
       /** @description Chat not found */

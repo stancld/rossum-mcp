@@ -12,7 +12,6 @@ import type { ScrollBoxHandle } from "./components/ScrollBox.js";
 import { InputArea } from "./components/InputArea.js";
 import { QuestionSelector } from "./components/QuestionSelector.js";
 import { StatusBar } from "./components/StatusBar.js";
-import { TaskList } from "./components/TaskList.js";
 import { useChat } from "./hooks/useChat.js";
 import { useCommands } from "./hooks/useCommands.js";
 import { useMouseScroll } from "./hooks/useMouseScroll.js";
@@ -178,13 +177,7 @@ interface AppProps {
 const INTRA_SCROLL_STEP = 3;
 
 function isExpandable(kind: string): boolean {
-  return (
-    kind === "thinking" ||
-    kind === "tool_call" ||
-    kind === "tool_group" ||
-    kind === "intermediate" ||
-    kind === "final_answer"
-  );
+  return kind === "final_answer";
 }
 
 export function App({ config }: AppProps) {
@@ -222,10 +215,9 @@ export function App({ config }: AppProps) {
     [state, questionIndex],
   );
 
-  // Layout: ChatView (flex) + notification (0-1 rows) + InputArea (1+ rows) + TaskList (N rows) + StatusBar (3 rows with border)
-  const taskListHeight = state.tasks.length;
+  // Layout: ChatView (flex) + notification (0-1 rows) + InputArea (1+ rows) + StatusBar (3 rows with border)
   const notificationHeight = notification ? 1 : 0;
-  const fixedHeight = 3 + notificationHeight + inputAreaRows + taskListHeight;
+  const fixedHeight = 3 + notificationHeight + inputAreaRows;
   const chatAreaHeight = Math.max(rows - fixedHeight, 1);
 
   // When sticky and new items arrive, keep selectedIndex on the last item
@@ -637,14 +629,11 @@ export function App({ config }: AppProps) {
           onCtrlKey={handleCtrlKey}
         />
       )}
-      {state.tasks.length > 0 && <TaskList tasks={state.tasks} />}
       <StatusBar
         connectionStatus={state.connectionStatus}
         mcpMode={config.mcpMode}
         persona={config.persona}
         chatId={state.chatId}
-        tokenUsage={state.tokenUsage}
-        contextUsageFraction={state.contextUsageFraction}
         mode={mode}
       />
     </Box>

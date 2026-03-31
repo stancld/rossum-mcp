@@ -33,18 +33,6 @@ CAUTIOUS_APPROVAL_LABEL = "Yes, proceed"
 
 
 @dataclass
-class SubAgentProgress:
-    """Progress information from a sub-agent (e.g., schema patching Opus sub-agent)."""
-
-    tool_name: str
-    iteration: int
-    max_iterations: int
-    current_tool: str | None = None
-    tool_calls: list[str] = field(default_factory=list)
-    status: str = "running"
-
-
-@dataclass
 class SubAgentTokenUsage:
     """Token usage from a sub-agent call."""
 
@@ -54,15 +42,6 @@ class SubAgentTokenUsage:
     iteration: int | None = None
     cache_creation_input_tokens: int = 0
     cache_read_input_tokens: int = 0
-
-
-@dataclass
-class SubAgentText:
-    """Text output from a sub-agent (e.g., schema patching Opus sub-agent)."""
-
-    tool_name: str
-    text: str
-    is_final: bool = False
 
 
 @dataclass
@@ -90,8 +69,6 @@ class AgentQuestion:
     questions: list[AgentQuestionItem]
 
 
-SubAgentProgressCallback = Callable[[SubAgentProgress], None]
-SubAgentTextCallback = Callable[[SubAgentText], None]
 SubAgentTokenCallback = Callable[[SubAgentTokenUsage], None]
 TaskSnapshotCallback = Callable[[list[dict[str, object]]], None]
 QuestionCallback = Callable[[AgentQuestion], None]
@@ -143,8 +120,6 @@ class AgentContext:
     cautious_blocked_writes: set[str] = field(default_factory=set)
     cautious_executed_preapproved: set[str] = field(default_factory=set)
     # Callbacks
-    progress_callback: SubAgentProgressCallback | None = None
-    text_callback: SubAgentTextCallback | None = None
     token_callback: SubAgentTokenCallback | None = None
     task_snapshot_callback: TaskSnapshotCallback | None = None
     question_callback: QuestionCallback | None = None
@@ -181,10 +156,6 @@ class AgentContext:
         if (creds := self.get_rossum_credentials()) is not None:
             return creds
         raise ValueError("Rossum API credentials not available (neither in context nor environment variables)")
-
-    def report_progress(self, progress: SubAgentProgress) -> None:
-        if self.progress_callback is not None:
-            self.progress_callback(progress)
 
     def report_token_usage(self, usage: SubAgentTokenUsage) -> None:
         if self.token_callback is not None:
