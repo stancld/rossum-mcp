@@ -187,6 +187,22 @@ def _handle_slash_command(
     )
 
 
+async def _parse_message_request(request: Request) -> MessageRequest:
+    """Parse MessageRequest from raw body, bypassing FastAPI's body parsing.
+
+    Handles double-encoded JSON (body is a JSON string containing another JSON string)
+    which some clients may send.
+    """
+    try:
+        raw = await request.body()
+        data = json.loads(raw)
+        if isinstance(data, str):
+            data = json.loads(data)
+        return MessageRequest.model_validate(data)
+    except (json.JSONDecodeError, ValueError) as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
+
+
 @router.post(
     "/{chat_id}/messages",
     response_class=StreamingResponse,
@@ -203,7 +219,7 @@ def _handle_slash_command(
 async def send_message(
     request: Request,
     chat_id: str,
-    message: MessageRequest,
+    message: Annotated[MessageRequest, Depends(_parse_message_request)],
     credentials: Annotated[RossumCredentials, Depends(get_validated_credentials)],
     chat_service: Annotated[ChatService, Depends(get_chat_service)],
     agent_service: Annotated[AgentService, Depends(get_agent_service)],
