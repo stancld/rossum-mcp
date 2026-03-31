@@ -61,11 +61,11 @@ class TestListOrganizationGroups:
         mock_og1 = create_mock_organization_group(id=1, name="Organization Group 1")
         mock_og2 = create_mock_organization_group(id=2, name="Organization Group 2")
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield mock_og1
             yield mock_og2
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_organization_groups(mock_client)
 
@@ -77,11 +77,11 @@ class TestListOrganizationGroups:
         mock_og = create_mock_organization_group(id=1, name="Production")
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             received_filters.update(filters)
             yield mock_og
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_organization_groups(mock_client, name="Production")
 
@@ -104,12 +104,12 @@ class TestListOrganizationGroups:
 
         mock_client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield {"id": 1}
             yield {"id": 2}
             yield {"id": 3}
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_organization_groups(mock_client)
 
@@ -125,12 +125,12 @@ class TestListOrganizationGroups:
         ]
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             received_filters.update(filters)
             for group in mock_groups:
                 yield group
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_organization_groups(mock_client, name="acme", use_regex=True)
 
@@ -144,11 +144,11 @@ class TestListOrganizationGroups:
         """Test that use_regex=True returns empty list when no groups match pattern."""
         mock_groups = [create_mock_organization_group(id=1, name="Beta Ltd")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for group in mock_groups:
                 yield group
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_organization_groups(mock_client, name="^acme$", use_regex=True)
 

@@ -54,12 +54,12 @@ class TestListRules:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_rules if resource == Resource.Rule else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_rules(mock_client)
 
@@ -75,11 +75,11 @@ class TestListRules:
         """Test that workspaces is empty when rule has no queues."""
         mock_rules = [create_mock_rule(id=1, name="Rule 1", queues=[])]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for rule in mock_rules:
                 yield rule
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_rules(mock_client)
 
@@ -122,12 +122,12 @@ class TestListRules:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_rules if resource == Resource.Rule else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_rules(mock_client, workspace_id=100)
 
@@ -152,12 +152,12 @@ class TestListRules:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_rules if resource == Resource.Rule else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_rules(mock_client, workspace_id=999)
 

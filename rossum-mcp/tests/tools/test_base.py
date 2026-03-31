@@ -93,11 +93,11 @@ class TestGracefulList:
         client._http_client = AsyncMock()
         client._deserializer = Mock(side_effect=lambda r, raw: raw)
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [{"id": 1, "name": "item1"}, {"id": 2, "name": "item2"}]:
                 yield item
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await graceful_list(client, Resource.Queue, "queue")
         assert len(result.items) == 2
@@ -120,11 +120,11 @@ class TestGracefulList:
 
         client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [{"id": 1, "name": "ok"}, {"id": 2, "name": "broken"}, {"id": 3, "name": "ok2"}]:
                 yield item
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await graceful_list(client, Resource.Queue, "queue")
         assert len(result.items) == 2
@@ -147,11 +147,11 @@ class TestGracefulList:
 
         client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}]:
                 yield item
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await graceful_list(client, Resource.Queue, "queue", max_items=2)
         assert len(result.items) == 2
@@ -162,7 +162,7 @@ class TestGracefulList:
 
     @pytest.mark.asyncio
     async def test_graceful_list_passes_filters(self) -> None:
-        """Test graceful_list passes filters to fetch_all."""
+        """Test graceful_list passes filters to cursor_fetch_all."""
         from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
@@ -172,13 +172,13 @@ class TestGracefulList:
 
         received_filters = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             return
             yield
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         await graceful_list(client, Resource.Queue, "queue", workspace=5, name="Test")
         assert received_filters == {"workspace": 5, "name": "Test"}
@@ -193,11 +193,11 @@ class TestGracefulList:
         client._http_client = AsyncMock()
         client._deserializer = Mock(side_effect=ValueError("broken"))
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [{"id": 1}, {"id": 2}]:
                 yield item
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await graceful_list(client, Resource.Queue, "queue")
         assert len(result.items) == 0
@@ -214,11 +214,11 @@ class TestGracefulList:
         client._http_client = AsyncMock()
         client._deserializer = Mock()
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await graceful_list(client, Resource.Queue, "queue")
         assert len(result.items) == 0
@@ -237,10 +237,10 @@ class TestGracefulList:
         client._http_client = AsyncMock()
         client._deserializer = Mock(side_effect=ValueError("bad data"))
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield {"id": 42}
 
-        client._http_client.fetch_all = mock_fetch_all
+        client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         with caplog.at_level(logging.WARNING):
             result = await graceful_list(client, Resource.Queue, "queue")

@@ -52,14 +52,14 @@ class TestListEmailTemplates:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = mock_templates if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_email_templates(mock_client)
 
@@ -92,14 +92,14 @@ class TestListEmailTemplates:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = mock_templates if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_email_templates(mock_client)
 
@@ -137,14 +137,14 @@ class TestListEmailTemplates:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = mock_templates if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_email_templates(mock_client, workspace_id=100)
 
@@ -172,14 +172,14 @@ class TestListEmailTemplates:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = mock_templates if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_email_templates(mock_client, workspace_id=999)
 
@@ -198,14 +198,14 @@ class TestListEmailTemplates:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = mock_templates if call_count == 0 else []
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_email_templates(mock_client)
 
