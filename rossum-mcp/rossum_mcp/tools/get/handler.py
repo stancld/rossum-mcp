@@ -76,7 +76,21 @@ async def _get_many(
     client: AsyncRossumAPIClient, config: EntityConfig, entity: str, entity_ids: list[int], include_related: bool
 ) -> list[dict[str, object]]:
     tasks = [_get_one(client, config, entity, eid, include_related) for eid in entity_ids]
-    return list(await asyncio.gather(*tasks))
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    results: list[dict[str, object]] = []
+    skipped = 0
+    for entity_id, response in zip(entity_ids, responses, strict=True):
+        if isinstance(response, Exception):
+            logger.warning(f"Failed to retrieve {entity} (id={entity_id}), skipping")
+            skipped += 1
+        else:
+            results.append(response)
+
+    if skipped:
+        logger.warning(f"Skipped {skipped} {entity} item(s) that failed to retrieve")
+
+    return results
 
 
 def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901 - many tool registrations

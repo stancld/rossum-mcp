@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+
+### Changed
+- `execute_python`: increased max code length from 12 000 to 25 000 characters
+- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.1`
+
+### Fixed
+- `execute_python`: unified globals/locals namespace so imports and top-level names are visible inside nested functions [#338](https://github.com/stancld/rossum-agents/pull/338)
+
 ## [1.8.2] - 2026-03-30
 
 ### Added

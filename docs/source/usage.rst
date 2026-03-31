@@ -59,6 +59,22 @@ The agent includes working memory (auto-spillover for large tool results to work
 file I/O, knowledge base search, hook testing, deployment tools,
 and multi-environment MCP connections. See the :doc:`examples` section for complete workflows.
 
+Prompt Caching
+^^^^^^^^^^^^^^
+
+The agent automatically applies Anthropic's ``cache_control`` breakpoints to reduce input token costs
+by up to 90% on cached content. Three breakpoints are placed per API request:
+
+1. **System prompt** — static across the conversation, cached once
+2. **Last tool definition** — stable per agent iteration
+3. **Last message** — moves forward with each turn to maximize cache reuse of conversation history
+
+Previous breakpoints are automatically removed before adding new ones to stay within Anthropic's
+4-breakpoint limit. This works transparently on AWS Bedrock — no configuration needed.
+
+Token usage metrics (``cache_creation_input_tokens`` and ``cache_read_input_tokens``) are reported
+in the ``done`` SSE event at the end of each agent run.
+
 Using Rossum Deploy
 -------------------
 
@@ -195,7 +211,7 @@ Single entity:
 
    {"entity": "queue", "id": 12345, "data": {"id": 12345, "name": "Invoices"}}
 
-Batch: list of the above.
+Batch: list of the above. Failed items are silently skipped.
 
 **Example usage:**
 

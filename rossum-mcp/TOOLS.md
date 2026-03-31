@@ -21,6 +21,8 @@ Retrieves one or more entities by ID.
   - `hook` → `queues`, `events`
 
 **Returns:**
+
+Single ID:
 ```json
 {
   "entity": "queue",
@@ -30,7 +32,7 @@ Retrieves one or more entities by ID.
 }
 ```
 
-Batch retrieval (list of IDs) returns an array of the same structure.
+Batch retrieval (list of IDs) returns an array of the same structure. Failed items are silently skipped.
 
 ---
 
