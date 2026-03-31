@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.2`
+
 ## [1.8.3] - 2026-03-31
 
 ### Changed
