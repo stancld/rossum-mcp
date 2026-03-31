@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { Box, useInput } from "ink";
+import { Box, Text, useInput } from "ink";
 import { ChatView, estimateItemHeight } from "./components/ChatView.js";
 import { InputArea } from "./components/InputArea.js";
 import { QuestionSelector } from "./components/QuestionSelector.js";
@@ -26,6 +26,7 @@ import {
 } from "./utils/fileAttachments.js";
 import { Buffer } from "node:buffer";
 import { getClipboardImage } from "./utils/clipboard.js";
+import { useLocalCommands } from "./hooks/useLocalCommands.js";
 import type {
   AgentQuestionItem,
   AttachmentInfo,
@@ -154,6 +155,21 @@ function buildDisplayMessage(message: string): string {
   return cleaned || "See attached files.";
 }
 
+function NotificationBar({
+  notification,
+}: {
+  notification: { message: string; type: "success" | "error" } | null;
+}) {
+  if (!notification) return null;
+  return (
+    <Box paddingLeft={2}>
+      <Text color={notification.type === "success" ? "green" : "red"}>
+        {notification.message}
+      </Text>
+    </Box>
+  );
+}
+
 interface AppProps {
   config: Config;
 }
@@ -198,6 +214,9 @@ export function App({ config }: AppProps) {
   const [questionAnswers, setQuestionAnswers] = useState<string[]>([]);
   const [otherSelected, setOtherSelected] = useState(false);
   const [pendingImages, setPendingImages] = useState<ImageAttachment[]>([]);
+  const { notification, handleLocalCommand } = useLocalCommands(
+    state.completedSteps,
+  );
 
   // Reset question iteration state when a new question event arrives
   const pendingRef = useRef(state.pendingQuestion);
@@ -215,9 +234,10 @@ export function App({ config }: AppProps) {
     [state, questionIndex],
   );
 
-  // Layout: ChatView (flex) + InputArea (1+ rows) + TaskList (N rows) + StatusBar (3 rows with border)
+  // Layout: ChatView (flex) + notification (0-1 rows) + InputArea (1+ rows) + TaskList (N rows) + StatusBar (3 rows with border)
   const taskListHeight = state.tasks.length;
-  const fixedHeight = 3 + inputAreaRows + taskListHeight; // statusBar + input + taskList
+  const notificationHeight = notification ? 1 : 0;
+  const fixedHeight = 3 + notificationHeight + inputAreaRows + taskListHeight;
   const chatAreaHeight = Math.max(rows - fixedHeight, 1);
 
   useEffect(() => {
@@ -263,6 +283,8 @@ export function App({ config }: AppProps) {
 
   const handleSendMessage = useCallback(
     async (message: string) => {
+      if (handleLocalCommand(message)) return;
+
       setAutoScroll(true);
       setExpandState({});
       setIntraScrollOffset(0);
@@ -325,7 +347,7 @@ export function App({ config }: AppProps) {
 
       setPendingImages([]);
     },
-    [sendMessage, pendingImages],
+    [sendMessage, pendingImages, handleLocalCommand],
   );
 
   const handleQuestionAnswer = useCallback(
@@ -656,6 +678,7 @@ export function App({ config }: AppProps) {
         scrollNudge={scrollNudge}
         intraScrollOffset={intraScrollOffset}
       />
+      <NotificationBar notification={notification} />
       {state.pendingQuestion &&
       !otherSelected &&
       (state.pendingQuestion.questions[questionIndex]?.options ?? []).length ? (

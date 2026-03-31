@@ -1,6 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { listCommands } from "../api/client.js";
 import type { CommandInfo, Config } from "../types.js";
+
+/** Commands handled locally by the TUI (never sent to the backend). */
+export const LOCAL_COMMANDS: CommandInfo[] = [
+  {
+    name: "/copy",
+    description: "Copy the last response to clipboard",
+    argument_suggestions: [],
+  },
+];
+
+const LOCAL_COMMAND_NAMES = new Set(LOCAL_COMMANDS.map((c) => c.name));
 
 const FALLBACK_COMMANDS: CommandInfo[] = [
   {
@@ -47,19 +58,27 @@ const FALLBACK_COMMANDS: CommandInfo[] = [
 ];
 
 export function useCommands(config: Config): { commands: CommandInfo[] } {
-  const [commands, setCommands] = useState<CommandInfo[]>(FALLBACK_COMMANDS);
+  const [serverCommands, setServerCommands] =
+    useState<CommandInfo[]>(FALLBACK_COMMANDS);
 
   useEffect(() => {
     let cancelled = false;
     listCommands(config).then((result) => {
       if (!cancelled && result.length > 0) {
-        setCommands(result);
+        setServerCommands(result);
       }
     });
     return () => {
       cancelled = true;
     };
   }, [config]);
+
+  const commands = useMemo(() => {
+    const filtered = serverCommands.filter(
+      (c) => !LOCAL_COMMAND_NAMES.has(c.name),
+    );
+    return [...LOCAL_COMMANDS, ...filtered];
+  }, [serverCommands]);
 
   return { commands };
 }
