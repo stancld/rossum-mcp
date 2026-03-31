@@ -141,6 +141,7 @@ The ``rossum_agent`` package provides additional capabilities:
 * Interactive user questions (free-text or multiple-choice) via ``ask_user_question`` tool
 * Working memory with auto-spillover — large tool results (>30k chars) are saved to workspace files; agent queries them via ``run_jq`` or ``run_grep``
 * File output for saving reports, documentation, and analysis results
+* Prompt caching (``cache_control``) on system prompt, tools, and conversation history for up to 90% input token cost reduction via AWS Bedrock
 * Integration with AI agent frameworks (Anthropic Claude via AWS Bedrock)
 * REST API interface with slash commands for quick introspection (``/list-skills``, ``/list-mcp-tools``, etc.)
 * See the :doc:`examples` section for complete workflows
