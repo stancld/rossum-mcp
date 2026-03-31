@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [1.8.3] - 2026-03-31
 
 ### Changed
 - `execute_python`: increased max code length from 12 000 to 25 000 characters
