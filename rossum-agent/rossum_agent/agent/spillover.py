@@ -57,9 +57,11 @@ def maybe_spill(
 
 def _summarize(content: str, file_path: str) -> str:
     """Generate a compact summary of spilled content."""
-    # Try JSON array
     try:
         parsed = json.loads(content)
+        # Wrapped list from serialize_tool_result: {"total_results": N, "results": [...]}
+        if isinstance(parsed, dict) and "total_results" in parsed and isinstance(parsed.get("results"), list):
+            return _summarize_array(parsed["results"], file_path)
         if isinstance(parsed, list):
             return _summarize_array(parsed, file_path)
         if isinstance(parsed, dict):
@@ -79,7 +81,8 @@ def _summarize_array(items: list, file_path: str) -> str:
     remaining_note = f"\n... ({remaining} more items)" if remaining > 0 else ""
 
     return (
-        f"Result saved to {file_path} ({len(items)} items)\n\n"
+        f"Result saved to {file_path}\n"
+        f"total_results: {len(items)}\n\n"
         f"Preview:\n{preview_json}{remaining_note}\n\n"
         f"Use run_jq or run_grep on the file path to query full content."
     )

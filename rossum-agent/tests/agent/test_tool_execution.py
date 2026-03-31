@@ -687,7 +687,7 @@ class TestSerializeToolResult:
         result = serialize_tool_result(items)
 
         parsed = json.loads(result)
-        assert parsed == [{"id": 1}, {"id": 2}]
+        assert parsed == {"total_results": 2, "results": [{"id": 1}, {"id": 2}]}
 
     def test_serialize_pydantic_model(self):
         """Test that pydantic model is serialized to JSON."""
@@ -713,7 +713,7 @@ class TestSerializeToolResult:
         result = serialize_tool_result(models)
 
         parsed = json.loads(result)
-        assert parsed == [{"id": 1}, {"id": 2}]
+        assert parsed == {"total_results": 2, "results": [{"id": 1}, {"id": 2}]}
 
     def test_serialize_dict(self):
         """Test that dict is serialized to JSON."""
@@ -727,7 +727,7 @@ class TestSerializeToolResult:
         result = serialize_tool_result([1, 2, 3])
 
         parsed = json.loads(result)
-        assert parsed == [1, 2, 3]
+        assert parsed == {"total_results": 3, "results": [1, 2, 3]}
 
     def test_serialize_string(self):
         """Test that string is returned as-is."""

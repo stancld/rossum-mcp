@@ -163,8 +163,10 @@ def serialize_tool_result(result: object) -> str:
     result = _to_serializable(result)
     if isinstance(result, list):
         result = [_to_serializable(item) for item in result]
+        wrapped = {"total_results": len(result), "results": result}
+        return json.dumps(wrapped, separators=COMPACT_JSON_SEPARATORS, default=str)
 
-    if isinstance(result, dict | list):
+    if isinstance(result, dict):
         return json.dumps(result, separators=COMPACT_JSON_SEPARATORS, default=str)
 
     return str(result)

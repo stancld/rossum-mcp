@@ -50,7 +50,7 @@ class TestMaybeSpill:
 
         result = maybe_spill(content, "list_schemas", 1, tmp_path)
 
-        assert "100 items" in result
+        assert "total_results: 100" in result
         # Preview shows first 3 items
         assert '"item_0"' in result
         assert '"item_1"' in result
@@ -133,5 +133,5 @@ class TestMaybeSpill:
 
         result = maybe_spill(content, "tool", 1, tmp_path)
 
-        assert "2 items" in result
+        assert "total_results: 2" in result
         assert "more items" not in result

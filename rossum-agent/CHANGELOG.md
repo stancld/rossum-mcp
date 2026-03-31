@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- `serialize_tool_result`: list results now wrapped as `{"total_results": N, "results": [...]}` — gives the agent result count upfront, saving a trivial `jq` call to get the length [#340](https://github.com/stancld/rossum-agents/pull/340)
+
 ### Changed
 - `execute_python`: increased max code length from 12 000 to 25 000 characters
 
