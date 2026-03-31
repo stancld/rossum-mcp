@@ -335,6 +335,36 @@ class TestGetBatch:
         assert len(result) == 0
 
     @pytest.mark.asyncio
+    async def test_get_batch_partial_failure_skips_broken(
+        self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
+    ) -> None:
+        q1 = create_mock_queue(id=1, name="Q1")
+
+        def retrieve_side_effect(qid: int):
+            if qid == 1:
+                return q1
+            raise RuntimeError(f"Queue {qid} not found")
+
+        mock_client.retrieve_queue.side_effect = retrieve_side_effect
+        register_get_tools(mock_mcp, mock_client)
+
+        result = await mock_mcp._tools["get"](entity="queue", entity_id=[1, 2, 3])
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_get_batch_all_failures_returns_empty(
+        self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
+    ) -> None:
+        mock_client.retrieve_queue.side_effect = RuntimeError("Not found")
+        register_get_tools(mock_mcp, mock_client)
+
+        result = await mock_mcp._tools["get"](entity="queue", entity_id=[1, 2])
+        assert isinstance(result, list)
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
     async def test_get_batch_error_entity_returns_error(
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:

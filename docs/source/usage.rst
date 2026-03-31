@@ -195,7 +195,7 @@ Single entity:
 
    {"entity": "queue", "id": 12345, "data": {"id": 12345, "name": "Invoices"}}
 
-Batch: list of the above.
+Batch: list of the above. Failed items are silently skipped.
 
 **Example usage:**
 
