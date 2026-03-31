@@ -336,12 +336,12 @@ class TestListHooks:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_hooks if resource == Resource.Hook else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_hooks(mock_client)
 
@@ -357,11 +357,11 @@ class TestListHooks:
         """Test that workspaces is empty when hook has no queues."""
         mock_hooks = [create_mock_hook(id=1, name="Hook 1", queues=[])]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for hook in mock_hooks:
                 yield hook
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_hooks(mock_client)
 
@@ -404,12 +404,12 @@ class TestListHooks:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_hooks if resource == Resource.Hook else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_hooks(mock_client, workspace_id=100)
 
@@ -434,12 +434,12 @@ class TestListHooks:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_hooks if resource == Resource.Hook else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_hooks(mock_client, workspace_id=999)
 
