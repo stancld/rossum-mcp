@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.1.1] - 2026-03-31
 
 ### Fixed
 - Batch `get` (list of IDs) now silently skips failed items instead of raising on the first error [#339](https://github.com/stancld/rossum-agents/pull/339)
