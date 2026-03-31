@@ -9,13 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-from rossum_agent.agent.models import FinalAnswerStep, StepType, TextDeltaStep
 from rossum_agent.api.main import (
     _drain_and_shutdown,
     _install_sigterm_handler,
     app,
 )
-from rossum_agent.api.models.schemas import StreamDoneEvent
+from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
 from rossum_agent.api.shutdown import shutdown_state
 
 from .conftest import create_mock_httpx_client
@@ -190,14 +189,9 @@ class TestStreamingRequestTracking:
         async def mock_run_agent(*args, **kwargs):
             # Record active_requests while mid-stream — should be >= 1
             active_during_stream.append(shutdown_state.active_requests)
-            yield TextDeltaStep(
-                step_number=1,
-                step_type=StepType.INTERMEDIATE,
-                text_delta="Thinking...",
-                accumulated_text="Thinking...",
-            )
+            yield StepEvent(type="thinking", step_number=1, content="Thinking...")
             active_during_stream.append(shutdown_state.active_requests)
-            yield FinalAnswerStep(step_number=2, final_answer="Done!", input_tokens=100, output_tokens=50)
+            yield StepEvent(type="final_answer", step_number=2, content="Done!", is_final=True)
             yield StreamDoneEvent(total_steps=2, input_tokens=100, output_tokens=50)
 
         app.state.chat_service = mock_chat_service

@@ -17,7 +17,7 @@ class TestTaskTracker:
         task = tracker.create_task(subject="Deploy schema")
         assert task.id == "1"
         assert task.subject == "Deploy schema"
-        assert task.status == TaskStatus.PENDING
+        assert task.status == TaskStatus.pending
         assert task.description == ""
 
     def test_create_task_with_description(self) -> None:
@@ -37,8 +37,8 @@ class TestTaskTracker:
     def test_update_task_status(self) -> None:
         tracker = TaskTracker()
         tracker.create_task(subject="Test")
-        updated = tracker.update_task("1", status=TaskStatus.IN_PROGRESS)
-        assert updated.status == TaskStatus.IN_PROGRESS
+        updated = tracker.update_task("1", status=TaskStatus.in_progress)
+        assert updated.status == TaskStatus.in_progress
 
     def test_update_task_subject(self) -> None:
         tracker = TaskTracker()
@@ -49,7 +49,7 @@ class TestTaskTracker:
     def test_update_task_not_found(self) -> None:
         tracker = TaskTracker()
         with pytest.raises(KeyError, match="Task 999 not found"):
-            tracker.update_task("999", status=TaskStatus.COMPLETED)
+            tracker.update_task("999", status=TaskStatus.completed)
 
     def test_list_tasks(self) -> None:
         tracker = TaskTracker()
@@ -90,7 +90,7 @@ class TestTaskTracker:
         tracker = TaskTracker()
         tracker.create_task(subject="Deploy", description="Push to prod")
         tracker.create_task(subject="Verify")
-        tracker.update_task("1", status=TaskStatus.COMPLETED)
+        tracker.update_task("1", status=TaskStatus.completed)
         snapshot = tracker.snapshot()
         assert snapshot == [
             {"id": "1", "subject": "Deploy", "status": "completed", "description": "Push to prod"},
@@ -116,14 +116,14 @@ class TestTaskTracker:
     def test_update_task_atomic(self) -> None:
         tracker = TaskTracker()
         tracker.create_task(subject="Test")
-        task, snapshot = tracker.update_task_atomic("1", status=TaskStatus.COMPLETED)
-        assert task.status == TaskStatus.COMPLETED
+        task, snapshot = tracker.update_task_atomic("1", status=TaskStatus.completed)
+        assert task.status == TaskStatus.completed
         assert snapshot[0]["status"] == "completed"
 
     def test_update_task_atomic_not_found(self) -> None:
         tracker = TaskTracker()
         with pytest.raises(KeyError, match="Task 999 not found"):
-            tracker.update_task_atomic("999", status=TaskStatus.COMPLETED)
+            tracker.update_task_atomic("999", status=TaskStatus.completed)
 
 
 class TestCreateTaskTool:

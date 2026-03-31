@@ -5,6 +5,7 @@ import type {
   InteractionMode,
   McpMode,
   Persona,
+  TokenUsageBreakdown,
 } from "../types.js";
 
 interface StatusBarProps {
@@ -12,6 +13,8 @@ interface StatusBarProps {
   mcpMode: McpMode;
   persona: Persona;
   chatId: string | null;
+  tokenUsage: TokenUsageBreakdown | null;
+  contextUsageFraction: number | null;
   mode: InteractionMode;
 }
 
@@ -29,13 +32,22 @@ function statusColor(status: ConnectionStatus): string {
   }
 }
 
+function contextUsageColor(fraction: number): string {
+  if (fraction > 0.8) return "red";
+  if (fraction >= 0.5) return "yellow";
+  return "green";
+}
+
 export function StatusBar({
   connectionStatus,
   mcpMode,
   persona,
   chatId,
+  tokenUsage,
+  contextUsageFraction,
   mode,
 }: StatusBarProps) {
+  const total = tokenUsage?.total;
   const modeLabel = mode === "browse" ? "[BROWSE]" : "[INPUT]";
   const modeColor = mode === "browse" ? "yellow" : "green";
   const hints =
@@ -65,6 +77,17 @@ export function StatusBar({
       </Text>
       <Text>
         <Text dimColor>{hints}</Text>
+        {contextUsageFraction != null && (
+          <Text color={contextUsageColor(contextUsageFraction)}>
+            {"  "}context: {Math.round(contextUsageFraction * 100)}%
+          </Text>
+        )}
+        {total && (
+          <Text dimColor>
+            {"  "}tokens: {total.input_tokens.toLocaleString()} in /{" "}
+            {total.output_tokens.toLocaleString()} out
+          </Text>
+        )}
       </Text>
     </Box>
   );

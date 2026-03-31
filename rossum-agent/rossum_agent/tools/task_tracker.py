@@ -11,20 +11,26 @@ import json
 import re
 import threading
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from anthropic import beta_tool
 
-from rossum_agent.agent.models import TaskStatus
 from rossum_agent.tools.core import get_context
 
 _NUMBERED_PREFIX = re.compile(r"^(\d+)\.\s")
+
+
+class TaskStatus(StrEnum):
+    pending = "pending"
+    in_progress = "in_progress"
+    completed = "completed"
 
 
 @dataclass
 class Task:
     id: str
     subject: str
-    status: TaskStatus = TaskStatus.PENDING
+    status: TaskStatus = TaskStatus.pending
     description: str = ""
 
 

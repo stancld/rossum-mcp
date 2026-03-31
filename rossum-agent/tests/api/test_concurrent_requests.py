@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent.models import FinalAnswerStep
+from rossum_agent.api.models.schemas import StepEvent
 from rossum_agent.api.services.agent_service import AgentService, _request_context
 
 
@@ -163,8 +164,8 @@ class TestConcurrentAgentService:
                         rossum_api_token="token",
                         rossum_api_base_url="https://api.rossum.ai",
                     ):
-                        if isinstance(event, FinalAnswerStep):
-                            final_answer = event.final_answer
+                        if isinstance(event, StepEvent) and event.type == "final_answer":
+                            final_answer = event.content
                     return final_answer or "no answer"
                 except AttributeError as e:
                     return f"ERROR: {e}"

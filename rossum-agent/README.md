@@ -159,7 +159,7 @@ The agent provides internal tools and access to 30 MCP tools via dynamic loading
 - `list_tasks` - List all tracked tasks with current status
 
 **User Interaction:**
-- `ask_user_question` - Ask the user structured questions (free-text or multiple-choice) mid-execution; streamed via `data-agent-question` event
+- `ask_user_question` - Ask the user structured questions (free-text or multiple-choice) mid-execution; streamed via SSE `agent_question` event
 
 </details>
 
@@ -218,7 +218,7 @@ flowchart TB
 | `POST /api/v1/chats` | Create new chat |
 | `GET /api/v1/chats/{id}` | Get chat details |
 | `DELETE /api/v1/chats/{id}` | Delete chat |
-| `POST /api/v1/chats/{id}/messages` | Send message (AI SDK UI Message Stream v1) |
+| `POST /api/v1/chats/{id}/messages` | Send message (SSE) |
 | `PUT /api/v1/chats/{id}/feedback` | Submit thumbs up/down for a turn |
 | `GET /api/v1/chats/{id}/feedback` | Get all feedback for a chat |
 | `DELETE /api/v1/chats/{id}/feedback/{turn}` | Remove feedback for a turn |
@@ -228,7 +228,7 @@ flowchart TB
 
 API docs: `/api/docs` (Swagger) or `/api/redoc`
 
-**Slash Commands:** Messages starting with `/` are intercepted before reaching the agent and return instant responses via the wire protocol. Available commands:
+**Slash Commands:** Messages starting with `/` are intercepted before reaching the agent and return instant responses via SSE. Available commands:
 
 | Command | Description |
 |---------|-------------|
@@ -240,19 +240,18 @@ API docs: `/api/docs` (Swagger) or `/api/redoc`
 
 The TUI provides autocomplete suggestions when typing `/`. Commands can also be discovered programmatically via `GET /api/v1/commands`.
 
-**Streaming Events:** AI SDK UI Message Stream v1 compatible (`x-vercel-ai-ui-message-stream: v1`). Each line is `data: <json>\n\n` discriminated by `type`:
+**SSE Events:** The message endpoint streams these SSE event types:
 
-| Wire `type` | Description |
-|-------------|-------------|
-| `start` / `finish` | Stream lifecycle |
-| `reasoning-start` / `reasoning-delta` / `reasoning-end` | Extended thinking blocks |
-| `text-start` / `text-delta` / `text-end` | Text content blocks |
-| `tool-input-start` / `tool-input-available` | Tool call begins and args ready |
-| `tool-output-available` | Tool result |
+| SSE `event:` | Description |
+|--------------|-------------|
+| `step` | Agent steps (thinking, tool calls, final answer) |
+| `sub_agent_progress` | Sub-agent iteration updates |
+| `sub_agent_text` | Sub-agent text streaming |
+| `task_snapshot` | Task tracker state after each task mutation |
+| `agent_question` | Structured question from agent to user (e.g. confirmation prompts) |
+| `file_created` | Output file notification |
+| `done` | Final event with token usage |
 | `error` | Agent execution error |
-| `data-agent-question` | Structured question from agent |
-| `data-task-snapshot` | Full task list snapshot |
-| `data-file-created` | File created during agent run |
 
 **MCP Mode:** Chat sessions support mode switching via the `mcp_mode` parameter:
 - Set at chat creation: `POST /api/v1/chats` with `{"mcp_mode": "read-write"}`

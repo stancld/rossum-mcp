@@ -19,6 +19,22 @@ export type TextContent = Schemas["TextContent"];
 export type ImageContent = Schemas["ImageContent"];
 export type DocumentContent = Schemas["DocumentContent"];
 
+// SSE events
+export type StepEvent = Schemas["StepEvent"];
+export type SubAgentProgressEvent = Schemas["SubAgentProgressEvent"];
+export type SubAgentTextEvent = Schemas["SubAgentTextEvent"];
+export type TaskSnapshotEvent = Schemas["TaskSnapshotEvent"];
+export type AgentQuestionEvent = Schemas["AgentQuestionEvent"];
+export type AgentQuestionItemSchema = Schemas["AgentQuestionItemSchema"];
+export type QuestionOptionSchema = Schemas["QuestionOptionSchema"];
+export type FileCreatedEvent = Schemas["FileCreatedEvent"];
+export type StreamDoneEvent = Schemas["StreamDoneEvent"];
+
+// Token usage
+export type TokenUsageBySource = Schemas["TokenUsageBySource"];
+export type TokenUsageBreakdown = Schemas["TokenUsageBreakdown"];
+export type SubAgentTokenUsageDetail = Schemas["SubAgentTokenUsageDetail"];
+
 // Files
 export type FileInfo = Schemas["FileInfo"];
 export type FileListResponse = Schemas["FileListResponse"];
@@ -49,8 +65,20 @@ export type ReportToSlackResponse = Schemas["ReportToSlackResponse"];
 export type ErrorResponse = Schemas["ErrorResponse"];
 
 // Derived types
+export type StepType = StepEvent["type"];
+export type SubAgentStatus = SubAgentProgressEvent["status"];
 export type McpMode = CreateChatRequest["mcp_mode"];
 export type Persona = CreateChatRequest["persona"];
+
+// Discriminated SSE event union
+export type SSEEvent =
+  | { event: "step"; data: StepEvent }
+  | { event: "sub_agent_progress"; data: SubAgentProgressEvent }
+  | { event: "sub_agent_text"; data: SubAgentTextEvent }
+  | { event: "task_snapshot"; data: TaskSnapshotEvent }
+  | { event: "agent_question"; data: AgentQuestionEvent }
+  | { event: "done"; data: StreamDoneEvent }
+  | { event: "file_created"; data: FileCreatedEvent };
 
 // Client configuration
 export interface ClientConfig {

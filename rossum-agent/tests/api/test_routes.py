@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from rossum_agent.agent.models import FinalAnswerStep, ReasoningStep
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import (
     ChatDetail,
@@ -15,6 +14,7 @@ from rossum_agent.api.models.schemas import (
     ChatResponse,
     ChatSummary,
     Message,
+    StepEvent,
     StreamDoneEvent,
 )
 from rossum_agent.change_tracking.models import ConfigCommit, EntityChange
@@ -320,8 +320,8 @@ class TestSendMessageEndpoint:
         mock_chat_service.save_messages.return_value = True
 
         async def mock_run_agent(*args, **kwargs):
-            yield ReasoningStep(step_number=1, reasoning="Processing...")
-            yield FinalAnswerStep(step_number=1, final_answer="Done!")
+            yield StepEvent(type="thinking", step_number=1, content="Processing...")
+            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 
         mock_agent_service.run_agent = mock_run_agent
@@ -336,10 +336,8 @@ class TestSendMessageEndpoint:
         assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
         content = response.text
-        assert '"type":"start"' in content
-        assert '"type":"finish"' in content
-        assert '"type":"text-delta"' in content
-        assert "data: [DONE]" in content
+        assert "event: step" in content
+        assert "event: done" in content
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_send_message_preserves_mcp_mode_metadata(
@@ -353,7 +351,7 @@ class TestSendMessageEndpoint:
         mock_chat_service.save_messages.return_value = True
 
         async def mock_run_agent(*args, **kwargs):
-            yield FinalAnswerStep(step_number=1, final_answer="Done!")
+            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 
         mock_agent_service.run_agent = mock_run_agent

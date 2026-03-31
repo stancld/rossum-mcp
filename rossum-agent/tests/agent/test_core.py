@@ -22,7 +22,7 @@ from rossum_agent.agent.core import create_agent
 from rossum_agent.agent.models import (
     ErrorStep,
     FinalAnswerStep,
-    ReasoningStep,
+    ThinkingStep,
     ToolResultStep,
     ToolStartStep,
 )
@@ -87,9 +87,9 @@ class TestAgentStepTypes:
         )
         assert len(step.tool_calls) == 1
 
-    def test_reasoning_step_has_no_tool_calls(self):
-        """Test ReasoningStep has no tool_calls attribute."""
-        step = ReasoningStep(step_number=1, reasoning="thought")
+    def test_thinking_step_has_no_tool_calls(self):
+        """Test ThinkingStep has no tool_calls attribute."""
+        step = ThinkingStep(step_number=1, thinking="thought")
         assert not hasattr(step, "tool_calls")
 
 
@@ -775,10 +775,10 @@ class TestAgentRun:
             async for step in agent.run("Test prompt"):
                 steps.append(step)
 
-        thinking_steps = [s for s in steps if isinstance(s, ReasoningStep)]
+        thinking_steps = [s for s in steps if isinstance(s, ThinkingStep)]
         assert len(thinking_steps) >= 1
-        assert "Rate limited" in thinking_steps[0].reasoning
-        assert "waiting" in thinking_steps[0].reasoning.lower()
+        assert "Rate limited" in thinking_steps[0].thinking
+        assert "waiting" in thinking_steps[0].thinking.lower()
 
     @pytest.mark.asyncio
     async def test_rate_limit_exponential_backoff_delay(self):

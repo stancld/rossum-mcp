@@ -10,6 +10,8 @@ from unittest.mock import MagicMock
 import pytest
 from rossum_agent.tools.core import (
     AgentContext,
+    SubAgentProgress,
+    SubAgentText,
     SubAgentTokenUsage,
     get_context,
     reset_context,
@@ -28,6 +30,59 @@ def _reset_core_state() -> Iterator[None]:
     token = set_context(AgentContext())
     yield  # type: ignore[misc]
     reset_context(token)
+
+
+class TestSubAgentProgress:
+    """Tests for SubAgentProgress dataclass."""
+
+    def test_default_field_values(self) -> None:
+        progress = SubAgentProgress(
+            tool_name="test_tool",
+            iteration=1,
+            max_iterations=5,
+        )
+        assert progress.tool_name == "test_tool"
+        assert progress.iteration == 1
+        assert progress.max_iterations == 5
+        assert progress.current_tool is None
+        assert progress.tool_calls == []
+        assert progress.status == "running"
+
+    def test_with_custom_values(self) -> None:
+        progress = SubAgentProgress(
+            tool_name="search_knowledge_base",
+            iteration=3,
+            max_iterations=10,
+            current_tool="list_annotations",
+            tool_calls=["get_hook", "list_rules"],
+            status="completed",
+        )
+        assert progress.tool_name == "search_knowledge_base"
+        assert progress.iteration == 3
+        assert progress.max_iterations == 10
+        assert progress.current_tool == "list_annotations"
+        assert progress.tool_calls == ["get_hook", "list_rules"]
+        assert progress.status == "completed"
+
+
+class TestSubAgentText:
+    """Tests for SubAgentText dataclass."""
+
+    def test_default_field_values(self) -> None:
+        text = SubAgentText(tool_name="test_tool", text="Some output")
+        assert text.tool_name == "test_tool"
+        assert text.text == "Some output"
+        assert text.is_final is False
+
+    def test_with_custom_values(self) -> None:
+        text = SubAgentText(
+            tool_name="search_knowledge_base",
+            text="Final analysis complete",
+            is_final=True,
+        )
+        assert text.tool_name == "search_knowledge_base"
+        assert text.text == "Final analysis complete"
+        assert text.is_final is True
 
 
 class TestSubAgentTokenUsage:
@@ -68,6 +123,8 @@ class TestAgentContext:
         assert ctx.commit_store is None
         assert ctx.snapshot_store is None
         assert ctx.task_tracker is None
+        assert ctx.progress_callback is None
+        assert ctx.text_callback is None
         assert ctx.token_callback is None
         assert ctx.task_snapshot_callback is None
 
@@ -116,6 +173,18 @@ class TestAgentContext:
         monkeypatch.delenv("ROSSUM_API_TOKEN", raising=False)
         with pytest.raises(ValueError, match="Rossum API credentials not available"):
             ctx.require_rossum_credentials()
+
+    def test_report_progress_with_callback(self) -> None:
+        callback = MagicMock()
+        ctx = AgentContext(progress_callback=callback)
+        progress = SubAgentProgress(tool_name="test", iteration=1, max_iterations=5)
+        ctx.report_progress(progress)
+        callback.assert_called_once_with(progress)
+
+    def test_report_progress_no_callback(self) -> None:
+        ctx = AgentContext()
+        progress = SubAgentProgress(tool_name="test", iteration=1, max_iterations=5)
+        ctx.report_progress(progress)  # should not raise
 
     def test_report_token_usage_with_callback(self) -> None:
         callback = MagicMock()
@@ -200,14 +269,14 @@ class TestContextVarIsolation:
         callback1 = MagicMock()
 
         def thread1_func() -> None:
-            ctx = AgentContext(token_callback=callback1)
+            ctx = AgentContext(progress_callback=callback1)
             set_context(ctx)
-            usage = SubAgentTokenUsage(tool_name="t1", input_tokens=100, output_tokens=50)
-            get_context().report_token_usage(usage)
+            progress = SubAgentProgress(tool_name="t1", iteration=1, max_iterations=5)
+            get_context().report_progress(progress)
 
         def thread2_func() -> None:
-            usage = SubAgentTokenUsage(tool_name="t2", input_tokens=100, output_tokens=50)
-            get_context().report_token_usage(usage)
+            progress = SubAgentProgress(tool_name="t2", iteration=1, max_iterations=5)
+            get_context().report_progress(progress)
 
         t1 = threading.Thread(target=thread1_func)
         t2 = threading.Thread(target=thread2_func)

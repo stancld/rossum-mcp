@@ -7,11 +7,11 @@ from rossum_agent.agent.models import (
     AgentConfig,
     ErrorStep,
     FinalAnswerStep,
-    ReasoningStep,
     StepType,
     StreamDelta,
     TextDeltaStep,
     ThinkingBlockData,
+    ThinkingStep,
     ToolCall,
     ToolResult,
     ToolResultStep,
@@ -152,17 +152,17 @@ class TestAgentConfig:
         assert config.request_delay == 1.0
 
 
-class TestReasoningStep:
-    """Test ReasoningStep dataclass."""
+class TestThinkingStep:
+    """Test ThinkingStep dataclass."""
 
     def test_creation(self):
-        step = ReasoningStep(step_number=1, reasoning="Let me think...")
+        step = ThinkingStep(step_number=1, thinking="Let me think...")
         assert step.step_number == 1
-        assert step.reasoning == "Let me think..."
+        assert step.thinking == "Let me think..."
         assert step.is_streaming is True
 
     def test_custom_is_streaming(self):
-        step = ReasoningStep(step_number=1, reasoning="thought", is_streaming=False)
+        step = ThinkingStep(step_number=1, thinking="thought", is_streaming=False)
         assert step.is_streaming is False
 
 
@@ -207,6 +207,7 @@ class TestToolStartStep:
         assert len(step.tool_calls) == 1
         assert step.tool_progress == (2, 5)
         assert step.current_tool is None
+        assert step.sub_agent_progress is None
         assert step.is_streaming is True
 
     def test_with_current_tool(self):

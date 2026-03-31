@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from rossum_agent.agent.models import FinalAnswerStep
 from rossum_agent.api.main import app
-from rossum_agent.api.models.schemas import StreamDoneEvent
+from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
 from rossum_agent.api.routes.messages import limiter
 from rossum_agent.api.shutdown import shutdown_state
 
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def mock_chat_summary():
     """Prevent real AWS Bedrock calls from _generate_chat_summary in route tests."""
-    with patch("rossum_agent.api.routes.messages.generate_chat_summary", return_value=None):
+    with patch("rossum_agent.api.routes.messages._generate_chat_summary", return_value=None):
         yield
 
 
@@ -137,7 +136,7 @@ def mock_run_agent_factory() -> Callable[[], tuple[list, Callable]]:
 
         async def mock_run_agent(*args, **kwargs):
             calls.append(kwargs)
-            yield FinalAnswerStep(step_number=1, final_answer="Done!")
+            yield StepEvent(type="final_answer", step_number=1, content="Done!", is_final=True)
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 
         return calls, mock_run_agent

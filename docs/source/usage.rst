@@ -1367,7 +1367,7 @@ User Interaction Tools
 ask_user_question
 """""""""""""""""
 
-Ask the user one or more structured questions mid-execution. Supports free-text input and multiple-choice selectors. Streamed to the frontend via ``data-agent-question`` wire event.
+Ask the user one or more structured questions mid-execution. Supports free-text input and multiple-choice selectors. Streamed to the frontend via SSE ``agent_question`` event.
 
 Use when you need required information that you cannot determine on your own (e.g. queue name, template choice, workspace ID), or when the user explicitly asks for confirmation before proceeding.
 

@@ -1,6 +1,6 @@
 {
   "name": "rossum-agent-tui",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "description": "Terminal UI for Rossum Agent API",
   "type": "module",
   "bin": {

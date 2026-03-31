@@ -1,515 +1,224 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { createChat, submitFeedback as apiFeedback } from "../api/client.js";
+import { streamMessage } from "rossum-agent-client";
+import type {
+  ClientConfig,
+  ImageContent,
+  DocumentContent,
+} from "rossum-agent-client";
 import {
   loadPersistedState,
   savePersistedState,
 } from "../utils/persistence.js";
 import type {
-  AgentQuestionPart,
+  AgentQuestionEvent,
   AttachmentInfo,
   ChatState,
   CompletedStep,
   Config,
-  PendingToolCall,
-  TaskSnapshotPart,
+  ConfigCommitInfo,
+  FileCreatedEvent,
+  SSEEvent,
+  StepEvent,
+  SubAgentProgressEvent,
+  SubAgentTextEvent,
+  TaskItem,
+  TokenUsageBreakdown,
+  StreamDoneEvent,
 } from "../types.js";
 import type {
   ImageAttachment,
   DocumentAttachment,
 } from "../utils/fileAttachments.js";
-import type { ImageContent, DocumentContent } from "rossum-agent-client";
-import { buildHeaders } from "../api/client.js";
 
 const INITIAL_STATE: ChatState = {
   chatId: null,
   connectionStatus: "disconnected",
   completedSteps: [],
   currentStreaming: null,
+  tasks: [],
+  subAgentProgress: null,
+  subAgentText: null,
+  finalAnswer: null,
+  tokenUsage: null,
+  contextUsageFraction: null,
+  configCommit: null,
+  files: [],
   error: null,
   userMessages: [],
   feedback: {},
   pendingQuestion: null,
-  pendingToolCalls: {},
-  tasks: null,
-  files: [],
 };
 
-// --- Wire event types (minimal v1 protocol) ---
-
-interface WireTextStart {
-  type: "text-start";
-  id: string;
-}
-
-interface WireTextDelta {
-  type: "text-delta";
-  id: string;
-  delta: string;
-}
-
-interface WireTextEnd {
-  type: "text-end";
-  id: string;
-}
-
-interface WireError {
-  type: "error";
-  errorText: string;
-}
-
-interface WireFinish {
-  type: "finish";
-}
-
-interface WireStart {
-  type: "start";
-}
-
-interface WireAgentQuestion {
-  type: "data-agent-question";
-  data: {
-    questions: Array<{
-      question: string;
-      options: Array<{ value: string; label: string; description: string }>;
-      multi_select: boolean;
-    }>;
-  };
-}
-
-interface WireTaskSnapshot {
-  type: "data-task-snapshot";
-  data: {
-    tasks: Array<{
-      id: string;
-      subject: string;
-      status: "pending" | "in_progress" | "completed";
-      description: string;
-    }>;
-  };
-}
-
-interface WireReasoningStart {
-  type: "reasoning-start";
-  id: string;
-}
-
-interface WireReasoningDelta {
-  type: "reasoning-delta";
-  id: string;
-  delta: string;
-}
-
-interface WireReasoningEnd {
-  type: "reasoning-end";
-  id: string;
-}
-
-interface WireToolInputStart {
-  type: "tool-input-start";
-  toolCallId: string;
-  toolName: string;
-}
-
-interface WireToolInputAvailable {
-  type: "tool-input-available";
-  toolCallId: string;
-  toolName: string;
-  input: Record<string, unknown>;
-}
-
-interface WireToolOutputAvailable {
-  type: "tool-output-available";
-  toolCallId: string;
-  output: string;
-}
-
-interface WireFileCreated {
-  type: "data-file-created";
-  data: {
-    filename: string;
-    url: string;
-  };
-}
-
-type WireEvent =
-  | WireStart
-  | WireFinish
-  | WireReasoningStart
-  | WireReasoningDelta
-  | WireReasoningEnd
-  | WireTextStart
-  | WireTextDelta
-  | WireTextEnd
-  | WireError
-  | WireAgentQuestion
-  | WireTaskSnapshot
-  | WireFileCreated
-  | WireToolInputStart
-  | WireToolInputAvailable
-  | WireToolOutputAvailable;
-
-// --- SSE stream helpers ---
-
-function buildRequestBody(
-  opts: Pick<
-    StreamOptions,
-    "message" | "images" | "documents" | "persona" | "rossumUrl" | "mcpMode"
-  >,
-): string {
-  const body: Record<string, unknown> = { content: opts.message };
-  if (opts.persona) body.persona = opts.persona;
-  if (opts.mcpMode) body.mcp_mode = opts.mcpMode;
-  if (opts.rossumUrl) body.rossum_url = opts.rossumUrl;
-  if (opts.images && opts.images.length > 0) body.images = opts.images;
-  if (opts.documents && opts.documents.length > 0)
-    body.documents = opts.documents;
-  return JSON.stringify(body);
-}
-
-interface StreamOptions {
-  config: Config;
-  chatId: string;
-  message: string;
-  mcpMode?: string;
-  persona?: string;
-  rossumUrl?: string;
-  images?: ImageContent[];
-  documents?: DocumentContent[];
-  onEvent: (event: WireEvent) => void;
-  onError: (error: Error) => void;
-  onDone: () => void;
-  signal?: AbortSignal;
-}
-
-/** Parse SSE data lines from a chunk, returning true if [DONE] was encountered. */
-function processSSEChunk(
-  chunk: string,
-  onEvent: (event: WireEvent) => void,
-  onDone: () => void,
-): boolean {
-  for (const line of chunk.split("\n")) {
-    if (!line.startsWith("data: ")) continue;
-    const data = line.slice(6);
-    if (data === "[DONE]") {
-      onDone();
-      return true;
-    }
-    try {
-      onEvent(JSON.parse(data) as WireEvent);
-    } catch {
-      // Skip malformed events
-    }
-  }
-  return false;
-}
-
-async function readSSEStream(
-  body: ReadableStream<Uint8Array>,
-  onEvent: (event: WireEvent) => void,
-  onDone: () => void,
-  onError: (error: Error) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() ?? "";
-
-      for (const part of parts) {
-        if (processSSEChunk(part, onEvent, onDone)) return;
-      }
-    }
-    onDone();
-  } catch (e) {
-    if (signal?.aborted) return;
-    onError(e instanceof Error ? e : new Error(String(e)));
-  }
-}
-
-async function streamMessage(opts: StreamOptions): Promise<void> {
-  const { config, chatId, onEvent, onError, onDone, signal } = opts;
-  const headers = buildHeaders(config);
-
-  let res: Response;
-  try {
-    res = await fetch(`${config.apiUrl}/api/v1/chats/${chatId}/messages`, {
-      method: "POST",
-      headers,
-      body: buildRequestBody(opts),
-      signal,
-    });
-  } catch (err) {
-    if (signal?.aborted) return;
-    const detail = err instanceof Error ? err.message : String(err);
-    onError(new Error(`Cannot connect to ${config.apiUrl}: ${detail}`));
-    return;
-  }
-
-  if (!res.ok) {
-    const text = await res.text();
-    onError(new Error(`Stream request failed (${res.status}): ${text}`));
-    return;
-  }
-
-  if (!res.body) {
-    onError(new Error("Response body is null"));
-    return;
-  }
-
-  await readSSEStream(res.body, onEvent, onDone, onError, signal);
-}
-
-// --- State helpers ---
-
-function nextStepNumber(steps: CompletedStep[]): number {
-  return steps.length + 1;
-}
-
-function commitStreaming(prev: ChatState): {
-  steps: CompletedStep[];
-  streaming: null;
-} {
-  if (!prev.currentStreaming || prev.currentStreaming.type === "tool") {
-    return { steps: prev.completedSteps, streaming: null };
-  }
+function stepToCompleted(step: StepEvent): CompletedStep {
   return {
-    steps: [
-      ...prev.completedSteps,
-      {
-        stepNumber: nextStepNumber(prev.completedSteps),
-        type: prev.currentStreaming.type,
-        content: prev.currentStreaming.content,
-      },
-    ],
-    streaming: null,
+    stepNumber: step.step_number,
+    type: step.type,
+    content: step.content,
+    toolName: step.tool_name,
+    toolArguments: step.tool_arguments,
+    toolProgress: step.tool_progress,
+    result: step.result,
+    isError: step.is_error,
+    toolCallId: step.tool_call_id,
+    isHookOutput: step.is_hook_output,
   };
 }
 
-function handleFinish(prev: ChatState): ChatState {
-  const lastStream = prev.currentStreaming;
-  const extra: CompletedStep[] =
-    lastStream && lastStream.type !== "tool"
-      ? [
-          {
-            stepNumber: nextStepNumber(prev.completedSteps),
-            type: lastStream.type,
-            content: lastStream.content,
-          },
-        ]
-      : [];
-  // Mark the last text step as final_answer
-  const steps = [...prev.completedSteps, ...extra];
-  for (let i = steps.length - 1; i >= 0; i--) {
-    if (steps[i]!.type === "text") {
-      steps[i] = { ...steps[i]!, type: "final_answer" };
-      break;
-    }
+function isDifferentStep(a: StepEvent, b: StepEvent): boolean {
+  return a.step_number !== b.step_number || a.type !== b.type;
+}
+
+function shouldCommitPrevious(
+  prev: StepEvent | null,
+  current: StepEvent,
+): prev is StepEvent {
+  return prev !== null && isDifferentStep(prev, current);
+}
+
+function resolveFinalAnswer(
+  step: StepEvent,
+  prev: string | null,
+): string | null {
+  return step.type === "final_answer" ? step.content || prev : prev;
+}
+
+function handleStepEvent(prev: ChatState, step: StepEvent): ChatState {
+  if (step.type === "error") {
+    return {
+      ...prev,
+      error: step.content || "Unknown error",
+      connectionStatus: "error",
+    };
   }
+
+  if (step.is_streaming) {
+    const finalAnswer = resolveFinalAnswer(step, prev.finalAnswer);
+
+    // If we're switching to a different step while the previous one was still
+    // streaming, commit the previous streaming step to completedSteps so it
+    // doesn't get lost (e.g. thinking block replaced by tool_start).
+    const prevStream = prev.currentStreaming;
+    if (shouldCommitPrevious(prevStream, step)) {
+      return {
+        ...prev,
+        completedSteps: [...prev.completedSteps, stepToCompleted(prevStream)],
+        currentStreaming: step,
+        finalAnswer,
+      };
+    }
+    return { ...prev, currentStreaming: step, finalAnswer };
+  }
+
+  const prevStream = prev.currentStreaming;
+  // Same step_number = finalization/correction of the streaming step (e.g. text
+  // streamed as final_answer corrected to intermediate once tool_use arrived).
+  // Don't commit the stale streaming version — only commit the authoritative finalized event.
+  const extraSteps: CompletedStep[] =
+    prevStream && prevStream.step_number !== step.step_number
+      ? [stepToCompleted(prevStream)]
+      : [];
+
+  return {
+    ...prev,
+    completedSteps: [
+      ...prev.completedSteps,
+      ...extraSteps,
+      stepToCompleted(step),
+    ],
+    currentStreaming: null,
+    finalAnswer: step.is_final
+      ? resolveFinalAnswer(step, prev.finalAnswer)
+      : prev.finalAnswer,
+    contextUsageFraction:
+      step.context_usage_fraction ?? prev.contextUsageFraction,
+  };
+}
+
+function handleSubAgentTextEvent(
+  prev: ChatState,
+  textEvent: SubAgentTextEvent,
+): ChatState {
+  const prevText =
+    prev.subAgentText?.tool_name === textEvent.tool_name
+      ? prev.subAgentText!.text
+      : "";
+  const nextText = textEvent.text.startsWith(prevText)
+    ? textEvent.text
+    : prevText + textEvent.text;
+  return {
+    ...prev,
+    subAgentText: {
+      tool_name: textEvent.tool_name,
+      text: nextText,
+      is_final: textEvent.is_final,
+    },
+  };
+}
+
+function handleDoneEvent(
+  prev: ChatState,
+  eventData: StreamDoneEvent,
+): ChatState {
+  const lastStream = prev.currentStreaming;
+  const extra: CompletedStep[] = lastStream
+    ? [stepToCompleted(lastStream)]
+    : [];
+  const commitInfo: ConfigCommitInfo | null = eventData.config_commit_hash
+    ? {
+        hash: eventData.config_commit_hash,
+        message: eventData.config_commit_message ?? "",
+        changesCount: eventData.config_changes_count ?? 0,
+      }
+    : null;
+
   return {
     ...prev,
     connectionStatus: "idle",
-    completedSteps: steps,
+    completedSteps: [...prev.completedSteps, ...extra],
     currentStreaming: null,
+    subAgentProgress: null,
+    subAgentText: null,
+    tokenUsage: eventData.token_usage_breakdown as TokenUsageBreakdown | null,
+    contextUsageFraction: eventData.context_usage_fraction ?? null,
+    configCommit: commitInfo,
   };
 }
 
-function handleReasoningEvent(
-  prev: ChatState,
-  wire: WireReasoningStart | WireReasoningDelta | WireReasoningEnd,
-): ChatState {
-  if (wire.type === "reasoning-start") {
-    const committed = commitStreaming(prev);
-    return {
-      ...prev,
-      completedSteps: committed.steps,
-      currentStreaming: { type: "reasoning", content: null },
-    };
-  }
-  if (wire.type === "reasoning-delta") {
-    if (!prev.currentStreaming || prev.currentStreaming.type !== "reasoning")
+function reduceEvent(prev: ChatState, event: SSEEvent): ChatState {
+  switch (event.event) {
+    case "step":
+      return handleStepEvent(prev, event.data);
+
+    case "task_snapshot":
+      return { ...prev, tasks: event.data.tasks as TaskItem[] };
+
+    case "sub_agent_progress":
+      return { ...prev, subAgentProgress: event.data as SubAgentProgressEvent };
+
+    case "sub_agent_text":
+      return handleSubAgentTextEvent(prev, event.data as SubAgentTextEvent);
+
+    case "agent_question":
+      return {
+        ...prev,
+        pendingQuestion: event.data as AgentQuestionEvent,
+        connectionStatus: "idle",
+      };
+
+    case "done":
+      return handleDoneEvent(prev, event.data);
+
+    case "file_created":
+      return {
+        ...prev,
+        files: [...prev.files, event.data as FileCreatedEvent],
+      };
+
+    default:
       return prev;
-    const newContent = (prev.currentStreaming.content ?? "") + wire.delta;
-    return {
-      ...prev,
-      currentStreaming: { ...prev.currentStreaming, content: newContent },
-    };
   }
-  // reasoning-end
-  const reasoning = prev.currentStreaming;
-  if (!reasoning || reasoning.type !== "reasoning") return prev;
-  return {
-    ...prev,
-    completedSteps: [
-      ...prev.completedSteps,
-      {
-        stepNumber: nextStepNumber(prev.completedSteps),
-        type: "reasoning",
-        content: reasoning.content,
-      },
-    ],
-    currentStreaming: null,
-  };
 }
-
-function handleTextEvent(
-  prev: ChatState,
-  wire: WireTextStart | WireTextDelta | WireTextEnd,
-): ChatState {
-  if (wire.type === "text-start") {
-    const committed = commitStreaming(prev);
-    return {
-      ...prev,
-      completedSteps: committed.steps,
-      currentStreaming: { type: "text", content: null },
-    };
-  }
-  if (wire.type === "text-delta") {
-    if (!prev.currentStreaming || prev.currentStreaming.type !== "text")
-      return prev;
-    const newContent = (prev.currentStreaming.content ?? "") + wire.delta;
-    return {
-      ...prev,
-      currentStreaming: { ...prev.currentStreaming, content: newContent },
-    };
-  }
-  // text-end
-  const text = prev.currentStreaming;
-  if (!text || text.type !== "text") return prev;
-  return {
-    ...prev,
-    completedSteps: [
-      ...prev.completedSteps,
-      {
-        stepNumber: nextStepNumber(prev.completedSteps),
-        type: "text",
-        content: text.content,
-      },
-    ],
-    currentStreaming: null,
-  };
-}
-
-function handleToolEvent(
-  prev: ChatState,
-  wire: WireToolInputStart | WireToolInputAvailable | WireToolOutputAvailable,
-): ChatState {
-  if (wire.type === "tool-input-start") {
-    const committed = commitStreaming(prev);
-    const pending: PendingToolCall = {
-      toolName: wire.toolName,
-      toolCallId: wire.toolCallId,
-    };
-    return {
-      ...prev,
-      completedSteps: committed.steps,
-      currentStreaming: {
-        type: "tool",
-        content: null,
-        toolName: wire.toolName,
-      },
-      pendingToolCalls: {
-        ...prev.pendingToolCalls,
-        [wire.toolCallId]: pending,
-      },
-    };
-  }
-  if (wire.type === "tool-input-available") {
-    const existing = prev.pendingToolCalls[wire.toolCallId];
-    if (!existing) return prev;
-    return {
-      ...prev,
-      pendingToolCalls: {
-        ...prev.pendingToolCalls,
-        [wire.toolCallId]: { ...existing, input: wire.input },
-      },
-    };
-  }
-  // tool-output-available
-  const tc = prev.pendingToolCalls[wire.toolCallId];
-  if (!tc) return prev;
-  const { [wire.toolCallId]: _matched, ...remaining } = prev.pendingToolCalls; // eslint-disable-line @typescript-eslint/no-unused-vars
-  const hasMorePending = Object.keys(remaining).length > 0;
-  return {
-    ...prev,
-    completedSteps: [
-      ...prev.completedSteps,
-      {
-        stepNumber: nextStepNumber(prev.completedSteps),
-        type: "tool_call" as const,
-        content: wire.output,
-        toolName: tc.toolName,
-        toolArgs: tc.input ?? {},
-      },
-    ],
-    currentStreaming: hasMorePending ? prev.currentStreaming : null,
-    pendingToolCalls: remaining,
-  };
-}
-
-function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
-  const t = wire.type;
-  if (t === "start") return prev;
-  if (t === "finish") return handleFinish(prev);
-  if (t === "error")
-    return { ...prev, error: wire.errorText, connectionStatus: "error" };
-  if (t.startsWith("reasoning-"))
-    return handleReasoningEvent(
-      prev,
-      wire as WireReasoningStart | WireReasoningDelta | WireReasoningEnd,
-    );
-  if (t.startsWith("text-"))
-    return handleTextEvent(
-      prev,
-      wire as WireTextStart | WireTextDelta | WireTextEnd,
-    );
-  if (t.startsWith("tool-"))
-    return handleToolEvent(
-      prev,
-      wire as
-        | WireToolInputStart
-        | WireToolInputAvailable
-        | WireToolOutputAvailable,
-    );
-  if (t === "data-agent-question") {
-    const { data } = wire as WireAgentQuestion;
-    return {
-      ...prev,
-      pendingQuestion: {
-        type: "data-agent-question",
-        questions: data.questions,
-      } as AgentQuestionPart,
-      connectionStatus: "idle",
-    };
-  }
-  if (t === "data-task-snapshot") {
-    const { data } = wire as WireTaskSnapshot;
-    return {
-      ...prev,
-      tasks: {
-        type: "data-task-snapshot",
-        tasks: data.tasks,
-      } as TaskSnapshotPart,
-    };
-  }
-  if (t === "data-file-created") {
-    const { data } = wire as WireFileCreated;
-    return {
-      ...prev,
-      files: [...prev.files, data],
-    };
-  }
-  return prev;
-}
-
-// --- Hook ---
 
 export function useChat(config: Config) {
   const [state, setState] = useState<ChatState>(
@@ -524,8 +233,8 @@ export function useChat(config: Config) {
     }
   }, [state]);
 
-  const dispatch = useCallback((wire: WireEvent) => {
-    setState((prev) => reduceWireEvent(prev, wire));
+  const dispatch = useCallback((event: SSEEvent) => {
+    setState((prev) => reduceEvent(prev, event));
   }, []);
 
   const sendMessage = useCallback(
@@ -547,9 +256,14 @@ export function useChat(config: Config) {
         connectionStatus: "connecting",
         completedSteps: prev.chatId ? prev.completedSteps : [],
         currentStreaming: null,
+        subAgentProgress: null,
+        subAgentText: null,
         pendingQuestion: null,
+        finalAnswer: null,
+        tokenUsage: null,
+        configCommit: null,
+        tasks: [],
         error: null,
-        files: [],
         userMessages: [
           ...prev.userMessages,
           {
@@ -575,16 +289,22 @@ export function useChat(config: Config) {
 
         setState((prev) => ({ ...prev, connectionStatus: "streaming" }));
 
+        const clientConfig: ClientConfig = {
+          apiUrl: config.apiUrl,
+          token: config.token,
+          rossumUrl: config.rossumUrl,
+        };
+
         await streamMessage({
-          config,
+          config: clientConfig,
           chatId,
           message,
           persona: config.persona,
           rossumUrl: config.contextUrl,
-          mcpMode: config.mcpMode,
           images: options?.images as ImageContent[] | undefined,
           documents: options?.documents as DocumentContent[] | undefined,
-          onEvent: dispatch,
+          onEvent: (event: Record<string, unknown>) =>
+            dispatch(event as SSEEvent),
           onError: (err: Error) => {
             setState((prev) => ({
               ...prev,
@@ -630,22 +350,17 @@ export function useChat(config: Config) {
         return prev;
       }
 
-      const extra: CompletedStep[] =
-        prev.currentStreaming && prev.currentStreaming.type !== "tool"
-          ? [
-              {
-                stepNumber: nextStepNumber(prev.completedSteps),
-                type: prev.currentStreaming.type,
-                content: prev.currentStreaming.content,
-              },
-            ]
-          : [];
+      const extra = prev.currentStreaming
+        ? [stepToCompleted(prev.currentStreaming)]
+        : [];
 
       return {
         ...prev,
         connectionStatus: "idle",
         completedSteps: [...prev.completedSteps, ...extra],
         currentStreaming: null,
+        subAgentProgress: null,
+        subAgentText: null,
         error: null,
       };
     });
@@ -656,6 +371,7 @@ export function useChat(config: Config) {
       const chatId = chatIdRef.current;
       if (!chatId) return;
 
+      // Optimistic update
       setState((prev) => ({
         ...prev,
         feedback: { ...prev.feedback, [turnIndex]: isPositive },
@@ -664,6 +380,7 @@ export function useChat(config: Config) {
       try {
         await apiFeedback(config, chatId, turnIndex, isPositive);
       } catch {
+        // Silent revert on failure
         setState((prev) => {
           const next = { ...prev.feedback };
           delete next[turnIndex];

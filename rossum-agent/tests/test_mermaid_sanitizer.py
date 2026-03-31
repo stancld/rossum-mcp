@@ -98,9 +98,12 @@ class TestSanitizeMermaidInMarkdown:
             "```\n"
         )
         result = sanitize_mermaid_in_markdown(text)
+        # click directives are valid without href — left untouched
         assert 'click Event1 "#annotation_status"' in result
         assert 'click Hook1 "#validation_hook"' in result
+        # unquoted label with parens should be quoted (mermaid-js/mermaid#7002)
         assert 'Event1["annotation_status (2 hooks)"]' in result
+        # already quoted label should be unchanged
         assert 'Hook1["Validation Hook<br/>[function]"]' in result
 
     def test_idempotent(self):

@@ -53,9 +53,9 @@ from rossum_agent.agent.models import (
     AgentStep,
     ErrorStep,
     FinalAnswerStep,
-    ReasoningStep,
     StepType,
     TextDeltaStep,
+    ThinkingStep,
 )
 from rossum_agent.agent.streaming import (
     StreamState,
@@ -441,9 +441,9 @@ class RossumAgent:
                         f"Rate limit hit at step {step_num} (attempt {rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES}), "
                         f"retrying in {wait_time:.1f}s: {e}"
                     )
-                    yield ReasoningStep(
+                    yield ThinkingStep(
                         step_number=step_num,
-                        reasoning=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
+                        thinking=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
                     )
                     await asyncio.sleep(wait_time)
 
