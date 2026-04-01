@@ -11,6 +11,7 @@ from rossum_agent.agent.models import (
     FileCreatedPart,
     FinalAnswerStep,
     ReasoningStep,
+    StepType,
     TaskSnapshotPart,
     TextDeltaStep,
     ToolResultStep,
@@ -115,6 +116,10 @@ def _convert_reasoning(event: ReasoningStep, state: StreamState) -> list[dict]:
 
 
 def _convert_text_delta(event: TextDeltaStep, state: StreamState) -> list[dict]:
+    # Intermediate text (before tool calls) is sent as reasoning so the client
+    # can distinguish it from the final answer.
+    if event.step_type == StepType.INTERMEDIATE:
+        return _convert_intermediate_as_reasoning(event, state)
     events: list[dict] = _close_reasoning(state)
     if state.active_text_id is None:
         state.active_text_id = state.next_id("text")
@@ -122,6 +127,18 @@ def _convert_text_delta(event: TextDeltaStep, state: StreamState) -> list[dict]:
     events.append({"type": "text-delta", "id": state.active_text_id, "delta": event.text_delta})
     if not event.is_streaming:
         events.extend(_close_text(state))
+    return events
+
+
+def _convert_intermediate_as_reasoning(event: TextDeltaStep, state: StreamState) -> list[dict]:
+    events: list[dict] = []
+    if state.active_reasoning_id is None:
+        state.active_reasoning_id = state.next_id("reasoning")
+        events.append({"type": "reasoning-start", "id": state.active_reasoning_id})
+    if event.text_delta:
+        events.append({"type": "reasoning-delta", "id": state.active_reasoning_id, "delta": event.text_delta})
+    if not event.is_streaming:
+        events.extend(_close_reasoning(state))
     return events
 
 

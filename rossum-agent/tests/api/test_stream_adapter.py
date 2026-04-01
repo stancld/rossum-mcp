@@ -115,7 +115,7 @@ class TestReasoningConversion:
         types = [e["type"] for e in events]
         assert types == ["reasoning-start", "reasoning-delta", "reasoning-end"]
 
-    def test_reasoning_closed_by_text_delta(self):
+    def test_intermediate_text_continues_reasoning_block(self):
         state = StreamState()
         convert_agent_event(
             ReasoningStep(step_number=1, reasoning="Thinking...", is_streaming=True),
@@ -132,9 +132,10 @@ class TestReasoningConversion:
             ),
             state,
         )
-        assert events[0]["type"] == "reasoning-end"
-        assert events[1]["type"] == "text-start"
-        assert events[2]["type"] == "text-delta"
+        # Intermediate text is sent as reasoning — continues the open block
+        assert len(events) == 1
+        assert events[0]["type"] == "reasoning-delta"
+        assert events[0]["delta"] == "Hello"
 
     def test_reasoning_closed_by_tool_start(self):
         state = StreamState()
@@ -187,7 +188,7 @@ class TestReasoningConversion:
 
 
 class TestTextConversion:
-    def test_text_delta_opens_text_block(self):
+    def test_intermediate_text_opens_reasoning_block(self):
         state = StreamState()
         events = convert_agent_event(
             TextDeltaStep(
@@ -200,11 +201,11 @@ class TestTextConversion:
             state,
         )
         assert len(events) == 2
-        assert events[0]["type"] == "text-start"
-        assert events[1]["type"] == "text-delta"
+        assert events[0]["type"] == "reasoning-start"
+        assert events[1]["type"] == "reasoning-delta"
         assert events[1]["delta"] == "Processing..."
 
-    def test_text_delta_continues_block(self):
+    def test_intermediate_text_continues_reasoning_block(self):
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -227,10 +228,10 @@ class TestTextConversion:
             state,
         )
         assert len(events) == 1
-        assert events[0]["type"] == "text-delta"
+        assert events[0]["type"] == "reasoning-delta"
         assert events[0]["delta"] == " world"
 
-    def test_text_delta_finalized_closes_block(self):
+    def test_intermediate_text_finalized_closes_reasoning_block(self):
         state = StreamState()
         events = convert_agent_event(
             TextDeltaStep(
@@ -243,7 +244,23 @@ class TestTextConversion:
             state,
         )
         types = [e["type"] for e in events]
-        assert types == ["text-start", "text-delta", "text-end"]
+        assert types == ["reasoning-start", "reasoning-delta", "reasoning-end"]
+
+    def test_final_answer_text_opens_text_block(self):
+        state = StreamState()
+        events = convert_agent_event(
+            TextDeltaStep(
+                step_number=2,
+                step_type=StepType.FINAL_ANSWER,
+                text_delta="Answer",
+                accumulated_text="Answer",
+                is_streaming=True,
+            ),
+            state,
+        )
+        assert events[0]["type"] == "text-start"
+        assert events[1]["type"] == "text-delta"
+        assert events[1]["delta"] == "Answer"
 
     def test_final_answer_emits_data_event(self):
         """FinalAnswerStep emits data-final-answer (not text-* events)."""
@@ -258,8 +275,8 @@ class TestTextConversion:
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer=""), state)
         assert events == []
 
-    def test_final_answer_closes_active_text_block(self):
-        """When text was already streamed, FinalAnswerStep closes the block then emits data event."""
+    def test_final_answer_closes_active_reasoning_block(self):
+        """When intermediate text was streamed as reasoning, FinalAnswerStep closes it."""
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -271,10 +288,10 @@ class TestTextConversion:
             ),
             state,
         )
-        assert state.active_text_id is not None
+        assert state.active_reasoning_id is not None
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
         types = [e["type"] for e in events]
-        assert types == ["text-end", "data-final-answer"]
+        assert types == ["reasoning-end", "data-final-answer"]
 
     def test_hook_output_emits_data_event(self):
         """Hook output FinalAnswerStep also emits data-final-answer."""
@@ -301,7 +318,7 @@ class TestErrorConversion:
         events = convert_agent_event(ErrorStep(step_number=1, error=""), state)
         assert events[0]["errorText"] == "Unknown error"
 
-    def test_error_closes_open_text_block(self):
+    def test_error_closes_open_reasoning_block(self):
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -314,7 +331,7 @@ class TestErrorConversion:
             state,
         )
         events = convert_agent_event(ErrorStep(step_number=2, error="Failed"), state)
-        assert events[0]["type"] == "text-end"
+        assert events[0]["type"] == "reasoning-end"
         assert events[1]["type"] == "error"
 
 
@@ -370,7 +387,7 @@ class TestToolConversion:
         )
         assert events == []
 
-    def test_tool_start_closes_active_text_block(self):
+    def test_tool_start_closes_active_reasoning_block(self):
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -382,7 +399,7 @@ class TestToolConversion:
             ),
             state,
         )
-        assert state.active_text_id is not None
+        assert state.active_reasoning_id is not None
         events = convert_agent_event(
             ToolStartStep(
                 step_number=2,
@@ -391,7 +408,7 @@ class TestToolConversion:
             ),
             state,
         )
-        assert events[0]["type"] == "text-end"
+        assert events[0]["type"] == "reasoning-end"
         assert events[1]["type"] == "tool-input-start"
 
     def test_tool_result_emits_output_event(self):

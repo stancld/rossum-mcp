@@ -202,8 +202,9 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | Internal event | Wire event(s) |
 |---------------|---------------|
 | `ReasoningStep` | `reasoning-start` + `reasoning-delta` (+ `reasoning-end` when finalized) |
-| `TextDeltaStep` | `text-start` + `text-delta` (+ `text-end` when finalized) |
-| `FinalAnswerStep` | `data-final-answer` (+ `text-end` if text block was open) |
+| `TextDeltaStep` (intermediate) | `reasoning-start` + `reasoning-delta` (+ `reasoning-end` when finalized) |
+| `TextDeltaStep` (final answer) | `text-start` + `text-delta` (+ `text-end` when finalized) |
+| `FinalAnswerStep` | `data-final-answer` (+ `reasoning-end` if reasoning block was open) |
 | `ErrorStep` | `error` |
 | `ToolStartStep` | `tool-input-start` + `tool-input-available` (per new tool call, deduplicated) |
 | `ToolResultStep` | `tool-output-available` (per result) |

@@ -21,10 +21,13 @@ from rossum_agent.agent.models import (
     ErrorStep,
     FinalAnswerStep,
     QueuedAgentEvent,
+    ReasoningStep,
     TaskSnapshotPart,
     TaskSnapshotTask,
     TaskStatus,
+    TextDeltaStep,
     ToolResultStep,
+    ToolStartStep,
 )
 from rossum_agent.api.models.schemas import (
     AgentQuestionItemSchema,
@@ -150,6 +153,34 @@ class _ChatRunState:
 _request_context: contextvars.ContextVar[_RequestContext] = contextvars.ContextVar("request_context")
 
 type StreamEvent = AgentStep | StreamDoneEvent | QueuedAgentEvent
+
+
+def _log_step(step: AgentStep) -> None:
+    """Log each agent step using the wire event type names.
+
+    Only logs finalized events to avoid flooding logs with per-token streaming chunks.
+    """
+    match step:
+        case ReasoningStep() if not step.is_streaming:
+            logger.info(f"StepEvent: type=reasoning, step={step.step_number}")
+        case TextDeltaStep() if not step.is_streaming:
+            logger.info(f"StepEvent: type=text-delta, step={step.step_number}, stepType={step.step_type.value}")
+        case ToolStartStep():
+            for tc in step.tool_calls:
+                logger.info(
+                    f"StepEvent: type=tool-input-start, step={step.step_number}, "
+                    f"tool_call_id={tc.id}, tool_name={tc.name}"
+                )
+        case ToolResultStep():
+            for r in step.tool_results:
+                logger.info(
+                    f"StepEvent: type=tool-output-available, step={step.step_number}, "
+                    f"tool_call_id={r.tool_call_id}, tool_name={r.name}"
+                )
+        case FinalAnswerStep():
+            logger.info(f"StepEvent: type=data-final-answer, step={step.step_number}")
+        case ErrorStep():
+            logger.info(f"StepEvent: type=error, step={step.step_number}")
 
 
 class AgentService:
@@ -448,6 +479,7 @@ class AgentService:
                             for sub_event in self._drain_queue(req_ctx.event_queue):
                                 yield sub_event
 
+                            _log_step(step)
                             yield step
 
                             if isinstance(step, (ToolResultStep, FinalAnswerStep, ErrorStep)):
