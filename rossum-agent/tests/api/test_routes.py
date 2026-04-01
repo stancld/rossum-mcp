@@ -338,7 +338,7 @@ class TestSendMessageEndpoint:
         content = response.text
         assert '"type":"start"' in content
         assert '"type":"finish"' in content
-        assert '"type":"text-delta"' in content
+        assert '"type":"data-final-answer"' in content
         assert "data: [DONE]" in content
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")

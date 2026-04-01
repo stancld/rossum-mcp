@@ -183,6 +183,7 @@ Adapter in `rossum_agent/api/routes/stream_adapter.py` converts internal `AgentS
 | `data-agent-question` | Structured question from agent (payload in `data` field) |
 | `data-task-snapshot` | Full task list snapshot (payload in `data` field) |
 | `data-file-created` | File created during agent run (payload in `data` field) |
+| `data-final-answer` | Final answer from agent (payload in `data` field, ignored by elis-frontend) |
 
 ### Stream Lifecycle
 
@@ -202,7 +203,7 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 |---------------|---------------|
 | `ReasoningStep` | `reasoning-start` + `reasoning-delta` (+ `reasoning-end` when finalized) |
 | `TextDeltaStep` | `text-start` + `text-delta` (+ `text-end` when finalized) |
-| `FinalAnswerStep` | `text-start` + `text-delta` + `text-end` |
+| `FinalAnswerStep` | `data-final-answer` (+ `text-end` if text block was open) |
 | `ErrorStep` | `error` |
 | `ToolStartStep` | `tool-input-start` + `tool-input-available` (per new tool call, deduplicated) |
 | `ToolResultStep` | `tool-output-available` (per result) |

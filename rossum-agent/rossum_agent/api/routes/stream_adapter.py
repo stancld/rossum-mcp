@@ -132,16 +132,9 @@ def _convert_final_answer(event: FinalAnswerStep, state: StreamState) -> list[di
     # (e.g. unquoted labels with parens/braces — see mermaid-js/mermaid#7002).
     answer = sanitize_mermaid_in_markdown(event.final_answer)
     events: list[dict] = [*_close_reasoning(state)]
-    if state.active_text_id is not None and not event.is_hook_output:
-        # Text was already streamed via TextDeltaStep; just close the open block.
-        events.extend(_close_text(state))
-        return events
-    # No prior streaming (e.g. hook output) — emit the full text as a new block.
     events.extend(_close_text(state))
-    text_id = state.next_id("text")
-    events.append({"type": "text-start", "id": text_id})
-    events.append({"type": "text-delta", "id": text_id, "delta": answer})
-    events.append({"type": "text-end", "id": text_id})
+    # Emit as data event — elis-frontend ignores it; TUI renders it.
+    events.append({"type": "data-final-answer", "data": {"text": answer}})
     return events
 
 
@@ -174,7 +167,8 @@ def convert_agent_event(event: StreamEvent, state: StreamState) -> list[dict]:
     """Convert an internal StreamEvent to a list of AI SDK wire event dicts.
 
     Emits: reasoning-start/delta/end, text-start/delta/end, tool-input-start/available,
-    tool-output-available, error, data-agent-question, data-task-snapshot, data-file-created.
+    tool-output-available, error, data-agent-question, data-task-snapshot, data-file-created,
+    data-final-answer.
     Dropped: SubAgentProgressPart.
     Pre-filtered by caller: StreamDoneEvent.
     """

@@ -642,6 +642,14 @@ export interface components {
       description: string;
     };
     /**
+     * FinalAnswerSchema
+     * @description Final answer payload emitted as a data-final-answer wire event.
+     */
+    FinalAnswerSchema: {
+      /** Text */
+      text: string;
+    };
+    /**
      * FileCreatedSchema
      * @description A file created during an agent run.
      */

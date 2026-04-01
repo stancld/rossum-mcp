@@ -205,6 +205,12 @@ class TaskSnapshotTaskSchema(BaseModel):
     description: str = ""
 
 
+class FinalAnswerSchema(BaseModel):
+    """Final answer payload emitted as a data-final-answer wire event."""
+
+    text: str
+
+
 class FileCreatedSchema(BaseModel):
     """A file created during an agent run."""
 

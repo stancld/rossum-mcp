@@ -171,7 +171,7 @@ class TestReasoningConversion:
         )
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
         types = [e["type"] for e in events]
-        assert types == ["reasoning-end", "text-start", "text-delta", "text-end"]
+        assert types == ["reasoning-end", "data-final-answer"]
 
     def test_no_delta_when_no_new_content(self):
         state = StreamState()
@@ -245,21 +245,21 @@ class TestTextConversion:
         types = [e["type"] for e in events]
         assert types == ["text-start", "text-delta", "text-end"]
 
-    def test_final_answer_opens_text_block(self):
+    def test_final_answer_emits_data_event(self):
+        """FinalAnswerStep emits data-final-answer (not text-* events)."""
         state = StreamState()
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
-        assert events[0]["type"] == "text-start"
-        assert events[1]["type"] == "text-delta"
-        assert events[1]["delta"] == "Done!"
-        assert events[2]["type"] == "text-end"
+        assert len(events) == 1
+        assert events[0]["type"] == "data-final-answer"
+        assert events[0]["data"]["text"] == "Done!"
 
     def test_final_answer_empty_content_skipped(self):
         state = StreamState()
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer=""), state)
         assert events == []
 
-    def test_final_answer_closes_active_text_block_without_re_emitting(self):
-        """When text was already streamed, FinalAnswerStep just closes the open block."""
+    def test_final_answer_closes_active_text_block(self):
+        """When text was already streamed, FinalAnswerStep closes the block then emits data event."""
         state = StreamState()
         convert_agent_event(
             TextDeltaStep(
@@ -274,18 +274,18 @@ class TestTextConversion:
         assert state.active_text_id is not None
         events = convert_agent_event(FinalAnswerStep(step_number=2, final_answer="Done!"), state)
         types = [e["type"] for e in events]
-        assert types == ["text-end"]
+        assert types == ["text-end", "data-final-answer"]
 
-    def test_hook_output_emits_new_text_block(self):
-        """Hook output FinalAnswerStep always emits a new text block (genuinely new content)."""
+    def test_hook_output_emits_data_event(self):
+        """Hook output FinalAnswerStep also emits data-final-answer."""
         state = StreamState()
         events = convert_agent_event(
             FinalAnswerStep(step_number=2, final_answer="Commit summary", is_hook_output=True),
             state,
         )
-        types = [e["type"] for e in events]
-        assert types == ["text-start", "text-delta", "text-end"]
-        assert events[1]["delta"] == "Commit summary"
+        assert len(events) == 1
+        assert events[0]["type"] == "data-final-answer"
+        assert events[0]["data"]["text"] == "Commit summary"
 
 
 class TestErrorConversion:

@@ -131,6 +131,13 @@ interface WireFileCreated {
   };
 }
 
+interface WireFinalAnswer {
+  type: "data-final-answer";
+  data: {
+    text: string;
+  };
+}
+
 type WireEvent =
   | WireStart
   | WireFinish
@@ -144,6 +151,7 @@ type WireEvent =
   | WireAgentQuestion
   | WireTaskSnapshot
   | WireFileCreated
+  | WireFinalAnswer
   | WireToolInputStart
   | WireToolInputAvailable
   | WireToolOutputAvailable;
@@ -305,17 +313,32 @@ function handleFinish(prev: ChatState): ChatState {
           },
         ]
       : [];
-  // Mark the last text step as final_answer
-  const steps = [...prev.completedSteps, ...extra];
-  for (let i = steps.length - 1; i >= 0; i--) {
-    if (steps[i]!.type === "text") {
-      steps[i] = { ...steps[i]!, type: "final_answer" };
-      break;
-    }
-  }
   return {
     ...prev,
     connectionStatus: "idle",
+    completedSteps: [...prev.completedSteps, ...extra],
+    currentStreaming: null,
+  };
+}
+
+function handleFinalAnswer(prev: ChatState, text: string): ChatState {
+  // Commit any in-flight streaming first
+  const committed = commitStreaming(prev);
+  const steps = [...committed.steps];
+  // If the last step is text (streamed via TextDeltaStep), promote it to final_answer
+  const lastIdx = steps.length - 1;
+  if (lastIdx >= 0 && steps[lastIdx]!.type === "text") {
+    steps[lastIdx] = { ...steps[lastIdx]!, type: "final_answer" };
+  } else {
+    // No prior text (e.g. hook output) — create a new final_answer step
+    steps.push({
+      stepNumber: nextStepNumber(steps),
+      type: "final_answer",
+      content: text,
+    });
+  }
+  return {
+    ...prev,
     completedSteps: steps,
     currentStreaming: null,
   };
@@ -505,6 +528,10 @@ function reduceWireEvent(prev: ChatState, wire: WireEvent): ChatState {
       ...prev,
       files: [...prev.files, data],
     };
+  }
+  if (t === "data-final-answer") {
+    const { data } = wire as WireFinalAnswer;
+    return handleFinalAnswer(prev, data.text);
   }
   return prev;
 }
