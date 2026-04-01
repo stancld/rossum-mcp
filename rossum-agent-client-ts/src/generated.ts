@@ -407,39 +407,6 @@ export interface components {
       deleted: boolean;
     };
     /**
-     * DocumentContent
-     * @description Document content in a message.
-     */
-    DocumentContent: {
-      /**
-       * Type
-       * @default document
-       * @constant
-       */
-      type: "document";
-      /**
-       * Media Type
-       * @enum {string}
-       */
-      media_type:
-        | "application/pdf"
-        | "text/csv"
-        | "text/plain"
-        | "text/markdown"
-        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        | "application/vnd.ms-excel";
-      /**
-       * Data
-       * @description Base64-encoded document data
-       */
-      data: string;
-      /**
-       * Filename
-       * @description Original filename of the document
-       */
-      filename: string;
-    };
-    /**
      * EntityChangeInfo
      * @description A single entity change within a config commit.
      */
@@ -576,43 +543,6 @@ export interface components {
       feedback?: boolean | null;
     };
     /**
-     * MessageRequest
-     * @description Request body for sending a message.
-     *
-     *     Supports text-only messages or multimodal messages with images and documents.
-     *     For image messages, use the `images` field with base64-encoded image data.
-     *     For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
-     */
-    MessageRequest: {
-      /**
-       * Content
-       * @description Text content of the message
-       */
-      content: string;
-      /**
-       * Images
-       * @description Optional list of images (max 5) to include with the message
-       */
-      images?: components["schemas"]["ImageContent"][] | null;
-      /**
-       * Documents
-       * @description Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.
-       */
-      documents?: components["schemas"]["DocumentContent"][] | null;
-      /**
-       * Rossum Url
-       * @description Optional Rossum app URL for context
-       */
-      rossum_url?: string | null;
-      /**
-       * Mcp Mode
-       * @description MCP mode to use for this message and all subsequent messages. If not specified, uses the chat's current mode.
-       */
-      mcp_mode?: ("read-only" | "read-write") | null;
-      /** @description Agent persona to use for this message and all subsequent messages. If not specified, uses the chat's current persona. */
-      persona?: components["schemas"]["Persona"] | null;
-    };
-    /**
      * Persona
      * @enum {string}
      */
@@ -720,6 +650,83 @@ export interface components {
       filename: string;
       /** Url */
       url: string;
+    };
+    /**
+     * DocumentContent
+     * @description Document content in a message.
+     */
+    DocumentContent: {
+      /**
+       * Type
+       * @default document
+       * @constant
+       */
+      type: "document";
+      /**
+       * Media Type
+       * @enum {string}
+       */
+      media_type:
+        | "application/pdf"
+        | "text/csv"
+        | "text/plain"
+        | "text/markdown"
+        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        | "application/vnd.ms-excel";
+      /**
+       * Data
+       * @description Base64-encoded document data
+       */
+      data: string;
+      /**
+       * Filename
+       * @description Original filename of the document
+       */
+      filename: string;
+    };
+    /**
+     * MessageRequest
+     * @description Request body for sending a message.
+     *
+     *     Supports text-only messages or multimodal messages with images and documents.
+     *     For image messages, use the `images` field with base64-encoded image data.
+     *     For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
+     */
+    MessageRequest: {
+      /**
+       * Content
+       * @description Text content of the message
+       */
+      content: string;
+      /**
+       * Images
+       * @description Optional list of images (max 5) to include with the message
+       * @default null
+       */
+      images: components["schemas"]["ImageContent"][] | null;
+      /**
+       * Documents
+       * @description Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.
+       * @default null
+       */
+      documents: components["schemas"]["DocumentContent"][] | null;
+      /**
+       * Rossum Url
+       * @description Optional Rossum app URL for context
+       * @default null
+       */
+      rossum_url: string | null;
+      /**
+       * Mcp Mode
+       * @description MCP mode to use for this message and all subsequent messages. If not specified, uses the chat's current mode.
+       * @default null
+       */
+      mcp_mode: ("read-only" | "read-write") | null;
+      /**
+       * @description Agent persona to use for this message and all subsequent messages. If not specified, uses the chat's current persona.
+       * @default null
+       */
+      persona: components["schemas"]["Persona"] | null;
     };
   };
   responses: never;

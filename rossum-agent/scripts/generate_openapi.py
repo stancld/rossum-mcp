@@ -16,18 +16,22 @@ from pydantic import TypeAdapter
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import (
     AgentQuestionItemSchema,
+    DocumentContent,
     FileCreatedSchema,
+    MessageRequest,
     QuestionOptionSchema,
     TaskSnapshotTaskSchema,
 )
 
-# Models used in SSE events that must appear in the OpenAPI spec even though
-# no endpoint references them directly.
+# Models that must appear in the OpenAPI spec even though no endpoint
+# references them directly (SSE event payloads, Depends()-injected bodies, etc.).
 _SSE_EVENT_MODELS: list[type] = [
     QuestionOptionSchema,
     AgentQuestionItemSchema,
     TaskSnapshotTaskSchema,
     FileCreatedSchema,
+    MessageRequest,
+    DocumentContent,
 ]
 
 
@@ -47,6 +51,26 @@ def main() -> None:
         for def_name, def_schema in schema.pop("$defs", {}).items():
             schemas[def_name] = def_schema
         schemas[model.__name__] = schema
+
+    # Inject requestBody for endpoints that use Depends() for body parsing,
+    # which FastAPI cannot detect automatically.
+    _OPERATION_REQUEST_BODIES: dict[str, str] = {
+        "send_message_api_v1_chats__chat_id__messages_post": "MessageRequest",
+    }
+    for path_item in spec.get("paths", {}).values():
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            op_id = operation.get("operationId", "")
+            if op_id in _OPERATION_REQUEST_BODIES:
+                operation["requestBody"] = {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": f"#/components/schemas/{_OPERATION_REQUEST_BODIES[op_id]}"}
+                        }
+                    },
+                }
 
     output_path.write_text(json.dumps(spec, indent=2) + "\n")
     print(f"OpenAPI spec written to {output_path}")
