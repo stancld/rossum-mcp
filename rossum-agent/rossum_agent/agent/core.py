@@ -57,11 +57,7 @@ from rossum_agent.agent.models import (
     TextDeltaStep,
     ThinkingStep,
 )
-from rossum_agent.agent.streaming import (
-    StreamState,
-    extract_thinking_blocks,
-    process_stream_events,
-)
+from rossum_agent.agent.streaming import StreamState, extract_thinking_blocks, process_stream_events
 from rossum_agent.agent.tool_execution import execute_tools_with_progress
 from rossum_agent.api.models.schemas import TokenUsageBreakdown
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_model_id

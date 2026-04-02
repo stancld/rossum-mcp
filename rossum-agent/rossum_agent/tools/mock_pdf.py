@@ -400,19 +400,13 @@ def _make_amounts_consistent(
         _distribute_subtotals(header_values, line_items, line_item_fields, total, item_total_key, _find_header_id)
 
 
-def _get_explicit_row_fields(
-    explicit_fields_by_row: list[set[str]],
-    row_index: int,
-) -> set[str]:
+def _get_explicit_row_fields(explicit_fields_by_row: list[set[str]], row_index: int) -> set[str]:
     if row_index < len(explicit_fields_by_row):
         return explicit_fields_by_row[row_index]
     return set()
 
 
-def _collect_row_totals(
-    line_items: list[dict[str, str]],
-    total_col: str,
-) -> list[tuple[int, float]]:
+def _collect_row_totals(line_items: list[dict[str, str]], total_col: str) -> list[tuple[int, float]]:
     total_by_row: list[tuple[int, float]] = []
     for i, item in enumerate(line_items):
         with contextlib.suppress(ValueError, KeyError):
@@ -421,9 +415,7 @@ def _collect_row_totals(
 
 
 def _set_fallback_base_totals(
-    line_items: list[dict[str, str]],
-    auto_base_rows: list[tuple[int, float]],
-    total_base_col: str,
+    line_items: list[dict[str, str]], auto_base_rows: list[tuple[int, float]], total_base_col: str
 ) -> None:
     for i, total in auto_base_rows:
         line_items[i][total_base_col] = str(round(total / (1 + _DEFAULT_TAX_RATE), 2))
@@ -531,11 +523,7 @@ _KNOWN_SECTION_FIELDS = frozenset(
 
 
 def _render_field_list(
-    pdf: FPDF,
-    field_ids: list[str],
-    header_values: dict[str, str],
-    label_map: dict[str, str],
-    x: float | None = None,
+    pdf: FPDF, field_ids: list[str], header_values: dict[str, str], label_map: dict[str, str], x: float | None = None
 ) -> None:
     """Render a list of field values. Skips fields not in header_values."""
     for fid in field_ids:
@@ -546,11 +534,7 @@ def _render_field_list(
             pdf.cell(0, 5, f"{lbl}: {header_values[fid]}", new_x="LMARGIN", new_y="NEXT")
 
 
-def _render_header_section(
-    pdf: FPDF,
-    header_values: dict[str, str],
-    label_map: dict[str, str],
-) -> None:
+def _render_header_section(pdf: FPDF, header_values: dict[str, str], label_map: dict[str, str]) -> None:
     """Render vendor info (left) and document details (right) in two columns."""
     left_col_x = 10
     right_col_x = 120
@@ -580,11 +564,7 @@ def _render_header_section(
     pdf.set_y(max(left_end_y, right_y) + 4)
 
 
-def _render_buyer_section(
-    pdf: FPDF,
-    header_values: dict[str, str],
-    label_map: dict[str, str],
-) -> None:
+def _render_buyer_section(pdf: FPDF, header_values: dict[str, str], label_map: dict[str, str]) -> None:
     """Render buyer/recipient info block."""
     if not any(bf in header_values for bf in _BUYER_FIELDS):
         return
@@ -595,11 +575,7 @@ def _render_buyer_section(
     pdf.ln(4)
 
 
-def _render_line_items_table(
-    pdf: FPDF,
-    line_items: list[dict[str, str]],
-    line_item_fields: list[dict],
-) -> None:
+def _render_line_items_table(pdf: FPDF, line_items: list[dict[str, str]], line_item_fields: list[dict]) -> None:
     """Render the line items table with header and data rows."""
     if not line_items or not line_item_fields:
         return
@@ -630,11 +606,7 @@ def _render_line_items_table(
     pdf.ln(4)
 
 
-def _render_totals_section(
-    pdf: FPDF,
-    header_values: dict[str, str],
-    label_map: dict[str, str],
-) -> None:
+def _render_totals_section(pdf: FPDF, header_values: dict[str, str], label_map: dict[str, str]) -> None:
     """Render totals block with bold emphasis on total/due amounts."""
     if not any(tf in header_values for tf in _TOTAL_FIELDS):
         return
@@ -654,11 +626,7 @@ def _render_totals_section(
     pdf.ln(4)
 
 
-def _render_payment_section(
-    pdf: FPDF,
-    header_values: dict[str, str],
-    label_map: dict[str, str],
-) -> None:
+def _render_payment_section(pdf: FPDF, header_values: dict[str, str], label_map: dict[str, str]) -> None:
     """Render payment details block."""
     if not any(pf in header_values for pf in _PAYMENT_FIELDS):
         return

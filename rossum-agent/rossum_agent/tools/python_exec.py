@@ -150,11 +150,7 @@ def _validate_sandbox_path(resolved: Path, caller: str) -> bool:
             raise ValueError(f"{caller} path must stay inside workspace or /var") from e
 
 
-def _sandboxed_open(
-    file: str,
-    mode: str = "r",
-    encoding: str = "utf-8",
-) -> object:
+def _sandboxed_open(file: str, mode: str = "r", encoding: str = "utf-8") -> object:
     """Open files within the workspace, plus read-only access under /var."""
     if mode not in _ALLOWED_OPEN_MODES:
         raise ValueError(f"open mode not allowed: {mode}")
