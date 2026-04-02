@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastmcp import FastMCP
-from rossum_mcp.tools.catalog import CATEGORY_META, get_catalog_summary
+from rossum_mcp.tools.catalog import CATEGORY_META
 from rossum_mcp.tools.discovery import register_discovery_tools
 
 
@@ -33,20 +33,6 @@ class TestCategoryMeta:
     def test_each_category_has_keywords(self) -> None:
         for name, meta in CATEGORY_META.items():
             assert len(meta.keywords) > 0, f"Category {name} has no keywords"
-
-
-class TestCatalogSummary:
-    """Tests for get_catalog_summary function."""
-
-    def test_summary_contains_all_categories(self) -> None:
-        summary = get_catalog_summary()
-        for category_name in CATEGORY_META:
-            assert category_name in summary
-
-    def test_summary_contains_descriptions(self) -> None:
-        summary = get_catalog_summary()
-        for meta in CATEGORY_META.values():
-            assert meta.description in summary
 
 
 class TestDiscoveryTools:

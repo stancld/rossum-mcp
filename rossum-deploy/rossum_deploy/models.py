@@ -109,7 +109,6 @@ class DiffStatus(StrEnum):
     REMOTE_MODIFIED = "remote_modified"
     CONFLICT = "conflict"
     LOCAL_ONLY = "local_only"
-    REMOTE_ONLY = "remote_only"
 
 
 class FieldDiff(BaseModel):

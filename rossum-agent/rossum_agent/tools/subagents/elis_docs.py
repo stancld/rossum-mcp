@@ -66,16 +66,6 @@ class SpecCache:
         self._spec: dict[str, Any] | None = None
         self._mtime: float = 0
 
-    def invalidate(self) -> None:
-        """Clear in-memory and disk cache."""
-        self._spec = None
-        self._mtime = 0
-        try:
-            self._cache_path.unlink(missing_ok=True)
-            logger.info(f"Deleted cached OpenAPI spec at {self._cache_path}")
-        except OSError:
-            pass
-
     def load(self) -> dict[str, Any]:
         """Load spec with in-memory caching keyed on file mtime."""
         path = self._ensure_downloaded()

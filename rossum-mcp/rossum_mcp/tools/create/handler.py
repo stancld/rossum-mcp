@@ -19,13 +19,7 @@ from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.create.rules import _create_rule
 from rossum_mcp.tools.create.users import _create_user
 from rossum_mcp.tools.create.workspaces import _create_workspace
-from rossum_mcp.tools.models import (
-    EmailRecipient,
-    EmailTemplateType,
-    EngineType,
-    HookSideload,
-    QueueTemplateName,
-)
+from rossum_mcp.tools.models import EmailRecipient, EmailTemplateType, EngineType, HookSideload, QueueTemplateName
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
