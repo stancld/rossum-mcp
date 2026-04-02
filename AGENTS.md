@@ -236,6 +236,7 @@ The agent signals tool usage through two paired `StepEvent` types sharing the sa
 | `ROSSUM_AGENT_API_URL` | Optional - Agent API URL (rossum-agent-client) |
 | `ROSSUM_AGENT_PERSONA` | Optional - Agent persona: default or cautious |
 | `ROSSUM_FRONTEND_REPO` | Optional - Absolute path to the Rossum WebUI repo for UI cross-referencing |
+| `ELASTICSEARCH_ALLOWED_INDEX_PREFIXES` | Optional - Comma-separated ES index prefixes for elasticsearch tool |
 
 ## Planning Files
 

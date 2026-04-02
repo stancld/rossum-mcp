@@ -64,6 +64,8 @@ Available Skills
      - Analyze automation stats, run projections, configure per-field thresholds
    * - ``customer-email``
      - Draft professional customer-facing emails summarizing investigation findings, changes, or resolutions
+   * - ``elasticsearch``
+     - Query Elasticsearch indices for datapoint statistics and annotation analytics
 
 Hooks Skill
 """"""""""""

@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Added
+- `search_elasticsearch` tool and `elasticsearch` skill for querying Elasticsearch indices — supports datapoint aggregations, annotation analytics, and full DSL queries with automatic organization scoping [#344](https://github.com/stancld/rossum-agents/pull/344)
+
 ### Changed
 - Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.2`
 
