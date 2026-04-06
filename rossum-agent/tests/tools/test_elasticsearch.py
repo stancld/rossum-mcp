@@ -15,6 +15,7 @@ from rossum_agent.tools.internal.elasticsearch import (
     _validate_index,
     search_elasticsearch,
 )
+from rossum_agent.tools.python_exec import execute_python
 
 ORG_ID = 327033
 DEPLOYMENT_LOCATION = "prod-eu2"
@@ -510,3 +511,53 @@ class TestFormatResponse:
         assert result["total"] == 0
         assert "hits" not in result
         assert "aggregations" not in result
+
+
+class TestExecPythonCannotBypassElasticsearch:
+    """Verify that exec_python blocks HTTP/network libraries so the agent cannot
+    bypass the elasticsearch tool by making raw HTTP calls to ES directly."""
+
+    @pytest.mark.parametrize("module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp"])
+    def test_rejects_http_and_network_imports(self, module: str) -> None:
+        result = json.loads(execute_python(code=f"import {module}\nresult = 1"))
+
+        assert result["status"] == "error"
+        assert "Import" in result["error"]
+
+    @pytest.mark.parametrize("module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp"])
+    def test_rejects_http_and_network_imports_inside_function(self, module: str) -> None:
+        result = json.loads(execute_python(code=f"def f():\n    import {module}\n    return 1\nf()"))
+
+        assert result["status"] == "error"
+        assert "Import" in result["error"]
+
+    @pytest.mark.parametrize(
+        ("module", "name"),
+        [
+            ("httpx", "Client"),
+            ("requests", "get"),
+            ("urllib.request", "urlopen"),
+            ("http.client", "HTTPConnection"),
+            ("subprocess", "run"),
+            ("socket", "socket"),
+        ],
+    )
+    def test_rejects_from_import_of_http_and_network_modules(self, module: str, name: str) -> None:
+        result = json.loads(execute_python(code=f"from {module} import {name}\nresult = 1"))
+
+        assert result["status"] == "error"
+        assert "ImportFrom" in result["error"]
+
+    @pytest.mark.parametrize(
+        ("module", "name"),
+        [
+            ("httpx", "Client"),
+            ("requests", "get"),
+            ("subprocess", "run"),
+        ],
+    )
+    def test_rejects_from_import_of_http_modules_inside_function(self, module: str, name: str) -> None:
+        result = json.loads(execute_python(code=f"def f():\n    from {module} import {name}\n    return 1\nf()"))
+
+        assert result["status"] == "error"
+        assert "ImportFrom" in result["error"]
