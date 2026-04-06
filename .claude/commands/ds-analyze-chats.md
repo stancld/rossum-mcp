@@ -166,6 +166,6 @@ When identifying improvement opportunities, validate gaps against these specific
 | Agent tools | `rossum-agent/rossum_agent/tools/` |
 | Skills | `rossum-agent/rossum_agent/skills/` — check `__init__.py` for registry |
 | Dynamic tool loading | `rossum-agent/rossum_agent/tools/dynamic_tools.py` |
-| Prompts | `rossum-agent/rossum_agent/prompts/base_prompt.py` |
+| System prompt | `rossum-agent/rossum_agent/system_prompt.py` |
 
 Use targeted Grep/Glob calls, not a general-purpose Agent subagent.
