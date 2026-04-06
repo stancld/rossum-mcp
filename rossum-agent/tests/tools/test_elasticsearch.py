@@ -6,7 +6,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rossum_agent.tools.elasticsearch import (
+from rossum_agent.tools.internal.elasticsearch import (
     _deployment_location_to_env_prefix,
     _format_response,
     _inject_org_filter,
@@ -134,8 +134,8 @@ class TestSearchElasticsearchMultiIndex:
 
 
 class TestSearchElasticsearchDeepValidation:
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_rejects_global_aggregation(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         dsl = json.dumps(
             {
@@ -148,8 +148,8 @@ class TestSearchElasticsearchDeepValidation:
         assert "global" in result["message"]
         mock_get_client.return_value.search.assert_not_called()
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_allows_script_in_query(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_get_client.return_value.search.return_value = MagicMock(
             body={"hits": {"total": {"value": 0}, "hits": []}}
@@ -162,8 +162,8 @@ class TestSearchElasticsearchDeepValidation:
         filters = call_kwargs["query"]["bool"]["filter"]
         assert {"term": {"organization_id": ORG_ID}} in filters
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_rejects_scripted_metric_in_aggs(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         dsl = json.dumps(
             {
@@ -189,8 +189,8 @@ class TestSearchElasticsearchDeepValidation:
 class TestSearchElasticsearchBodyKeyValidation:
     """Verify that dangerous top-level DSL keys are rejected to prevent org filter bypass."""
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_rejects_runtime_mappings(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         dsl = json.dumps(
             {
@@ -203,8 +203,8 @@ class TestSearchElasticsearchBodyKeyValidation:
         assert "runtime_mappings" in result["message"]
         mock_get_client.return_value.search.assert_not_called()
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_rejects_script_fields(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         dsl = json.dumps(
             {
@@ -216,8 +216,8 @@ class TestSearchElasticsearchBodyKeyValidation:
         assert result["status"] == "error"
         assert "script_fields" in result["message"]
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_allows_permitted_keys(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         mock_es.search.return_value = MagicMock(body={"hits": {"total": {"value": 0}, "hits": []}})
@@ -268,15 +268,15 @@ class TestInjectOrgFilter:
 
 
 class TestSearchElasticsearch:
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
     def test_returns_error_when_es_not_configured(self, mock_get_org_info: MagicMock) -> None:
         with patch.dict("os.environ", {"ELASTICSEARCH_ALLOWED_INDEX_PREFIXES": "elis_ann_alias_"}, clear=True):
             result = json.loads(search_elasticsearch(index="elis_ann_alias_test", query="*"))
         assert result["status"] == "error"
         assert "not configured" in result["message"]
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_query_string_search(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         mock_es.search.return_value = MagicMock(
@@ -298,8 +298,8 @@ class TestSearchElasticsearch:
         assert call_kwargs["query"]["bool"]["filter"] == [{"term": {"organization_id": ORG_ID}}]
         assert call_kwargs["size"] == 5
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_dsl_query_with_aggregations(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         mock_es.search.return_value = MagicMock(
@@ -344,8 +344,8 @@ class TestSearchElasticsearch:
         assert {"term": {"organization_id": ORG_ID}} in filters
         assert {"terms": {"queue_id": [123]}} in filters
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_dsl_query_as_dict(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         """When the LLM passes query as a dict (not a JSON string), it should work the same."""
         mock_es = MagicMock()
@@ -389,8 +389,8 @@ class TestSearchElasticsearch:
         filters = call_kwargs["query"]["bool"]["filter"]
         assert {"term": {"organization_id": ORG_ID}} in filters
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_dsl_query_injects_default_size(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         mock_es.search.return_value = MagicMock(body={"hits": {"total": {"value": 0}, "hits": []}})
@@ -402,8 +402,8 @@ class TestSearchElasticsearch:
         call_kwargs = mock_es.search.call_args.kwargs
         assert call_kwargs["size"] == 5
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_handles_es_exception(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         mock_es.search.side_effect = Exception("Connection refused")
@@ -414,8 +414,8 @@ class TestSearchElasticsearch:
         assert result["status"] == "error"
         assert "Connection refused" in result["message"]
 
-    @patch("rossum_agent.tools.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
-    @patch("rossum_agent.tools.elasticsearch._get_es_client")
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
     def test_truncates_large_output(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
         mock_es = MagicMock()
         large_hits = [{"_id": str(i), "_source": {"data": "x" * 500}, "_score": 1.0} for i in range(200)]
@@ -444,8 +444,8 @@ class TestDeploymentLocationToEnvPrefix:
 
 
 class TestGetOrgInfo:
-    @patch("rossum_agent.tools.elasticsearch.SyncRossumAPIClient")
-    @patch("rossum_agent.tools.elasticsearch.get_context")
+    @patch("rossum_agent.tools.internal.elasticsearch.SyncRossumAPIClient")
+    @patch("rossum_agent.tools.internal.elasticsearch.get_context")
     def test_resolves_org_info(self, mock_get_context: MagicMock, mock_client_cls: MagicMock) -> None:
         mock_ctx = MagicMock()
         mock_ctx.get_rossum_credentials.return_value = ("https://example.com", "tok")
@@ -460,19 +460,19 @@ class TestGetOrgInfo:
         mock_client.list_organization_groups.return_value = iter([mock_og])
         mock_client_cls.return_value = mock_client
 
-        from rossum_agent.tools.elasticsearch import _get_org_info
+        from rossum_agent.tools.internal.elasticsearch import _get_org_info
 
         org_id, deployment_location = _get_org_info()
         assert org_id == ORG_ID
         assert deployment_location == DEPLOYMENT_LOCATION
 
-    @patch("rossum_agent.tools.elasticsearch.get_context")
+    @patch("rossum_agent.tools.internal.elasticsearch.get_context")
     def test_raises_when_no_credentials(self, mock_get_context: MagicMock) -> None:
         mock_ctx = MagicMock()
         mock_ctx.get_rossum_credentials.return_value = None
         mock_get_context.return_value = mock_ctx
 
-        from rossum_agent.tools.elasticsearch import _get_org_info
+        from rossum_agent.tools.internal.elasticsearch import _get_org_info
 
         with pytest.raises(RuntimeError, match="credentials are not available"):
             _get_org_info()

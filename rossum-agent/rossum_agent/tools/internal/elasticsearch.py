@@ -1,4 +1,8 @@
-"""Elasticsearch search tool for datapoint statistics and annotation analytics."""
+"""Elasticsearch search tool for datapoint statistics and annotation analytics.
+
+Depends on Rossum's closed-source infrastructure (internal Elasticsearch clusters).
+Not available in the open-source distribution.
+"""
 
 from __future__ import annotations
 

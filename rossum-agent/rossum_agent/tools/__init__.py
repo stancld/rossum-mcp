@@ -19,8 +19,8 @@ from rossum_agent.tools.change_history import (
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.data_tools import run_grep, run_jq
 from rossum_agent.tools.dynamic_tools import get_load_tool_definition, load_tool
-from rossum_agent.tools.elasticsearch import search_elasticsearch
 from rossum_agent.tools.file_tools import write_file
+from rossum_agent.tools.internal.elasticsearch import search_elasticsearch
 from rossum_agent.tools.mock_pdf import generate_mock_pdf
 from rossum_agent.tools.python_exec import execute_python, get_execute_python_definition
 from rossum_agent.tools.skills import load_skill
