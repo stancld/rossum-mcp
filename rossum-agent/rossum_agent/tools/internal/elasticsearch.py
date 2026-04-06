@@ -50,6 +50,9 @@ BLOCKED_AGG_TYPES: frozenset[str] = frozenset({"global", "significant_terms", "s
 # legitimate DSL construct for analytical filters (e.g. string-length checks).
 BLOCKED_SCRIPT_KEYS: frozenset[str] = frozenset({"scripted_metric", "bucket_script", "bucket_selector", "_script"})
 
+# Elasticsearch uses both "aggs" and "aggregations" as equivalent keys.
+_AGG_KEYS = ("aggs", "aggregations")
+
 
 def _deployment_location_to_env_prefix(deployment_location: str) -> str:
     """Convert a deployment location (e.g., 'prod-eu2') to an env var prefix (e.g., 'PROD_EU2')."""
@@ -138,7 +141,7 @@ def _validate_body_deep(body: dict) -> None:
     Raises:
         ValueError: If a blocked construct is found.
     """
-    for key in ("aggs", "aggregations"):
+    for key in _AGG_KEYS:
         aggs = body.get(key)
         if isinstance(aggs, dict):
             _validate_aggs(aggs)
@@ -153,7 +156,7 @@ def _validate_aggs(aggs: dict) -> None:
             raise ValueError(
                 f"Aggregation {name!r} uses blocked type(s): {sorted(blocked)}. These bypass the organization filter."
             )
-        for sub_key in ("aggs", "aggregations"):
+        for sub_key in _AGG_KEYS:
             sub = agg_body.get(sub_key)
             if isinstance(sub, dict):
                 _validate_aggs(sub)
