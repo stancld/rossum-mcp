@@ -25,7 +25,7 @@ The agent is **skill-first**. Adding a new capability (e.g., formula fields, rea
 
 1. **Write a skill file** — Create `rossum-agent/rossum_agent/skills/<your-skill>.md`. Look at existing skills in that directory for the format — they define the goal, workflow, and when to use the skill.
 
-2. **Register the skill** — Add a `load_skill(...)` entry in `rossum-agent/rossum_agent/prompts/base_prompt.py` under the `ROSSUM_EXPERT_INTRO` section so the agent knows when to load it.
+2. **Register the skill** — Skills are auto-discovered by `SkillRegistry` from the `skills/` directory. No manual registration needed.
 
 3. **Add MCP tools if needed** — If the Rossum API interaction isn't already covered by an existing tool, add one in `rossum-mcp/rossum_mcp/tools/`. See [Adding an MCP tool](#adding-an-mcp-tool) below.
 
