@@ -514,18 +514,22 @@ class TestFormatResponse:
 
 
 class TestExecPythonCannotBypassElasticsearch:
-    """Verify that exec_python blocks HTTP/network libraries so the agent cannot
-    bypass the elasticsearch tool by making raw HTTP calls to ES directly."""
+    """Verify that exec_python blocks network, process, and elasticsearch libraries
+    so the agent cannot bypass the elasticsearch tool by direct access."""
 
-    @pytest.mark.parametrize("module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp"])
-    def test_rejects_http_and_network_imports(self, module: str) -> None:
+    @pytest.mark.parametrize(
+        "module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp", "elasticsearch"]
+    )
+    def test_rejects_forbidden_import(self, module: str) -> None:
         result = json.loads(execute_python(code=f"import {module}\nresult = 1"))
 
         assert result["status"] == "error"
         assert "Import" in result["error"]
 
-    @pytest.mark.parametrize("module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp"])
-    def test_rejects_http_and_network_imports_inside_function(self, module: str) -> None:
+    @pytest.mark.parametrize(
+        "module", ["httpx", "requests", "urllib", "http", "subprocess", "socket", "aiohttp", "elasticsearch"]
+    )
+    def test_rejects_forbidden_import_inside_function(self, module: str) -> None:
         result = json.loads(execute_python(code=f"def f():\n    import {module}\n    return 1\nf()"))
 
         assert result["status"] == "error"
@@ -540,9 +544,10 @@ class TestExecPythonCannotBypassElasticsearch:
             ("http.client", "HTTPConnection"),
             ("subprocess", "run"),
             ("socket", "socket"),
+            ("elasticsearch", "Elasticsearch"),
         ],
     )
-    def test_rejects_from_import_of_http_and_network_modules(self, module: str, name: str) -> None:
+    def test_rejects_forbidden_from_import(self, module: str, name: str) -> None:
         result = json.loads(execute_python(code=f"from {module} import {name}\nresult = 1"))
 
         assert result["status"] == "error"
@@ -554,9 +559,10 @@ class TestExecPythonCannotBypassElasticsearch:
             ("httpx", "Client"),
             ("requests", "get"),
             ("subprocess", "run"),
+            ("elasticsearch", "Elasticsearch"),
         ],
     )
-    def test_rejects_from_import_of_http_modules_inside_function(self, module: str, name: str) -> None:
+    def test_rejects_forbidden_from_import_inside_function(self, module: str, name: str) -> None:
         result = json.loads(execute_python(code=f"def f():\n    from {module} import {name}\n    return 1\nf()"))
 
         assert result["status"] == "error"
