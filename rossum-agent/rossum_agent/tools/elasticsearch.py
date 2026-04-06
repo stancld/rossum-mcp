@@ -85,7 +85,7 @@ def _get_es_client(deployment_location: str) -> Elasticsearch:
         basic_auth=(username, password),
         verify_certs=verify_certs,
         ssl_show_warn=verify_certs,
-        request_timeout=30,
+        request_timeout=120,
     )
 
 
