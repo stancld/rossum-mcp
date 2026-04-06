@@ -57,9 +57,10 @@ class TestSearchElasticsearchIndexValidation:
 
 
 class TestValidateAggs:
-    def test_blocks_global_aggregation(self) -> None:
-        aggs = {"cross_tenant": {"global": {}, "aggs": {"count": {"value_count": {"field": "status"}}}}}
-        with pytest.raises(ValueError, match="global"):
+    @pytest.mark.parametrize("agg_type", ["global", "significant_terms", "significant_text"])
+    def test_blocks_cross_tenant_aggregation(self, agg_type: str) -> None:
+        aggs = {"cross_tenant": {agg_type: {}, "aggs": {"count": {"value_count": {"field": "status"}}}}}
+        with pytest.raises(ValueError, match=agg_type):
             _validate_aggs(aggs)
 
     def test_blocks_nested_global_aggregation(self) -> None:
@@ -116,6 +117,11 @@ class TestRejectScripts:
     def test_blocks_bucket_script(self) -> None:
         body = {"aggs": {"x": {"bucket_script": {"buckets_path": {"a": "a"}, "script": "1"}}}}
         with pytest.raises(ValueError, match="bucket_script"):
+            _reject_scripts(body)
+
+    def test_blocks_bucket_selector(self) -> None:
+        body = {"aggs": {"x": {"bucket_selector": {"buckets_path": {"a": "a"}, "script": "params.a > 10"}}}}
+        with pytest.raises(ValueError, match="bucket_selector"):
             _reject_scripts(body)
 
     def test_allows_safe_body(self) -> None:
@@ -202,6 +208,20 @@ class TestSearchElasticsearchBodyKeyValidation:
         result = json.loads(search_elasticsearch(index="elis_ann_alias_*", query=dsl))
         assert result["status"] == "error"
         assert "runtime_mappings" in result["message"]
+        mock_get_client.return_value.search.assert_not_called()
+
+    @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
+    @patch("rossum_agent.tools.internal.elasticsearch._get_es_client")
+    def test_rejects_post_filter(self, mock_get_client: MagicMock, mock_get_org_info: MagicMock) -> None:
+        dsl = json.dumps(
+            {
+                "query": {"match_all": {}},
+                "post_filter": {"term": {"status": "exported"}},
+            }
+        )
+        result = json.loads(search_elasticsearch(index="elis_ann_alias_*", query=dsl))
+        assert result["status"] == "error"
+        assert "post_filter" in result["message"]
         mock_get_client.return_value.search.assert_not_called()
 
     @patch("rossum_agent.tools.internal.elasticsearch._get_org_info", return_value=(ORG_ID, DEPLOYMENT_LOCATION))
