@@ -2,6 +2,10 @@
 
 Depends on Rossum's closed-source infrastructure (internal Elasticsearch clusters).
 Not available in the open-source distribution.
+
+Defense-in-depth: execute_python blocks ``import elasticsearch`` (and other network
+libraries) so the agent cannot bypass this tool's org-scoping and validation.
+See ``TestExecPythonCannotBypassElasticsearch`` in tests/tools/internal/test_elasticsearch.py.
 """
 
 from __future__ import annotations
