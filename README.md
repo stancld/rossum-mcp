@@ -284,7 +284,6 @@ The Rossum Agent includes specialized capabilities for complex workflows:
 | `document-testing` | End-to-end document extraction testing workflows |
 | `automation-setup` | Set up automation pipelines for document processing |
 | `customer-email` | Draft client-facing emails about Rossum topics |
-| `elasticsearch` | Query Elasticsearch indices for datapoint statistics and annotation analytics |
 
 **Sub-Agents** - Opus-powered components for complex iterative tasks:
 

@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from rossum_agent.tools.ask_user import ask_user_question, get_ask_user_question_definition
+from rossum_agent.tools.ask_user import (
+    ask_user_question,
+    get_ask_user_question_definition,
+)
 from rossum_agent.tools.change_history import (
     diff_objects,
     restore_entity_version,
@@ -18,9 +21,11 @@ from rossum_agent.tools.change_history import (
 )
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.data_tools import run_grep, run_jq
-from rossum_agent.tools.dynamic_tools import get_load_tool_definition, load_tool
+from rossum_agent.tools.dynamic_tools import (
+    get_load_tool_definition,
+    load_tool,
+)
 from rossum_agent.tools.file_tools import write_file
-from rossum_agent.tools.internal.elasticsearch import search_elasticsearch
 from rossum_agent.tools.mock_pdf import generate_mock_pdf
 from rossum_agent.tools.python_exec import execute_python, get_execute_python_definition
 from rossum_agent.tools.skills import load_skill
@@ -48,7 +53,6 @@ _ALWAYS_INTERNAL_TOOLS: list[BetaTool[..., str]] = [
     run_grep,
     generate_mock_pdf,
     execute_python,
-    search_elasticsearch,
 ]
 
 _CHANGE_HISTORY_TOOLS: list[BetaTool[..., str]] = [
@@ -83,7 +87,11 @@ def get_internal_tools() -> list[ToolParam]:
             visible_tools.append(get_execute_python_definition())
         else:
             visible_tools.append(tool.to_dict())
-    return [*visible_tools, get_load_tool_definition(), get_ask_user_question_definition()]
+    return [
+        *visible_tools,
+        get_load_tool_definition(),
+        get_ask_user_question_definition(),
+    ]
 
 
 def get_internal_tool_names() -> set[str]:

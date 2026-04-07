@@ -30,7 +30,6 @@ agent = [
     "anthropic>=0.79.0",
     "boto3>=1.0",
     "defusedxml>=0.7.0",
-    "elasticsearch>=8.0.0,<9.0.0",
     "fastmcp>=3.0.0",
     "fpdf2>=2.8.0",
     "openpyxl>=3.1.0",

@@ -96,7 +96,7 @@ class SkillRegistry:
             self._loaded = True
             return
 
-        for skill_file in self.skills_dir.rglob("*.md"):
+        for skill_file in self.skills_dir.glob("*.md"):
             try:
                 raw = skill_file.read_text(encoding="utf-8")
                 meta, body = _parse_frontmatter(raw)
