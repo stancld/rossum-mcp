@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Breaking**: Wire protocol changed from custom SSE events to AI SDK UI Message Stream v1 — existing clients consuming `event: step` / `event: done` must migrate [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Renamed `ThinkingStep` → `ReasoningStep` to align with AI SDK naming [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Response header: `x-vercel-ai-ui-message-stream: v1`; stream ends with `data: [DONE]\n\n` [#342](https://github.com/stancld/rossum-agents/pull/342)
-- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.2`
+- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.3`
 - Bump `fastmcp` dependency from `>=2.-.0` to `>=3.2.0`
 
 ### Removed
