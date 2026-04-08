@@ -223,12 +223,16 @@ def _build_cors_origin_regex() -> str:
     return rf"https://({'|'.join(patterns)})"
 
 
+_cors_origins = [
+    "https://elis.rossum.ai",
+    "https://elis.develop.r8.lol",
+]
+if os.environ.get("ROSSUM_AGENT_DEVELOP"):
+    _cors_origins.append("http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://elis.rossum.ai",
-        "https://elis.develop.r8.lol",
-    ],
+    allow_origins=_cors_origins,
     allow_origin_regex=_build_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],

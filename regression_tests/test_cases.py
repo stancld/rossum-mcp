@@ -241,6 +241,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
             "    - Field name: month_in_spanish\n"
             "    - Section: basic_info_section\n"
             "    - Logic: Take the month from the date due field and return it in Spanish\n"
+            "    - Description: LLM translation\n"
             "3. Add a formula field to the schema:\n"
             "    - Field name: total_quantity\n"
             "    - Section: basic_info_section\n"

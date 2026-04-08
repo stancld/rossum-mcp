@@ -19,10 +19,12 @@ class SchemaNodeUpdate:
 
     label: str | None = None
     type: DatapointType | None = None
+    description: str | None = None
     score_threshold: float | None = None
     hidden: bool | None = None
     disable_prediction: bool | None = None
     can_export: bool | None = None
+    can_collapse: bool | None = None
     default_value: str | None = None
     rir_field_names: list[str] | None = None
     constraints: dict | None = None
@@ -36,8 +38,11 @@ class SchemaNodeUpdate:
     format: str | None = None
     width: int | None = None
     stretch: bool | None = None
+    aggregations: dict | None = None
     min_occurrences: int | None = None
     max_occurrences: int | None = None
+    grid: dict | None = None
+    show_grid_by_default: bool | None = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if v is not None}

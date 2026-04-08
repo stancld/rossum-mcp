@@ -7,17 +7,20 @@ All notable changes to this project will be documented in this file.
 ## [2.0.0] - 2026-04-08
 
 ### Added
+- Allow `http://localhost:3000` CORS origin when `ROSSUM_AGENT_DEVELOP` env var is set
 - AI SDK UI Message Stream v1-compatible streaming API — replaces custom SSE contract; clients can now use `@ai-sdk/react`'s `useChat()` or plain Fetch without a custom SSE wrapper [#342](https://github.com/stancld/rossum-agents/pull/342)
 - New `stream_adapter.py` translating internal agent events to AI SDK wire format (`text-*`, `reasoning-*`, `tool-input-*`/`tool-output-*`, `data-agent-question`, `data-task-snapshot`, `data-file-created`, `start`/`finish`) [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Task snapshots and file-created events are now streamed to clients [#342](https://github.com/stancld/rossum-agents/pull/342)
 - `FinalAnswerStep.is_hook_output` field [#342](https://github.com/stancld/rossum-agents/pull/342)
 - `TaskSnapshotTaskSchema` Pydantic model for typed task snapshot wire events [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `patch_schema_with_subagent` now includes `description` and `hidden` fields in both the change summary and tool docstring
+- Update operations now include full JSON specs in the sub-agent prompt (previously only lookup fields did), ensuring no field properties are lost
 
 ### Changed
 - **Breaking**: Wire protocol changed from custom SSE events to AI SDK UI Message Stream v1 — existing clients consuming `event: step` / `event: done` must migrate [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Renamed `ThinkingStep` → `ReasoningStep` to align with AI SDK naming [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Response header: `x-vercel-ai-ui-message-stream: v1`; stream ends with `data: [DONE]\n\n` [#342](https://github.com/stancld/rossum-agents/pull/342)
-- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.2`
+- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.3`
 - Bump `fastmcp` dependency from `>=2.-.0` to `>=3.2.0`
 
 ### Removed

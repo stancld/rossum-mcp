@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rossum-mcp"
-version = "2.2.0dev"
+version = "2.1.3"
 description = "MCP server for AI-powered Rossum orchestration: document workflows, debug pipelines automatically, and configure intelligent document processing through natural language."
 readme = "README.md"
 requires-python = ">=3.12"

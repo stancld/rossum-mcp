@@ -101,12 +101,14 @@ class SchemaDatapoint:
     id: str | None = None
     category: Literal["datapoint"] = "datapoint"
     type: DatapointType | None = None
+    description: str | None = None
     rir_field_names: list[str] | None = None
     default_value: str | None = None
     score_threshold: float | None = None
     hidden: bool = False
     disable_prediction: bool = False
     can_export: bool = True
+    can_collapse: bool = False
     constraints: dict | None = None
     options: list[dict] | None = None
     ui_configuration: dict | None = None
@@ -118,6 +120,7 @@ class SchemaDatapoint:
     format: str | None = None
     width: int | None = None
     stretch: bool | None = None
+    aggregations: dict | None = None
 
     def to_dict(self) -> dict:
         """Convert to dict, excluding None values."""
@@ -136,12 +139,18 @@ class SchemaTuple:
     children: list[SchemaDatapoint]
     category: Literal["tuple"] = "tuple"
     hidden: bool = False
+    disable_prediction: bool = False
+    rir_field_names: list[str] | None = None
 
     def to_dict(self) -> dict:
         """Convert to dict, excluding None values."""
         result: dict = {"id": self.id, "category": self.category, "label": self.label}
         if self.hidden:
             result["hidden"] = self.hidden
+        if self.disable_prediction:
+            result["disable_prediction"] = self.disable_prediction
+        if self.rir_field_names:
+            result["rir_field_names"] = self.rir_field_names
         result["children"] = [child.to_dict() for child in self.children]
         return result
 
@@ -162,6 +171,9 @@ class SchemaMultivalue:
     min_occurrences: int | None = None
     max_occurrences: int | None = None
     hidden: bool = False
+    disable_prediction: bool = False
+    grid: dict | None = None
+    show_grid_by_default: bool = False
 
     def to_dict(self) -> dict:
         """Convert to dict, excluding None values."""
@@ -176,6 +188,12 @@ class SchemaMultivalue:
             result["max_occurrences"] = self.max_occurrences
         if self.hidden:
             result["hidden"] = self.hidden
+        if self.disable_prediction:
+            result["disable_prediction"] = self.disable_prediction
+        if self.grid is not None:
+            result["grid"] = self.grid
+        if self.show_grid_by_default:
+            result["show_grid_by_default"] = self.show_grid_by_default
         result["children"] = self.children.to_dict()
         return result
 

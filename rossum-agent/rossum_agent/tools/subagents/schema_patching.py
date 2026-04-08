@@ -28,6 +28,7 @@ from rossum_mcp.tools.update.schemas.patching import _resolve_relative_field_pos
 from rossum_mcp.tools.validation import sanitize_schema_content
 
 from rossum_agent.tools.core import get_context
+from rossum_agent.tools.dynamic_tools import load_tool
 from rossum_agent.tools.subagents.base import (
     SubAgent,
     SubAgentConfig,
@@ -122,7 +123,7 @@ Use get_schema_tree_structure / get_full_schema only if you need to verify or re
 | after_field | No | Insert after this field ID (within same parent). Without this, fields append to end. |
 | before_field | No | Insert before this field ID (within same parent). |
 
-Optional: format, options (for enum), rir_field_names, hidden, can_export, ui_configuration, prompt, context, matching
+Optional: format, options (for enum), rir_field_names, description, hidden, disable_prediction, can_export, can_collapse, ui_configuration, prompt, context, matching, aggregations, grid, show_grid_by_default
 
 ## Constraints
 
@@ -206,9 +207,15 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                         },
                         "format": {"type": "string"},
                         "options": {"type": "array"},
+                        "description": {"type": "string"},
                         "rir_field_names": {"type": "array"},
                         "hidden": {"type": "boolean"},
+                        "disable_prediction": {"type": "boolean"},
                         "can_export": {"type": "boolean"},
+                        "can_collapse": {"type": "boolean"},
+                        "aggregations": {"type": "object"},
+                        "grid": {"type": "object"},
+                        "show_grid_by_default": {"type": "boolean"},
                         "ui_configuration": {
                             "type": "object",
                             "properties": {
@@ -251,8 +258,11 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                         "formula": {"type": "string", "description": "New formula code"},
                         "label": {"type": "string"},
                         "type": {"type": "string"},
+                        "description": {"type": "string"},
                         "hidden": {"type": "boolean"},
+                        "disable_prediction": {"type": "boolean"},
                         "can_export": {"type": "boolean"},
+                        "can_collapse": {"type": "boolean"},
                         "ui_configuration": {
                             "type": "object",
                             "properties": {
@@ -264,10 +274,13 @@ _APPLY_SCHEMA_CHANGES_TOOL: dict[str, Any] = {
                             "type": "object",
                             "description": "Lookup field matching config update.",
                         },
+                        "aggregations": {"type": "object"},
+                        "grid": {"type": "object"},
+                        "show_grid_by_default": {"type": "boolean"},
                     },
                     "required": ["id"],
                 },
-                "description": "Existing fields to update (e.g., change formula, label, type, matching).",
+                "description": "Existing fields to update (e.g., change formula, label, type, description, matching).",
             },
         },
         "required": ["schema_id"],
@@ -316,6 +329,20 @@ def _coerce_field_type(value: Any) -> SchemaFieldType:
         return SchemaFieldType.STRING
 
 
+_BOOL_FIELD_KEYS = ("hidden", "can_export", "disable_prediction", "can_collapse", "show_grid_by_default")
+_TRUTHY_FIELD_KEYS = (
+    "format",
+    "ui_configuration",
+    "prompt",
+    "context",
+    "formula",
+    "matching",
+    "description",
+    "aggregations",
+    "grid",
+)
+
+
 def _build_field_node(spec: dict[str, Any]) -> dict[str, Any]:
     """Build a schema field node from specification."""
     field_type = _coerce_field_type(spec.get("type", "string"))
@@ -329,33 +356,17 @@ def _build_field_node(spec: dict[str, Any]) -> dict[str, Any]:
     if field_type == "enum":
         node["options"] = spec.get("options") or []
 
-    if spec.get("format"):
-        node["format"] = spec["format"]
-
     is_lookup = isinstance(spec.get("ui_configuration"), dict) and spec["ui_configuration"].get("type") == "lookup"
     if not is_lookup and spec.get("rir_field_names"):
         node["rir_field_names"] = spec["rir_field_names"]
 
-    if spec.get("hidden") is not None:
-        node["hidden"] = spec["hidden"]
+    for key in _BOOL_FIELD_KEYS:
+        if spec.get(key) is not None:
+            node[key] = spec[key]
 
-    if spec.get("can_export") is not None:
-        node["can_export"] = spec["can_export"]
-
-    if spec.get("ui_configuration"):
-        node["ui_configuration"] = spec["ui_configuration"]
-
-    if spec.get("prompt"):
-        node["prompt"] = spec["prompt"]
-
-    if spec.get("context"):
-        node["context"] = spec["context"]
-
-    if spec.get("formula"):
-        node["formula"] = spec["formula"]
-
-    if spec.get("matching"):
-        node["matching"] = spec["matching"]
+    for key in _TRUTHY_FIELD_KEYS:
+        if spec.get(key):
+            node[key] = spec[key]
 
     return node
 
@@ -562,6 +573,8 @@ def _update_schema_via_api(schema_id: int, content: list[dict[str, Any]]) -> Non
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     sanitized = sanitize_schema_content(content)
     response = httpx.patch(url, json={"content": sanitized}, headers=headers, timeout=60)
+    if response.is_error:
+        logger.warning(f"Schema PATCH {schema_id} failed ({response.status_code}): {response.text[:500]}")
     response.raise_for_status()
 
 
@@ -696,26 +709,38 @@ def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> Su
         f"- {c.get('action', 'add')} field '{c.get('id')}' ({c.get('type', 'string')})"
         + (f" in section '{c.get('parent_section')}'" if c.get("parent_section") else "")
         + (f" with label '{c.get('label')}'" if c.get("label") else "")
+        + (f" description='{c.get('description')}'" if c.get("description") else "")
+        + (f" hidden={c.get('hidden')}" if c.get("hidden") is not None else "")
         + (f" [TABLE: {c.get('table_id')}]" if c.get("table_field") or c.get("table_id") else "")
+        + (f" ui_configuration={c.get('ui_configuration')}" if c.get("ui_configuration") else "")
         + (f" formula='{c.get('formula')}'" if c.get("formula") else "")
+        + (f" prompt='{c.get('prompt')}'" if c.get("prompt") else "")
+        + (f" context={c.get('context')}" if c.get("context") else "")
         + (" [LOOKUP]" if c.get("matching") else "")
         for c in changes
     )
 
-    # Include full JSON specs for lookup fields so the sub-agent can pass matching configs through
-    lookup_changes = [c for c in changes if c.get("matching")]
-    lookup_section = ""
-    if lookup_changes:
-        lookup_json = json.dumps(lookup_changes, indent=2, ensure_ascii=False)
-        lookup_section = f"""
+    # Include full JSON specs for complex fields so the sub-agent passes all properties through
+    detail_changes = [
+        c
+        for c in changes
+        if c.get("matching") or c.get("action") == "update" or c.get("formula") or c.get("prompt") or c.get("context")
+    ]
+    detail_section = ""
+    if detail_changes:
+        detail_json = json.dumps(detail_changes, indent=2, ensure_ascii=False)
+        detail_section = f"""
 
-## Lookup Field Specs (pass these EXACTLY to fields_to_add/fields_to_update including matching)
+## Full Change Specs (apply ALL field properties as specified below)
 
 ```json
-{lookup_json}
+{detail_json}
 ```
-
-Lookup fields MUST include: type "enum", ui_configuration {{"type": "lookup", "edit": "disabled"}}, and the matching object exactly as shown."""
+"""
+        lookup_changes = [c for c in detail_changes if c.get("matching")]
+        if lookup_changes:
+            detail_section += """
+Lookup fields MUST include: type "enum", ui_configuration {"type": "lookup", "edit": "disabled"}, and the matching object exactly as shown."""
 
     actions = {c.get("action", "add") for c in changes}
     if actions == {"update"}:
@@ -725,7 +750,7 @@ Lookup fields MUST include: type "enum", ui_configuration {{"type": "lookup", "e
 
     user_content = f"""{intro}
 
-{changes_text}{lookup_section}
+{changes_text}{detail_section}
 
 ## Current Schema Tree
 {tree_str}
@@ -741,6 +766,9 @@ Call apply_schema_changes with fields_to_keep (IDs to retain), fields_to_add, an
     finally:
         # Ensure cache is cleaned up even if the sub-agent fails or skips apply_schema_changes
         _schema_content_cache.pop(schema_id_int, None)
+
+
+_SCHEMA_SKILL_MCP_TOOLS = ["patch_schema", "get_schema_tree_structure", "prune_schema_fields"]
 
 
 @beta_tool
@@ -762,6 +790,8 @@ def patch_schema_with_subagent(schema_id: str, changes: str) -> str:
             - parent_section: Section ID for the field (required for "add")
             - type: Field type (string, number, date, enum)
             - label: Field label (optional, defaults to id)
+            - description: Field description text
+            - hidden: Whether the field is hidden (boolean)
             - table_id: Multivalue ID if this is a table column
             - formula: TxScript formula code (for formula fields)
 
@@ -786,6 +816,9 @@ def patch_schema_with_subagent(schema_id: str, changes: str) -> str:
         return json.dumps(
             {"error": "No changes provided", "elapsed_ms": round((time.perf_counter() - start_time) * 1000, 3)}
         )
+
+    # Auto-load schema MCP tools so the main agent can call patch_schema directly for follow-ups
+    load_tool(_SCHEMA_SKILL_MCP_TOOLS)
 
     logger.info(f"patch_schema: Calling Opus for schema_id={schema_id}, {len(changes_list)} changes")
     result = _call_opus_for_patching(schema_id, changes_list)
