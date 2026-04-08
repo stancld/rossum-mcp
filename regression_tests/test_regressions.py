@@ -107,7 +107,10 @@ def _evaluate_criteria(
             failures,
         )
 
-    used_subagent = any(isinstance(s, ToolStartStep) and s.sub_agent_progress is not None for s in run.steps)
+    _SUBAGENT_TOOLS = {"patch_schema_with_subagent", "search_elis_docs", "search_knowledge_base"}
+    used_subagent = any(
+        isinstance(s, ToolStartStep) and any(tc.name in _SUBAGENT_TOOLS for tc in s.tool_calls) for s in run.steps
+    )
     if criteria.require_subagent is None:
         print(f"  - Sub-agent usage: optional (used={used_subagent})")
     elif criteria.require_subagent:

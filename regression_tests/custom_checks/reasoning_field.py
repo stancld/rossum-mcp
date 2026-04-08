@@ -54,4 +54,8 @@ def check_reasoning_field_configured(steps: list[AgentStep], _api_base_url: str,
     if not prompt:
         return False, "Reasoning field has no prompt configured"
 
+    description = field.get("description")
+    if not description:
+        return False, "Reasoning field has no description configured"
+
     return call_haiku_check(_PROMPT_EVAL.format(prompt=prompt))

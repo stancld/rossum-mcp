@@ -573,6 +573,8 @@ def _update_schema_via_api(schema_id: int, content: list[dict[str, Any]]) -> Non
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     sanitized = sanitize_schema_content(content)
     response = httpx.patch(url, json={"content": sanitized}, headers=headers, timeout=60)
+    if response.is_error:
+        logger.warning(f"Schema PATCH {schema_id} failed ({response.status_code}): {response.text[:500]}")
     response.raise_for_status()
 
 
@@ -710,13 +712,20 @@ def _call_opus_for_patching(schema_id: str, changes: list[dict[str, Any]]) -> Su
         + (f" description='{c.get('description')}'" if c.get("description") else "")
         + (f" hidden={c.get('hidden')}" if c.get("hidden") is not None else "")
         + (f" [TABLE: {c.get('table_id')}]" if c.get("table_field") or c.get("table_id") else "")
+        + (f" ui_configuration={c.get('ui_configuration')}" if c.get("ui_configuration") else "")
         + (f" formula='{c.get('formula')}'" if c.get("formula") else "")
+        + (f" prompt='{c.get('prompt')}'" if c.get("prompt") else "")
+        + (f" context={c.get('context')}" if c.get("context") else "")
         + (" [LOOKUP]" if c.get("matching") else "")
         for c in changes
     )
 
-    # Include full JSON specs for update/lookup fields so the sub-agent passes all properties through
-    detail_changes = [c for c in changes if c.get("matching") or c.get("action") == "update"]
+    # Include full JSON specs for complex fields so the sub-agent passes all properties through
+    detail_changes = [
+        c
+        for c in changes
+        if c.get("matching") or c.get("action") == "update" or c.get("formula") or c.get("prompt") or c.get("context")
+    ]
     detail_section = ""
     if detail_changes:
         detail_json = json.dumps(detail_changes, indent=2, ensure_ascii=False)
