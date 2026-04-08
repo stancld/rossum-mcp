@@ -7,7 +7,6 @@ export type {
   ClientConfig,
   McpMode,
   Persona,
-  SSEEvent,
   // Chat
   ChatResponse,
   ChatSummary,
@@ -22,22 +21,6 @@ export type {
   TextContent,
   ImageContent,
   DocumentContent,
-  // SSE events
-  StepEvent,
-  StepType,
-  SubAgentProgressEvent,
-  SubAgentStatus,
-  SubAgentTextEvent,
-  TaskSnapshotEvent,
-  AgentQuestionEvent,
-  AgentQuestionItemSchema,
-  QuestionOptionSchema,
-  FileCreatedEvent,
-  StreamDoneEvent,
-  // Token usage
-  TokenUsageBySource,
-  TokenUsageBreakdown,
-  SubAgentTokenUsageDetail,
   // Files
   FileInfo,
   FileListResponse,
@@ -80,7 +63,3 @@ export {
   listCommits,
   reportToSlack,
 } from "./client.js";
-
-// SSE streaming
-export { streamMessage } from "./sse.js";
-export type { StreamOptions } from "./sse.js";

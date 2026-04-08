@@ -19,9 +19,9 @@ from anthropic.types import (
 from rossum_agent.agent import AgentConfig, RossumAgent, ToolCall
 from rossum_agent.agent.models import (
     FinalAnswerStep,
+    ReasoningStep,
     StepType,
     TextDeltaStep,
-    ThinkingStep,
     ToolResultStep,
 )
 from rossum_agent.agent.streaming import StreamState, process_stream_event
@@ -298,7 +298,7 @@ class TestStreamState:
         assert result.text_delta == "Some response text"
 
     def test_finalize_thinking_returns_step_on_first_call(self):
-        """Test that finalize_thinking returns a ThinkingStep on first call."""
+        """Test that finalize_thinking returns a ReasoningStep on first call."""
         state = StreamState()
         state.thinking_text = "Let me think about this..."
 
@@ -306,7 +306,7 @@ class TestStreamState:
 
         assert result is not None
         assert result.step_number == 1
-        assert result.thinking == "Let me think about this..."
+        assert result.reasoning == "Let me think about this..."
         assert result.is_streaming is False
         assert state.thinking_finalized is True
 
@@ -457,7 +457,7 @@ class TestHandleTextDeltaWithFinalization:
         steps = handle_text_delta_with_finalization(step_num=2, content="Answer", state=state)
 
         assert len(steps) == 2
-        assert isinstance(steps[0], ThinkingStep)
+        assert isinstance(steps[0], ReasoningStep)
         assert steps[0].is_streaming is False
         assert isinstance(steps[1], TextDeltaStep)
         assert steps[1].text_delta == "Answer"
@@ -486,7 +486,7 @@ class TestHandleTextDeltaWithFinalization:
         assert state.text_buffer == ["Hello"]
 
     def test_does_not_finalize_thinking_twice(self):
-        """Second call doesn't produce another ThinkingStep."""
+        """Second call doesn't produce another ReasoningStep."""
         from rossum_agent.agent.streaming import handle_text_delta_with_finalization
 
         state = StreamState()
@@ -496,7 +496,7 @@ class TestHandleTextDeltaWithFinalization:
         steps1 = handle_text_delta_with_finalization(step_num=2, content="First", state=state)
         steps2 = handle_text_delta_with_finalization(step_num=2, content="Second", state=state)
 
-        thinking_steps = [s for s in steps1 + steps2 if isinstance(s, ThinkingStep)]
+        thinking_steps = [s for s in steps1 + steps2 if isinstance(s, ReasoningStep)]
         assert len(thinking_steps) == 1
 
 
@@ -803,10 +803,10 @@ class TestStreamModelResponse:
         final_step = steps[-1]
         assert isinstance(final_step, ToolResultStep)
         assert len(final_step.tool_calls) == 1
-        # Thinking is yielded as a separate ThinkingStep earlier in the stream
-        thinking_steps = [s for s in steps if isinstance(s, ThinkingStep)]
+        # Thinking is yielded as a separate ReasoningStep earlier in the stream
+        thinking_steps = [s for s in steps if isinstance(s, ReasoningStep)]
         assert len(thinking_steps) >= 1
-        assert "Let me analyze this..." in thinking_steps[-1].thinking
+        assert "Let me analyze this..." in thinking_steps[-1].reasoning
 
     @pytest.mark.asyncio
     async def test_stream_exception_propagates(self):
@@ -883,7 +883,7 @@ class TestStreamModelResponse:
 
         # Text should be buffered until stream ends (not flushed prematurely).
         # The finalized thinking step should also appear.
-        thinking_steps = [s for s in steps if isinstance(s, ThinkingStep)]
+        thinking_steps = [s for s in steps if isinstance(s, ReasoningStep)]
         finalized_thinking = [s for s in thinking_steps if not s.is_streaming]
         assert len(finalized_thinking) == 1
 

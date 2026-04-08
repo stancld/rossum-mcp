@@ -16,9 +16,7 @@
     "format:check": "prettier --check 'src/**/*.ts'",
     "generate": "openapi-typescript ../rossum-agent/rossum_agent/api/openapi.json -o src/generated.ts"
   },
-  "dependencies": {
-    "eventsource-parser": "^3.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.0.0",
     "openapi-typescript": "^7.13.0",

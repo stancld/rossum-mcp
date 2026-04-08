@@ -180,60 +180,6 @@ class MessageRequest(BaseModel):
     )
 
 
-class StepEvent(BaseModel):
-    """Event emitted during agent execution via SSE.
-
-    Extended thinking mode separates the model's internal reasoning from its final response:
-    - "thinking": Model's chain-of-thought reasoning (from thinking blocks)
-    - "intermediate": Model's response text before tool calls
-    - "final_answer": Final response when no more tool calls needed
-    """
-
-    type: Literal["thinking", "intermediate", "tool_start", "tool_result", "final_answer", "error"]
-    step_number: int
-    content: str | None = None
-    tool_name: str | None = None
-    tool_arguments: dict | None = None
-    tool_progress: tuple[int, int] | None = None
-    result: str | None = None
-    is_error: bool = False
-    is_streaming: bool = False
-    is_final: bool = False
-    tool_call_id: str | None = None
-    is_hook_output: bool = False
-    context_usage_fraction: float | None = None
-
-
-class SubAgentProgressEvent(BaseModel):
-    """Event emitted during sub-agent execution via SSE."""
-
-    type: Literal["sub_agent_progress"] = "sub_agent_progress"
-    tool_name: str
-    iteration: int
-    max_iterations: int
-    current_tool: str | None = None
-    tool_calls: list[str] = Field(default_factory=list)
-    status: Literal["thinking", "searching", "analyzing", "reasoning", "running_tool", "completed", "running"] = (
-        "running"
-    )
-
-
-class SubAgentTextEvent(BaseModel):
-    """Event emitted when sub-agent streams text output via SSE."""
-
-    type: Literal["sub_agent_text"] = "sub_agent_text"
-    tool_name: str
-    text: str
-    is_final: bool = False
-
-
-class TaskSnapshotEvent(BaseModel):
-    """Event emitted when task tracker state changes via SSE."""
-
-    type: Literal["task_snapshot"] = "task_snapshot"
-    tasks: list[dict[str, object]]
-
-
 class QuestionOptionSchema(BaseModel):
     """A single option for an agent question."""
 
@@ -250,11 +196,26 @@ class AgentQuestionItemSchema(BaseModel):
     multi_select: bool = False
 
 
-class AgentQuestionEvent(BaseModel):
-    """Event emitted when the agent asks the user a structured question."""
+class TaskSnapshotTaskSchema(BaseModel):
+    """A single task within a task snapshot event."""
 
-    type: Literal["agent_question"] = "agent_question"
-    questions: list[AgentQuestionItemSchema]
+    id: str
+    subject: str
+    status: Literal["pending", "in_progress", "completed"]
+    description: str = ""
+
+
+class FinalAnswerSchema(BaseModel):
+    """Final answer payload emitted as a data-final-answer wire event."""
+
+    text: str
+
+
+class FileCreatedSchema(BaseModel):
+    """A file created during an agent run."""
+
+    filename: str
+    url: str
 
 
 class TokenUsageBySource(BaseModel):
@@ -453,14 +414,6 @@ class StreamDoneEvent(BaseModel):
     config_commit_hash: str | None = None
     config_commit_message: str | None = None
     config_changes_count: int = 0
-
-
-class FileCreatedEvent(BaseModel):
-    """Event emitted when a file is created and stored."""
-
-    type: Literal["file_created"] = "file_created"
-    filename: str
-    url: str
 
 
 class ReportToSlackRequest(BaseModel):
