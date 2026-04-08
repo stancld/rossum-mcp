@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - Task snapshots and file-created events are now streamed to clients [#342](https://github.com/stancld/rossum-agents/pull/342)
 - `FinalAnswerStep.is_hook_output` field [#342](https://github.com/stancld/rossum-agents/pull/342)
 - `TaskSnapshotTaskSchema` Pydantic model for typed task snapshot wire events [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `patch_schema_with_subagent` now includes `description` and `hidden` fields in both the change summary and tool docstring
+- Update operations now include full JSON specs in the sub-agent prompt (previously only lookup fields did), ensuring no field properties are lost
 
 ### Changed
 - **Breaking**: Wire protocol changed from custom SSE events to AI SDK UI Message Stream v1 — existing clients consuming `event: step` / `event: done` must migrate [#342](https://github.com/stancld/rossum-agents/pull/342)

@@ -80,6 +80,24 @@ class TestSchemaNodeUpdate:
         assert result == {"format": "M/D/YYYY"}
         assert "label" not in result
 
+    def test_schema_node_update_with_new_fields(self) -> None:
+        """Test SchemaNodeUpdate with description, can_collapse, aggregations, grid, show_grid_by_default."""
+        update = SchemaNodeUpdate(
+            description="A test field",
+            can_collapse=True,
+            aggregations={"sum": True},
+            grid={"parts": []},
+            show_grid_by_default=True,
+        )
+        result = update.to_dict()
+
+        assert result["description"] == "A test field"
+        assert result["can_collapse"] is True
+        assert result["aggregations"] == {"sum": True}
+        assert result["grid"] == {"parts": []}
+        assert result["show_grid_by_default"] is True
+        assert "label" not in result
+
     def test_schema_node_update_with_stretch(self) -> None:
         """Test SchemaNodeUpdate with stretch field."""
         update = SchemaNodeUpdate(label="Column", width=100, stretch=True)
