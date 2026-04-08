@@ -44,11 +44,6 @@ DISCOVERY_TOOL_NAME = "list_tool_categories"
 DELETE_TOOL_NAME = "delete"
 
 
-# ---------------------------------------------------------------------------
-# Convenience accessors - read from the per-request AgentContext
-# ---------------------------------------------------------------------------
-
-
 def reset_dynamic_tools() -> None:
     """Reset dynamic tool state for a new conversation."""
     get_context().dynamic_tools.reset()

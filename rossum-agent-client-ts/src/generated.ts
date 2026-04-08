@@ -136,14 +136,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Send Message
-     * @description Send a message and stream the agent's response via SSE.
-     *
-     *     If a previous request is still running for this chat, it will be cancelled
-     *     before starting the new one. Client disconnects are also detected and will
-     *     cancel the running agent.
-     */
+    /** Send Message */
     post: operations["send_message_api_v1_chats__chat_id__messages_post"];
     delete?: never;
     options?: never;
@@ -160,10 +153,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Cancel Message
-     * @description Cancel a running agent request for a chat.
-     */
+    /** Cancel Message */
     post: operations["cancel_message_api_v1_chats__chat_id__cancel_post"];
     delete?: never;
     options?: never;
@@ -417,39 +407,6 @@ export interface components {
       deleted: boolean;
     };
     /**
-     * DocumentContent
-     * @description Document content in a message.
-     */
-    DocumentContent: {
-      /**
-       * Type
-       * @default document
-       * @constant
-       */
-      type: "document";
-      /**
-       * Media Type
-       * @enum {string}
-       */
-      media_type:
-        | "application/pdf"
-        | "text/csv"
-        | "text/plain"
-        | "text/markdown"
-        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        | "application/vnd.ms-excel";
-      /**
-       * Data
-       * @description Base64-encoded document data
-       */
-      data: string;
-      /**
-       * Filename
-       * @description Original filename of the document
-       */
-      filename: string;
-    };
-    /**
      * EntityChangeInfo
      * @description A single entity change within a config commit.
      */
@@ -586,43 +543,6 @@ export interface components {
       feedback?: boolean | null;
     };
     /**
-     * MessageRequest
-     * @description Request body for sending a message.
-     *
-     *     Supports text-only messages or multimodal messages with images and documents.
-     *     For image messages, use the `images` field with base64-encoded image data.
-     *     For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
-     */
-    MessageRequest: {
-      /**
-       * Content
-       * @description Text content of the message
-       */
-      content: string;
-      /**
-       * Images
-       * @description Optional list of images (max 5) to include with the message
-       */
-      images?: components["schemas"]["ImageContent"][] | null;
-      /**
-       * Documents
-       * @description Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.
-       */
-      documents?: components["schemas"]["DocumentContent"][] | null;
-      /**
-       * Rossum Url
-       * @description Optional Rossum app URL for context
-       */
-      rossum_url?: string | null;
-      /**
-       * Mcp Mode
-       * @description MCP mode to use for this message and all subsequent messages. If not specified, uses the chat's current mode.
-       */
-      mcp_mode?: ("read-only" | "read-write") | null;
-      /** @description Agent persona to use for this message and all subsequent messages. If not specified, uses the chat's current persona. */
-      persona?: components["schemas"]["Persona"] | null;
-    };
-    /**
      * Persona
      * @enum {string}
      */
@@ -672,160 +592,19 @@ export interface components {
       ctx?: Record<string, never>;
     };
     /**
-     * StepEvent
-     * @description Event emitted during agent execution via SSE.
-     *
-     *     Extended thinking mode separates the model's internal reasoning from its final response:
-     *     - "thinking": Model's chain-of-thought reasoning (from thinking blocks)
-     *     - "intermediate": Model's response text before tool calls
-     *     - "final_answer": Final response when no more tool calls needed
+     * QuestionOptionSchema
+     * @description A single option for an agent question.
      */
-    StepEvent: {
+    QuestionOptionSchema: {
+      /** Value */
+      value: string;
+      /** Label */
+      label: string;
       /**
-       * Type
-       * @enum {string}
+       * Description
+       * @default
        */
-      type:
-        | "thinking"
-        | "intermediate"
-        | "tool_start"
-        | "tool_result"
-        | "final_answer"
-        | "error";
-      /** Step Number */
-      step_number: number;
-      /**
-       * Content
-       * @default null
-       */
-      content: string | null;
-      /**
-       * Tool Name
-       * @default null
-       */
-      tool_name: string | null;
-      /**
-       * Tool Arguments
-       * @default null
-       */
-      tool_arguments: {
-        [key: string]: unknown;
-      } | null;
-      /**
-       * Tool Progress
-       * @default null
-       */
-      tool_progress: [number, number] | null;
-      /**
-       * Result
-       * @default null
-       */
-      result: string | null;
-      /**
-       * Is Error
-       * @default false
-       */
-      is_error: boolean;
-      /**
-       * Is Streaming
-       * @default false
-       */
-      is_streaming: boolean;
-      /**
-       * Is Final
-       * @default false
-       */
-      is_final: boolean;
-      /**
-       * Tool Call Id
-       * @default null
-       */
-      tool_call_id: string | null;
-      /**
-       * Is Hook Output
-       * @default false
-       */
-      is_hook_output: boolean;
-      /**
-       * Context Usage Fraction
-       * @default null
-       */
-      context_usage_fraction: number | null;
-    };
-    /**
-     * SubAgentProgressEvent
-     * @description Event emitted during sub-agent execution via SSE.
-     */
-    SubAgentProgressEvent: {
-      /**
-       * Type
-       * @default sub_agent_progress
-       * @constant
-       */
-      type: "sub_agent_progress";
-      /** Tool Name */
-      tool_name: string;
-      /** Iteration */
-      iteration: number;
-      /** Max Iterations */
-      max_iterations: number;
-      /**
-       * Current Tool
-       * @default null
-       */
-      current_tool: string | null;
-      /** Tool Calls */
-      tool_calls?: string[];
-      /**
-       * Status
-       * @default running
-       * @enum {string}
-       */
-      status:
-        | "thinking"
-        | "searching"
-        | "analyzing"
-        | "reasoning"
-        | "running_tool"
-        | "completed"
-        | "running";
-    };
-    /**
-     * SubAgentTextEvent
-     * @description Event emitted when sub-agent streams text output via SSE.
-     */
-    SubAgentTextEvent: {
-      /**
-       * Type
-       * @default sub_agent_text
-       * @constant
-       */
-      type: "sub_agent_text";
-      /** Tool Name */
-      tool_name: string;
-      /** Text */
-      text: string;
-      /**
-       * Is Final
-       * @default false
-       */
-      is_final: boolean;
-    };
-    /**
-     * TaskSnapshotEvent
-     * @description Event emitted when task tracker state changes via SSE.
-     */
-    TaskSnapshotEvent: {
-      /**
-       * Type
-       * @default task_snapshot
-       * @constant
-       */
-      type: "task_snapshot";
-      /** Tasks */
-      tasks: {
-        [key: string]: unknown;
-      }[];
+      description: string;
     };
     /**
      * AgentQuestionItemSchema
@@ -843,14 +622,19 @@ export interface components {
       multi_select: boolean;
     };
     /**
-     * QuestionOptionSchema
-     * @description A single option for an agent question.
+     * TaskSnapshotTaskSchema
+     * @description A single task within a task snapshot event.
      */
-    QuestionOptionSchema: {
-      /** Value */
-      value: string;
-      /** Label */
-      label: string;
+    TaskSnapshotTaskSchema: {
+      /** Id */
+      id: string;
+      /** Subject */
+      subject: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "pending" | "in_progress" | "completed";
       /**
        * Description
        * @default
@@ -858,161 +642,100 @@ export interface components {
       description: string;
     };
     /**
-     * AgentQuestionEvent
-     * @description Event emitted when the agent asks the user a structured question.
+     * FinalAnswerSchema
+     * @description Final answer payload emitted as a data-final-answer wire event.
      */
-    AgentQuestionEvent: {
-      /**
-       * Type
-       * @default agent_question
-       * @constant
-       */
-      type: "agent_question";
-      /** Questions */
-      questions: components["schemas"]["AgentQuestionItemSchema"][];
+    FinalAnswerSchema: {
+      /** Text */
+      text: string;
     };
     /**
-     * FileCreatedEvent
-     * @description Event emitted when a file is created and stored.
+     * FileCreatedSchema
+     * @description A file created during an agent run.
      */
-    FileCreatedEvent: {
-      /**
-       * Type
-       * @default file_created
-       * @constant
-       */
-      type: "file_created";
+    FileCreatedSchema: {
       /** Filename */
       filename: string;
       /** Url */
       url: string;
     };
     /**
-     * SubAgentTokenUsageDetail
-     * @description Token usage breakdown for sub-agents.
+     * DocumentContent
+     * @description Document content in a message.
      */
-    SubAgentTokenUsageDetail: {
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
-      /** Total Tokens */
-      total_tokens: number;
-      /**
-       * Cache Creation Input Tokens
-       * @default 0
-       */
-      cache_creation_input_tokens: number;
-      /**
-       * Cache Read Input Tokens
-       * @default 0
-       */
-      cache_read_input_tokens: number;
-      /** By Tool */
-      by_tool: {
-        [key: string]: components["schemas"]["TokenUsageBySource"];
-      };
-    };
-    /**
-     * TokenUsageBreakdown
-     * @description Token usage breakdown by agent vs sub-agents.
-     */
-    TokenUsageBreakdown: {
-      total: components["schemas"]["TokenUsageBySource"];
-      main_agent: components["schemas"]["TokenUsageBySource"];
-      sub_agents: components["schemas"]["SubAgentTokenUsageDetail"];
-    };
-    /**
-     * TokenUsageBySource
-     * @description Token usage for a specific source (main agent or sub-agent).
-     */
-    TokenUsageBySource: {
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
-      /** Total Tokens */
-      total_tokens: number;
-      /**
-       * Cache Creation Input Tokens
-       * @default 0
-       */
-      cache_creation_input_tokens: number;
-      /**
-       * Cache Read Input Tokens
-       * @default 0
-       */
-      cache_read_input_tokens: number;
-    };
-    /**
-     * StreamDoneEvent
-     * @description Final event emitted when streaming completes.
-     */
-    StreamDoneEvent: {
+    DocumentContent: {
       /**
        * Type
-       * @default done
+       * @default document
        * @constant
        */
-      type: "done";
-      /** Total Steps */
-      total_steps: number;
-      /** Input Tokens */
-      input_tokens: number;
-      /** Output Tokens */
-      output_tokens: number;
+      type: "document";
       /**
-       * Cache Creation Input Tokens
-       * @default 0
+       * Media Type
+       * @enum {string}
        */
-      cache_creation_input_tokens: number;
+      media_type:
+        | "application/pdf"
+        | "text/csv"
+        | "text/plain"
+        | "text/markdown"
+        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        | "application/vnd.ms-excel";
       /**
-       * Cache Read Input Tokens
-       * @default 0
+       * Data
+       * @description Base64-encoded document data
        */
-      cache_read_input_tokens: number;
-      /** @default null */
-      token_usage_breakdown:
-        | components["schemas"]["TokenUsageBreakdown"]
-        | null;
+      data: string;
       /**
-       * Max Input Tokens
-       * @default 0
+       * Filename
+       * @description Original filename of the document
        */
-      max_input_tokens: number;
-      /**
-       * Context Usage Fraction
-       * @default 0
-       */
-      context_usage_fraction: number;
-      /**
-       * Config Commit Hash
-       * @default null
-       */
-      config_commit_hash: string | null;
-      /**
-       * Config Commit Message
-       * @default null
-       */
-      config_commit_message: string | null;
-      /**
-       * Config Changes Count
-       * @default 0
-       */
-      config_changes_count: number;
+      filename: string;
     };
     /**
-     * SSEEvent
-     * @description Union of all SSE event payloads. The `event:` field in the SSE frame determines the payload type (see x-sse-events).
+     * MessageRequest
+     * @description Request body for sending a message.
+     *
+     *     Supports text-only messages or multimodal messages with images and documents.
+     *     For image messages, use the `images` field with base64-encoded image data.
+     *     For document messages, use the `documents` field with base64-encoded data (PDF, CSV, Excel, plain text).
      */
-    SSEEvent:
-      | components["schemas"]["StepEvent"]
-      | components["schemas"]["SubAgentProgressEvent"]
-      | components["schemas"]["SubAgentTextEvent"]
-      | components["schemas"]["TaskSnapshotEvent"]
-      | components["schemas"]["AgentQuestionEvent"]
-      | components["schemas"]["FileCreatedEvent"]
-      | components["schemas"]["StreamDoneEvent"];
+    MessageRequest: {
+      /**
+       * Content
+       * @description Text content of the message
+       */
+      content: string;
+      /**
+       * Images
+       * @description Optional list of images (max 5) to include with the message
+       * @default null
+       */
+      images: components["schemas"]["ImageContent"][] | null;
+      /**
+       * Documents
+       * @description Optional list of documents (max 5) to include with the message. Supported formats: PDF, CSV, Excel (.xlsx, .xls), plain text.
+       * @default null
+       */
+      documents: components["schemas"]["DocumentContent"][] | null;
+      /**
+       * Rossum Url
+       * @description Optional Rossum app URL for context
+       * @default null
+       */
+      rossum_url: string | null;
+      /**
+       * Mcp Mode
+       * @description MCP mode to use for this message and all subsequent messages. If not specified, uses the chat's current mode.
+       * @default null
+       */
+      mcp_mode: ("read-only" | "read-write") | null;
+      /**
+       * @description Agent persona to use for this message and all subsequent messages. If not specified, uses the chat's current persona.
+       * @default null
+       */
+      persona: components["schemas"]["Persona"] | null;
+    };
   };
   responses: never;
   parameters: never;
@@ -1394,13 +1117,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description SSE stream of agent events. Each SSE message has an `event:` field (one of: step, sub_agent_progress, sub_agent_text, task_snapshot, agent_question, file_created, done) and a `data:` field containing the JSON-serialized event payload. */
+      /** @description AI SDK UI Message Stream v1 compatible SSE stream */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "text/event-stream": components["schemas"]["SSEEvent"];
+          "text/event-stream": unknown;
         };
       };
       /** @description Chat not found */

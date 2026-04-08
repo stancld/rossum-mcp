@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Change
+- Bump `fastmcp` dependency from `>=2.-.0` to `>=3.2.0`
+
+
+## [2.1.2] - 2026-03-31
+
+### Fixed
+- Switch `graceful_list` to cursor-based pagination (`cursor_fetch_all`) to avoid silently returning empty results on large collections [#341](https://github.com/stancld/rossum-agents/pull/341)
+
 
 ## [2.1.1] - 2026-03-31
 

@@ -53,15 +53,11 @@ from rossum_agent.agent.models import (
     AgentStep,
     ErrorStep,
     FinalAnswerStep,
+    ReasoningStep,
     StepType,
     TextDeltaStep,
-    ThinkingStep,
 )
-from rossum_agent.agent.streaming import (
-    StreamState,
-    extract_thinking_blocks,
-    process_stream_events,
-)
+from rossum_agent.agent.streaming import StreamState, extract_thinking_blocks, process_stream_events
 from rossum_agent.agent.tool_execution import execute_tools_with_progress
 from rossum_agent.api.models.schemas import TokenUsageBreakdown
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_model_id
@@ -441,9 +437,9 @@ class RossumAgent:
                         f"Rate limit hit at step {step_num} (attempt {rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES}), "
                         f"retrying in {wait_time:.1f}s: {e}"
                     )
-                    yield ThinkingStep(
+                    yield ReasoningStep(
                         step_number=step_num,
-                        thinking=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
+                        reasoning=f"⏳ Rate limited, waiting {wait_time:.1f}s before retry ({rate_limit_retries}/{RATE_LIMIT_MAX_RETRIES})...",
                     )
                     await asyncio.sleep(wait_time)
 

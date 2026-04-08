@@ -36,11 +36,11 @@ class TestGetEmailTemplate:
             )
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_email_template(mock_client, 5)
 
@@ -67,11 +67,11 @@ class TestGetEmailTemplate:
             )
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_email_template(mock_client, 5)
 
@@ -88,11 +88,11 @@ class TestGetEmailTemplate:
         )
         mock_client.retrieve_email_template.return_value = mock_template
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_email_template(mock_client, 5)
 

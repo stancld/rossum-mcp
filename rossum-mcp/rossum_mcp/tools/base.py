@@ -80,13 +80,13 @@ async def graceful_list(
 ) -> GracefulListResult:
     """List resources gracefully, skipping items that fail deserialization.
 
-    Uses _http_client.fetch_all directly so that a single broken item
+    Uses _http_client.cursor_fetch_all directly so that a single broken item
     does not terminate the entire iteration (the high-level client generators
     die on the first deserialization error).
     """
     items: list[Any] = []
     skipped_ids: list[int | str] = []
-    async for raw in client._http_client.fetch_all(resource, **filters):
+    async for raw in client._http_client.cursor_fetch_all(resource, **filters):
         try:
             item = client._deserializer(resource, raw)
             items.append(item)

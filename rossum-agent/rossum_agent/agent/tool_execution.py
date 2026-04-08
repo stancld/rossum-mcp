@@ -32,7 +32,6 @@ from rossum_agent.agent.spillover import maybe_spill
 from rossum_agent.tools import execute_internal_tool, get_internal_tool_names
 from rossum_agent.tools.core import (
     AgentContext,
-    SubAgentProgress,
     SubAgentTokenUsage,
     get_context,
     set_context,
@@ -193,10 +192,9 @@ async def execute_tool_with_progress(
     mcp_connection: MCPConnection,
     tokens: TokenTracker,
 ) -> AsyncIterator[ToolStartStep | ToolResult]:
-    """Execute a tool and yield progress updates for sub-agents.
+    """Execute a tool and yield progress updates.
 
-    For tools with sub-agents, this yields ToolStartStep updates
-    with sub_agent_progress. Always yields the final ToolResult.
+    Always yields the final ToolResult.
     """
     # Cautious persona: gate write operations behind user confirmation
     agent_ctx = get_context()
@@ -205,11 +203,7 @@ async def execute_tool_with_progress(
         yield blocked_result
         return
 
-    progress_queue: queue.Queue[SubAgentProgress] = queue.Queue()
     token_queue: queue.Queue[SubAgentTokenUsage] = queue.Queue()
-
-    def progress_callback(progress: SubAgentProgress) -> None:
-        progress_queue.put(progress)
 
     def token_callback(usage: SubAgentTokenUsage) -> None:
         token_queue.put(usage)
@@ -224,7 +218,6 @@ async def execute_tool_with_progress(
             agent_ctx = get_context()
             tool_ctx = dataclasses.replace(
                 agent_ctx,
-                progress_callback=progress_callback,
                 token_callback=token_callback,
             )
 
@@ -239,19 +232,6 @@ async def execute_tool_with_progress(
             )
 
             while not future.done():
-                try:
-                    progress = progress_queue.get_nowait()
-                    yield ToolStartStep(
-                        step_number=step_num,
-                        tool_calls=tool_calls,
-                        tool_progress=tool_progress,
-                        current_tool=tool_call.name,
-                        current_tool_call_id=tool_call.id,
-                        sub_agent_progress=progress,
-                    )
-                except queue.Empty:
-                    pass
-
                 drain_token_queue(tokens, token_queue)
                 await asyncio.sleep(0.1)
 

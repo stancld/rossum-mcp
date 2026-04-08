@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,6 +6,31 @@ import os from "node:os";
 import { MAX_IMAGE_SIZE, type ImageAttachment } from "./fileAttachments.js";
 
 const execAsync = promisify(exec);
+
+export function copyToClipboard(text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let cmd: string;
+    let args: string[];
+    if (process.platform === "darwin") {
+      cmd = "pbcopy";
+      args = [];
+    } else if (process.platform === "linux") {
+      cmd = "xclip";
+      args = ["-selection", "clipboard"];
+    } else {
+      reject(new Error("Unsupported platform"));
+      return;
+    }
+    const proc = spawn(cmd, args, { stdio: ["pipe", "ignore", "ignore"] });
+    proc.stdin.write(text);
+    proc.stdin.end();
+    proc.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${cmd} exited with code ${code}`));
+    });
+    proc.on("error", reject);
+  });
+}
 
 export async function getClipboardImage(): Promise<ImageAttachment | null> {
   if (process.platform === "darwin") {

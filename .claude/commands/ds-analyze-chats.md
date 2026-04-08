@@ -68,8 +68,8 @@ def extract_task_text(task) -> str:
 | Metric | How to compute |
 |--------|----------------|
 | Total chats | Count lines |
-| Active vs abandoned | Has `task_step` in messages vs empty `[]` |
-| Abandonment rate | `empty / total * 100` |
+| Abandoned chats (filtered out) | Has no `task_step` in messages (empty `[]`) — skip these entirely, they are false positives |
+| Active chats analyzed | Total minus abandoned |
 | Persona distribution | Count `persona` values in metadata |
 | MCP mode distribution | Count `mcp_mode` values in metadata |
 | Config commits | Chats with non-empty `config_commits` |
@@ -166,6 +166,6 @@ When identifying improvement opportunities, validate gaps against these specific
 | Agent tools | `rossum-agent/rossum_agent/tools/` |
 | Skills | `rossum-agent/rossum_agent/skills/` — check `__init__.py` for registry |
 | Dynamic tool loading | `rossum-agent/rossum_agent/tools/dynamic_tools.py` |
-| Prompts | `rossum-agent/rossum_agent/prompts/base_prompt.py` |
+| System prompt | `rossum-agent/rossum_agent/system_prompt.py` |
 
 Use targeted Grep/Glob calls, not a general-purpose Agent subagent.

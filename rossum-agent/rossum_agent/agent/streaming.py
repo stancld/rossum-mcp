@@ -27,11 +27,11 @@ from anthropic.types import (
 
 from rossum_agent.agent.models import (
     AgentStep,
+    ReasoningStep,
     StepType,
     StreamDelta,
     TextDeltaStep,
     ThinkingBlockData,
-    ThinkingStep,
     ToolCall,
 )
 from rossum_agent.agent.tool_execution import _parse_json_encoded_strings
@@ -114,12 +114,12 @@ class StreamState:
             thinking=self.thinking_text or None,
         )
 
-    def finalize_thinking(self, step_num: int) -> ThinkingStep | None:
-        """Return a finalized ThinkingStep if thinking exists and hasn't been finalized yet."""
+    def finalize_thinking(self, step_num: int) -> ReasoningStep | None:
+        """Return a finalized ReasoningStep if thinking exists and hasn't been finalized yet."""
         if not self.thinking_text or self.thinking_finalized:
             return None
         self.thinking_finalized = True
-        return ThinkingStep(step_number=step_num, thinking=self.thinking_text, is_streaming=False)
+        return ReasoningStep(step_number=step_num, reasoning=self.thinking_text, is_streaming=False)
 
     def maybe_log_progress(self, step_num: int) -> None:
         """Log streaming progress periodically (every _STREAM_PROGRESS_LOG_INTERVAL seconds)."""
@@ -269,9 +269,9 @@ async def process_stream_events(
                 state.thinking_deltas += 1
                 state.maybe_log_progress(step_num)
                 # Yield #3: Streaming thinking tokens (extended thinking / chain-of-thought)
-                yield ThinkingStep(
+                yield ReasoningStep(
                     step_number=step_num,
-                    thinking=state.thinking_text,
+                    reasoning=state.thinking_text,
                 )
                 continue
 

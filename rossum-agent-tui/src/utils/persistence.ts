@@ -2,13 +2,12 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type {
-  AgentQuestionEvent,
+  AgentQuestionPart,
   ChatState,
   CompletedStep,
+  FileCreatedSchema,
+  TaskSnapshotPart,
   UserMessage,
-  TaskItem,
-  FileCreatedEvent,
-  TokenUsageBreakdown,
 } from "../types.js";
 
 const DIR = join(homedir(), ".rossum-agent-tui");
@@ -18,13 +17,10 @@ interface PersistedState {
   chatId: string | null;
   completedSteps: CompletedStep[];
   userMessages: UserMessage[];
-  tasks: TaskItem[];
-  files: FileCreatedEvent[];
-  tokenUsage: TokenUsageBreakdown | null;
-  contextUsageFraction: number | null;
-  finalAnswer: string | null;
   feedback: Record<number, boolean>;
-  pendingQuestion: AgentQuestionEvent | null;
+  pendingQuestion: AgentQuestionPart | null;
+  tasks: TaskSnapshotPart | null;
+  files?: FileCreatedSchema[];
 }
 
 function hydrateState(p: PersistedState): ChatState {
@@ -33,14 +29,6 @@ function hydrateState(p: PersistedState): ChatState {
     connectionStatus: "idle",
     completedSteps: p.completedSteps ?? [],
     currentStreaming: null,
-    tasks: p.tasks ?? [],
-    subAgentProgress: null,
-    subAgentText: null,
-    finalAnswer: p.finalAnswer ?? null,
-    tokenUsage: p.tokenUsage ?? null,
-    contextUsageFraction: p.contextUsageFraction ?? null,
-    configCommit: null,
-    files: p.files ?? [],
     error: null,
     userMessages: p.userMessages ?? [],
     feedback: p.feedback ?? {},
@@ -48,6 +36,9 @@ function hydrateState(p: PersistedState): ChatState {
       p.pendingQuestion && Array.isArray(p.pendingQuestion.questions)
         ? p.pendingQuestion
         : null,
+    pendingToolCalls: {},
+    tasks: p.tasks && Array.isArray(p.tasks.tasks) ? p.tasks : null,
+    files: Array.isArray(p.files) ? p.files : [],
   };
 }
 
@@ -69,13 +60,10 @@ export function savePersistedState(state: ChatState): void {
       chatId: state.chatId,
       completedSteps: state.completedSteps,
       userMessages: state.userMessages,
-      tasks: state.tasks,
-      files: state.files,
-      tokenUsage: state.tokenUsage,
-      contextUsageFraction: state.contextUsageFraction,
-      finalAnswer: state.finalAnswer,
       feedback: state.feedback,
       pendingQuestion: state.pendingQuestion,
+      tasks: state.tasks,
+      files: state.files,
     };
     writeFileSync(FILE, JSON.stringify(p));
   } catch {

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from enum import Enum, StrEnum
+from typing import TYPE_CHECKING
 
 from anthropic.types import ThinkingBlockParam
+
+if TYPE_CHECKING:
+    from typing import Any, Literal
+
+    from rossum_agent.api.models.schemas import AgentQuestionItemSchema
 
 
 class StepType(Enum):
@@ -12,10 +17,6 @@ class StepType(Enum):
 
     INTERMEDIATE = "intermediate"
     FINAL_ANSWER = "final_answer"
-
-
-if TYPE_CHECKING:
-    from rossum_agent.tools.core import SubAgentProgress
 
 
 @dataclass
@@ -91,11 +92,11 @@ class ThinkingBlockData:
 
 
 @dataclass
-class ThinkingStep:
-    """Streaming thinking/chain-of-thought tokens."""
+class ReasoningStep:
+    """Streaming reasoning/chain-of-thought tokens."""
 
     step_number: int
-    thinking: str
+    reasoning: str
     is_streaming: bool = True
 
 
@@ -120,7 +121,6 @@ class ToolStartStep:
     tool_progress: tuple[int, int]
     current_tool: str | None = None
     current_tool_call_id: str | None = None
-    sub_agent_progress: SubAgentProgress | None = None
     is_streaming: bool = True
 
 
@@ -143,6 +143,7 @@ class FinalAnswerStep:
     final_answer: str
     input_tokens: int = 0
     output_tokens: int = 0
+    is_hook_output: bool = False
 
 
 @dataclass
@@ -153,7 +154,43 @@ class ErrorStep:
     error: str
 
 
-AgentStep = ThinkingStep | TextDeltaStep | ToolStartStep | ToolResultStep | FinalAnswerStep | ErrorStep
+AgentStep = ReasoningStep | TextDeltaStep | ToolStartStep | ToolResultStep | FinalAnswerStep | ErrorStep
+
+
+# --- Internal queue event types (used by AgentService, not wire protocol) ---
+
+
+class TaskStatus(StrEnum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+@dataclass
+class TaskSnapshotTask:
+    id: str
+    subject: str
+    status: TaskStatus
+    description: str = ""
+
+
+@dataclass
+class TaskSnapshotPart:
+    tasks: list[TaskSnapshotTask]
+
+
+@dataclass
+class FileCreatedPart:
+    filename: str
+    url: str
+
+
+@dataclass
+class AgentQuestionPart:
+    questions: list[AgentQuestionItemSchema]
+
+
+type QueuedAgentEvent = TaskSnapshotPart | AgentQuestionPart | FileCreatedPart
 
 
 @dataclass

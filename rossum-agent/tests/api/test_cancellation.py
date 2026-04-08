@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 from rossum_agent.api.main import app
-from rossum_agent.api.routes.messages import _watch_disconnect
+from rossum_agent.api.routes.helpers import watch_disconnect
 from rossum_agent.api.services.agent_service import AgentService, _ChatRunState
 
 
@@ -131,7 +131,7 @@ class TestAgentServiceRunRegistry:
 
 
 class TestWatchDisconnect:
-    """Tests for _watch_disconnect helper."""
+    """Tests for watch_disconnect helper."""
 
     @pytest.mark.asyncio
     async def test_watch_disconnect_calls_cancel_on_disconnect(self):
@@ -147,12 +147,12 @@ class TestWatchDisconnect:
         agent_service = MagicMock()
         agent_service.cancel_run = MagicMock(return_value=True)
 
-        await _watch_disconnect(request, "chat_1", agent_service)
+        await watch_disconnect(request, "chat_1", agent_service)
         agent_service.cancel_run.assert_called_once_with("chat_1")
 
     @pytest.mark.asyncio
     async def test_watch_disconnect_exits_cleanly_on_cancellation(self):
-        """Test that _watch_disconnect handles CancelledError gracefully."""
+        """Test that watch_disconnect handles CancelledError gracefully."""
         request = MagicMock()
 
         async def never_disconnected():
@@ -161,11 +161,11 @@ class TestWatchDisconnect:
         request.is_disconnected = never_disconnected
         agent_service = MagicMock()
 
-        task = asyncio.create_task(_watch_disconnect(request, "chat_1", agent_service))
+        task = asyncio.create_task(watch_disconnect(request, "chat_1", agent_service))
         # Let the watcher start polling
         await asyncio.sleep(0.1)
         task.cancel()
-        # Should not raise — CancelledError is suppressed inside _watch_disconnect
+        # Should not raise — CancelledError is suppressed inside watch_disconnect
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
@@ -241,7 +241,7 @@ class TestCancelEndpoint:
 
 
 async def _noop_watch_disconnect(request, chat_id, agent_service):
-    """No-op replacement for _watch_disconnect in tests."""
+    """No-op replacement for watch_disconnect in tests."""
 
 
 class TestSendMessageCancellation:
@@ -269,7 +269,7 @@ class TestSendMessageCancellation:
 
         with (
             patch("rossum_agent.api.dependencies.httpx.AsyncClient", return_value=mock_httpx_success),
-            patch("rossum_agent.api.routes.messages._watch_disconnect", _noop_watch_disconnect),
+            patch("rossum_agent.api.routes.messages.watch_disconnect", _noop_watch_disconnect),
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -305,7 +305,7 @@ class TestSendMessageCancellation:
 
         with (
             patch("rossum_agent.api.dependencies.httpx.AsyncClient", return_value=mock_httpx_success),
-            patch("rossum_agent.api.routes.messages._watch_disconnect", _noop_watch_disconnect),
+            patch("rossum_agent.api.routes.messages.watch_disconnect", _noop_watch_disconnect),
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -5,7 +5,6 @@ from __future__ import annotations
 from rossum_mcp.tools.catalog import (
     CATEGORY_META,
     CategoryMeta,
-    get_catalog_summary,
 )
 from rossum_mcp.tools.create.handler import register_create_tools
 from rossum_mcp.tools.delete.handler import register_delete_tools
@@ -16,7 +15,6 @@ from rossum_mcp.tools.update.handler import register_update_tools
 __all__ = [
     "CATEGORY_META",
     "CategoryMeta",
-    "get_catalog_summary",
     "register_create_tools",
     "register_delete_tools",
     "register_discovery_tools",

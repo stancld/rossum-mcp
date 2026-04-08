@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+- AI SDK UI Message Stream v1-compatible streaming API — replaces custom SSE contract; clients can now use `@ai-sdk/react`'s `useChat()` or plain Fetch without a custom SSE wrapper [#342](https://github.com/stancld/rossum-agents/pull/342)
+- New `stream_adapter.py` translating internal agent events to AI SDK wire format (`text-*`, `reasoning-*`, `tool-input-*`/`tool-output-*`, `data-agent-question`, `data-task-snapshot`, `data-file-created`, `start`/`finish`) [#342](https://github.com/stancld/rossum-agents/pull/342)
+- Task snapshots and file-created events are now streamed to clients [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `FinalAnswerStep.is_hook_output` field [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `TaskSnapshotTaskSchema` Pydantic model for typed task snapshot wire events [#342](https://github.com/stancld/rossum-agents/pull/342)
+
+### Changed
+- **Breaking**: Wire protocol changed from custom SSE events to AI SDK UI Message Stream v1 — existing clients consuming `event: step` / `event: done` must migrate [#342](https://github.com/stancld/rossum-agents/pull/342)
+- Renamed `ThinkingStep` → `ReasoningStep` to align with AI SDK naming [#342](https://github.com/stancld/rossum-agents/pull/342)
+- Response header: `x-vercel-ai-ui-message-stream: v1`; stream ends with `data: [DONE]\n\n` [#342](https://github.com/stancld/rossum-agents/pull/342)
+- Bump `rossum-mcp` dependency from `>=2.1.0` to `>=2.1.2`
+- Bump `fastmcp` dependency from `>=2.-.0` to `>=3.2.0`
+
+### Removed
+- `SubAgentProgress`, `SubAgentText` dataclasses and `SubAgentProgressCallback`, `SubAgentTextCallback` type aliases from `AgentContext` [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `progress_callback` and `text_callback` from `AgentContext` [#342](https://github.com/stancld/rossum-agents/pull/342)
+- `StepEvent`, `SubAgentProgressEvent`, `SubAgentTextEvent`, `TaskSnapshotEvent`, `AgentQuestionEvent`, `FileCreatedEvent` Pydantic models [#342](https://github.com/stancld/rossum-agents/pull/342)
+- Custom OpenAPI schema generation (`_custom_openapi`, `_SSE_EVENT_MODELS`, `_SSE_EVENTS`) from `main.py` [#342](https://github.com/stancld/rossum-agents/pull/342)
+
 ## [1.8.3] - 2026-03-31
 
 ### Changed
@@ -79,7 +101,12 @@ All notable changes to this project will be documented in this file.
 - Plain text / markdown file support for document uploads— files under 2000 lines are inlined in the prompt, larger ones are sent as `text/plain` documents [#297](https://github.com/stancld/rossum-agents/pull/297), [#298](https://github.com/stancld/rossum-agents/pull/298)
 - Alembic migrations for PostgreSQL schema management — initial migration creates `chats` and `messages` tables, with `alembic upgrade head` / `alembic downgrade` support [#286](https://github.com/stancld/rossum-agents/pull/286)
 
+### Changed
+- **Breaking**: Replace custom SSE protocol with AI SDK UI Message Stream v1 wire protocol — response header `x-vercel-ai-ui-message-stream: v1`, `data: <json>\n\n` framing, `data: [DONE]\n\n` sentinel
+- New `stream_adapter.py` converts internal agent events to wire events (`reasoning-start/delta/end`, `text-start/delta/end`, `tool-input-start/available`, `tool-output-available`, `error`, `data-agent-question`, `data-task-snapshot`, `data-file-created`)
+
 ### Removed
+- `StepEvent`, `SubAgentProgressEvent`, `SubAgentTextEvent`, `TaskSnapshotEvent`, `AgentQuestionEvent`, `FileCreatedEvent` Pydantic models — replaced by plain dict wire events
 - Redis as chat persistence backend — PostgreSQL is now the only storage backend; `CHAT_STORAGE_BACKEND` env var is no longer used [#294](https://github.com/stancld/rossum-agents/pull/294)
 - `ROSSUM_KB_DATA_PATH` env var override from knowledge base cache — KB data now resolves only via explicit `cache_path` or the bundled package resource
 

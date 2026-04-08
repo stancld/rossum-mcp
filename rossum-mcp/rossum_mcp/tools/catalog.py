@@ -61,11 +61,3 @@ CATEGORY_META: dict[str, CategoryMeta] = {
         keywords=["workspace", "organization"],
     ),
 }
-
-
-def get_catalog_summary() -> str:
-    """Get a compact text summary of all tool categories for the system prompt."""
-    lines = ["Available MCP tool categories (use `list_tool_categories` for details):"]
-    for name, meta in CATEGORY_META.items():
-        lines.append(f"- **{name}**: {meta.description}")
-    return "\n".join(lines)

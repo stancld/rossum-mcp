@@ -6,8 +6,9 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+from rossum_agent.agent.models import FinalAnswerStep
 from rossum_agent.api.main import app
-from rossum_agent.api.models.schemas import StepEvent, StreamDoneEvent
+from rossum_agent.api.models.schemas import StreamDoneEvent
 from rossum_agent.storage import ChatData, ChatMetadata
 
 from .conftest import create_mock_httpx_client
@@ -24,7 +25,7 @@ def client(mock_chat_service, mock_agent_service, mock_file_service):
 
 
 class TestSlashCommandInterception:
-    @patch("rossum_agent.api.routes.messages.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.RedisConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_commands_returns_sse(
         self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
@@ -47,15 +48,16 @@ class TestSlashCommandInterception:
         assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
         content = response.text
-        assert "event: step" in content
-        assert "final_answer" in content
+        assert '"type":"start"' in content
+        assert '"type":"text-delta"' in content
         assert "/list-commands" in content
-        assert "event: done" in content
+        assert '"type":"finish"' in content
+        assert "data: [DONE]" in content
 
         # Agent should NOT have been called
         mock_agent_service.run_agent.assert_not_called()
 
-    @patch("rossum_agent.api.routes.messages._get_commit_store")
+    @patch("rossum_agent.api.routes.messages.get_commit_store")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_commands_does_not_initialize_commit_store(
         self, mock_httpx, mock_get_commit_store, client, mock_chat_service, valid_headers
@@ -91,7 +93,7 @@ class TestSlashCommandInterception:
         mock_chat_service.save_messages.return_value = True
 
         async def mock_run_agent(*args, **kwargs):
-            yield StepEvent(type="final_answer", step_number=1, content="Hello!", is_final=True)
+            yield FinalAnswerStep(step_number=1, final_answer="Hello!")
             yield StreamDoneEvent(total_steps=1, input_tokens=100, output_tokens=50)
 
         mock_agent_service.run_agent = mock_run_agent
@@ -107,7 +109,7 @@ class TestSlashCommandInterception:
         content = response.text
         assert "Hello!" in content
 
-    @patch("rossum_agent.api.routes.messages.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.RedisConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_unknown_command_returns_error(
         self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
@@ -133,7 +135,7 @@ class TestSlashCommandInterception:
 
         mock_agent_service.run_agent.assert_not_called()
 
-    @patch("rossum_agent.api.routes.messages.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.RedisConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_command_does_not_save_to_history(
         self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
@@ -155,7 +157,7 @@ class TestSlashCommandInterception:
         assert response.status_code == 200
         mock_chat_service.save_messages.assert_not_called()
 
-    @patch("rossum_agent.api.routes.messages.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.RedisConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_commits_handles_commit_store_init_failure(
         self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers

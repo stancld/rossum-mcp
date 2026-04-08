@@ -92,11 +92,11 @@ class TestGetSchema:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_schema(mock_client, 50)
 

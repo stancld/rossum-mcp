@@ -26,11 +26,11 @@ class TestListSchemas:
             create_mock_schema(id=2, name="Schema 2"),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -44,13 +44,13 @@ class TestListSchemas:
         mock_schemas = [create_mock_schema(id=1, name="Invoice Schema")]
         filters_received = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal filters_received
             filters_received = filters
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, name="Invoice Schema")
 
@@ -63,13 +63,13 @@ class TestListSchemas:
         mock_schemas = [create_mock_schema(id=1, name="Schema 1")]
         filters_received = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal filters_received
             filters_received = filters
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, queue_id=5)
 
@@ -82,13 +82,13 @@ class TestListSchemas:
         mock_schemas = [create_mock_schema(id=1, name="Test Schema")]
         filters_received = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal filters_received
             filters_received = filters
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, name="Test Schema", queue_id=3)
 
@@ -100,11 +100,11 @@ class TestListSchemas:
     async def test_list_schemas_empty_result(self, mock_client: AsyncMock) -> None:
         """Test schema listing with no results."""
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -125,10 +125,10 @@ class TestListSchemas:
             ],
         )
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield mock_schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -151,12 +151,12 @@ class TestListSchemas:
 
         mock_client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield {"id": 1, "name": "Good Schema"}
             yield {"id": 2, "name": "Broken Schema"}
             yield {"id": 3, "name": "Another Good Schema"}
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -172,13 +172,13 @@ class TestListSchemas:
         ]
         filters_received = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal filters_received
             filters_received = filters
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, name="invoice", use_regex=True)
 
@@ -192,11 +192,11 @@ class TestListSchemas:
         """Test that use_regex=True returns empty list when no schemas match pattern."""
         mock_schemas = [create_mock_schema(id=1, name="Receipt Schema")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, name="^invoice$", use_regex=True)
 
@@ -233,12 +233,12 @@ class TestListSchemas:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_schemas if resource == Resource.Schema else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -254,11 +254,11 @@ class TestListSchemas:
         """Test that workspaces is None when schema has no queues."""
         mock_schemas = [create_mock_schema(id=1, name="Schema 1", queues=[])]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for schema in mock_schemas:
                 yield schema
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client)
 
@@ -301,12 +301,12 @@ class TestListSchemas:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_schemas if resource == Resource.Schema else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, workspace_id=100)
 
@@ -331,12 +331,12 @@ class TestListSchemas:
             ),
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             items = mock_schemas if resource == Resource.Schema else mock_queues
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_schemas(mock_client, workspace_id=999)
 

@@ -143,11 +143,11 @@ class TestGetRouting:
 
         mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="annotation", entity_id=99)
@@ -183,11 +183,11 @@ class TestGetRouting:
 
         mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="rule", entity_id=11)
@@ -202,11 +202,11 @@ class TestGetRouting:
 
         mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="email_template", entity_id=15)
@@ -700,11 +700,11 @@ class TestIncludeRelatedHook:
 
         mock_queues = [create_mock_queue(id=1, url="https://q/1", workspace="https://w/1")]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="hook", entity_id=5, include_related=True)

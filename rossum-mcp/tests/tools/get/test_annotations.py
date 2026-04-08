@@ -58,11 +58,11 @@ class TestGetAnnotation:
             )
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_annotation(mock_client, annotation_id=67890)
 
@@ -88,11 +88,11 @@ class TestGetAnnotation:
             )
         ]
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in mock_queues:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_annotation(mock_client, annotation_id=67890)
 
@@ -108,11 +108,11 @@ class TestGetAnnotation:
         )
         mock_client.retrieve_annotation.return_value = mock_annotation
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _get_annotation(mock_client, annotation_id=67890)
 
@@ -174,14 +174,14 @@ class TestListAnnotations:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = [mock_ann1, mock_ann2] if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_annotations(mock_client, queue_id=100, status="confirmed,to_review")
 
@@ -211,14 +211,14 @@ class TestListAnnotations:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = [mock_ann1, mock_ann2] if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_annotations(mock_client, queue_id=100, workspace_id=100)
 
@@ -240,14 +240,14 @@ class TestListAnnotations:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             items = [mock_ann1] if call_count == 0 else mock_queues
             call_count += 1
             for item in items:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_annotations(mock_client, queue_id=100, workspace_id=999)
 
@@ -257,11 +257,11 @@ class TestListAnnotations:
     async def test_list_annotations_no_status_filter(self, mock_client: AsyncMock) -> None:
         """Test annotations listing without status filter."""
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_annotations(mock_client, queue_id=100, status=None)
 
@@ -291,7 +291,7 @@ class TestListAnnotations:
 
         call_count = 0
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal call_count
             if call_count == 0:
                 call_count += 1
@@ -303,7 +303,7 @@ class TestListAnnotations:
                 for item in mock_queues:
                     yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_annotations(mock_client, queue_id=100, status="confirmed,to_review")
 

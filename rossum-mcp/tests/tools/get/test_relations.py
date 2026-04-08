@@ -80,11 +80,11 @@ class TestListRelations:
         mock_rel1 = create_mock_relation(id=1, type="duplicate")
         mock_rel2 = create_mock_relation(id=2, type="edit")
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [mock_rel1, mock_rel2]:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client)
 
@@ -96,12 +96,12 @@ class TestListRelations:
         mock_rel = create_mock_relation(id=1, type="duplicate")
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_rel
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client, type="duplicate")
 
@@ -114,12 +114,12 @@ class TestListRelations:
         mock_rel = create_mock_relation(id=1)
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_rel
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client, parent=500)
 
@@ -132,12 +132,12 @@ class TestListRelations:
         mock_rel = create_mock_relation(id=1)
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_rel
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client, annotation=600)
 
@@ -150,12 +150,12 @@ class TestListRelations:
         mock_rel = create_mock_relation(id=1, key="specific_key")
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_rel
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client, key="specific_key")
 
@@ -166,11 +166,11 @@ class TestListRelations:
     async def test_list_relations_empty(self, mock_client: AsyncMock) -> None:
         """Test relations listing when none exist."""
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client)
 
@@ -189,12 +189,12 @@ class TestListRelations:
 
         mock_client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield {"id": 1, "type": "duplicate"}
             yield {"id": 2, "type": "broken"}
             yield {"id": 3, "type": "edit"}
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_relations(mock_client)
 

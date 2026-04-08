@@ -19,7 +19,6 @@ from rossum_agent.api.models.schemas import (
     ImageContent,
     Message,
     MessageRequest,
-    StepEvent,
     StreamDoneEvent,
     TextContent,
 )
@@ -330,62 +329,6 @@ class TestMessageMultimodal:
         ]
         msg = Message(role="user", content=content)
         assert len(msg.content) == 2
-
-
-class TestStepEvent:
-    """Tests for StepEvent schema."""
-
-    def test_thinking_event(self):
-        """Test thinking event."""
-        event = StepEvent(type="thinking", step_number=1, content="I'll help you with that...", is_streaming=True)
-        assert event.type == "thinking"
-        assert event.is_streaming is True
-
-    def test_tool_start_event(self):
-        """Test tool_start event."""
-        event = StepEvent(type="tool_start", step_number=1, tool_name="list_annotations", tool_progress=(1, 3))
-        assert event.type == "tool_start"
-        assert event.tool_name == "list_annotations"
-        assert event.tool_progress == (1, 3)
-
-    def test_tool_result_event(self):
-        """Test tool_result event."""
-        event = StepEvent(
-            type="tool_result",
-            step_number=1,
-            tool_name="list_annotations",
-            result='{"annotations": []}',
-            is_error=False,
-        )
-        assert event.type == "tool_result"
-        assert event.is_error is False
-
-    def test_final_answer_event(self):
-        """Test final_answer event."""
-        event = StepEvent(type="final_answer", step_number=2, content="Here is your answer", is_final=True)
-        assert event.type == "final_answer"
-        assert event.is_final is True
-
-    def test_error_event(self):
-        """Test error event."""
-        event = StepEvent(type="error", step_number=0, content="Something went wrong", is_final=True)
-        assert event.type == "error"
-
-    def test_context_usage_fraction_defaults_to_none(self):
-        """Test context_usage_fraction defaults to None on StepEvent."""
-        event = StepEvent(type="thinking", step_number=1, content="thinking...")
-        assert event.context_usage_fraction is None
-
-    def test_context_usage_fraction_can_be_set(self):
-        """Test context_usage_fraction can be set on StepEvent."""
-        event = StepEvent(
-            type="tool_result",
-            step_number=2,
-            tool_name="list_annotations",
-            result="[]",
-            context_usage_fraction=0.42,
-        )
-        assert event.context_usage_fraction == 0.42
 
 
 class TestStreamDoneEvent:

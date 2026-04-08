@@ -204,23 +204,6 @@ class TestSkillRegistry:
 
             assert set(names) == {"skill-a", "skill-b"}
 
-    def test_reload_clears_cache(self):
-        with TemporaryDirectory() as tmpdir:
-            skill_file = Path(tmpdir) / "original.md"
-            skill_file.write_text("Original")
-
-            registry = SkillRegistry(Path(tmpdir))
-            assert len(registry.get_all_skills()) == 1
-
-            skill_file.unlink()
-            (Path(tmpdir) / "new.md").write_text("New")
-
-            registry.reload()
-            names = registry.get_skill_names()
-
-            assert "new" in names
-            assert "original" not in names
-
     def test_handles_missing_directory(self):
         registry = SkillRegistry(Path("/nonexistent/path"))
         skills = registry.get_all_skills()

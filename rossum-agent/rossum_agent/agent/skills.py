@@ -150,12 +150,6 @@ class SkillRegistry:
         self._load_skills()
         return list(self._skills.keys())
 
-    def reload(self) -> None:
-        """Force reload all skills from disk."""
-        self._skills.clear()
-        self._loaded = False
-        self._load_skills()
-
 
 # Module-level default registry instance
 _default_registry: SkillRegistry | None = None

@@ -76,11 +76,11 @@ class TestListDocumentRelations:
         mock_dr1 = create_mock_document_relation(id=1, type="export")
         mock_dr2 = create_mock_document_relation(id=2, type="einvoice")
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             for item in [mock_dr1, mock_dr2]:
                 yield item
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client)
 
@@ -92,12 +92,12 @@ class TestListDocumentRelations:
         mock_dr = create_mock_document_relation(id=1, type="export")
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_dr
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client, type="export")
 
@@ -110,12 +110,12 @@ class TestListDocumentRelations:
         mock_dr = create_mock_document_relation(id=1)
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_dr
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client, annotation=500)
 
@@ -128,12 +128,12 @@ class TestListDocumentRelations:
         mock_dr = create_mock_document_relation(id=1)
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_dr
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client, documents=700)
 
@@ -146,12 +146,12 @@ class TestListDocumentRelations:
         mock_dr = create_mock_document_relation(id=1, key="specific_key")
         received_filters: dict = {}
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             nonlocal received_filters
             received_filters = filters
             yield mock_dr
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client, key="specific_key")
 
@@ -162,11 +162,11 @@ class TestListDocumentRelations:
     async def test_list_document_relations_empty(self, mock_client: AsyncMock) -> None:
         """Test document relations listing when none exist."""
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             return
             yield
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client)
 
@@ -185,12 +185,12 @@ class TestListDocumentRelations:
 
         mock_client._deserializer = mock_deserializer
 
-        async def mock_fetch_all(resource, **filters):
+        async def mock_cursor_fetch_all(resource, **filters):
             yield {"id": 1, "type": "export"}
             yield {"id": 2, "type": "broken"}
             yield {"id": 3, "type": "einvoice"}
 
-        mock_client._http_client.fetch_all = mock_fetch_all
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
 
         result = await _list_document_relations(mock_client)
 
