@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Change
+- Bump `fastmcp` dependency from `>=2.-.0` to `>=3.2.0`
+
 
 ## [2.1.2] - 2026-03-31
 
