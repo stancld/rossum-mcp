@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased] - YYYY-MM-DD
+## [2.1.3] - 2026-04-08
 
 ### Added
 - Schema models now expose additional fields: `description`, `can_collapse`, `aggregations` on datapoints; `disable_prediction`, `rir_field_names` on tuples; `disable_prediction`, `grid`, `show_grid_by_default` on multivalues — all settable via `patch_schema` [#347](https://github.com/stancld/rossum-agents/pull/347)
