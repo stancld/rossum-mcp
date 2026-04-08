@@ -143,6 +143,109 @@ class TestSchemaDataclasses:
         assert result["enum_value_type"] == "string"
         assert result["options"] == []
 
+    def test_schema_datapoint_with_description_and_can_collapse(self) -> None:
+        """Test SchemaDatapoint with description and can_collapse fields."""
+        datapoint = SchemaDatapoint(
+            label="Notes",
+            type="string",
+            description="Additional notes for the line item",
+            can_collapse=True,
+        )
+        result = datapoint.to_dict()
+
+        assert result["description"] == "Additional notes for the line item"
+        assert result["can_collapse"] is True
+
+    def test_schema_datapoint_with_aggregations(self) -> None:
+        """Test SchemaDatapoint with aggregations field."""
+        aggregations = {"sum": True, "avg": False}
+        datapoint = SchemaDatapoint(label="Amount", type="number", aggregations=aggregations)
+        result = datapoint.to_dict()
+
+        assert result["aggregations"] == {"sum": True, "avg": False}
+
+    def test_schema_tuple_with_disable_prediction(self) -> None:
+        """Test SchemaTuple with disable_prediction=True includes it in output."""
+        tuple_node = SchemaTuple(
+            id="line_item",
+            label="Line Item",
+            children=[SchemaDatapoint(label="Field", type="string")],
+            disable_prediction=True,
+        )
+        result = tuple_node.to_dict()
+
+        assert result["disable_prediction"] is True
+
+    def test_schema_tuple_with_rir_field_names(self) -> None:
+        """Test SchemaTuple with rir_field_names includes them in output."""
+        tuple_node = SchemaTuple(
+            id="line_item",
+            label="Line Item",
+            children=[SchemaDatapoint(label="Field", type="string")],
+            rir_field_names=["line_items"],
+        )
+        result = tuple_node.to_dict()
+
+        assert result["rir_field_names"] == ["line_items"]
+
+    def test_schema_tuple_defaults_exclude_optional_fields(self) -> None:
+        """Test SchemaTuple with defaults excludes disable_prediction and rir_field_names."""
+        tuple_node = SchemaTuple(
+            id="line_item",
+            label="Line Item",
+            children=[SchemaDatapoint(label="Field", type="string")],
+        )
+        result = tuple_node.to_dict()
+
+        assert "disable_prediction" not in result
+        assert "rir_field_names" not in result
+
+    def test_schema_multivalue_with_disable_prediction(self) -> None:
+        """Test SchemaMultivalue with disable_prediction=True includes it in output."""
+        multivalue = SchemaMultivalue(
+            label="Line Items",
+            children=SchemaDatapoint(label="Item", type="string"),
+            disable_prediction=True,
+        )
+        result = multivalue.to_dict()
+
+        assert result["disable_prediction"] is True
+
+    def test_schema_multivalue_with_grid(self) -> None:
+        """Test SchemaMultivalue with grid configuration."""
+        grid = {"parts": [{"rows": "line_items"}]}
+        multivalue = SchemaMultivalue(
+            label="Line Items",
+            children=SchemaDatapoint(label="Item", type="string"),
+            grid=grid,
+        )
+        result = multivalue.to_dict()
+
+        assert result["grid"] == {"parts": [{"rows": "line_items"}]}
+
+    def test_schema_multivalue_with_show_grid_by_default(self) -> None:
+        """Test SchemaMultivalue with show_grid_by_default=True."""
+        multivalue = SchemaMultivalue(
+            label="Line Items",
+            children=SchemaDatapoint(label="Item", type="string"),
+            show_grid_by_default=True,
+        )
+        result = multivalue.to_dict()
+
+        assert result["show_grid_by_default"] is True
+
+    def test_schema_multivalue_defaults_exclude_new_optional_fields(self) -> None:
+        """Test SchemaMultivalue with defaults excludes disable_prediction, grid, show_grid_by_default."""
+        multivalue = SchemaMultivalue(
+            label="Line Items",
+            children=SchemaDatapoint(label="Item", type="string"),
+        )
+        result = multivalue.to_dict()
+
+        assert "disable_prediction" not in result
+        assert "grid" not in result
+        assert "show_grid_by_default" not in result
+
     def test_schema_multivalue_all_optional_fields(self) -> None:
         """Test SchemaMultivalue with all optional fields set."""
         multivalue = SchemaMultivalue(

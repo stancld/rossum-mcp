@@ -484,6 +484,59 @@ class TestBuildFieldNode:
 
         assert "matching" not in node
 
+    def test_description_field(self):
+        spec = {"id": "notes", "label": "Notes", "type": "string", "description": "Additional notes"}
+        node = _build_field_node(spec)
+
+        assert node["description"] == "Additional notes"
+
+    def test_disable_prediction_field(self):
+        spec = {"id": "manual_entry", "label": "Manual Entry", "type": "string", "disable_prediction": True}
+        node = _build_field_node(spec)
+
+        assert node["disable_prediction"] is True
+
+    def test_can_collapse_field(self):
+        spec = {"id": "details", "label": "Details", "type": "string", "can_collapse": True}
+        node = _build_field_node(spec)
+
+        assert node["can_collapse"] is True
+
+    def test_aggregations_field(self):
+        aggregations = {"sum": True}
+        spec = {"id": "amount", "label": "Amount", "type": "number", "aggregations": aggregations}
+        node = _build_field_node(spec)
+
+        assert node["aggregations"] == aggregations
+
+    def test_grid_and_show_grid_by_default(self):
+        grid = {"columns": ["col1", "col2"]}
+        spec = {
+            "id": "items",
+            "label": "Items",
+            "type": "string",
+            "grid": grid,
+            "show_grid_by_default": True,
+        }
+        node = _build_field_node(spec)
+
+        assert node["grid"] == grid
+        assert node["show_grid_by_default"] is True
+
+    def test_new_optional_fields_not_included_when_absent(self):
+        spec = {"id": "plain", "label": "Plain", "type": "string"}
+        node = _build_field_node(spec)
+
+        for key in (
+            "description",
+            "disable_prediction",
+            "can_collapse",
+            "aggregations",
+            "grid",
+            "show_grid_by_default",
+        ):
+            assert key not in node
+
 
 class TestCoerceTypeToString:
     """Test _coerce_field_type function."""
@@ -1338,14 +1391,15 @@ class TestCallOpusForPatching:
                 user_content = call_args[1]["messages"][0]["content"]
                 user_text = user_content[0]["text"] if isinstance(user_content, list) else user_content
                 assert "[LOOKUP]" in user_text
-                assert "Lookup Field Specs" in user_text
+                assert "Full Change Specs" in user_text
+                assert "Lookup fields MUST include" in user_text
                 assert "master_data_hub" in user_text
                 assert "matching" in user_text
         finally:
             set_context(AgentContext())
 
-    def test_no_lookup_section_without_matching(self):
-        """Test that no lookup section is added for non-lookup fields."""
+    def test_no_detail_section_without_matching_or_update(self):
+        """Test that no detail section is added for plain add fields."""
         mock_response = MagicMock()
         mock_response.stop_reason = "end_of_turn"
         mock_response.content = [MagicMock(text="Done", type="text")]
@@ -1367,7 +1421,7 @@ class TestCallOpusForPatching:
                 call_args = mock_client.return_value.messages.create.call_args
                 user_content = call_args[1]["messages"][0]["content"]
                 user_text = user_content[0]["text"] if isinstance(user_content, list) else user_content
-                assert "Lookup Field Specs" not in user_text
+                assert "Full Change Specs" not in user_text
         finally:
             set_context(AgentContext())
 
@@ -1395,6 +1449,63 @@ class TestCallOpusForPatching:
                 user_content = call_args[1]["messages"][0]["content"]
                 user_text = user_content[0]["text"] if isinstance(user_content, list) else user_content
                 assert "formula='field.a + field.b'" in user_text
+        finally:
+            set_context(AgentContext())
+
+    def test_description_included_in_changes_text(self):
+        """Test that description appears in both summary and detail section for update ops."""
+        mock_response = MagicMock()
+        mock_response.stop_reason = "end_of_turn"
+        mock_response.content = [MagicMock(text="Done", type="text")]
+        mock_response.content[0].text = "Done"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
+
+        set_context(AgentContext(token_callback=MagicMock()))
+        try:
+            with (
+                patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
+                patch("rossum_agent.tools.subagents.schema_patching.call_mcp_tool", return_value=None),
+            ):
+                mock_client.return_value.messages.create.return_value = mock_response
+
+                changes = [{"action": "update", "id": "doc_id", "description": "My new description"}]
+                _call_opus_for_patching("123", changes)
+
+                call_args = mock_client.return_value.messages.create.call_args
+                user_content = call_args[1]["messages"][0]["content"]
+                user_text = user_content[0]["text"] if isinstance(user_content, list) else user_content
+                assert "description='My new description'" in user_text
+                assert "Full Change Specs" in user_text  # detail section present
+                assert '"description": "My new description"' in user_text
+        finally:
+            set_context(AgentContext())
+
+    def test_update_action_includes_detail_section(self):
+        """Test that update actions get full JSON specs in the detail section."""
+        mock_response = MagicMock()
+        mock_response.stop_reason = "end_of_turn"
+        mock_response.content = [MagicMock(text="Done", type="text")]
+        mock_response.content[0].text = "Done"
+        mock_response.usage.input_tokens = 100
+        mock_response.usage.output_tokens = 50
+
+        set_context(AgentContext(token_callback=MagicMock()))
+        try:
+            with (
+                patch("rossum_agent.tools.subagents.base.create_bedrock_client") as mock_client,
+                patch("rossum_agent.tools.subagents.schema_patching.call_mcp_tool", return_value=None),
+            ):
+                mock_client.return_value.messages.create.return_value = mock_response
+
+                changes = [{"action": "update", "id": "f1", "hidden": True}]
+                _call_opus_for_patching("123", changes)
+
+                call_args = mock_client.return_value.messages.create.call_args
+                user_content = call_args[1]["messages"][0]["content"]
+                user_text = user_content[0]["text"] if isinstance(user_content, list) else user_content
+                assert "hidden=True" in user_text
+                assert "Full Change Specs" in user_text  # detail section present
         finally:
             set_context(AgentContext())
 
