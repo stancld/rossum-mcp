@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - YYYY-MM-DD
 
 ### Added
+- Allow `http://localhost:3000` CORS origin when `ROSSUM_AGENT_DEVELOP` env var is set
 - AI SDK UI Message Stream v1-compatible streaming API — replaces custom SSE contract; clients can now use `@ai-sdk/react`'s `useChat()` or plain Fetch without a custom SSE wrapper [#342](https://github.com/stancld/rossum-agents/pull/342)
 - New `stream_adapter.py` translating internal agent events to AI SDK wire format (`text-*`, `reasoning-*`, `tool-input-*`/`tool-output-*`, `data-agent-question`, `data-task-snapshot`, `data-file-created`, `start`/`finish`) [#342](https://github.com/stancld/rossum-agents/pull/342)
 - Task snapshots and file-created events are now streamed to clients [#342](https://github.com/stancld/rossum-agents/pull/342)
