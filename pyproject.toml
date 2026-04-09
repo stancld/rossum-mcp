@@ -19,7 +19,7 @@ keywords = ["mcp", "rossum", "document-processing", "agent", "ai"]
 dependencies = [
     # Transitive dep (fastmcp -> authlib); pinned to fix Snyk SNYK-PYTHON-CRYPTOGRAPHY-15263096
     "cryptography>=46.0.5",
-    "fastmcp>=3.2.0",
+    "fastmcp==3.2.0",
     "mcp>=1.0.0",
     "rossum-api>=3.13.1",
 ]
@@ -30,7 +30,7 @@ agent = [
     "anthropic>=0.79.0",
     "boto3>=1.0",
     "defusedxml>=0.7.0",
-    "fastmcp>=3.2.0",
+    "fastmcp==3.2.0",
     "fpdf2>=2.8.0",
     "openpyxl>=3.1.0",
     "pandas>=2.0.0",
@@ -62,7 +62,7 @@ docs = [
 ]
 # MCP server dependencies
 mcp = [
-    "fastmcp>=3.2.0",
+    "fastmcp==3.2.0",
     "mcp>=1.0.0",
 ]
 # Testing
@@ -86,7 +86,7 @@ all = [
     "cryptography>=46.0.5",
     "defusedxml>=0.7.0",
     "fastapi>=0.115.0",
-    "fastmcp>=3.2.0",
+    "fastmcp==3.2.0",
     "fpdf2>=2.8.0",
     "furo",
     "gunicorn>=23.0.0",
