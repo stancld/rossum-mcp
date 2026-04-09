@@ -90,12 +90,8 @@ class StreamState:
         return (time.monotonic() - self.first_text_token_time) >= INITIAL_TEXT_BUFFER_DELAY
 
     def get_step_type(self, step_num: int) -> StepType:
-        """Get the step type based on whether tool calls are pending.
-
-        In the first step, default to INTERMEDIATE since the agent nearly always
-        uses tools before producing a final answer.
-        """
-        if self.pending_tools or self.tool_calls or step_num == 1:
+        """Get the step type based on whether tool calls are pending."""
+        if self.pending_tools or self.tool_calls:
             return StepType.INTERMEDIATE
         return StepType.FINAL_ANSWER
 

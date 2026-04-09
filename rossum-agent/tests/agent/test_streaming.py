@@ -240,16 +240,10 @@ class TestStreamState:
         assert state.get_step_type(step_num=2) == StepType.INTERMEDIATE
 
     def test_get_step_type_final_answer(self):
-        """Test get_step_type returns FINAL_ANSWER when no tools on non-first step."""
+        """Test get_step_type returns FINAL_ANSWER when no tools."""
         state = StreamState()
 
         assert state.get_step_type(step_num=2) == StepType.FINAL_ANSWER
-
-    def test_get_step_type_first_step_defaults_to_intermediate(self):
-        """Test get_step_type returns INTERMEDIATE on step 1 even without tools."""
-        state = StreamState()
-
-        assert state.get_step_type(step_num=1) == StepType.INTERMEDIATE
 
     def test_thinking_block_followed_by_intermediate_step(self):
         """Test that a step with thinking always has content (tool calls or text).
