@@ -2558,7 +2558,7 @@ requires-dist = [
     { name = "defusedxml", marker = "extra == 'scripts'", specifier = ">=0.7.0" },
     { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.115.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
-    { name = "fastmcp", specifier = ">=3.2.0" },
+    { name = "fastmcp", specifier = "==3.2.0" },
     { name = "fpdf2", specifier = ">=2.8.0" },
     { name = "furo", marker = "extra == 'all'" },
     { name = "furo", marker = "extra == 'docs'" },
