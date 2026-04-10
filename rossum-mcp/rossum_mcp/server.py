@@ -9,7 +9,7 @@ from fastmcp import FastMCP
 from rossum_api import AsyncRossumAPIClient
 from rossum_api.dtos import Token
 
-from rossum_mcp.logging_config import setup_logging
+from rossum_mcp.logging_config import VALID_LOG_LEVELS, setup_logging
 from rossum_mcp.tools import (
     register_create_tools,
     register_delete_tools,
@@ -35,7 +35,10 @@ def create_app() -> FastMCP:
     - ``ROSSUM_MCP_MODE`` (optional, default: read-write)
     - ``ROSSUM_MCP_LOG_LEVEL`` (optional, default: INFO)
     """
-    setup_logging(log_level=os.environ.get("ROSSUM_MCP_LOG_LEVEL", "INFO"))
+    log_level = os.environ.get("ROSSUM_MCP_LOG_LEVEL", "INFO").upper()
+    if log_level not in VALID_LOG_LEVELS:
+        raise ValueError(f"Invalid ROSSUM_MCP_LOG_LEVEL: {log_level}. Must be one of: {VALID_LOG_LEVELS}")
+    setup_logging(log_level=log_level)  # ty:ignore[invalid-argument-type] - validated above
 
     base_url = os.environ["ROSSUM_API_BASE_URL"].rstrip("/")
     api_token = os.environ["ROSSUM_API_TOKEN"]

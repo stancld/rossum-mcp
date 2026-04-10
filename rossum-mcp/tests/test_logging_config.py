@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+import pytest
 from rossum_mcp.logging_config import setup_logging
 
 
@@ -66,16 +67,6 @@ class TestSetupLogging:
 
         assert handler_count_1 == handler_count_2
 
-    def test_log_level_case_insensitive(self):
-        logger1 = setup_logging(log_level="debug")
-        assert logger1.level == logging.DEBUG
-
-        logger2 = setup_logging(log_level="DEBUG")
-        assert logger2.level == logging.DEBUG
-
-        logger3 = setup_logging(log_level="Debug")
-        assert logger3.level == logging.DEBUG
-
     def test_default_parameters(self):
         logger = setup_logging()
 
@@ -89,7 +80,6 @@ class TestSetupLogging:
         ]
         assert len(console_handlers) >= 1
 
-    def test_invalid_log_level_falls_back_to_info(self):
-        logger = setup_logging(log_level="BOGUS")
-
-        assert logger.level == logging.INFO
+    def test_invalid_log_level_raises(self):
+        with pytest.raises(KeyError):
+            setup_logging(log_level="BOGUS")

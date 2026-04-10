@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Literal, get_args
+
+LogLevel = Literal["INFO", "DEBUG", "WARNING", "ERROR", "CRITICAL"]
+
+VALID_LOG_LEVELS: tuple[str, ...] = get_args(LogLevel)
 
 
-def setup_logging(log_level: str = "INFO") -> logging.Logger:
-    """Configure logging for the MCP server.
-
-    Args:
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-                   Falls back to INFO on invalid values.
-    """
+def setup_logging(log_level: LogLevel = "INFO") -> logging.Logger:
     root_logger = logging.getLogger()
 
-    normalized = log_level.upper()
-    level = logging.getLevelNamesMapping().get(normalized, logging.INFO)
+    level = logging.getLevelNamesMapping()[log_level]
     root_logger.setLevel(level)
 
     root_logger.handlers.clear()
