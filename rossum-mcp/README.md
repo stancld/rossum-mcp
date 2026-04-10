@@ -80,75 +80,46 @@ To change the mode, restart the server with a different `ROSSUM_MCP_MODE` enviro
 
 ## Available Tools
 
-A compact, fully-typed tool surface — Pydantic models, `StrEnum` parameters, and consolidated APIs built for agents:
+Fully typed with Pydantic models, `StrEnum` parameters, and unified APIs — 30 tools across 13 categories.
 
 | Category | Description |
 |----------|-------------|
-| **Read Layer** | Get any entity by ID or search/list with typed filters |
-| **Delete Layer** | Unified delete for any supported entity by ID |
-| **Document Processing** | Upload documents, retrieve content, update/confirm/copy annotations |
-| **Queue Management** | Create and configure queues (including from templates) |
-| **Schema Management** | Define, modify, patch, and prune field structures |
-| **Engine Management** | Configure extraction and splitting engines |
-| **Extensions (Hooks)** | Webhooks, serverless functions, template-based creation, testing |
-| **Rules & Actions** | Business rules with TxScript triggers and actions |
-| **Workspace Management** | Create workspaces |
-| **Organization & Users** | Feature flags, user creation and updates |
-| **Email Templates** | Automated email responses |
-| **MCP Mode** | Get/set read-only or read-write mode at runtime |
-| **Tool Discovery** | Dynamic tool loading via `list_tool_categories` |
+| **Read** | Get any entity by ID or search with typed filters |
+| **Delete** | Remove any supported entity by ID |
+| **Documents** | Upload, retrieve content, update fields, confirm, copy annotations |
+| **Queues** | Create from templates and configure settings |
+| **Schemas** | Patch fields, view tree structure, prune unused fields |
+| **Engines** | Configure extraction and splitting engines |
+| **Hooks** | Webhooks, serverless functions, templates, testing |
+| **Rules** | Business rules with TxScript triggers |
+| **Workspaces** | Create workspaces |
+| **Users** | Create and update users |
+| **Email** | Automated email response templates |
+| **Mode** | Runtime read-only / read-write introspection |
+| **Discovery** | Dynamic tool loading via `list_tool_categories` |
 
 <details>
-<summary><strong>Tool List by Category</strong></summary>
+<summary><strong>All 30 tools</strong></summary>
 
-**Read Layer** (unified get + search replacing ~25 individual get_X/list_X tools):
-`get`, `search`
-
-Supported entities for `get` (by ID): `queue`, `schema`, `hook`, `engine`, `rule`, `user`, `workspace`, `email_template`, `organization_group`, `organization_limit`, `annotation`, `relation`, `document_relation`, `hook_secrets_keys`
-
-Supported entities for `search` (with typed filters): all `get` entities except `organization_limit` and `hook_secrets_keys`, plus search-only entities `hook_log`, `hook_template`, `user_role`, `queue_template_name`
-
-**Delete Layer** (unified delete replacing individual delete_X tools):
-`delete`
-
-Supported entities: `queue`, `schema`, `hook`, `rule`, `workspace`, `annotation`
-
-**Document Processing:**
-`upload_document`, `get_annotation_content`, `start_annotation`, `bulk_update_annotation_fields`, `confirm_annotation`, `copy_annotations`
-
-**Queue Management:**
-`create_queue_from_template`, `update_queue`
-
-**Schema Management:**
-`patch_schema`, `get_schema_tree_structure`, `prune_schema_fields`
-
-**Engine Management:**
-`create_engine`, `update_engine`, `create_engine_field`, `get_engine_fields`
-
-**Extensions (Hooks):**
-`create_hook`, `update_hook`, `create_hook_from_template`, `test_hook`
-
-**Rules & Actions:**
-`create_rule`, `patch_rule`
-
-**Workspace Management:**
-`create_workspace`
-
-**User Management:**
-`create_user`, `update_user`
-
-**Email Templates:**
-`create_email_template`
-
-**MCP Mode:**
-`get_mcp_mode`
-
-**Tool Discovery:**
-`list_tool_categories`
+| Category | Tools |
+|----------|-------|
+| Read | `get` · `search` |
+| Delete | `delete` |
+| Documents | `upload_document` · `get_annotation_content` · `start_annotation` · `bulk_update_annotation_fields` · `confirm_annotation` · `copy_annotations` |
+| Queues | `create_queue_from_template` · `update_queue` |
+| Schemas | `patch_schema` · `get_schema_tree_structure` · `prune_schema_fields` |
+| Engines | `create_engine` · `update_engine` · `create_engine_field` · `get_engine_fields` |
+| Hooks | `create_hook` · `update_hook` · `create_hook_from_template` · `test_hook` |
+| Rules | `create_rule` · `patch_rule` |
+| Workspaces | `create_workspace` |
+| Users | `create_user` · `update_user` |
+| Email | `create_email_template` |
+| Mode | `get_mcp_mode` |
+| Discovery | `list_tool_categories` |
 
 </details>
 
-For detailed API documentation with parameters and examples, see [TOOLS.md](TOOLS.md).
+For parameters and examples, see [TOOLS.md](TOOLS.md).
 
 ## Example Workflows
 
