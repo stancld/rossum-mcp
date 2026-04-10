@@ -7,8 +7,8 @@ from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.queue import Queue
 
+from rossum_mcp.models.queue import QUEUE_TEMPLATE_NAMES, QueueTemplateName
 from rossum_mcp.tools.base import build_resource_url, extract_id_from_url, get_queue_engine_url
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, QueueTemplateName
 from rossum_mcp.tools.resource_tracking import embed_tracked_resources, track_resource
 
 if TYPE_CHECKING:

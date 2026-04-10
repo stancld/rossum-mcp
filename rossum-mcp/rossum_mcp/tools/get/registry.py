@@ -21,12 +21,16 @@ from rossum_api.models.queue import Queue
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
+from rossum_mcp.models.annotation import Annotation
+from rossum_mcp.models.email_template import EmailTemplate
+from rossum_mcp.models.hook import Hook
+from rossum_mcp.models.rule import Rule
+from rossum_mcp.models.schema import Schema
 from rossum_mcp.tools.base import (
     resolve_queue_workspaces,
     resolve_workspace_from_queue,
     resolve_workspaces_from_queues,
 )
-from rossum_mcp.tools.models import Annotation, EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

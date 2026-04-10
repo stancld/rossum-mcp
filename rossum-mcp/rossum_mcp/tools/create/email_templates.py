@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any
 
 from rossum_api.models.email_template import EmailTemplate
 
+from rossum_mcp.models.email_template import EmailTemplateType
 from rossum_mcp.tools.base import build_resource_url
-from rossum_mcp.tools.models import EmailTemplateType
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
-    from rossum_mcp.tools.models import EmailRecipient
+    from rossum_mcp.models.email_template import EmailRecipient
 
 logger = logging.getLogger(__name__)
 

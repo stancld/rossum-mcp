@@ -11,6 +11,12 @@ from rossum_api.models.rule import Rule, RuleAction
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
+from rossum_mcp.models.email_template import EmailRecipient, EmailTemplateType
+from rossum_mcp.models.engine import EngineType  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+from rossum_mcp.models.hook import HookSideload  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+from rossum_mcp.models.queue import (
+    QueueTemplateName,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
 from rossum_mcp.tools.create.annotations import _copy_annotations, _upload_document
 from rossum_mcp.tools.create.email_templates import _create_email_template
 from rossum_mcp.tools.create.engines import _create_engine, _create_engine_field
@@ -19,7 +25,6 @@ from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.create.rules import _create_rule
 from rossum_mcp.tools.create.users import _create_user
 from rossum_mcp.tools.create.workspaces import _create_workspace
-from rossum_mcp.tools.models import EmailRecipient, EmailTemplateType, EngineType, HookSideload, QueueTemplateName
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP

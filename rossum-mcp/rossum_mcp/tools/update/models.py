@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, TypedDict
 
-from rossum_mcp.tools.models import (  # noqa: TC001 - needed at runtime for FastMCP TypedDict resolution
+from rossum_mcp.models.queue import (  # noqa: TC001 - needed at runtime for FastMCP TypedDict resolution
     AutomationLevel,
-    DatapointType,
     QueueLocale,
+)
+from rossum_mcp.models.schema import (
+    DatapointType,  # noqa: TC001 - needed at runtime for FastMCP TypedDict resolution
 )
 
 
