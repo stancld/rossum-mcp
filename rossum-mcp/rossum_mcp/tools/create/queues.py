@@ -12,6 +12,7 @@ from rossum_mcp.tools.base import build_resource_url, extract_id_from_url, get_q
 from rossum_mcp.tools.resource_tracking import embed_tracked_resources, track_resource
 
 if TYPE_CHECKING:
+    from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 
@@ -72,3 +73,21 @@ async def _create_queue_from_template(
             logger.warning(f"Failed to fetch engine for tracked resource (queue={queue.id})", exc_info=True)
 
     return embed_tracked_resources(queue, tracked)
+
+
+def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
+    @mcp.tool(
+        description="Create a queue from a template (includes schema + engine defaults).",
+        tags={"queues", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_queue_from_template(
+        name: str,
+        template_name: QueueTemplateName,
+        workspace_id: int,
+        include_documents: bool = False,
+        engine_id: int | None = None,
+    ) -> Queue | dict:
+        return await _create_queue_from_template(
+            client, base_url, name, template_name, workspace_id, include_documents, engine_id
+        )
