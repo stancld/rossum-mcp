@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, Any
 from fastmcp.exceptions import ToolError
 from rossum_api.models.hook import Hook, HookEventAndAction, HookType
 
+from rossum_mcp.models.hook import (
+    HookSideload,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
 from rossum_mcp.tools.base import build_resource_url
-from rossum_mcp.tools.models import HookSideload  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 from rossum_mcp.tools.validation import validate_hook_events
 
 if TYPE_CHECKING:

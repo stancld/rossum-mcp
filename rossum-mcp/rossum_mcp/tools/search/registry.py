@@ -15,6 +15,13 @@ from rossum_api.models.schema import Schema
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
+from rossum_mcp.logging_config import LogLevel  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+from rossum_mcp.models.annotation import Annotation
+from rossum_mcp.models.email_template import EmailTemplate
+from rossum_mcp.models.engine import EngineType  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+from rossum_mcp.models.hook import Hook
+from rossum_mcp.models.queue import QUEUE_TEMPLATE_NAMES
+from rossum_mcp.models.rule import Rule
 from rossum_mcp.tools.base import (
     build_filters,
     filter_by_name_regex,
@@ -24,7 +31,6 @@ from rossum_mcp.tools.base import (
     resolve_workspace_from_queue,
     resolve_workspaces_from_queues,
 )
-from rossum_mcp.tools.models import QUEUE_TEMPLATE_NAMES, Annotation, EmailTemplate, EngineType, Hook, LogLevel, Rule
 from rossum_mcp.tools.search.models import QueueListItem, SchemaListItem, SearchQuery
 
 if TYPE_CHECKING:

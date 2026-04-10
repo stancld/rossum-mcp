@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from conftest import create_mock_schema
-from rossum_mcp.tools.models import SchemaDatapoint
+from rossum_mcp.models.schema import SchemaDatapoint
 from rossum_mcp.tools.update.handler import register_update_tools
 from rossum_mcp.tools.update.models import SchemaNodeUpdate
 

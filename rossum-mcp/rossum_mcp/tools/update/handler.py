@@ -8,8 +8,10 @@ from rossum_api.models.queue import Queue
 from rossum_api.models.rule import Rule, RuleAction
 from rossum_api.models.user import User
 
-from rossum_mcp.tools.models import (
+from rossum_mcp.models.hook import (
     HookSideload,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
+from rossum_mcp.models.schema import (
     SchemaNode,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 )
 from rossum_mcp.tools.update.annotations import _bulk_update_annotation_fields, _confirm_annotation, _start_annotation

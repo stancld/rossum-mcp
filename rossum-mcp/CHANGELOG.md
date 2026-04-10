@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Refactor `server.py` into `RossumMCPServer` class in `server.py` and thin `run.py` entry point [#348](https://github.com/stancld/rossum-agents/pull/348)
 - Replace `Literal` type aliases with `StrEnum` for `MCPMode` and `LogLevel` — drops manual validation in favor of enum construction [#348](https://github.com/stancld/rossum-agents/pull/348)
+- Extract shared models into dedicated `models` module with resource-level separation [#349](https://github.com/stancld/rossum-agents/pull/349)
 
 ## [2.1.3] - 2026-04-08
 

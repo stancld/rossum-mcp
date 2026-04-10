@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from rossum_api import AsyncRossumAPIClient
 
-    from rossum_mcp.tools.models import SchemaNode
+    from rossum_mcp.models.schema import SchemaNode
     from rossum_mcp.tools.update.models import SchemaNodeUpdate
 
 MAX_RETRIES_ON_PRECONDITION_FAILED = 5

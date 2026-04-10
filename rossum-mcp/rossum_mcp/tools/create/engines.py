@@ -7,8 +7,8 @@ from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.engine import Engine, EngineField, EngineFieldType
 
+from rossum_mcp.models.engine import EngineType
 from rossum_mcp.tools.base import build_resource_url
-from rossum_mcp.tools.models import EngineType
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient

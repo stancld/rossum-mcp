@@ -1,84 +1,17 @@
-"""Shared domain models used across operation layers (create, update, search)."""
+"""Schema models and node dataclasses for schema patch operations."""
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from typing import Literal, TypedDict
+from typing import TYPE_CHECKING
 
-from rossum_api.models.annotation import Annotation as RossumAnnotation
-from rossum_api.models.email_template import EmailTemplate as RossumEmailTemplate
-from rossum_api.models.hook import Hook as RossumHook
-from rossum_api.models.rule import Rule as RossumRule
 from rossum_api.models.schema import Schema as RossumSchema
 
-from rossum_mcp.tools.base import RossumResourceWithResolvedWorkspaces
+from rossum_mcp.models.base import RossumResourceWithResolvedWorkspaces
 
-
-@dataclass
-class Annotation(RossumResourceWithResolvedWorkspaces[RossumAnnotation], RossumAnnotation):
-    """Enriched Annotation with resolved workspace URLs."""
-
-
-@dataclass
-class Schema(RossumResourceWithResolvedWorkspaces[RossumSchema], RossumSchema):
-    """Enriched Schema with resolved workspace URLs."""
-
-
-@dataclass
-class Hook(RossumResourceWithResolvedWorkspaces[RossumHook], RossumHook):
-    """Enriched Hook with resolved workspace URLs."""
-
-
-@dataclass
-class Rule(RossumResourceWithResolvedWorkspaces[RossumRule], RossumRule):
-    """Enriched Rule with resolved workspace URLs."""
-
-
-@dataclass
-class EmailTemplate(RossumResourceWithResolvedWorkspaces[RossumEmailTemplate], RossumEmailTemplate):
-    """Enriched EmailTemplate with resolved workspace URLs."""
-
-
-class AutomationLevel(StrEnum):
-    NEVER = "never"
-    ALWAYS = "always"
-    CONFIDENT = "confident"
-
-
-class QueueLocale(StrEnum):
-    AUTO = "auto"
-    EN_US = "en_US"
-    EN_GB = "en_GB"
-    DE_DE = "de_DE"
-    DE_AT = "de_AT"
-    DE_CH = "de_CH"
-    FR_FR = "fr_FR"
-    FR_BE = "fr_BE"
-    FR_CH = "fr_CH"
-    CS_CZ = "cs_CZ"
-    SK_SK = "sk_SK"
-    ES_ES = "es_ES"
-    IT_IT = "it_IT"
-    PT_PT = "pt_PT"
-    PT_BR = "pt_BR"
-    NL_NL = "nl_NL"
-    NL_BE = "nl_BE"
-    PL_PL = "pl_PL"
-    HU_HU = "hu_HU"
-    RO_RO = "ro_RO"
-    JA_JP = "ja_JP"
-    ZH_CN = "zh_CN"
-    KO_KR = "ko_KR"
-    DA_DK = "da_DK"
-    FI_FI = "fi_FI"
-    SV_SE = "sv_SE"
-    NB_NO = "nb_NO"
-
-
-class EmailRecipient(TypedDict):
-    type: Literal["annotator", "constant", "datapoint"]
-    value: str
+if TYPE_CHECKING:
+    from typing import Literal
 
 
 class DatapointType(StrEnum):
@@ -201,61 +134,6 @@ class SchemaMultivalue:
 SchemaNode = SchemaDatapoint | SchemaMultivalue | SchemaTuple
 
 
-class QueueTemplateName(StrEnum):
-    EU_DEMO = "EU Demo Template"
-    APR_EU_DEMO = "AP&R EU Demo Template"
-    TAX_INVOICE_EU_DEMO = "Tax Invoice EU Demo Template"
-    US_DEMO = "US Demo Template"
-    APR_US_DEMO = "AP&R US Demo Template"
-    TAX_INVOICE_US_DEMO = "Tax Invoice US Demo Template"
-    UK_DEMO = "UK Demo Template"
-    APR_UK_DEMO = "AP&R UK Demo Template"
-    TAX_INVOICE_UK_DEMO = "Tax Invoice UK Demo Template"
-    CZ_DEMO = "CZ Demo Template"
-    EMPTY_ORGANIZATION = "Empty Organization Template"
-    DELIVERY_NOTES_DEMO = "Delivery Notes Demo Template"
-    DELIVERY_NOTE_DEMO = "Delivery Note Demo Template"
-    CHINESE_INVOICES_FAPIAO_DEMO = "Chinese Invoices (Fapiao) Demo Template"
-    TAX_INVOICE_CN_DEMO = "Tax Invoice CN Demo Template"
-    CERTIFICATES_OF_ANALYSIS_DEMO = "Certificates of Analysis Demo Template"
-    PURCHASE_ORDER_DEMO = "Purchase Order Demo Template"
-    CREDIT_NOTE_DEMO = "Credit Note Demo Template"
-    DEBIT_NOTE_DEMO = "Debit Note Demo Template"
-    PROFORMA_INVOICE_DEMO = "Proforma Invoice Demo Template"
-
-
-QUEUE_TEMPLATE_NAMES = tuple(QueueTemplateName)
-
-
-class EmailTemplateType(StrEnum):
-    REJECTION = "rejection"
-    REJECTION_DEFAULT = "rejection_default"
-    EMAIL_WITH_NO_PROCESSABLE_ATTACHMENTS = "email_with_no_processable_attachments"
-    CUSTOM = "custom"
-
-
-class HookSideload(StrEnum):
-    QUEUES = "queues"
-    MODIFIERS = "modifiers"
-    SCHEMAS = "schemas"
-    EMAILS = "emails"
-    RELATED_EMAILS = "related_emails"
-    RELATIONS = "relations"
-    CHILD_RELATION = "child_relation"
-    NOTES = "notes"
-    SUGGESTED_EDITS = "suggested_edits"
-    ASSIGNEES = "assignees"
-    PAGES = "pages"
-    LABELS = "labels"
-    AUTOMATION_BLOCKERS = "automation_blockers"
-
-
-class EngineType(StrEnum):
-    EXTRACTOR = "extractor"
-    SPLITTER = "splitter"
-
-
-class LogLevel(StrEnum):
-    INFO = "INFO"
-    ERROR = "ERROR"
-    WARNING = "WARNING"
+@dataclass
+class Schema(RossumResourceWithResolvedWorkspaces[RossumSchema], RossumSchema):
+    """Enriched Schema with resolved workspace URLs."""
