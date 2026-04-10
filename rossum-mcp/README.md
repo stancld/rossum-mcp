@@ -74,16 +74,7 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 
 ### Read-Only Mode
 
-Set `ROSSUM_MCP_MODE=read-only` to disable all CREATE, UPDATE, and UPLOAD operations. Only GET and LIST operations will be available.
-
-### Checking the Current Mode
-
-Use `get_mcp_mode` to query the current operation mode:
-
-```
-User: What mode are we in?
-Assistant: [calls get_mcp_mode] → "read-only"
-```
+Set `ROSSUM_MCP_MODE=read-only` to disable all CREATE, UPDATE, DELETE, and UPLOAD operations. Only GET and LIST operations will be available.
 
 To change the mode, restart the server with a different `ROSSUM_MCP_MODE` environment variable.
 
