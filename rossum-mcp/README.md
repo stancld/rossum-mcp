@@ -162,8 +162,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 ## Resources
 
-- [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [Tools Reference](TOOLS.md)
-- [Rossum API Documentation](https://rossum.app/api/docs)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Main Repository](https://github.com/stancld/rossum-agents)
