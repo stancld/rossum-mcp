@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Literal, get_args
-
-LogLevel = Literal["INFO", "DEBUG", "WARNING", "ERROR", "CRITICAL"]
-
-VALID_LOG_LEVELS: tuple[str, ...] = get_args(LogLevel)
+from enum import StrEnum
 
 
-def setup_logging(log_level: LogLevel = "INFO") -> logging.Logger:
+class LogLevel(StrEnum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
+
+
+def setup_logging(log_level: LogLevel = LogLevel.INFO) -> logging.Logger:
     root_logger = logging.getLogger()
 
     level = logging.getLevelNamesMapping()[log_level]
