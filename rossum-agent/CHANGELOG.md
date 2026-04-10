@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [2.0.0] - 2026-04-09
+
 ### Added
 - Allow `http://localhost:3000` CORS origin when `ROSSUM_AGENT_DEVELOP` env var is set
 - AI SDK UI Message Stream v1-compatible streaming API — replaces custom SSE contract; clients can now use `@ai-sdk/react`'s `useChat()` or plain Fetch without a custom SSE wrapper [#342](https://github.com/stancld/rossum-agents/pull/342)
