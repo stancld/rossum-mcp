@@ -1,15 +1,14 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
 
 from fastmcp import FastMCP
 from rossum_api import AsyncRossumAPIClient
 from rossum_api.dtos import Token
 
-from rossum_mcp.logging_config import VALID_LOG_LEVELS, setup_logging
+from rossum_mcp.logging_config import LogLevel, setup_logging
 from rossum_mcp.tools import (
     register_create_tools,
     register_delete_tools,
@@ -17,60 +16,49 @@ from rossum_mcp.tools import (
     register_get_tools,
     register_update_tools,
 )
-from rossum_mcp.tools.base import VALID_MODES
-
-if TYPE_CHECKING:
-    from rossum_mcp.tools.base import McpMode
+from rossum_mcp.tools.base import MCPMode
 
 logger = logging.getLogger(__name__)
 
 
-def create_app() -> FastMCP:
-    """Create and configure the MCP server.
+class RossumMCPServer:
+    @dataclass(frozen=True)
+    class Config:
+        base_url: str
+        api_token: str
+        mode: MCPMode = MCPMode.READ_WRITE
+        log_level: LogLevel = LogLevel.INFO
 
-    Reads configuration from environment variables:
+        @classmethod
+        def from_env(cls) -> RossumMCPServer.Config:
+            return cls(
+                base_url=os.environ["ROSSUM_API_BASE_URL"].rstrip("/"),
+                api_token=os.environ["ROSSUM_API_TOKEN"],
+                mode=MCPMode(os.environ.get("ROSSUM_MCP_MODE", "read-write").lower()),
+                log_level=LogLevel(os.environ.get("ROSSUM_MCP_LOG_LEVEL", "INFO").upper()),
+            )
 
-    - ``ROSSUM_API_BASE_URL`` (required)
-    - ``ROSSUM_API_TOKEN`` (required)
-    - ``ROSSUM_MCP_MODE`` (optional, default: read-write)
-    - ``ROSSUM_MCP_LOG_LEVEL`` (optional, default: INFO)
-    """
-    log_level = os.environ.get("ROSSUM_MCP_LOG_LEVEL", "INFO").upper()
-    if log_level not in VALID_LOG_LEVELS:
-        raise ValueError(f"Invalid ROSSUM_MCP_LOG_LEVEL: {log_level}. Must be one of: {VALID_LOG_LEVELS}")
-    setup_logging(log_level=log_level)  # ty:ignore[invalid-argument-type] - validated above
+    def __init__(self, config: Config) -> None:
+        setup_logging(log_level=config.log_level)
+        self.config = config
+        self.client = AsyncRossumAPIClient(base_url=config.base_url, credentials=Token(token=config.api_token))
+        self.mcp = self._create_app()
 
-    base_url = os.environ["ROSSUM_API_BASE_URL"].rstrip("/")
-    api_token = os.environ["ROSSUM_API_TOKEN"]
-    mcp_mode = os.environ.get("ROSSUM_MCP_MODE", "read-write").lower()
+    def _create_app(self) -> FastMCP:
+        logger.info(f"Rossum MCP Server starting in {self.config.mode} mode")
 
-    if mcp_mode not in VALID_MODES:
-        raise ValueError(f"Invalid ROSSUM_MCP_MODE: {mcp_mode}. Must be one of: {VALID_MODES}")
-    validated_mode: McpMode = mcp_mode  # ty:ignore[invalid-assignment] - validated above
+        mcp = FastMCP("rossum-mcp-server")
 
-    logger.info(f"Rossum MCP Server starting in {validated_mode} mode")
+        register_discovery_tools(mcp, self.config.mode)
+        register_get_tools(mcp, self.client)
+        register_delete_tools(mcp, self.client)
+        register_create_tools(mcp, self.client, self.config.base_url)
+        register_update_tools(mcp, self.client, self.config.base_url)
 
-    mcp = FastMCP("rossum-mcp-server")
-    client = AsyncRossumAPIClient(base_url=base_url, credentials=Token(token=api_token))
+        if self.config.mode == MCPMode.READ_ONLY:
+            mcp.disable(tags={"write"})
 
-    register_discovery_tools(mcp, validated_mode)
-    register_get_tools(mcp, client)
-    register_delete_tools(mcp, client)
-    register_create_tools(mcp, client, base_url)
-    register_update_tools(mcp, client, base_url)
+        return mcp
 
-    # Enforce read-only mode by hiding write tools via FastMCP visibility
-    if validated_mode == "read-only":
-        mcp.disable(tags={"write"})
-
-    return mcp
-
-
-def main() -> None:
-    """Main entry point for console script."""
-    app = create_app()
-    app.run()
-
-
-if __name__ == "__main__":
-    main()
+    def run(self) -> None:
+        self.mcp.run()

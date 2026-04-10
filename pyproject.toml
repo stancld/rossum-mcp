@@ -127,7 +127,7 @@ where = ["rossum-mcp", "rossum-deploy", "rossum-agent", "rossum-agent-client"]
 include = ["rossum_mcp*", "rossum_deploy*", "rossum_agent*", "rossum_agent_client*"]
 
 [project.scripts]
-rossum-mcp = "rossum_mcp.server:main"
+rossum-mcp = "rossum_mcp.run:main"
 rossum-agent-api = "rossum_agent.api.main:main"
 
 [tool.pytest.ini_options]

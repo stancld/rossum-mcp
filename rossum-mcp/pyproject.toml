@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.scripts]
-rossum-mcp = "rossum_mcp.server:main"
+rossum-mcp = "rossum_mcp.run:main"
 
 [project.optional-dependencies]
 docs = [

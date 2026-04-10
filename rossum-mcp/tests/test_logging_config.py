@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import pytest
-from rossum_mcp.logging_config import setup_logging
+from rossum_mcp.logging_config import LogLevel, setup_logging
 
 
 class TestSetupLogging:
@@ -24,7 +24,7 @@ class TestSetupLogging:
         root_logger.setLevel(logging.WARNING)
 
     def test_configures_basic_logging(self):
-        logger = setup_logging(log_level="INFO")
+        logger = setup_logging(log_level=LogLevel.INFO)
 
         assert logger.level == logging.INFO
         console_handlers = [
@@ -37,7 +37,7 @@ class TestSetupLogging:
         assert len(console_handlers) >= 1
 
     def test_respects_log_level_parameter(self):
-        logger = setup_logging(log_level="WARNING")
+        logger = setup_logging(log_level=LogLevel.WARNING)
 
         assert logger.level == logging.WARNING
 
@@ -82,4 +82,4 @@ class TestSetupLogging:
 
     def test_invalid_log_level_raises(self):
         with pytest.raises(KeyError):
-            setup_logging(log_level="BOGUS")
+            setup_logging(log_level="BOGUS")  # type: ignore[arg-type]
