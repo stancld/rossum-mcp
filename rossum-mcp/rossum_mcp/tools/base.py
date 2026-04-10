@@ -149,12 +149,6 @@ async def delete_resource(
     """Generic delete operation.
 
     Write-access is enforced at the MCP layer via tags={"write"} + mcp.disable().
-
-    Args:
-        resource_type: Name of the resource (e.g., "queue", "workspace")
-        resource_id: ID of the resource to delete
-        delete_fn: Async function that performs the deletion
-        success_message: Custom success message. If None, uses default format.
     """
     logger.debug(f"Deleting {resource_type}: {resource_type}_id={resource_id}")
     await delete_fn(resource_id)
