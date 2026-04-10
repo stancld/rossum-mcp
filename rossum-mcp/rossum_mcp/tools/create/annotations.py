@@ -11,6 +11,7 @@ from fastmcp.exceptions import ToolError
 from rossum_mcp.tools.base import build_resource_url
 
 if TYPE_CHECKING:
+    from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
@@ -86,3 +87,26 @@ async def _copy_annotations(
             results.append({"annotation_id": annotation_id, "copied_annotation": response})
 
     return {"copied": len(results), "failed": len(errors), "results": results, "errors": errors}
+
+
+def register_annotation_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
+    @mcp.tool(
+        description="Upload a document; use search(entity='annotation', queue_id=...) to find the created annotation.",
+        tags={"annotations", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def upload_document(file_path: str, queue_id: int) -> dict:
+        return await _upload_document(client, file_path, queue_id)
+
+    @mcp.tool(
+        description="Copy annotations to another queue. reimport=True re-extracts data in the target queue (use when moving/uploading documents between queues). reimport=False preserves original extracted data as-is.",
+        tags={"annotations", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def copy_annotations(
+        annotation_ids: Sequence[int],
+        target_queue_id: int,
+        target_status: str | None = None,
+        reimport: bool = False,
+    ) -> dict:
+        return await _copy_annotations(client, base_url, annotation_ids, target_queue_id, target_status, reimport)

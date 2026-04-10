@@ -10,7 +10,7 @@ from rossum_api.models.engine import Engine
 from rossum_api.models.queue import Queue
 from rossum_api.models.schema import Schema
 from rossum_mcp.tools.base import get_queue_engine_url
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 from rossum_mcp.tools.create.queues import _create_queue_from_template
 from rossum_mcp.tools.resource_tracking import TRACKED_RESOURCES_KEY
 

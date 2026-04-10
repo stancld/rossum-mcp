@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from rossum_api.models.workspace import Workspace
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 
 
 def create_mock_workspace(**kwargs) -> Workspace:

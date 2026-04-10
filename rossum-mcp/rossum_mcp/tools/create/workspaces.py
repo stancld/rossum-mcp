@@ -8,6 +8,7 @@ from rossum_api.models.workspace import Workspace
 from rossum_mcp.tools.base import build_resource_url
 
 if TYPE_CHECKING:
+    from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
@@ -25,3 +26,13 @@ async def _create_workspace(
     workspace: Workspace = await client.create_new_workspace(workspace_data)
     logger.info(f"Successfully created workspace: id={workspace.id}, name={workspace.name}")
     return workspace
+
+
+def register_workspace_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
+    @mcp.tool(
+        description="Create a new workspace.",
+        tags={"workspaces", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_workspace(name: str, organization_id: int, metadata: dict | None = None) -> Workspace | dict:
+        return await _create_workspace(client, base_url, name, organization_id, metadata)
