@@ -24,12 +24,18 @@
 
 ## Quick Start
 
+Set the required environment variables:
+
 ```bash
-# Set environment variables
 export ROSSUM_API_TOKEN="your-api-token"
 export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
+```
 
-# Run the MCP server
+Then use the installed package or run from source.
+
+Install and run:
+
+```bash
 uv pip install rossum-mcp
 rossum-mcp
 ```
@@ -39,8 +45,9 @@ Or run from source:
 ```bash
 git clone https://github.com/stancld/rossum-agents.git
 cd rossum-agents/rossum-mcp
+
 uv sync
-python rossum_mcp/server.py
+python -m rossum_mcp.run
 ```
 
 ## Claude Desktop Configuration
@@ -51,11 +58,11 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 {
   "mcpServers": {
     "rossum": {
-      "command": "python",
-      "args": ["/path/to/rossum-agents/rossum-mcp/rossum_mcp/server.py"],
+      "command": "uvx",
+      "args": ["rossum-mcp"],
       "env": {
-        "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_API_TOKEN": "${ROSSUM_API_TOKEN}",
+        "ROSSUM_API_BASE_URL": "${ROSSUM_API_BASE_URL}",
         "ROSSUM_MCP_MODE": "read-write"
       }
     }
