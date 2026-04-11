@@ -1,7 +1,7 @@
-"""MCP tool registrations for get/search operations.
+"""MCP tool registrations for core get/search operations.
 
-Builds on the entity registry (registry.py) to expose get, search, and specialized
-read-only tools to the MCP server.
+Builds on the entity registry (registry.py) to expose get and search
+tools to the MCP server.
 """
 
 from __future__ import annotations
@@ -13,12 +13,9 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from fastmcp.exceptions import ToolError
-from rossum_api.models.engine import EngineField
 
-from rossum_mcp.tools.get.annotations import _get_annotation_content
-from rossum_mcp.tools.get.engines import _get_engine_fields
 from rossum_mcp.tools.get.registry import EntityConfig, build_get_registry
-from rossum_mcp.tools.get.related import _get_schema_tree_structure, fetch_related
+from rossum_mcp.tools.get.related import fetch_related
 from rossum_mcp.tools.search.models import (
     SearchQuery,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 )
@@ -93,7 +90,7 @@ async def _get_many(
     return results
 
 
-def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # noqa: C901 - many tool registrations
+def register_core_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
     registry = build_get_registry(client)
 
     # Fail fast at startup if EntityType drifts from the registry
@@ -107,7 +104,7 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
     @mcp.tool(
         description=(
             "Get entities by ID. Accepts a single ID or a list of IDs for batch retrieval. "
-            "include_related=True enriches with related data (queue→schema_tree+engine+hooks, schema→queues+rules, hook→queues+events). "
+            "include_related=True enriches with related data (queue->schema_tree+engine+hooks, schema->queues+rules, hook->queues+events). "
             "hook_secrets_keys returns stored secret key names (values are write-only, never returned)."
         ),
         tags={"read"},
@@ -145,27 +142,3 @@ def register_get_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:  # n
             kwargs["max_items"] = first_n
         result = await config.search_fn(**kwargs)
         return [_serialize(item) for item in result]
-
-    @mcp.tool(
-        description="Fetch annotation extracted content and save to a local JSON file; returns the path for jq/grep.",
-        tags={"annotations"},
-        annotations={"readOnlyHint": True},
-    )
-    async def get_annotation_content(annotation_id: int) -> dict:
-        return await _get_annotation_content(client, annotation_id)
-
-    @mcp.tool(
-        description="Lightweight schema tree (ids/labels/categories/types/required/hidden); accepts schema_id or queue_id.",
-        tags={"schemas"},
-        annotations={"readOnlyHint": True},
-    )
-    async def get_schema_tree_structure(schema_id: int | None = None, queue_id: int | None = None) -> list[dict]:
-        return await _get_schema_tree_structure(client, schema_id=schema_id, queue_id=queue_id)
-
-    @mcp.tool(
-        description="Retrieve engine fields for a specific engine or all engine fields.",
-        tags={"engines"},
-        annotations={"readOnlyHint": True},
-    )
-    async def get_engine_fields(engine_id: int | None = None) -> list[EngineField]:
-        return await _get_engine_fields(client, engine_id)

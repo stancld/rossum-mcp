@@ -8,7 +8,7 @@ import pytest
 from conftest import create_mock_hook, create_mock_queue
 from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
-from rossum_mcp.tools.search.registry import _list_hooks
+from rossum_mcp.tools.search.hooks import _list_hooks
 from rossum_mcp.tools.update.hooks import (
     _generate_hook_payload,
     register_hook_tools,

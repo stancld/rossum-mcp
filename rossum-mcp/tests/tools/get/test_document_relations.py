@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from rossum_api.models.document_relation import DocumentRelation
 from rossum_mcp.tools.get.registry import _get_document_relation
-from rossum_mcp.tools.search.registry import _list_document_relations
+from rossum_mcp.tools.search.relations import _list_document_relations
 
 
 def create_mock_document_relation(**kwargs) -> DocumentRelation:

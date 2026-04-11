@@ -17,7 +17,7 @@ from conftest import (
     create_mock_workspace,
 )
 from fastmcp.exceptions import ToolError
-from rossum_mcp.tools.get.handler import register_get_tools
+from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import build_get_registry
 from rossum_mcp.tools.search.models import (
     AnnotationSearch,
@@ -403,7 +403,7 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_queues(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_queue = create_mock_queue(id=1, name="Q1")
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5))
@@ -413,8 +413,8 @@ class TestSearchRouting:
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
         with (
-            patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl,
-            patch("rossum_mcp.tools.search.registry.resolve_queue_workspaces", return_value={}) as _mock_rqw,
+            patch("rossum_mcp.tools.search.annotations.graceful_list") as mock_gl,
+            patch("rossum_mcp.tools.search.annotations.resolve_queue_workspaces", return_value={}) as _mock_rqw,
         ):
             mock_gl.return_value = Mock(items=[mock_ann])
             register_get_tools(mock_mcp, mock_client)
@@ -424,7 +424,7 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_hooks(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_hook = create_mock_hook(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.hooks.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_hook])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=HookSearch(queue_id=5))
@@ -433,7 +433,7 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_engines(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_engine = create_mock_engine(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.engines.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_engine])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=EngineSearch(engine_type="extractor"))
@@ -442,7 +442,7 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_schemas(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_schema = create_mock_schema(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.schemas.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_schema])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=SchemaSearch(name="Test"))
@@ -451,7 +451,7 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_workspaces(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ws = create_mock_workspace(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.workspaces.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_ws])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=WorkspaceSearch(organization_id=1))
@@ -462,7 +462,7 @@ class TestSearchRouting:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         mock_queue = create_mock_queue(id=1, name="Q1")
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
             register_get_tools(mock_mcp, mock_client)
             await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5), first_n=3)
@@ -637,7 +637,7 @@ class TestSearchErrors:
 class TestSearchRelations:
     @pytest.mark.asyncio
     async def test_search_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=1, type="edit")])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=RelationSearch(type="edit"))
@@ -645,7 +645,7 @@ class TestSearchRelations:
 
     @pytest.mark.asyncio
     async def test_search_document_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=10, type="line_items")])
             register_get_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=DocumentRelationSearch(type="line_items"))

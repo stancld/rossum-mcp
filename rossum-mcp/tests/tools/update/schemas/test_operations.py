@@ -10,7 +10,7 @@ from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_mcp.tools.search.models import SchemaListItem
-from rossum_mcp.tools.search.registry import _list_schemas
+from rossum_mcp.tools.search.schemas import _list_schemas
 from rossum_mcp.tools.update.schemas.handler import register_schema_tools
 
 

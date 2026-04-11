@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from rossum_api.models.organization_group import OrganizationGroup
 from rossum_mcp.tools.get.registry import _get_organization_group
-from rossum_mcp.tools.search.registry import _list_organization_groups
+from rossum_mcp.tools.search.organization_groups import _list_organization_groups
 
 
 def create_mock_organization_group(**kwargs) -> OrganizationGroup:

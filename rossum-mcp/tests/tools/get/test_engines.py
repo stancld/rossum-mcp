@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from conftest import create_mock_engine_field
-from rossum_mcp.tools.get.handler import register_get_tools
+from rossum_mcp.tools.get import register_get_tools
 
 
 @pytest.fixture
