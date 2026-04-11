@@ -6,7 +6,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar
 
 from rossum_api.domain_logic.resources import Resource
 
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from rossum_api import AsyncRossumAPIClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,46 @@ def get_queue_engine_url(queue: object) -> str | None:
         if value and isinstance(value, str):
             return value
     return None
+
+
+class HasQueues(Protocol):
+    @property
+    def queues(self) -> list[str]: ...
+
+
+class HasQueue(Protocol):
+    @property
+    def queue(self) -> str | None: ...
+
+
+def get_multi_queue_urls[T: HasQueues](items: list[T]) -> set[str]:
+    """Collect queue URLs from items with a `.queues` list attribute."""
+    return {url for item in items for url in item.queues}
+
+
+def get_single_queue_urls[T: HasQueue](items: list[T]) -> set[str]:
+    """Collect queue URLs from items with a singular `.queue` attribute."""
+    return {item.queue for item in items if item.queue}
+
+
+async def search_with_workspace_resolution[T, U](
+    client: AsyncRossumAPIClient,
+    resource: Resource,
+    resource_label: str,
+    *,
+    enrich: Callable[[T, dict[str, str]], U],
+    get_queue_urls: Callable[[list[T]], set[str]],
+    filters: dict[str, int | str | bool] | None = None,
+    workspace_id: int | None = None,
+    name: str | None = None,
+    use_regex: bool = False,
+    max_items: int | None = None,
+) -> list[U]:
+    """List resources, resolve queue→workspace mappings, enrich items, and filter."""
+    result = await graceful_list(client, resource, resource_label, max_items=max_items, **(filters or {}))
+    queue_workspace_map = await resolve_queue_workspaces(client, get_queue_urls(result.items))
+    items = [enrich(item, queue_workspace_map) for item in result.items]
+    return filter_by_name_regex(filter_by_workspace_id(items, workspace_id), name, use_regex)
 
 
 async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set[str]) -> dict[str, str]:

@@ -378,11 +378,8 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
-        with (
-            patch("rossum_mcp.tools.search.annotations.graceful_list") as mock_gl,
-            patch("rossum_mcp.tools.search.annotations.resolve_queue_workspaces", return_value={}) as _mock_rqw,
-        ):
-            mock_gl.return_value = Mock(items=[mock_ann])
+        with patch("rossum_mcp.tools.search.annotations.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_ann]
             register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
         assert len(result) == 1
@@ -390,8 +387,8 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_hooks(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_hook = create_mock_hook(id=1)
-        with patch("rossum_mcp.tools.search.hooks.graceful_list") as mock_gl:
-            mock_gl.return_value = Mock(items=[mock_hook])
+        with patch("rossum_mcp.tools.search.hooks.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_hook]
             register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=HookSearch(queue_id=5))
         assert len(result) == 1
@@ -408,8 +405,8 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_schemas(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_schema = create_mock_schema(id=1)
-        with patch("rossum_mcp.tools.search.schemas.graceful_list") as mock_gl:
-            mock_gl.return_value = Mock(items=[mock_schema])
+        with patch("rossum_mcp.tools.search.schemas.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_schema]
             register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=SchemaSearch(name="Test"))
         assert len(result) == 1

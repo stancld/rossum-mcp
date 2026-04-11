@@ -5,6 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Annotated
 
 from rossum_api.domain_logic.resources import Resource
+from rossum_api.models.hook import Hook as RossumHook
 from rossum_api.models.hook import HookRunData
 from rossum_api.models.hook_template import HookTemplate
 
@@ -12,10 +13,10 @@ from rossum_mcp.logging_config import LogLevel  # noqa: TC001 - needed at runtim
 from rossum_mcp.models.hook import Hook
 from rossum_mcp.tools.base import (
     build_filters,
-    filter_by_workspace_id,
+    get_multi_queue_urls,
     graceful_list,
-    resolve_queue_workspaces,
     resolve_workspaces_from_queues,
+    search_with_workspace_resolution,
 )
 
 if TYPE_CHECKING:
@@ -23,6 +24,10 @@ if TYPE_CHECKING:
 
 type Timestamp = Annotated[str, "ISO 8601 timestamp (e.g., '2024-01-15T10:30:00Z')"]
 logger = logging.getLogger(__name__)
+
+
+def _enrich_hook(hook: RossumHook, queue_workspace_map: dict[str, str]) -> Hook:
+    return Hook.from_base(hook, workspaces=resolve_workspaces_from_queues(hook.queues, queue_workspace_map))
 
 
 async def _list_hooks(
@@ -33,17 +38,16 @@ async def _list_hooks(
     max_items: int | None = None,
 ) -> list[Hook]:
     logger.debug(f"Listing hooks: queue_id={queue_id}, workspace_id={workspace_id}, active={active}")
-    filters = build_filters(queue=queue_id, active=active)
-    result = await graceful_list(client, Resource.Hook, "hook", max_items=max_items, **filters)
-
-    all_queue_urls = {url for hook in result.items for url in hook.queues}
-    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
-
-    items = [
-        Hook.from_base(hook, workspaces=resolve_workspaces_from_queues(hook.queues, queue_workspace_map))
-        for hook in result.items
-    ]
-    return filter_by_workspace_id(items, workspace_id)
+    return await search_with_workspace_resolution(
+        client,
+        Resource.Hook,
+        "hook",
+        enrich=_enrich_hook,
+        get_queue_urls=get_multi_queue_urls,
+        workspace_id=workspace_id,
+        max_items=max_items,
+        filters=build_filters(queue=queue_id, active=active),
+    )
 
 
 async def _list_hook_logs(
