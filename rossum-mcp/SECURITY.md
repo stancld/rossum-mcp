@@ -29,6 +29,10 @@ The Rossum API enforces strict organization-level isolation on the backend:
 | No token logging | The API token is never logged or exposed in tool outputs |
 | Immutable config | Server configuration (including the token) is stored in a frozen dataclass and cannot be changed at runtime |
 
+## Rate Limiting
+
+Rate limiting is enforced **server-side by the Rossum API**. Requests that exceed the allowed threshold receive an **HTTP 429 Too Many Requests** response with a `Retry-After` header. See the [Rossum API docs](https://rossum.app/api/docs/openapi/guides/overview/#rate-limiting) for current limits.
+
 ## Best Practices
 
 - **Rotate tokens regularly.** Token rotation requires a server restart with the new value.
