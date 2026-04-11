@@ -4,20 +4,24 @@ import logging
 from typing import TYPE_CHECKING
 
 from rossum_api.domain_logic.resources import Resource
+from rossum_api.models.rule import Rule as RossumRule
 
 from rossum_mcp.models.rule import Rule
 from rossum_mcp.tools.base import (
     build_filters,
-    filter_by_workspace_id,
-    graceful_list,
-    resolve_queue_workspaces,
+    get_multi_queue_urls,
     resolve_workspaces_from_queues,
+    search_with_workspace_resolution,
 )
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
+
+
+def _enrich_rule(rule: RossumRule, queue_workspace_map: dict[str, str]) -> Rule:
+    return Rule.from_base(rule, workspaces=resolve_workspaces_from_queues(rule.queues, queue_workspace_map))
 
 
 async def _list_rules(
@@ -31,14 +35,13 @@ async def _list_rules(
     logger.debug(
         f"Listing rules: queue_id={queue_id}, workspace_id={workspace_id}, organization_id={organization_id}, enabled={enabled}"
     )
-    filters = build_filters(queue=queue_id, organization=organization_id, enabled=enabled)
-    result = await graceful_list(client, Resource.Rule, "rule", max_items=max_items, **filters)
-
-    all_queue_urls = {url for rule in result.items for url in rule.queues}
-    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
-
-    items = [
-        Rule.from_base(rule, workspaces=resolve_workspaces_from_queues(rule.queues, queue_workspace_map))
-        for rule in result.items
-    ]
-    return filter_by_workspace_id(items, workspace_id)
+    return await search_with_workspace_resolution(
+        client,
+        Resource.Rule,
+        "rule",
+        enrich=_enrich_rule,
+        get_queue_urls=get_multi_queue_urls,
+        workspace_id=workspace_id,
+        max_items=max_items,
+        filters=build_filters(queue=queue_id, organization=organization_id, enabled=enabled),
+    )

@@ -4,21 +4,25 @@ import logging
 from typing import TYPE_CHECKING
 
 from rossum_api.domain_logic.resources import Resource
+from rossum_api.models.email_template import EmailTemplate as RossumEmailTemplate
 
 from rossum_mcp.models.email_template import EmailTemplate
 from rossum_mcp.tools.base import (
     build_filters,
-    filter_by_name_regex,
-    filter_by_workspace_id,
-    graceful_list,
-    resolve_queue_workspaces,
+    get_single_queue_urls,
     resolve_workspace_from_queue,
+    search_with_workspace_resolution,
 )
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
+
+
+def _enrich_email_template(template: RossumEmailTemplate, queue_workspace_map: dict[str, str]) -> EmailTemplate:
+    ws = resolve_workspace_from_queue(template.queue, queue_workspace_map)
+    return EmailTemplate.from_base(template, workspaces=[ws] if ws else [])
 
 
 async def _list_email_templates(
@@ -33,16 +37,15 @@ async def _list_email_templates(
     logger.debug(
         f"Listing email templates: queue_id={queue_id}, workspace_id={workspace_id}, type={type}, name={name}"
     )
-    filters = build_filters(queue=queue_id, type=type, name=None if use_regex else name)
-    result = await graceful_list(client, Resource.EmailTemplate, "email_template", max_items=max_items, **filters)
-
-    all_queue_urls = {t.queue for t in result.items}
-    queue_workspace_map = await resolve_queue_workspaces(client, all_queue_urls)
-
-    items = [
-        EmailTemplate.from_base(
-            t, workspaces=[ws] if (ws := resolve_workspace_from_queue(t.queue, queue_workspace_map)) else []
-        )
-        for t in result.items
-    ]
-    return filter_by_name_regex(filter_by_workspace_id(items, workspace_id), name, use_regex)
+    return await search_with_workspace_resolution(
+        client,
+        Resource.EmailTemplate,
+        "email_template",
+        enrich=_enrich_email_template,
+        get_queue_urls=get_single_queue_urls,
+        workspace_id=workspace_id,
+        name=name,
+        use_regex=use_regex,
+        max_items=max_items,
+        filters=build_filters(queue=queue_id, type=type, name=None if use_regex else name),
+    )
