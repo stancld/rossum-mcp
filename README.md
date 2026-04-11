@@ -234,11 +234,11 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 {
   "mcpServers": {
     "rossum": {
-      "command": "python",
-      "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+      "command": "uvx",
+      "args": ["rossum-mcp"],
       "env": {
-        "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_API_TOKEN": "${ROSSUM_API_TOKEN}",
+        "ROSSUM_API_BASE_URL": "${ROSSUM_API_BASE_URL}",
         "ROSSUM_MCP_MODE": "read-write"
       }
     }
