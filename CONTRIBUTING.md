@@ -13,7 +13,6 @@ Thanks for your interest in contributing. This repo is **coding-agent-first** �
 
 **Auxiliary packages — lower priority for now:**
 
-- `rossum-deploy/` — Pull/diff/push deployment tool
 - `rossum-agent-client/` — Typed Python client for the agent API
 - `rossum-agent-tui/` — Terminal UI for development and testing (Node.js)
 

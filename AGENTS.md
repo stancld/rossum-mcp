@@ -1,6 +1,6 @@
 # Development Guidelines
 
-**Goal**: Maintain code quality, consistency, and documentation across rossum-agents packages (rossum-mcp, rossum-agent, rossum-deploy, rossum-agent-client).
+**Goal**: Maintain code quality, consistency, and documentation across rossum-agents packages (rossum-mcp, rossum-agent, rossum-agent-client).
 
 ## Critical Constraints
 
@@ -18,7 +18,6 @@
 | Setup | `uv sync` or `uv pip install -e .` |
 | Server | `rossum-mcp` (installed) or `python -m rossum_mcp.server` (dev) |
 | Tests | `pytest` or `pytest path/to/test.py` |
-| rossum-deploy tests | `cd rossum-deploy && pytest tests/` (required when modifying `workspace.py`) |
 | Lint | `pre-commit run --all-files` |
 | TUI lint | `cd rossum-agent-tui && npm run lint && npm run format:check && npm run typecheck` |
 
