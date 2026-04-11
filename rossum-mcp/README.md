@@ -7,7 +7,6 @@
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://stancld.github.io/rossum-agents/)
 [![Python](https://img.shields.io/pypi/pyversions/rossum-mcp.svg)](https://pypi.org/project/rossum-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 
 [![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-agents)
@@ -26,6 +25,8 @@
 
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
+
+This MCP server exposes only the **public Rossum API**. Internal tooling is part of [rossum-agent](../rossum-agent) and not available here.
 
 ## Demo
 
