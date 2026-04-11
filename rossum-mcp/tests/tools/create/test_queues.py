@@ -325,34 +325,27 @@ class TestCreateQueueFromTemplate:
 class TestGetQueueEngineUrl:
     """Tests for get_queue_engine_url helper."""
 
-    def test_dedicated_engine_takes_priority(self) -> None:
-        queue = create_mock_queue(
-            dedicated_engine="https://api.test.rossum.ai/v1/engines/20",
-            generic_engine="https://api.test.rossum.ai/v1/engines/30",
-            engine="https://api.test.rossum.ai/v1/engines/10",
-        )
-        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/20"
+    BASE = "https://api.test.rossum.ai/v1/engines"
 
-    def test_generic_engine_fallback(self) -> None:
-        queue = create_mock_queue(
-            dedicated_engine=None,
-            generic_engine="https://api.test.rossum.ai/v1/engines/30",
-            engine="https://api.test.rossum.ai/v1/engines/10",
-        )
-        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/30"
+    @pytest.mark.parametrize(
+        ("dedicated", "generic", "engine", "expected_id"),
+        [
+            (20, 30, 10, 20),
+            (None, 30, 10, 30),
+            (None, None, 10, 10),
+            (None, None, None, None),
+        ],
+        ids=["dedicated_priority", "generic_fallback", "engine_fallback", "all_none"],
+    )
+    def test_engine_url_priority(
+        self, dedicated: int | None, generic: int | None, engine: int | None, expected_id: int | None
+    ) -> None:
+        def to_url(eid: int | None) -> str | None:
+            return f"{self.BASE}/{eid}" if eid is not None else None
 
-    def test_engine_fallback(self) -> None:
         queue = create_mock_queue(
-            dedicated_engine=None,
-            generic_engine=None,
-            engine="https://api.test.rossum.ai/v1/engines/10",
+            dedicated_engine=to_url(dedicated),
+            generic_engine=to_url(generic),
+            engine=to_url(engine),
         )
-        assert get_queue_engine_url(queue) == "https://api.test.rossum.ai/v1/engines/10"
-
-    def test_all_none_returns_none(self) -> None:
-        queue = create_mock_queue(
-            dedicated_engine=None,
-            generic_engine=None,
-            engine=None,
-        )
-        assert get_queue_engine_url(queue) is None
+        assert get_queue_engine_url(queue) == to_url(expected_id)

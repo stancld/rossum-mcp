@@ -97,21 +97,39 @@ class TestToolRegistration:
 
 @pytest.mark.unit
 class TestGetRouting:
+    @pytest.mark.parametrize(
+        ("entity", "entity_id"),
+        [
+            ("queue", 42),
+            ("engine", 7),
+            ("workspace", 3),
+            ("user", 8),
+            ("organization_group", 20),
+            ("organization_limit", 30),
+            ("document_relation", 60),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_get_queue(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_queue = create_mock_queue(id=42, name="My Queue")
-        mock_client.retrieve_queue.return_value = mock_queue
+    async def test_get_simple_entity(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        setup_env: None,
+        entity: str,
+        entity_id: int,
+    ) -> None:
+        retrieve_method = getattr(mock_client, f"retrieve_{entity}")
+        retrieve_method.return_value = Mock(id=entity_id)
         register_get_tools(mock_mcp, mock_client)
 
-        result = await mock_mcp._tools["get"](entity="queue", entity_id=42)
-        assert result["entity"] == "queue"
-        assert result["id"] == 42
-        mock_client.retrieve_queue.assert_called_once_with(42)
+        result = await mock_mcp._tools["get"](entity=entity, entity_id=entity_id)
+        assert result["entity"] == entity
+        assert result["id"] == entity_id
+        retrieve_method.assert_called_once_with(entity_id)
 
     @pytest.mark.asyncio
     async def test_get_schema(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_schema = create_mock_schema(id=10)
-        mock_client.retrieve_schema.return_value = mock_schema
+        mock_client.retrieve_schema.return_value = create_mock_schema(id=10)
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="schema", entity_id=10)
@@ -120,25 +138,13 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_hook(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_hook = create_mock_hook(id=5)
-        mock_client.retrieve_hook.return_value = mock_hook
+        mock_client.retrieve_hook.return_value = create_mock_hook(id=5)
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="hook", entity_id=5)
         assert result["entity"] == "hook"
         assert result["id"] == 5
         mock_client.retrieve_hook.assert_called_once_with(5)
-
-    @pytest.mark.asyncio
-    async def test_get_engine(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_engine = create_mock_engine(id=7)
-        mock_client.retrieve_engine.return_value = mock_engine
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="engine", entity_id=7)
-        assert result["entity"] == "engine"
-        assert result["id"] == 7
-        mock_client.retrieve_engine.assert_called_once_with(7)
 
     @pytest.mark.asyncio
     async def test_get_annotation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
@@ -158,27 +164,6 @@ class TestGetRouting:
         assert result["entity"] == "annotation"
         assert result["id"] == 99
         mock_client.retrieve_annotation.assert_called_once_with(99)
-
-    @pytest.mark.asyncio
-    async def test_get_workspace(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_ws = create_mock_workspace(id=3)
-        mock_client.retrieve_workspace.return_value = mock_ws
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="workspace", entity_id=3)
-        assert result["entity"] == "workspace"
-        assert result["id"] == 3
-        mock_client.retrieve_workspace.assert_called_once_with(3)
-
-    @pytest.mark.asyncio
-    async def test_get_user(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_user.return_value = Mock(id=8, name="Test User")
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="user", entity_id=8)
-        assert result["entity"] == "user"
-        assert result["id"] == 8
-        mock_client.retrieve_user.assert_called_once_with(8)
 
     @pytest.mark.asyncio
     async def test_get_rule(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
@@ -219,26 +204,6 @@ class TestGetRouting:
         mock_client.retrieve_email_template.assert_called_once_with(15)
 
     @pytest.mark.asyncio
-    async def test_get_organization_group(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_organization_group.return_value = Mock(id=20)
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="organization_group", entity_id=20)
-        assert result["entity"] == "organization_group"
-        assert result["id"] == 20
-        mock_client.retrieve_organization_group.assert_called_once_with(20)
-
-    @pytest.mark.asyncio
-    async def test_get_organization_limit(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_organization_limit.return_value = Mock(id=30)
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="organization_limit", entity_id=30)
-        assert result["entity"] == "organization_limit"
-        assert result["id"] == 30
-        mock_client.retrieve_organization_limit.assert_called_once_with(30)
-
-    @pytest.mark.asyncio
     async def test_get_relation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_client._http_client.fetch_one.return_value = {"id": 50, "type": "edit"}
         register_get_tools(mock_mcp, mock_client)
@@ -247,33 +212,30 @@ class TestGetRouting:
         assert result["entity"] == "relation"
         assert result["id"] == 50
 
+    @pytest.mark.parametrize(
+        ("entity_id", "return_value"),
+        [
+            (123, ["SLACK_TOKEN", "API_KEY"]),
+            (456, []),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_get_document_relation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_document_relation.return_value = Mock(id=60)
+    async def test_get_hook_secrets_keys(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        setup_env: None,
+        entity_id: int,
+        return_value: list,
+    ) -> None:
+        mock_client._http_client.request_json.return_value = return_value
         register_get_tools(mock_mcp, mock_client)
 
-        result = await mock_mcp._tools["get"](entity="document_relation", entity_id=60)
-        assert result["entity"] == "document_relation"
-        assert result["id"] == 60
-
-    @pytest.mark.asyncio
-    async def test_get_hook_secrets_keys(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client._http_client.request_json.return_value = ["SLACK_TOKEN", "API_KEY"]
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=123)
+        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=entity_id)
         assert result["entity"] == "hook_secrets_keys"
-        assert result["id"] == 123
-        assert result["data"] == ["SLACK_TOKEN", "API_KEY"]
-        mock_client._http_client.request_json.assert_called_once_with("GET", "hooks/123/secrets_keys")
-
-    @pytest.mark.asyncio
-    async def test_get_hook_secrets_keys_empty(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client._http_client.request_json.return_value = []
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=456)
-        assert result["data"] == []
+        assert result["id"] == entity_id
+        assert result["data"] == return_value
+        mock_client._http_client.request_json.assert_called_once_with("GET", f"hooks/{entity_id}/secrets_keys")
 
 
 # ───────────────────────── GET Batch (list[int]) ─────────────────────────
