@@ -8,6 +8,7 @@ from fastmcp import FastMCP
 from rossum_api import AsyncRossumAPIClient
 from rossum_api.dtos import Token
 
+from rossum_mcp import __version__
 from rossum_mcp.logging_config import LogLevel, setup_logging
 from rossum_mcp.tools import (
     register_create_tools,
@@ -46,7 +47,7 @@ class RossumMCPServer:
         self.mcp = self._create_app()
 
     def _create_app(self) -> FastMCP:
-        logger.info(f"Rossum MCP Server starting in {self.config.mode} mode")
+        logger.info(f"Rossum MCP Server {__version__} starting in {self.config.mode} mode")
 
         mcp = FastMCP("rossum-mcp-server")
 
