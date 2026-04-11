@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Bump `rossum-mcp` dependency from `>=2.1.3` to `>=2.2.0`
+- Migrate from Redis to Valkey for change tracking storage [#356](https://github.com/stancld/rossum-agents/pull/356)
+
+### Added
+- `VALKEY_PASSWORD` environment variable for authenticated Valkey connections [#356](https://github.com/stancld/rossum-agents/pull/356)
 
 ### Fixed
 - Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)
