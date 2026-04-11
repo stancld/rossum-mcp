@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from fastmcp import FastMCP
+from rossum_api import AsyncRossumAPIClient
 from rossum_api.models.engine import Engine
 from rossum_api.models.hook import Hook, HookAction, HookEvent, HookEventAndAction
 from rossum_api.models.queue import Queue
@@ -17,10 +17,10 @@ from rossum_mcp.models.schema import (
 from rossum_mcp.tools.update.annotations import _bulk_update_annotation_fields, _confirm_annotation, _start_annotation
 from rossum_mcp.tools.update.engines import _update_engine
 from rossum_mcp.tools.update.hooks import _test_hook, _update_hook
-from rossum_mcp.tools.update.models import (  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
-    EngineUpdateData,
-    QueueUpdateData,
-    SchemaNodeUpdate,
+from rossum_mcp.tools.update.models import (
+    EngineUpdateData,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+    QueueUpdateData,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+    SchemaNodeUpdate,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 )
 from rossum_mcp.tools.update.queues import _update_queue
 from rossum_mcp.tools.update.rules import _patch_rule
@@ -29,10 +29,6 @@ from rossum_mcp.tools.update.schemas.patching import (
     PatchOperation,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 )
 from rossum_mcp.tools.update.users import _update_user
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-    from rossum_api import AsyncRossumAPIClient
 
 
 def register_update_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:

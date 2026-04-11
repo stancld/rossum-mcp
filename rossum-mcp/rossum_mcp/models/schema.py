@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import Literal  # noqa: TC003 - needed at runtime for Pydantic schema resolution
 
 from rossum_api.models.schema import Schema as RossumSchema
 
 from rossum_mcp.models.base import RossumResourceWithResolvedWorkspaces
-
-if TYPE_CHECKING:
-    from typing import Literal
 
 
 class DatapointType(StrEnum):
