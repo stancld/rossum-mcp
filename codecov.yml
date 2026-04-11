@@ -25,7 +25,3 @@ flags:
     paths:
       - rossum-agent-client/
     carryforward: true
-  rossum-deploy:
-    paths:
-      - rossum-deploy/
-    carryforward: true

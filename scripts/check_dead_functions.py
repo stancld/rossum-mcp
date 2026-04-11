@@ -12,7 +12,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PRODUCTION_PACKAGES = [
     REPO_ROOT / "rossum-mcp" / "rossum_mcp",
     REPO_ROOT / "rossum-agent" / "rossum_agent",
-    REPO_ROOT / "rossum-deploy" / "rossum_deploy",
     REPO_ROOT / "rossum-agent-client" / "rossum_agent_client",
 ]
 

@@ -116,16 +116,6 @@ A compact, fully-typed tool surface — Pydantic models, ``StrEnum`` parameters,
 
 * **get_mcp_mode** - Get the current MCP operation mode (read-only or read-write)
 
-**Deployment Toolkit**
-
-The ``rossum_deploy`` package provides configuration deployment:
-
-* Pull configurations from Rossum organizations to local files
-* Diff local vs remote configurations
-* Push changes back to Rossum (with dry-run support)
-* Cross-organization deployment with ID mapping
-* Workspace comparison for safe agent workflows
-
 **AI Agent Toolkit**
 
 The ``rossum_agent`` package provides additional capabilities:
@@ -145,16 +135,6 @@ The ``rossum_agent`` package provides additional capabilities:
 * Integration with AI agent frameworks (Anthropic Claude via AWS Bedrock)
 * REST API interface with slash commands for quick introspection (``/list-skills``, ``/list-mcp-tools``, etc.)
 * See the :doc:`examples` section for complete workflows
-
-**Deployment Tools**
-
-The ``rossum_deploy`` package provides lightweight deployment capabilities:
-
-* Pull/diff/push workflow for Rossum configurations
-* Support for Workspace, Queue, Schema, Hook, and Inbox objects
-* Conflict detection when both local and remote have changed
-* Python-first API designed for agent integration
-* Lightweight alternative to `deployment-manager (PRD2) <https://github.com/rossumai/deployment-manager>`_
 
 Quick Start
 -----------
