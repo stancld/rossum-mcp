@@ -1408,8 +1408,8 @@ tests = [
 requires-dist = [
     { name = "coverage", marker = "extra == 'all'", specifier = ">=7.0.0" },
     { name = "coverage", marker = "extra == 'tests'", specifier = ">=7.0.0" },
-    { name = "fastmcp", specifier = ">=3.2.0" },
-    { name = "fastmcp", marker = "extra == 'all'", specifier = ">=3.2.0" },
+    { name = "fastmcp", specifier = "==3.2.0" },
+    { name = "fastmcp", marker = "extra == 'all'", specifier = "==3.2.0" },
     { name = "furo", marker = "extra == 'all'" },
     { name = "furo", marker = "extra == 'docs'" },
     { name = "myst-parser", marker = "extra == 'all'", specifier = ">=2.0.0" },
