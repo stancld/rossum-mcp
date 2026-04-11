@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Fixed
+- Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)
+
 ## [2.0.0] - 2026-04-09
 
 ### Added
