@@ -328,7 +328,6 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [ros
 - [Rossum API](https://rossum.app/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
 - [Rossum API SDK](https://github.com/rossumai/rossum-api) - Python SDK
-- [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
 
 
 ## Development
