@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Add structured logging with `structlog` and observability middleware for request/response tracing [#357](https://github.com/stancld/rossum-agents/pull/357)
+
 ### Fixed
 - Fix user creation by including the required `organization` field in the payload [#354](https://github.com/stancld/rossum-agents/pull/354)
 

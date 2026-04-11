@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from rossum_mcp.logging_config import LogLevel
+from rossum_mcp.logging_config import LogFormat, LogLevel
 from rossum_mcp.server import RossumMCPServer
 from rossum_mcp.tools.base import MCPMode
 
@@ -28,6 +28,7 @@ class TestConfigFromEnv:
 
         assert config.mode == MCPMode.READ_WRITE
         assert config.log_level == LogLevel.INFO
+        assert config.log_format == LogFormat.CONSOLE
 
     @pytest.mark.parametrize(
         ("env_var", "value", "attr", "expected"),
@@ -36,6 +37,9 @@ class TestConfigFromEnv:
             ("ROSSUM_MCP_MODE", "READ-ONLY", "mode", MCPMode.READ_ONLY),
             ("ROSSUM_MCP_LOG_LEVEL", "DEBUG", "log_level", LogLevel.DEBUG),
             ("ROSSUM_MCP_LOG_LEVEL", "debug", "log_level", LogLevel.DEBUG),
+            ("ROSSUM_MCP_LOG_FORMAT", "json", "log_format", LogFormat.JSON),
+            ("ROSSUM_MCP_LOG_FORMAT", "JSON", "log_format", LogFormat.JSON),
+            ("ROSSUM_MCP_LOG_FORMAT", "console", "log_format", LogFormat.CONSOLE),
         ],
     )
     def test_reads_optional_env_var(
@@ -63,6 +67,7 @@ class TestConfigFromEnv:
         [
             ("ROSSUM_MCP_MODE", "bogus"),
             ("ROSSUM_MCP_LOG_LEVEL", "BOGUS"),
+            ("ROSSUM_MCP_LOG_FORMAT", "yaml"),
         ],
     )
     def test_invalid_optional_env_var_raises(self, monkeypatch: pytest.MonkeyPatch, env_var: str, value: str):
