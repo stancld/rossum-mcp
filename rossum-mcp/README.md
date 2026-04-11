@@ -32,7 +32,11 @@ This MCP server exposes only the **public Rossum API**. Internal tooling is part
 
 Rossum MCP in action with Claude Code:
 
+<div align="center">
+
 ![Demo](assets/claude_code_demo.gif)
+
+</div>
 
 ## Architecture
 
