@@ -124,41 +124,6 @@ Fully typed with Pydantic models, `StrEnum` parameters, and unified APIs — 30 
 
 For parameters and examples, see [TOOLS.md](TOOLS.md).
 
-## Example Workflows
-
-### Upload and Monitor
-
-```python
-# 1. Upload document
-upload_document(file_path="/path/to/invoice.pdf", queue_id=12345)
-
-# 2. Get annotation ID
-annotations = search(query={"entity": "annotation", "queue_id": 12345, "ordering": ["-created_at"]}, first_n=1)
-
-# 3. Check status
-annotation = get(entity="annotation", entity_id=annotations[0]["id"])
-```
-
-### Update Fields
-
-```python
-# 1. Start annotation (moves to 'reviewing')
-start_annotation(annotation_id=12345)
-
-# 2. Get content with field IDs
-annotation_content = get_annotation_content(annotation_id=12345)
-# Returns {"path": "/tmp/rossum_annotation_12345_content.json"} — use jq/grep on that file
-
-# 3. Update fields using datapoint IDs
-bulk_update_annotation_fields(
-    annotation_id=12345,
-    operations=[{"op": "replace", "id": 67890, "value": {"content": {"value": "INV-001"}}}]
-)
-
-# 4. Confirm
-confirm_annotation(annotation_id=12345)
-```
-
 ## License
 
 MIT License - see [LICENSE](../LICENSE) for details.
