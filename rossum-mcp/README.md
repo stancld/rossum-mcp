@@ -22,6 +22,12 @@
 > [!NOTE]
 > This is not an official Rossum project. It is a community-developed integration built on top of the Rossum API, not a product (yet).
 
+## Demo
+
+Rossum MCP in action with Claude Code:
+
+![Demo](assets/claude_code_demo.gif)
+
 ## Quick Start
 
 Set the required environment variables:
