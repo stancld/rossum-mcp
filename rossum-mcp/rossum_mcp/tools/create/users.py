@@ -22,9 +22,12 @@ async def _create_user(
     oidc_id: str | None = None,
     auth_type: str = "password",
 ) -> User | dict:
+    organization = await anext(client.list_organizations())
+
     user_data: dict[str, Any] = {
         "username": username,
         "email": email,
+        "organization": organization.url,
         "is_active": is_active,
         "auth_type": auth_type,
     }

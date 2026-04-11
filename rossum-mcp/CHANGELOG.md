@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Fix user creation by including the required `organization` field in the payload [#354](https://github.com/stancld/rossum-agents/pull/354)
+
 ### Changed
 - Refactor `server.py` into `RossumMCPServer` class in `server.py` and thin `run.py` entry point [#348](https://github.com/stancld/rossum-agents/pull/348)
 - Replace `Literal` type aliases with `StrEnum` for `MCPMode` and `LogLevel` — drops manual validation in favor of enum construction [#348](https://github.com/stancld/rossum-agents/pull/348)
