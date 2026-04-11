@@ -22,12 +22,15 @@ sys.path.insert(0, str(pathlib.Path("../../").resolve()))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 with pathlib.Path("../../rossum-mcp/pyproject.toml").resolve().open("rb") as f:
-    _pyproject = tomllib.load(f)
+    _mcp_pyproject = tomllib.load(f)
 
-project = "Rossum MCP Server"
-copyright = "2025, Dan Stancl"
-author = "Dan Stancl"
-version = _pyproject["project"]["version"]
+with pathlib.Path("../../rossum-agent/pyproject.toml").resolve().open("rb") as f:
+    _agent_pyproject = tomllib.load(f)
+
+project = "Rossum Agents"
+copyright = "2026, Rossum"
+author = "Rossum"
+version = f"rossum-mcp {_mcp_pyproject['project']['version']} | rossum-agent {_agent_pyproject['project']['version']}"
 release = version
 
 # -- General configuration ---------------------------------------------------
@@ -43,6 +46,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "myst_parser",
     "sphinx_copybutton",
+    "sphinx_design",
 ]
 
 # Autodoc settings
@@ -93,6 +97,11 @@ myst_enable_extensions = [
 templates_path = ["_templates"]
 exclude_patterns = []
 
+# Suppress warnings from inherited type annotations in rossum_api parent classes
+# (User, JsonDict, RuleAction, Section, Any, JsonValue) and nested class references (Config)
+# that sphinx_autodoc_typehints cannot resolve in the child module namespace.
+suppress_warnings = ["sphinx_autodoc_typehints.forward_reference"]
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -100,7 +109,7 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_logo = "_static/rossum-logo.svg"
 html_favicon = "_static/favicon.svg"
-html_title = "Rossum MCP Server"
+html_title = "Rossum Agents"
 
 html_theme_options = {
     "light_css_variables": {
