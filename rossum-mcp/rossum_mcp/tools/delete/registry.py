@@ -3,40 +3,17 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
-from rossum_mcp.tools.base import delete_resource
+from rossum_mcp.tools.delete.annotations import _delete_annotation
+from rossum_mcp.tools.delete.hooks import _delete_hook
+from rossum_mcp.tools.delete.queues import _delete_queue
+from rossum_mcp.tools.delete.rules import _delete_rule
+from rossum_mcp.tools.delete.schemas import _delete_schema
+from rossum_mcp.tools.delete.workspaces import _delete_workspace
 
 if TYPE_CHECKING:
     from rossum_api import AsyncRossumAPIClient
 
 DeleteRegistry = dict[str, Callable[[int], Awaitable[dict]]]
-
-
-async def _delete_queue(client: AsyncRossumAPIClient, queue_id: int) -> dict:
-    return await delete_resource(
-        "queue", queue_id, client.delete_queue, f"Queue {queue_id} scheduled for deletion (starts after 24 hours)"
-    )
-
-
-async def _delete_schema(client: AsyncRossumAPIClient, schema_id: int) -> dict:
-    return await delete_resource("schema", schema_id, client.delete_schema)
-
-
-async def _delete_hook(client: AsyncRossumAPIClient, hook_id: int) -> dict:
-    return await delete_resource("hook", hook_id, client.delete_hook)
-
-
-async def _delete_rule(client: AsyncRossumAPIClient, rule_id: int) -> dict:
-    return await delete_resource("rule", rule_id, client.delete_rule)
-
-
-async def _delete_workspace(client: AsyncRossumAPIClient, workspace_id: int) -> dict:
-    return await delete_resource("workspace", workspace_id, client.delete_workspace)
-
-
-async def _delete_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> dict:
-    return await delete_resource(
-        "annotation", annotation_id, client.delete_annotation, f"Annotation {annotation_id} moved to 'deleted' status"
-    )
 
 
 def build_delete_registry(client: AsyncRossumAPIClient) -> DeleteRegistry:
