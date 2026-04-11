@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from collections.abc import Callable
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -30,6 +30,9 @@ from rossum_mcp.tools.update.schemas.pruning import (
     _remove_fields_from_content,
 )
 from rossum_mcp.tools.validation import sanitize_schema_content
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 MAX_RETRIES_ON_PRECONDITION_FAILED = 5
 

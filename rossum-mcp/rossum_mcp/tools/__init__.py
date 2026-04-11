@@ -10,6 +10,7 @@ from rossum_mcp.tools.create import register_create_tools
 from rossum_mcp.tools.delete.handler import register_delete_tools
 from rossum_mcp.tools.discovery import register_discovery_tools
 from rossum_mcp.tools.get import register_get_tools
+from rossum_mcp.tools.search.handler import register_search_tools
 from rossum_mcp.tools.update import register_update_tools
 
 __all__ = [
@@ -19,5 +20,6 @@ __all__ = [
     "register_delete_tools",
     "register_discovery_tools",
     "register_get_tools",
+    "register_search_tools",
     "register_update_tools",
 ]

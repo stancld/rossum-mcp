@@ -1,4 +1,4 @@
-"""Tests for rossum_mcp.tools.get.handler — unified get + search tools."""
+"""Tests for rossum_mcp.tools.get.handler and rossum_mcp.tools.search.handler."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from conftest import (
 from fastmcp.exceptions import ToolError
 from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import build_get_registry
+from rossum_mcp.tools.search.handler import register_search_tools
 from rossum_mcp.tools.search.models import (
     AnnotationSearch,
     DocumentRelationSearch,
@@ -75,14 +76,17 @@ def setup_env(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.unit
 class TestToolRegistration:
-    def test_registers_get_and_search(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_registers_get_tool(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         register_get_tools(mock_mcp, mock_client)
         assert "get" in mock_mcp._tools
+
+    def test_registers_search_tool(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+        register_search_tools(mock_mcp, mock_client)
         assert "search" in mock_mcp._tools
 
-    def test_registers_exactly_five_tools(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_registers_exactly_four_get_tools(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         register_get_tools(mock_mcp, mock_client)
-        assert len(mock_mcp._tools) == 5
+        assert len(mock_mcp._tools) == 4
         assert "get_annotation_content" in mock_mcp._tools
         assert "get_schema_tree_structure" in mock_mcp._tools
         assert "get_engine_fields" in mock_mcp._tools
@@ -369,7 +373,7 @@ class TestGetBatch:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         register_get_tools(mock_mcp, mock_client)
-        with pytest.raises(ToolError, match="does not support get"):
+        with pytest.raises(ToolError, match="Unknown entity type"):
             await mock_mcp._tools["get"](entity="hook_log", entity_id=[1, 2])
 
 
@@ -383,7 +387,7 @@ class TestGetErrors:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         register_get_tools(mock_mcp, mock_client)
-        with pytest.raises(ToolError, match="does not support get"):
+        with pytest.raises(ToolError, match="Unknown entity type"):
             await mock_mcp._tools["get"](entity="hook_log", entity_id=1)
 
     @pytest.mark.asyncio
@@ -405,7 +409,7 @@ class TestSearchRouting:
         mock_queue = create_mock_queue(id=1, name="Q1")
         with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5))
         assert len(result) == 1
 
@@ -417,7 +421,7 @@ class TestSearchRouting:
             patch("rossum_mcp.tools.search.annotations.resolve_queue_workspaces", return_value={}) as _mock_rqw,
         ):
             mock_gl.return_value = Mock(items=[mock_ann])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
         assert len(result) == 1
 
@@ -426,7 +430,7 @@ class TestSearchRouting:
         mock_hook = create_mock_hook(id=1)
         with patch("rossum_mcp.tools.search.hooks.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_hook])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=HookSearch(queue_id=5))
         assert len(result) == 1
 
@@ -435,7 +439,7 @@ class TestSearchRouting:
         mock_engine = create_mock_engine(id=1)
         with patch("rossum_mcp.tools.search.engines.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_engine])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=EngineSearch(engine_type="extractor"))
         assert len(result) == 1
 
@@ -444,7 +448,7 @@ class TestSearchRouting:
         mock_schema = create_mock_schema(id=1)
         with patch("rossum_mcp.tools.search.schemas.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_schema])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=SchemaSearch(name="Test"))
         assert len(result) == 1
 
@@ -453,7 +457,7 @@ class TestSearchRouting:
         mock_ws = create_mock_workspace(id=1)
         with patch("rossum_mcp.tools.search.workspaces.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_ws])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=WorkspaceSearch(organization_id=1))
         assert len(result) == 1
 
@@ -464,7 +468,7 @@ class TestSearchRouting:
         mock_queue = create_mock_queue(id=1, name="Q1")
         with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5), first_n=3)
         mock_gl.assert_called_once()
         assert mock_gl.call_args.kwargs.get("max_items") == 3
@@ -588,24 +592,14 @@ class TestRegistry:
             "annotation",
             "relation",
             "document_relation",
-            "hook_log",
-            "hook_template",
-            "user_role",
-            "queue_template_name",
             "hook_secrets_keys",
         }
         assert set(registry.keys()) == expected
 
-    def test_search_only_entities_have_no_retrieve(self, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_all_entities_have_retrieve_fn(self, mock_client: AsyncMock, setup_env: None) -> None:
         registry = build_get_registry(mock_client)
-        for entity_name in ("hook_log", "hook_template", "user_role", "queue_template_name"):
-            assert registry[entity_name].retrieve_fn is None
-            assert registry[entity_name].search_fn is not None
-
-    def test_get_only_entity_has_no_search(self, mock_client: AsyncMock, setup_env: None) -> None:
-        registry = build_get_registry(mock_client)
-        assert registry["organization_limit"].search_fn is None
-        assert registry["organization_limit"].retrieve_fn is not None
+        for entity_name, config in registry.items():
+            assert config.retrieve_fn is not None, f"{entity_name} has no retrieve_fn"
 
 
 # ───────────────────────── SEARCH Error Cases ─────────────────────────
@@ -614,20 +608,14 @@ class TestRegistry:
 @pytest.mark.unit
 class TestSearchErrors:
     @pytest.mark.asyncio
-    async def test_search_unknown_entity_returns_error(
+    async def test_search_unsupported_entity_returns_error(
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
-        register_get_tools(mock_mcp, mock_client)
-        # organization_limit has no search_fn
-        from rossum_mcp.tools.search.models import BaseModel
+        from rossum_mcp.tools.search.registry import build_search_registry
 
-        class FakeSearch(BaseModel):
-            entity: str = "organization_limit"
-
-        # Build a query that mimics searching organization_limit
-        registry = build_get_registry(mock_client)
-        config = registry["organization_limit"]
-        assert config.search_fn is None
+        search_registry = build_search_registry(mock_client)
+        # organization_limit is not searchable
+        assert "organization_limit" not in search_registry
 
 
 # ───────────────────────── SEARCH Relations ─────────────────────────
@@ -639,7 +627,7 @@ class TestSearchRelations:
     async def test_search_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=1, type="edit")])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=RelationSearch(type="edit"))
         assert len(result) == 1
 
@@ -647,7 +635,7 @@ class TestSearchRelations:
     async def test_search_document_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=10, type="line_items")])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=DocumentRelationSearch(type="line_items"))
         assert len(result) == 1
 
