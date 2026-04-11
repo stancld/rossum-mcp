@@ -41,7 +41,6 @@ from rossum_agent.api.models.schemas import (
 from rossum_agent.bedrock_client import MAX_INPUT_TOKENS
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-from rossum_agent.redis_client import RedisConnection
 from rossum_agent.rossum_mcp_integration import MCPConnection, connect_mcp_server
 from rossum_agent.system_prompt import get_system_prompt
 from rossum_agent.tools.core import (
@@ -55,6 +54,7 @@ from rossum_agent.tools.dynamic_tools import get_write_tools_async
 from rossum_agent.tools.task_tracker import TaskTracker
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 from rossum_agent.utils import create_session_output_dir
+from rossum_agent.valkey_client import ValkeyConnection
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -195,10 +195,10 @@ class AgentService:
         self._chat_runs: dict[str, _ChatRunState] = {}
 
     def _get_or_create_stores(self) -> tuple[CommitStore | None, SnapshotStore | None]:
-        conn = RedisConnection()
+        conn = ValkeyConnection()
         if conn.is_connected():
             return CommitStore(conn.client), SnapshotStore(conn.client)
-        logger.warning("Redis unavailable — change tracking disabled for this run")
+        logger.warning("Valkey unavailable — change tracking disabled for this run")
         return None, None
 
     async def _setup_change_tracking(
@@ -209,7 +209,7 @@ class AgentService:
         write_tools = await get_write_tools_async(mcp_connection)
         environment = rossum_api_base_url.rstrip("/")
         if commit_store is not None:
-            assert snapshot_store is not None  # both created together from the same Redis client
+            assert snapshot_store is not None  # both created together from the same Valkey client
             mcp_connection.setup_change_tracking(write_tools, chat_id, environment, commit_store, snapshot_store)
         else:
             mcp_connection.write_tools = write_tools

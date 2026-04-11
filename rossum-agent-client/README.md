@@ -124,7 +124,7 @@ RossumAgentClient(
 
 ```python
 health = client.health_check()
-# Returns: HealthResponse(status="healthy", redis_connected=True, version="1.0.0dev")
+# Returns: HealthResponse(status="healthy", storage_connected=True, version="1.0.0dev")
 ```
 
 #### Chat Management

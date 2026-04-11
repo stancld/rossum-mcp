@@ -16,16 +16,16 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:8-alpine
-    container_name: rossum-redis
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: rossum-valkey
     ports:
       - 127.0.0.1:6379:6379
     volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
+      - valkey-data:/data
+    command: valkey-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,8 +45,8 @@ services:
       - POSTGRES_DB=rossum_agent
       - POSTGRES_USER=rossum
       - POSTGRES_PASSWORD=rossum
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
     ports:
       - 127.0.0.1:8000:8000
     volumes:
@@ -54,11 +54,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      valkey:
         condition: service_healthy
 
 volumes:
   postgres-data:
     driver: local
-  redis-data:
+  valkey-data:
     driver: local

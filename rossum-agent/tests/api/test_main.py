@@ -134,20 +134,20 @@ class TestInitServices:
             assert test_app.state.agent_service is mock_agent_instance
             assert test_app.state.file_service is mock_file_instance
 
-    def test_init_services_creates_redis_connection(self):
-        """Test that _init_services creates redis_connection for change tracking."""
+    def test_init_services_creates_valkey_connection(self):
+        """Test that _init_services creates valkey_connection for change tracking."""
         from fastapi import FastAPI
         from rossum_agent.api.main import _init_services
 
         mock_storage = MagicMock()
-        mock_redis = MagicMock()
+        mock_valkey = MagicMock()
 
         with (
             patch("rossum_agent.api.main._create_storage", return_value=mock_storage),
             patch("rossum_agent.api.main.ChatService") as mock_chat_cls,
             patch("rossum_agent.api.main.AgentService"),
             patch("rossum_agent.api.main.FileService"),
-            patch("rossum_agent.api.main.RedisConnection", return_value=mock_redis) as mock_redis_cls,
+            patch("rossum_agent.api.main.ValkeyConnection", return_value=mock_valkey) as mock_valkey_cls,
         ):
             mock_chat_instance = MagicMock()
             mock_chat_instance.storage = mock_storage
@@ -156,16 +156,16 @@ class TestInitServices:
             test_app = FastAPI()
             _init_services(test_app)
 
-            mock_redis_cls.assert_called_once()
-            assert test_app.state.redis_connection is mock_redis
+            mock_valkey_cls.assert_called_once()
+            assert test_app.state.valkey_connection is mock_valkey
 
-    def test_init_services_skips_existing_redis_connection(self):
-        """Test that _init_services doesn't overwrite existing redis_connection."""
+    def test_init_services_skips_existing_valkey_connection(self):
+        """Test that _init_services doesn't overwrite existing valkey_connection."""
         from fastapi import FastAPI
         from rossum_agent.api.main import _init_services
 
         mock_storage = MagicMock()
-        existing_redis = MagicMock()
+        existing_valkey = MagicMock()
 
         with (
             patch("rossum_agent.api.main._create_storage", return_value=mock_storage),
@@ -178,10 +178,10 @@ class TestInitServices:
             mock_chat_cls.return_value = mock_chat_instance
 
             test_app = FastAPI()
-            test_app.state.redis_connection = existing_redis
+            test_app.state.valkey_connection = existing_valkey
             _init_services(test_app)
 
-            assert test_app.state.redis_connection is existing_redis
+            assert test_app.state.valkey_connection is existing_valkey
 
 
 class TestLifespan:

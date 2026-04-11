@@ -519,30 +519,30 @@ class TestCacheInMemory:
         assert conn._cache_get("queue", "999") is None
 
 
-class TestCacheRedis:
-    def test_redis_set_and_get(self):
+class TestCacheValkey:
+    def test_valkey_set_and_get(self):
         conn = _make_connection()
         conn.chat_id = "chat-1"
-        mock_redis = MagicMock()
-        conn.redis_client = mock_redis
+        mock_valkey = MagicMock()
+        conn.valkey_client = mock_valkey
 
         data = {"id": 1, "name": "Q"}
         conn._cache_set("queue", "1", data)
 
         expected_key = "read_cache:chat-1:queue:1"
-        mock_redis.setex.assert_called_once_with(expected_key, conn.cache_ttl_seconds, json.dumps(data, default=str))
+        mock_valkey.setex.assert_called_once_with(expected_key, conn.cache_ttl_seconds, json.dumps(data, default=str))
 
-        # Simulate redis get
-        mock_redis.get.return_value = json.dumps(data).encode()
+        # Simulate valkey get
+        mock_valkey.get.return_value = json.dumps(data).encode()
         result = conn._cache_get("queue", "1")
         assert result == data
 
-    def test_redis_miss(self):
+    def test_valkey_miss(self):
         conn = _make_connection()
         conn.chat_id = "chat-1"
-        mock_redis = MagicMock()
-        mock_redis.get.return_value = None
-        conn.redis_client = mock_redis
+        mock_valkey = MagicMock()
+        mock_valkey.get.return_value = None
+        conn.valkey_client = mock_valkey
 
         assert conn._cache_get("queue", "999") is None
 

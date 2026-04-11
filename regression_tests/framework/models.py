@@ -151,7 +151,7 @@ class RegressionTestCase:
     api_token: str | None = None
     rossum_url: str | None = None
     sandbox_api_token: str | None = None
-    requires_redis: bool = False
+    requires_valkey: bool = False
     setup_fn: SetupFn | None = None
     tool_expectation: ToolExpectation = field(default_factory=ToolExpectation)
     token_budget: TokenBudget = field(default_factory=TokenBudget)

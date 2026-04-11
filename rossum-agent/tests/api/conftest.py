@@ -47,7 +47,7 @@ def reset_app_state() -> Generator[None, None, None]:
     fresh app.state and doesn't leak state to other tests.
     """
     original_state = {}
-    for attr in ("chat_service", "agent_service", "file_service", "redis_connection"):
+    for attr in ("chat_service", "agent_service", "file_service", "valkey_connection"):
         if hasattr(app.state, attr):
             original_state[attr] = getattr(app.state, attr)
             delattr(app.state, attr)
@@ -55,7 +55,7 @@ def reset_app_state() -> Generator[None, None, None]:
     try:
         yield
     finally:
-        for attr in ("chat_service", "agent_service", "file_service", "redis_connection"):
+        for attr in ("chat_service", "agent_service", "file_service", "valkey_connection"):
             if hasattr(app.state, attr):
                 delattr(app.state, attr)
         for attr, value in original_state.items():

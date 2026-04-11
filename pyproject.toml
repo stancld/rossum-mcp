@@ -47,7 +47,7 @@ api = [
     "gunicorn>=23.0.0",
     "psycopg[binary]>=3.1.0",
     "python-multipart>=0.0.22",
-    "redis>=7.0.0",
+    "valkey>=6.1.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.0",
     "sse-starlette>=2.0.0",
@@ -104,7 +104,7 @@ all = [
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
     "python-multipart>=0.0.22",
-    "redis>=7.0.0",
+    "valkey>=6.1.0",
     "rossum-api>=3.13.1",
     "slack-sdk[optional]>=3.27.0",
     "slowapi>=0.1.9",
@@ -164,9 +164,9 @@ include = ["**/api/**"]
 invalid-argument-type = "ignore"
 deprecated = "ignore"
 
-# Redis async iterators return complex union types
+# Valkey async iterators return complex union types
 [[tool.ty.overrides]]
-include = ["**/redis_storage.py"]
+include = ["**/valkey_client.py"]
 [tool.ty.overrides.rules]
 not-iterable = "ignore"
 invalid-argument-type = "ignore"

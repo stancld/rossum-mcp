@@ -801,12 +801,12 @@ class TestChangeManagement:
         assert not conn.has_changes()
 
 
-class TestRedisCacheHelpers:
-    """Tests for _cache_get/_cache_set with a mock Redis client."""
+class TestValkeyCacheHelpers:
+    """Tests for _cache_get/_cache_set with a mock Valkey client."""
 
     @pytest.fixture
-    def mock_redis(self):
-        """In-memory dict-backed mock Redis client."""
+    def mock_valkey(self):
+        """In-memory dict-backed mock Valkey client."""
         store: dict[str, bytes] = {}
         client = MagicMock()
         client.get = MagicMock(side_effect=lambda k: store.get(k))
@@ -818,77 +818,77 @@ class TestRedisCacheHelpers:
         return client
 
     @pytest.fixture
-    def redis_conn(self, mock_client, write_tools, mock_redis):
+    def valkey_conn(self, mock_client, write_tools, mock_valkey):
         c = MCPConnection(
             client=mock_client,
             write_tools=write_tools,
             chat_id="test-chat-123",
-            redis_client=mock_redis,
+            valkey_client=mock_valkey,
         )
         c._call_mcp = AsyncMock()
         return c
 
-    def test_cache_set_and_get_roundtrip(self, redis_conn):
+    def test_cache_set_and_get_roundtrip(self, valkey_conn):
         data = {"id": 1, "name": "Queue"}
-        redis_conn._cache_set("queue", "1", data)
+        valkey_conn._cache_set("queue", "1", data)
 
-        result = redis_conn._cache_get("queue", "1")
+        result = valkey_conn._cache_get("queue", "1")
         assert result == data
 
-    def test_cache_get_returns_none_for_missing_key(self, redis_conn):
-        assert redis_conn._cache_get("queue", "999") is None
+    def test_cache_get_returns_none_for_missing_key(self, valkey_conn):
+        assert valkey_conn._cache_get("queue", "999") is None
 
-    def test_cache_set_writes_to_redis_only_when_redis_available(self, redis_conn, mock_redis):
+    def test_cache_set_writes_to_valkey_only_when_valkey_available(self, valkey_conn, mock_valkey):
         data = {"id": 2, "name": "Schema"}
-        redis_conn._cache_set("schema", "2", data)
+        valkey_conn._cache_set("schema", "2", data)
 
-        # In-memory is NOT populated when Redis is available
-        assert ("schema", "2") not in redis_conn._read_cache
-        # Redis received a setex call
-        mock_redis.setex.assert_called_once()
-        call_args = mock_redis.setex.call_args
+        # In-memory is NOT populated when Valkey is available
+        assert ("schema", "2") not in valkey_conn._read_cache
+        # Valkey received a setex call
+        mock_valkey.setex.assert_called_once()
+        call_args = mock_valkey.setex.call_args
         assert call_args[0][0] == "read_cache:test-chat-123:schema:2"
         assert call_args[0][1] == 30 * 24 * 3600
 
-    def test_cache_get_prefers_redis(self, redis_conn, mock_redis):
-        """When Redis has data, _cache_get returns it even if in-memory is empty."""
-        redis_data = {"id": 1, "name": "From Redis"}
+    def test_cache_get_prefers_valkey(self, valkey_conn, mock_valkey):
+        """When Valkey has data, _cache_get returns it even if in-memory is empty."""
+        valkey_data = {"id": 1, "name": "From Valkey"}
         key = "read_cache:test-chat-123:queue:1"
-        mock_redis.get.side_effect = lambda k: json.dumps(redis_data).encode() if k == key else None
+        mock_valkey.get.side_effect = lambda k: json.dumps(valkey_data).encode() if k == key else None
 
-        result = redis_conn._cache_get("queue", "1")
-        assert result == redis_data
-        assert ("queue", "1") not in redis_conn._read_cache
+        result = valkey_conn._cache_get("queue", "1")
+        assert result == valkey_data
+        assert ("queue", "1") not in valkey_conn._read_cache
 
-    def test_fallback_to_memory_without_redis(self, mock_client, write_tools):
-        """Without redis_client, behaves like the original in-memory cache."""
+    def test_fallback_to_memory_without_valkey(self, mock_client, write_tools):
+        """Without valkey_client, behaves like the original in-memory cache."""
         conn = MCPConnection(client=mock_client, write_tools=write_tools)
         conn._cache_set("queue", "1", {"id": 1})
         assert conn._cache_get("queue", "1") == {"id": 1}
 
-    def test_fallback_to_memory_without_chat_id(self, mock_client, write_tools, mock_redis):
-        """With redis_client but no chat_id, falls back to in-memory."""
-        conn = MCPConnection(client=mock_client, write_tools=write_tools, redis_client=mock_redis)
+    def test_fallback_to_memory_without_chat_id(self, mock_client, write_tools, mock_valkey):
+        """With valkey_client but no chat_id, falls back to in-memory."""
+        conn = MCPConnection(client=mock_client, write_tools=write_tools, valkey_client=mock_valkey)
         conn._cache_set("queue", "1", {"id": 1})
         assert conn._cache_get("queue", "1") == {"id": 1}
-        mock_redis.setex.assert_not_called()
-        mock_redis.get.assert_not_called()
+        mock_valkey.setex.assert_not_called()
+        mock_valkey.get.assert_not_called()
 
     @pytest.mark.anyio
-    async def test_read_caches_to_redis(self, redis_conn, mock_redis):
-        """A read tool call stores its result in Redis."""
-        redis_conn._call_mcp = AsyncMock(return_value={"id": 5, "name": "Cached"})
+    async def test_read_caches_to_valkey(self, valkey_conn, mock_valkey):
+        """A read tool call stores its result in Valkey."""
+        valkey_conn._call_mcp = AsyncMock(return_value={"id": 5, "name": "Cached"})
 
-        await redis_conn.call_tool("get_queue", {"queue_id": "5"})
+        await valkey_conn.call_tool("get_queue", {"queue_id": "5"})
 
-        mock_redis.setex.assert_called_once()
-        key = mock_redis.setex.call_args[0][0]
+        mock_valkey.setex.assert_called_once()
+        key = mock_valkey.setex.call_args[0][0]
         assert key == "read_cache:test-chat-123:queue:5"
 
     @pytest.mark.anyio
-    async def test_proactive_fetch_stores_to_redis(self, redis_conn, mock_redis):
-        """When a write triggers a proactive before-fetch, it stores to Redis."""
-        redis_conn._call_mcp = AsyncMock(
+    async def test_proactive_fetch_stores_to_valkey(self, valkey_conn, mock_valkey):
+        """When a write triggers a proactive before-fetch, it stores to Valkey."""
+        valkey_conn._call_mcp = AsyncMock(
             side_effect=[
                 {"id": 1, "name": "Before"},  # proactive get(entity="queue") before-snapshot
                 "ok",  # update result
@@ -896,31 +896,31 @@ class TestRedisCacheHelpers:
             ]
         )
 
-        await redis_conn.call_tool("update_queue", {"queue_id": "1"})
+        await valkey_conn.call_tool("update_queue", {"queue_id": "1"})
 
-        # The proactive fetch should have stored to Redis
-        redis_keys = [call[0][0] for call in mock_redis.setex.call_args_list]
-        assert "read_cache:test-chat-123:queue:1" in redis_keys
+        # The proactive fetch should have stored to Valkey
+        valkey_keys = [call[0][0] for call in mock_valkey.setex.call_args_list]
+        assert "read_cache:test-chat-123:queue:1" in valkey_keys
 
     @pytest.mark.anyio
-    async def test_write_uses_redis_cached_before(self, redis_conn, mock_redis):
-        """A write reads the before-snapshot from Redis when not in local memory."""
+    async def test_write_uses_valkey_cached_before(self, valkey_conn, mock_valkey):
+        """A write reads the before-snapshot from Valkey when not in local memory."""
         before_data = {"id": 3, "name": "Cached Before"}
-        redis_key = "read_cache:test-chat-123:queue:3"
-        mock_redis.get.side_effect = lambda k: json.dumps(before_data).encode() if k == redis_key else None
+        valkey_key = "read_cache:test-chat-123:queue:3"
+        mock_valkey.get.side_effect = lambda k: json.dumps(before_data).encode() if k == valkey_key else None
 
-        redis_conn._call_mcp = AsyncMock(
+        valkey_conn._call_mcp = AsyncMock(
             side_effect=[
                 "ok",  # update result
                 {"id": 3, "name": "After"},  # after-snapshot
             ]
         )
 
-        await redis_conn.call_tool("update_queue", {"queue_id": "3"})
+        await valkey_conn.call_tool("update_queue", {"queue_id": "3"})
 
         # Should NOT have made a proactive fetch — only write + after-snapshot
-        assert redis_conn._call_mcp.call_count == 2
-        change = redis_conn._changes[0]
+        assert valkey_conn._call_mcp.call_count == 2
+        change = valkey_conn._changes[0]
         assert change.before == before_data
         assert change.after == {"id": 3, "name": "After"}
 
