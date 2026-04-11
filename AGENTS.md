@@ -98,8 +98,8 @@ When adding/modifying tools, update:
 
 | Tool Type | Files to Update |
 |-----------|-----------------|
-| MCP tools | `rossum-mcp/README.md`, `docs/source/index.rst`, `docs/source/usage.rst`, `docs/source/mcp_reference.rst` |
-| Agent tools | `rossum-agent/README.md`, `docs/source/index.rst`, `docs/source/usage.rst`, `docs/source/skills_and_subagents.rst` |
+| MCP tools | `rossum-mcp/README.md`, `docs/source/rossum-mcp/tools.rst`, `docs/source/rossum-mcp/configuration.rst` |
+| Agent tools | `rossum-agent/README.md`, `docs/source/rossum-agent/tools.rst`, `docs/source/rossum-agent/skills.rst`, `docs/source/rossum-agent/subagents.rst` |
 | Agent API | Regenerate OpenAPI spec and TUI types (see [OpenAPI Spec](#openapi-spec-rossum-agent-client) section) |
 
 Include: tool name, description, parameters with types, return format with JSON examples.
