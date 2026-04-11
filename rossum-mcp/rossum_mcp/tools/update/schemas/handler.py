@@ -121,7 +121,8 @@ async def _patch_schema(
         raise ToolError(str(e)) from e
 
     # Return concise confirmation with the affected node instead of the full schema
-    assert result_content is not None
+    if result_content is None:
+        raise ToolError("Schema update returned no content")
     node, _, _, _ = _find_node_anywhere(result_content, node_id)
     return {
         "status": "success",
