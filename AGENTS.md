@@ -225,6 +225,7 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `REDIS_HOST`, `REDIS_PORT` | Optional - Redis connection for change tracking (default: localhost:6379) |
 | `ROSSUM_MCP_MODE` | Optional - read-only or read-write |
 | `ROSSUM_MCP_LOG_LEVEL` | Optional - MCP server log level (default: INFO) |
+| `ROSSUM_MCP_LOG_FORMAT` | Optional - MCP server log format: json or console (default: console) |
 | `AWS_REGION` | Optional - AWS region for Bedrock (default: us-east-1) |
 | `AWS_BEDROCK_MODEL_ARN` | Optional - Custom ARN for Opus model |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | Optional - Custom ARN for Haiku model |
