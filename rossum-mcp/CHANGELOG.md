@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased]
+## [2.2.0] - 2026-04-11
 
 ### Added
 - Add structured logging with `structlog` and observability middleware for request/response tracing [#357](https://github.com/stancld/rossum-agents/pull/357)
