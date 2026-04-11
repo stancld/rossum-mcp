@@ -38,7 +38,11 @@ def try_connect_valkey() -> valkey.Valkey | None:
         port = os.getenv("VALKEY_PORT")
         if not host or not port:
             return None
-        client = valkey.Valkey(host=host, port=int(port), socket_connect_timeout=1)
+        kwargs: dict[str, object] = {"host": host, "port": int(port), "socket_connect_timeout": 1}
+        password = os.getenv("VALKEY_PASSWORD")
+        if password:
+            kwargs["password"] = password
+        client = valkey.Valkey(**kwargs)
         client.ping()
         return client
     except Exception:

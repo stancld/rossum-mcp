@@ -13,17 +13,29 @@ logger = logging.getLogger(__name__)
 class ValkeyConnection:
     """Minimal Valkey connection wrapper for change tracking (commits, snapshots)."""
 
-    def __init__(self, host: str | None = None, port: int | None = None) -> None:
+    def __init__(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+        password: str | None = None,
+    ) -> None:
         self.host = host or os.getenv("VALKEY_HOST", "localhost")
         self.port = port if port is not None else int(os.getenv("VALKEY_PORT", "6379"))
+        self.password = password if password is not None else os.getenv("VALKEY_PASSWORD")
         self._client: valkey.Valkey | None = None
 
     @property
     def client(self) -> valkey.Valkey:
         if self._client is None:
-            self._client = valkey.Valkey(
-                host=self.host, port=self.port, decode_responses=False, socket_connect_timeout=5
-            )
+            kwargs: dict[str, object] = {
+                "host": self.host,
+                "port": self.port,
+                "decode_responses": False,
+                "socket_connect_timeout": 5,
+            }
+            if self.password:
+                kwargs["password"] = self.password
+            self._client = valkey.Valkey(**kwargs)
         return self._client
 
     def is_connected(self) -> bool:

@@ -81,6 +81,7 @@ uv sync --extra api        # REST API (FastAPI, PostgreSQL, Valkey)
 | `POSTGRES_PASSWORD` | No | PostgreSQL password (default: `rossum`) |
 | `VALKEY_HOST` | No | Valkey host for change tracking (default: `localhost`) |
 | `VALKEY_PORT` | No | Valkey port for change tracking (default: `6379`) |
+| `VALKEY_PASSWORD` | No | Valkey authentication password |
 | `ROSSUM_MCP_MODE` | No | MCP mode: `read-write` (default) or `read-only` |
 | `ROSSUM_AGENT_PERSONA` | No | Agent persona: `default` (default) or `cautious` — read by the TUI client, not the server |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | No | Comma-separated regex patterns for additional allowed Rossum API hosts |

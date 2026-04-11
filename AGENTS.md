@@ -222,6 +222,7 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `POSTGRES_HOST`, `POSTGRES_PORT` | Optional - PostgreSQL connection (default: localhost:5432) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Optional - PostgreSQL credentials (default: rossum_agent/rossum/rossum) |
 | `VALKEY_HOST`, `VALKEY_PORT` | Optional - Valkey connection for change tracking (default: localhost:6379) |
+| `VALKEY_PASSWORD` | Optional - Valkey authentication password |
 | `ROSSUM_MCP_MODE` | Optional - read-only or read-write |
 | `ROSSUM_MCP_LOG_LEVEL` | Optional - MCP server log level (default: INFO) |
 | `ROSSUM_MCP_LOG_FORMAT` | Optional - MCP server log format: json or console (default: console) |
