@@ -34,6 +34,27 @@ Rossum MCP in action with Claude Code:
 
 ![Demo](assets/claude_code_demo.gif)
 
+## Architecture
+
+```
+rossum-mcp CLI / uvx
+  → run.py::main()
+       → RossumMCPServer.Config.from_env()       # reads env vars
+       → RossumMCPServer(config)
+            → AsyncRossumAPIClient(token, base_url)
+            → _create_app() → FastMCP instance
+                 register_discovery_tools(mcp, mode)
+                 register_get_tools(mcp, client)
+                 register_search_tools(mcp, client)
+                 register_create_tools(mcp, client, base_url)
+                 register_update_tools(mcp, client, base_url)
+                 register_delete_tools(mcp, client)
+                 if READ_ONLY: mcp.disable(tags={"write"})
+            → server.run()                        # stdio transport
+```
+
+The server is a single FastMCP app. Each tool layer (get, search, create, update, delete, discovery) is a registration function that decorates async handlers with `@mcp.tool()`. Tags (`read`, `write`, `queues`, `schemas`, ...) drive discoverability and the read-only mode.
+
 ## Quick Start
 
 Set the required environment variables:
