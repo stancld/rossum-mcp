@@ -1,4 +1,4 @@
-"""Tests for rossum_mcp.tools.get.handler and rossum_mcp.tools.search.handler."""
+"""Tests for rossum_mcp.tools.get.handler and rossum_mcp.tools.search."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from conftest import (
 from fastmcp.exceptions import ToolError
 from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import build_get_registry
-from rossum_mcp.tools.search.handler import register_search_tools
+from rossum_mcp.tools.search import register_search_tools
 from rossum_mcp.tools.search.models import (
     AnnotationSearch,
     DocumentRelationSearch,

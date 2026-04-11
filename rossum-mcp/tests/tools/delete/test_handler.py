@@ -1,4 +1,4 @@
-"""Tests for rossum_mcp.tools.delete.handler — unified delete tool."""
+"""Tests for rossum_mcp.tools.delete — unified delete tool."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
-from rossum_mcp.tools.delete.handler import register_delete_tools
+from rossum_mcp.tools.delete import register_delete_tools
 from rossum_mcp.tools.delete.registry import build_delete_registry
 
 if TYPE_CHECKING:
