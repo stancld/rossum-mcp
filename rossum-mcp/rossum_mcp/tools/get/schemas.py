@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from rossum_api.models.schema import Datapoint, Multivalue, Schema, Tuple
 
 from rossum_mcp.tools.get.models import SchemaTreeNode
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
+    from rossum_api import AsyncRossumAPIClient
 
 
 def _node_from_datapoint(dp: Datapoint) -> SchemaTreeNode:
@@ -54,3 +60,15 @@ def extract_schema_tree(schema: Schema) -> list[dict]:
         ).to_dict()
         for section in schema.content
     ]
+
+
+def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
+    from rossum_mcp.tools.get.related import _get_schema_tree_structure  # noqa: PLC0415 - circular import avoidance
+
+    @mcp.tool(
+        description="Lightweight schema tree (ids/labels/categories/types/required/hidden); accepts schema_id or queue_id.",
+        tags={"schemas"},
+        annotations={"readOnlyHint": True},
+    )
+    async def get_schema_tree_structure(schema_id: int | None = None, queue_id: int | None = None) -> list[dict]:
+        return await _get_schema_tree_structure(client, schema_id=schema_id, queue_id=queue_id)

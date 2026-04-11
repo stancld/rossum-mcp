@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_engine
 from rossum_api.domain_logic.resources import Resource
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.engines import register_engine_tools
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ class TestUpdateEngine:
     @pytest.mark.asyncio
     async def test_update_engine_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful engine update."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_engine_tools(mock_mcp, mock_client)
 
         mock_engine = create_mock_engine(id=123, name="Updated Engine")
         mock_client._http_client.update.return_value = {"id": 123}

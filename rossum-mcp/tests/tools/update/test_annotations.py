@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.annotations import register_annotation_tools
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ class TestStartAnnotation:
     @pytest.mark.asyncio
     async def test_start_annotation_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful annotation start."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_annotation_tools(mock_mcp, mock_client)
 
         start_annotation = mock_mcp._tools["start_annotation"]
         result = await start_annotation(annotation_id=12345)
@@ -59,7 +59,7 @@ class TestBulkUpdateAnnotationFields:
     @pytest.mark.asyncio
     async def test_bulk_update_annotation_fields_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful bulk update of annotation fields."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_annotation_tools(mock_mcp, mock_client)
 
         operations = [
             {"op": "replace", "id": 1, "value": {"content": {"value": "new value"}}},
@@ -82,7 +82,7 @@ class TestConfirmAnnotation:
     @pytest.mark.asyncio
     async def test_confirm_annotation_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful annotation confirmation."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_annotation_tools(mock_mcp, mock_client)
 
         confirm_annotation = mock_mcp._tools["confirm_annotation"]
         result = await confirm_annotation(annotation_id=12345)

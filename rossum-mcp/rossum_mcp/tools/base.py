@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import re
 from dataclasses import dataclass, field
@@ -29,6 +30,12 @@ class GracefulListResult(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-aut
 class MCPMode(StrEnum):
     READ_ONLY = "read-only"
     READ_WRITE = "read-write"
+
+
+def serialize_dataclass(obj: object) -> object:
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)
+    return obj
 
 
 def extract_id_from_url(url: str) -> int:

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
+from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
+from rossum_api import AsyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.queue import Queue
 
-if TYPE_CHECKING:
-    from rossum_api import AsyncRossumAPIClient
-
-    from rossum_mcp.tools.update.models import QueueUpdateData
+from rossum_mcp.tools.update.models import (
+    QueueUpdateData,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +63,13 @@ async def _update_queue(client: AsyncRossumAPIClient, queue_id: int, queue_data:
     logger.debug(f"Updating queue: queue_id={queue_id}, data={queue_data}")
     updated_queue_data = await client._http_client.update(Resource.Queue, queue_id, dict(queue_data))
     return cast("Queue", client._deserializer(Resource.Queue, updated_queue_data))
+
+
+def register_queue_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
+    @mcp.tool(
+        description="Update queue settings.",
+        tags={"queues", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def update_queue(queue_id: int, queue_data: QueueUpdateData) -> Queue | dict:
+        return await _update_queue(client, queue_id, queue_data)

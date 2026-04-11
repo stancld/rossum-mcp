@@ -8,11 +8,22 @@ import random
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
+from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
-from rossum_api import APIClientError
+from rossum_api import APIClientError, AsyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
 
-from rossum_mcp.tools.update.schemas.patching import PatchOperation, _find_node_anywhere, apply_schema_patch
+from rossum_mcp.models.schema import (
+    SchemaNode,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
+from rossum_mcp.tools.update.models import (
+    SchemaNodeUpdate,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
+from rossum_mcp.tools.update.schemas.patching import (
+    PatchOperation,
+    _find_node_anywhere,
+    apply_schema_patch,
+)
 from rossum_mcp.tools.update.schemas.pruning import (
     _collect_all_field_ids,
     _collect_ancestor_ids,
@@ -22,11 +33,6 @@ from rossum_mcp.tools.validation import sanitize_schema_content
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from rossum_api import AsyncRossumAPIClient
-
-    from rossum_mcp.models.schema import SchemaNode
-    from rossum_mcp.tools.update.models import SchemaNodeUpdate
 
 MAX_RETRIES_ON_PRECONDITION_FAILED = 5
 
@@ -181,3 +187,36 @@ async def _prune_schema_fields(
     all_ids = _collect_all_field_ids(original_content)
     remaining_ids = _collect_all_field_ids(result_content)
     return {"removed_fields": sorted(all_ids - remaining_ids), "remaining_fields": sorted(remaining_ids)}
+
+
+def register_schema_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
+    @mcp.tool(
+        description="Patch schema nodes (add/update/remove). Prereq: load schema-patching skill. Ops: add (parent_id + node_data), update (node_id + node_data), remove (node_id only). Tuple datapoints require explicit id; section-level datapoints use the passed node_id. Use after_field/before_field to control insertion position.",
+        tags={"schemas", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def patch_schema(
+        schema_id: int,
+        operation: PatchOperation,
+        node_id: str,
+        node_data: SchemaNode | SchemaNodeUpdate | None = None,
+        parent_id: str | None = None,
+        position: int | None = None,
+        after_field: str | None = None,
+        before_field: str | None = None,
+    ) -> dict:
+        return await _patch_schema(
+            client, schema_id, operation, node_id, node_data, parent_id, position, after_field, before_field
+        )
+
+    @mcp.tool(
+        description="Remove many fields at once. Provide fields_to_keep (keep only these leaf IDs; parent containers preserved automatically; list section IDs to preserve them as empty containers) or fields_to_remove (remove these leaf IDs). Returns {removed_fields, remaining_fields}.",
+        tags={"schemas", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def prune_schema_fields(
+        schema_id: int,
+        fields_to_keep: list[str] | None = None,
+        fields_to_remove: list[str] | None = None,
+    ) -> dict:
+        return await _prune_schema_fields(client, schema_id, fields_to_keep, fields_to_remove)

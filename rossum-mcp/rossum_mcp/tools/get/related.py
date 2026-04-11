@@ -19,7 +19,7 @@ from rossum_api.models.queue import Queue
 
 from rossum_mcp.tools.base import build_filters, extract_id_from_url, get_queue_engine_url, graceful_list
 from rossum_mcp.tools.get.schemas import extract_schema_tree
-from rossum_mcp.tools.search.registry import _list_hooks
+from rossum_mcp.tools.search.hooks import _list_hooks
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

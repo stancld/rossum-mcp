@@ -14,6 +14,7 @@ from rossum_mcp.tools import (
     register_delete_tools,
     register_discovery_tools,
     register_get_tools,
+    register_search_tools,
     register_update_tools,
 )
 from rossum_mcp.tools.base import MCPMode
@@ -51,6 +52,7 @@ class RossumMCPServer:
 
         register_discovery_tools(mcp, self.config.mode)
         register_get_tools(mcp, self.client)
+        register_search_tools(mcp, self.client)
         register_delete_tools(mcp, self.client)
         register_create_tools(mcp, self.client, self.config.base_url)
         register_update_tools(mcp, self.client, self.config.base_url)

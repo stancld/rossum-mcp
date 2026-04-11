@@ -8,7 +8,7 @@ import pytest
 from conftest import create_mock_queue, create_mock_schema
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
-from rossum_mcp.tools.get.handler import register_get_tools
+from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import _get_schema
 
 

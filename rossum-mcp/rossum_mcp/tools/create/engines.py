@@ -11,6 +11,7 @@ from rossum_mcp.models.engine import EngineType
 from rossum_mcp.tools.base import build_resource_url
 
 if TYPE_CHECKING:
+    from fastmcp import FastMCP
     from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
@@ -68,3 +69,43 @@ async def _create_engine_field(
 
     engine_field_response = await client._http_client.create(Resource.EngineField, engine_field_data)
     return cast("EngineField", client._deserializer(Resource.EngineField, engine_field_response))
+
+
+def register_engine_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
+    @mcp.tool(
+        description="Create an engine; create matching engine fields for the target schema immediately after.",
+        tags={"engines", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_engine(name: str, organization_id: int, engine_type: EngineType) -> Engine | dict:
+        return await _create_engine(client, base_url, name, organization_id, engine_type)
+
+    @mcp.tool(
+        description="Create an engine field corresponding to a schema field (used during engine+schema setup).",
+        tags={"engines", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def create_engine_field(
+        engine_id: int,
+        name: str,
+        label: str,
+        field_type: EngineFieldType,
+        schema_ids: list[int],
+        tabular: bool = False,
+        multiline: bool = False,
+        subtype: str | None = None,
+        pre_trained_field_id: str | None = None,
+    ) -> EngineField | dict:
+        return await _create_engine_field(
+            client,
+            base_url,
+            engine_id,
+            name,
+            label,
+            field_type,
+            schema_ids,
+            tabular,
+            multiline,
+            subtype,
+            pre_trained_field_id,
+        )

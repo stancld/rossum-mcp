@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from conftest import create_mock_email_template, create_mock_queue
-from rossum_mcp.tools.search.registry import _list_email_templates
+from rossum_mcp.tools.search.email_templates import _list_email_templates
 
 
 @pytest.fixture

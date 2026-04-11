@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_queue, create_mock_rule
 from rossum_api.domain_logic.resources import Resource
-from rossum_mcp.tools.search.registry import _list_rules
+from rossum_mcp.tools.search.rules import _list_rules
 
 
 @pytest.fixture

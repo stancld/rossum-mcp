@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_hook
 from fastmcp.exceptions import ToolError
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 from rossum_mcp.tools.validation import validate_hook_events
 
 if TYPE_CHECKING:
