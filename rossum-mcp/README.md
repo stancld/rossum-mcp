@@ -82,22 +82,6 @@ To change the mode, restart the server with a different `ROSSUM_MCP_MODE` enviro
 
 Fully typed with Pydantic models, `StrEnum` parameters, and unified APIs — 30 tools across 13 categories.
 
-| Category | Description |
-|----------|-------------|
-| **Read** | Get any entity by ID or search with typed filters |
-| **Delete** | Remove any supported entity by ID |
-| **Documents** | Upload, retrieve content, update fields, confirm, copy annotations |
-| **Queues** | Create from templates and configure settings |
-| **Schemas** | Patch fields, view tree structure, prune unused fields |
-| **Engines** | Configure extraction and splitting engines |
-| **Hooks** | Webhooks, serverless functions, templates, testing |
-| **Rules** | Business rules with TxScript triggers |
-| **Workspaces** | Create workspaces |
-| **Users** | Create and update users |
-| **Email** | Automated email response templates |
-| **Mode** | Runtime read-only / read-write introspection |
-| **Discovery** | Dynamic tool loading via `list_tool_categories` |
-
 <details>
 <summary><strong>All 30 tools</strong></summary>
 
