@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_schema
 from rossum_mcp.models.schema import SchemaDatapoint
-from rossum_mcp.tools.update.handler import register_update_tools
 from rossum_mcp.tools.update.models import SchemaNodeUpdate
+from rossum_mcp.tools.update.schemas.handler import register_schema_tools
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ class TestSchemaNodeUpdate:
     @pytest.mark.asyncio
     async def test_patch_schema_with_dataclass(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patch_schema accepts dataclass node_data."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -148,7 +148,7 @@ class TestSchemaNodeUpdate:
     @pytest.mark.asyncio
     async def test_patch_schema_update_with_dataclass(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patch_schema update operation with SchemaNodeUpdate dataclass."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {

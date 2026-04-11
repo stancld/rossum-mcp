@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_rule
 from fastmcp.exceptions import ToolError
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.rules import register_rule_tools
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ class TestPatchRule:
     @pytest.mark.asyncio
     async def test_patch_rule_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful rule patch (PATCH)."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         updated_rule = create_mock_rule(id=123, name="Patched Name", enabled=True)
         mock_client.update_part_rule.return_value = updated_rule
@@ -59,7 +59,7 @@ class TestPatchRule:
     @pytest.mark.asyncio
     async def test_patch_rule_multiple_fields(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patching multiple fields at once."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         updated_rule = create_mock_rule(id=123, enabled=False, trigger_condition="field.x > 0")
         mock_client.update_part_rule.return_value = updated_rule
@@ -75,7 +75,7 @@ class TestPatchRule:
     @pytest.mark.asyncio
     async def test_patch_rule_no_fields(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patch_rule with no fields returns error."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         patch_rule = mock_mcp._tools["patch_rule"]
         with pytest.raises(ToolError, match="No fields provided to update"):
@@ -86,7 +86,7 @@ class TestPatchRule:
     @pytest.mark.asyncio
     async def test_patch_rule_with_queue_ids(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patching rule with queue_ids."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         updated_rule = create_mock_rule(id=123)
         mock_client.update_part_rule.return_value = updated_rule
@@ -107,7 +107,7 @@ class TestPatchRule:
     @pytest.mark.asyncio
     async def test_patch_rule_clear_queues(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test clearing rule queues with empty list."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         updated_rule = create_mock_rule(id=123)
         mock_client.update_part_rule.return_value = updated_rule

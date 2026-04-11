@@ -8,7 +8,7 @@ import pytest
 from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
 from rossum_api.models.queue import Queue
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.queues import register_queue_tools
 
 
 def create_mock_queue(**kwargs) -> Queue:
@@ -77,7 +77,7 @@ class TestUpdateQueue:
     @pytest.mark.asyncio
     async def test_update_queue_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful queue update."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, name="Updated Queue")
         mock_client._http_client.update.return_value = {"id": 100, "name": "Updated Queue"}
@@ -92,7 +92,7 @@ class TestUpdateQueue:
 
     @pytest.mark.asyncio
     async def test_update_queue_rejects_invalid_meta_name(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_queue_tools(mock_mcp, mock_client)
 
         update_queue = mock_mcp._tools["update_queue"]
         with pytest.raises(ToolError, match="Invalid meta_name") as exc_info:
@@ -114,7 +114,7 @@ class TestUpdateQueue:
 
     @pytest.mark.asyncio
     async def test_update_queue_allows_valid_meta_names(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_queue_tools(mock_mcp, mock_client)
 
         mock_queue = create_mock_queue(id=100, name="Test Queue")
         mock_client._http_client.update.return_value = {"id": 100}

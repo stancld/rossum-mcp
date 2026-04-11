@@ -9,9 +9,9 @@ from conftest import create_mock_hook, create_mock_queue
 from fastmcp.exceptions import ToolError
 from rossum_api.domain_logic.resources import Resource
 from rossum_mcp.tools.search.registry import _list_hooks
-from rossum_mcp.tools.update.handler import register_update_tools
 from rossum_mcp.tools.update.hooks import (
     _generate_hook_payload,
+    register_hook_tools,
 )
 
 
@@ -49,7 +49,7 @@ class TestUpdateHook:
     @pytest.mark.asyncio
     async def test_update_hook_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful hook update."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_hook_tools(mock_mcp, mock_client)
 
         existing_hook = create_mock_hook(
             id=100,
@@ -74,7 +74,7 @@ class TestUpdateHook:
     @pytest.mark.asyncio
     async def test_update_hook_with_all_fields(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test hook update with all optional fields."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_hook_tools(mock_mcp, mock_client)
 
         existing_hook = create_mock_hook(id=100, name="Old Name", config=None)
         mock_client.retrieve_hook.return_value = existing_hook
@@ -111,7 +111,7 @@ class TestUpdateHook:
     @pytest.mark.asyncio
     async def test_update_hook_with_sideload(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test hook update with sideload parameter."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_hook_tools(mock_mcp, mock_client)
 
         existing_hook = create_mock_hook(id=100, name="Old Name", config=None)
         mock_client.retrieve_hook.return_value = existing_hook
@@ -137,7 +137,7 @@ class TestTestHook:
     @pytest.mark.asyncio
     async def test_test_hook_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful hook test execution with auto-resolved annotation."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_hook_tools(mock_mcp, mock_client)
 
         mock_hook = create_mock_hook(id=123, queues=["https://api.test.rossum.ai/v1/queues/100"])
         mock_client.retrieve_hook.return_value = mock_hook
@@ -179,7 +179,7 @@ class TestTestHook:
     @pytest.mark.asyncio
     async def test_test_hook_with_config(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test hook test with optional config override."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_hook_tools(mock_mcp, mock_client)
 
         generated_payload = {"payload": {"annotation": {"id": 456}}}
         test_response = {"response": {"status_code": 200}}
