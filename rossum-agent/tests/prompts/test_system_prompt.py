@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from rossum_agent.system_prompt import build_skill_catalog, get_system_prompt
+from rossum_agent.agent.system_prompt import build_skill_catalog, get_system_prompt
 
 
 class TestSystemPromptPersona:
