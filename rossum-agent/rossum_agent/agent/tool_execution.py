@@ -1,10 +1,3 @@
-"""Tool dispatch, serialization, deduplication and staggering for the Rossum agent.
-
-This module handles all tool execution concerns: parsing tool arguments,
-deduplicating identical calls, serializing results, and orchestrating parallel
-execution with progress reporting.
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -20,13 +13,7 @@ from pydantic import BaseModel
 
 from rossum_agent.agent.cautious_gate import check_cautious_write_gate
 from rossum_agent.agent.memory import MemoryStep
-from rossum_agent.agent.models import (
-    ThinkingBlockData,
-    ToolCall,
-    ToolResult,
-    ToolResultStep,
-    ToolStartStep,
-)
+from rossum_agent.agent.models import ThinkingBlockData, ToolCall, ToolResult, ToolResultStep, ToolStartStep
 from rossum_agent.agent.spillover import maybe_spill
 from rossum_agent.tools import execute_internal_tool, get_internal_tool_names
 from rossum_agent.tools.core import AgentContext, SubAgentTokenUsage, get_context, set_context
@@ -45,7 +32,6 @@ MAX_TOOL_OUTPUT_LENGTH = 30000
 
 
 def truncate_content(content: str, max_length: int = MAX_TOOL_OUTPUT_LENGTH) -> str:
-    """Truncate content preserving head and tail."""
     if len(content) <= max_length:
         return content
     half = max_length // 2
@@ -237,11 +223,7 @@ async def execute_tools_with_progress(
 
     total_tools = len(tool_calls)
 
-    yield ToolStartStep(
-        step_number=step_num,
-        tool_calls=tool_calls,
-        tool_progress=(0, total_tools),
-    )
+    yield ToolStartStep(step_number=step_num, tool_calls=tool_calls, tool_progress=(0, total_tools))
 
     progress_queue: asyncio.Queue[ToolStartStep] = asyncio.Queue()
     results_by_id: dict[str, ToolResult] = {}
