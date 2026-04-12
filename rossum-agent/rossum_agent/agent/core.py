@@ -72,7 +72,7 @@ from rossum_agent.tools.dynamic_tools import (
     preload_categories_for_request,
     reset_dynamic_tools,
 )
-from rossum_agent.utils import add_message_cache_breakpoint
+from rossum_agent.utils import add_message_cache_breakpoint, extract_text_from_content
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -357,18 +357,6 @@ class RossumAgent:
         ):
             yield step_or_result
 
-    def _extract_text_from_prompt(self, prompt: UserContent) -> str:
-        """Extract text content from a user prompt for classification."""
-        if isinstance(prompt, str):
-            return prompt
-        text_parts: list[str] = []
-        for block in prompt:
-            if block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    text_parts.append(text)
-        return " ".join(text_parts)
-
     def _calculate_rate_limit_delay(self, retries: int) -> float:
         """Calculate exponential backoff delay with jitter for rate limiting."""
         delay = min(RATE_LIMIT_BASE_DELAY * (2 ** (retries - 1)), RATE_LIMIT_MAX_DELAY)
@@ -391,7 +379,7 @@ class RossumAgent:
 
         # Pre-load tool categories based on keywords in the user's request
         # Run in thread pool to avoid blocking the event loop (preload uses sync MCP calls)
-        request_text = self._extract_text_from_prompt(prompt)
+        request_text = extract_text_from_content(prompt)
         ctx = copy_context()
         preload_result = await loop.run_in_executor(
             None, partial(ctx.run, preload_categories_for_request, request_text)
