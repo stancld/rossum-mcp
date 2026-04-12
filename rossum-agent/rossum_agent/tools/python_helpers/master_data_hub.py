@@ -23,7 +23,7 @@ from rossum_agent.tools.python_helpers.copilot._shared import (
     _request_with_retry,
     _resolve_mdh_dataset_identifier,
 )
-from rossum_agent.tools.utils import _truncate_output
+from rossum_agent.tools.utils import truncate_output
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def list_datasets() -> str:
             datasets.append(entry)
 
         output = json.dumps({"status": "success", "count": len(datasets), "datasets": datasets})
-        return _truncate_output(output, OUTPUT_LIMIT)
+        return truncate_output(output, OUTPUT_LIMIT)
 
     except Exception as e:
         return _handle_api_error(e, "list_datasets")
@@ -166,7 +166,7 @@ def search_dataset(
                 "rows": rows,
             }
         )
-        return _truncate_output(output, OUTPUT_LIMIT)
+        return truncate_output(output, OUTPUT_LIMIT)
 
     except Exception as e:
         return _handle_api_error(e, "search_dataset")

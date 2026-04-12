@@ -26,7 +26,7 @@ from rossum_agent.tools.python_helpers.copilot._shared import (
     _request_with_retry,
     _resolve_mdh_dataset_identifier,
 )
-from rossum_agent.tools.utils import _truncate_output
+from rossum_agent.tools.utils import truncate_output
 
 logger = logging.getLogger(__name__)
 
@@ -499,5 +499,5 @@ def query_lookup_dataset(dataset: str, jq_query: str) -> str:
     except (ValueError, SystemError) as e:
         return json.dumps({"status": "error", "error": f"jq error: {e}"})
 
-    output = _truncate_output(output, OUTPUT_LIMIT)
+    output = truncate_output(output, OUTPUT_LIMIT)
     return json.dumps({"status": "success", "result": output})

@@ -9,7 +9,7 @@ from pathlib import Path
 import jq  # ty: ignore[unresolved-import] - no type stubs for jq
 from anthropic import beta_tool
 
-from rossum_agent.tools.utils import _truncate_output
+from rossum_agent.tools.utils import truncate_output
 
 _JQ_OUTPUT_LIMIT = 50_000
 _GREP_MATCH_LIMIT = 200
@@ -80,7 +80,7 @@ def run_jq(jq_query: str, data: str | dict | list) -> str:
     result = results[0] if len(results) == 1 else results
     serialized = json.dumps(result)
     if len(serialized) > _JQ_OUTPUT_LIMIT:
-        serialized = _truncate_output(serialized, _JQ_OUTPUT_LIMIT)
+        serialized = truncate_output(serialized, _JQ_OUTPUT_LIMIT)
         return json.dumps({"status": "success", "result": serialized, "truncated": True})
     return json.dumps({"status": "success", "result": result})
 

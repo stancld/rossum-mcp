@@ -16,7 +16,7 @@ import jq
 from anthropic import beta_tool
 
 from rossum_agent.tools.subagents.base import SubAgent, SubAgentConfig
-from rossum_agent.tools.utils import _truncate_output
+from rossum_agent.tools.utils import truncate_output
 
 if TYPE_CHECKING:
     from typing import Any
@@ -209,7 +209,7 @@ def elis_openapi_jq(jq_query: str) -> str:
     except (ValueError, SystemError) as e:
         return json.dumps({"status": "error", "message": f"jq error: {e}"})
 
-    output = _truncate_output(output, _JQ_OUTPUT_LIMIT)
+    output = truncate_output(output, _JQ_OUTPUT_LIMIT)
     return json.dumps({"status": "success", "result": output})
 
 
