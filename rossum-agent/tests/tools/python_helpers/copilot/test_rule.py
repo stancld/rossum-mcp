@@ -6,6 +6,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
+import pytest
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_helpers.copilot.rule import (
     _build_annotation_content_url,
@@ -18,44 +19,25 @@ from rossum_agent.tools.python_helpers.copilot.rule import (
 )
 
 
-class TestBuildSuggestRuleUrl:
-    def test_appends_internal_path(self) -> None:
-        url = _build_suggest_rule_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/api/v1/internal/rules/suggest_rule"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_suggest_rule_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/api/v1/internal/rules/suggest_rule"
-
-
-class TestBuildQueueUrl:
-    def test_builds_queue_url(self) -> None:
-        url = _build_queue_url("https://elis.rossum.ai/api/v1", 2519495)
-        assert url == "https://elis.rossum.ai/api/v1/queues/2519495"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_queue_url("https://elis.rossum.ai/api/v1/", 2519495)
-        assert url == "https://elis.rossum.ai/api/v1/queues/2519495"
-
-
-class TestBuildEvaluateRulesUrl:
-    def test_appends_internal_path(self) -> None:
-        url = _build_evaluate_rules_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/api/v1/internal/rules/evaluate_rules"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_evaluate_rules_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/api/v1/internal/rules/evaluate_rules"
-
-
-class TestBuildAnnotationUrls:
-    def test_builds_annotation_url(self) -> None:
-        url = _build_annotation_url("https://elis.rossum.ai/api/v1", 34532441)
-        assert url == "https://elis.rossum.ai/api/v1/annotations/34532441"
-
-    def test_builds_annotation_content_url(self) -> None:
-        url = _build_annotation_content_url("https://elis.rossum.ai/api/v1", 34532441)
-        assert url == "https://elis.rossum.ai/api/v1/annotations/34532441/content"
+class TestBuildUrls:
+    @pytest.mark.parametrize(
+        ("builder", "extra_args", "expected"),
+        [
+            (_build_suggest_rule_url, (), "https://elis.rossum.ai/api/v1/internal/rules/suggest_rule"),
+            (_build_queue_url, (2519495,), "https://elis.rossum.ai/api/v1/queues/2519495"),
+            (_build_evaluate_rules_url, (), "https://elis.rossum.ai/api/v1/internal/rules/evaluate_rules"),
+            (_build_annotation_url, (34532441,), "https://elis.rossum.ai/api/v1/annotations/34532441"),
+            (_build_annotation_content_url, (34532441,), "https://elis.rossum.ai/api/v1/annotations/34532441/content"),
+        ],
+        ids=["suggest_rule", "queue", "evaluate_rules", "annotation", "annotation_content"],
+    )
+    @pytest.mark.parametrize(
+        "base_url",
+        ["https://elis.rossum.ai/api/v1", "https://elis.rossum.ai/api/v1/"],
+        ids=["clean", "trailing_slash"],
+    )
+    def test_build_url(self, base_url: str, builder: object, extra_args: tuple, expected: str) -> None:
+        assert builder(base_url, *extra_args) == expected
 
 
 class TestSuggestRule:

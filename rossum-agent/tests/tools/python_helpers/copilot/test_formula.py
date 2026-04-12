@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_helpers.copilot.formula import (
     _build_suggest_formula_url,
@@ -17,12 +18,13 @@ from rossum_agent.tools.python_helpers.copilot.formula import (
 class TestBuildSuggestFormulaUrl:
     """Tests for _build_suggest_formula_url."""
 
-    def test_appends_internal_path(self) -> None:
-        url = _build_suggest_formula_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/api/v1/internal/schemas/suggest_formula"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_suggest_formula_url("https://elis.rossum.ai/api/v1/")
+    @pytest.mark.parametrize(
+        "base_url",
+        ["https://elis.rossum.ai/api/v1", "https://elis.rossum.ai/api/v1/"],
+        ids=["clean", "trailing_slash"],
+    )
+    def test_appends_internal_path(self, base_url: str) -> None:
+        url = _build_suggest_formula_url(base_url)
         assert url == "https://elis.rossum.ai/api/v1/internal/schemas/suggest_formula"
 
 
@@ -57,13 +59,13 @@ class TestCreateFormulaFieldDefinition:
         field = _create_formula_field_definition("Test")
         assert field["type"] == "string"
 
-    def test_respects_field_type(self) -> None:
-        field = _create_formula_field_definition("Amount", field_type="number")
-        assert field["type"] == "number"
-
-    def test_respects_field_type_date(self) -> None:
-        field = _create_formula_field_definition("Due Date", field_type="date")
-        assert field["type"] == "date"
+    @pytest.mark.parametrize(
+        ("label", "field_type"),
+        [("Amount", "number"), ("Due Date", "date")],
+    )
+    def test_respects_field_type(self, label: str, field_type: str) -> None:
+        field = _create_formula_field_definition(label, field_type=field_type)
+        assert field["type"] == field_type
 
 
 class TestSuggestFormulaField:

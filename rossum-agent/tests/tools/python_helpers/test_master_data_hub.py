@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_helpers.master_data_hub import (
     _extract_dataset_name,
@@ -17,39 +18,37 @@ _ENV = {"ROSSUM_API_BASE_URL": "https://example.rossum.app/api/v1", "ROSSUM_API_
 
 
 class TestExtractDatasetName:
-    def test_from_metadata_name(self) -> None:
-        item = {"id": "imported-abc", "metadata": {"name": "Approved Vendors"}}
-        assert _extract_dataset_name(item) == "Approved Vendors"
-
-    def test_from_top_level_name(self) -> None:
-        item = {"id": "imported-abc", "name": "vendors"}
-        assert _extract_dataset_name(item) == "vendors"
-
-    def test_metadata_takes_precedence(self) -> None:
-        item = {"id": "imported-abc", "name": "vendors", "metadata": {"name": "Approved Vendors"}}
-        assert _extract_dataset_name(item) == "Approved Vendors"
-
-    def test_fallback_to_id(self) -> None:
-        item = {"id": "imported-abc"}
-        assert _extract_dataset_name(item) == "imported-abc"
-
-    def test_empty_dict(self) -> None:
-        assert _extract_dataset_name({}) == ""
+    @pytest.mark.parametrize(
+        ("item", "expected"),
+        [
+            ({"id": "imported-abc", "metadata": {"name": "Approved Vendors"}}, "Approved Vendors"),
+            ({"id": "imported-abc", "name": "vendors"}, "vendors"),
+            ({"id": "imported-abc", "name": "vendors", "metadata": {"name": "Approved Vendors"}}, "Approved Vendors"),
+            ({"id": "imported-abc"}, "imported-abc"),
+            ({}, ""),
+        ],
+        ids=["metadata_name", "top_level_name", "metadata_precedence", "fallback_to_id", "empty_dict"],
+    )
+    def test_extract_name(self, item: dict, expected: str) -> None:
+        assert _extract_dataset_name(item) == expected
 
 
 class TestExtractFieldNames:
-    def test_extracts_property_names(self) -> None:
-        item = {"schema": {"properties": {"Name": {"type": "string"}, "VAT ID": {"type": "string"}}}}
-        assert _extract_field_names(item) == ["Name", "VAT ID"]
-
-    def test_no_schema(self) -> None:
-        assert _extract_field_names({}) == []
-
-    def test_no_properties(self) -> None:
-        assert _extract_field_names({"schema": {}}) == []
-
-    def test_schema_not_dict(self) -> None:
-        assert _extract_field_names({"schema": "invalid"}) == []
+    @pytest.mark.parametrize(
+        ("item", "expected"),
+        [
+            (
+                {"schema": {"properties": {"Name": {"type": "string"}, "VAT ID": {"type": "string"}}}},
+                ["Name", "VAT ID"],
+            ),
+            ({}, []),
+            ({"schema": {}}, []),
+            ({"schema": "invalid"}, []),
+        ],
+        ids=["extracts_properties", "no_schema", "no_properties", "schema_not_dict"],
+    )
+    def test_extract_field_names(self, item: dict, expected: list) -> None:
+        assert _extract_field_names(item) == expected
 
 
 class TestListDatasets:

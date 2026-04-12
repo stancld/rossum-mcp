@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from rossum_agent.url_context import (
     RossumUrlContext,
     extract_url_context,
@@ -64,36 +65,29 @@ class TestExtractUrlContext:
         assert context.page_type == "documents_list"
         assert context.queue_id is None
 
-    def test_empty_url(self):
-        """Test handling of empty URL."""
-        context = extract_url_context("")
-        assert context.is_empty()
-
-    def test_none_url(self):
-        """Test handling of None URL."""
-        context = extract_url_context(None)
-        assert context.is_empty()
-
-    def test_non_rossum_url(self):
-        """Test handling of non-Rossum URL."""
-        context = extract_url_context("https://example.com/some/path")
-        assert context.is_empty()
-
-    def test_page_type_schema_settings(self):
-        """Test detecting schema settings page type."""
-        url = "https://elis.rossum.ai/queues/12345/settings/schema"
+    @pytest.mark.parametrize(
+        "url",
+        ["", None, "https://example.com/some/path"],
+        ids=["empty", "none", "non_rossum"],
+    )
+    def test_empty_context(self, url):
+        """Test handling of empty, None, or non-Rossum URLs."""
         context = extract_url_context(url)
+        assert context.is_empty()
 
-        assert context.queue_id == 12345
-        assert context.page_type == "schema_settings"
-
-    def test_page_type_hooks_settings(self):
-        """Test detecting hooks settings page type."""
-        url = "https://elis.rossum.ai/queues/12345/settings/hooks"
+    @pytest.mark.parametrize(
+        ("url", "queue_id", "page_type"),
+        [
+            ("https://elis.rossum.ai/queues/12345/settings/schema", 12345, "schema_settings"),
+            ("https://elis.rossum.ai/queues/12345/settings/hooks", 12345, "hooks_settings"),
+        ],
+        ids=["schema_settings", "hooks_settings"],
+    )
+    def test_page_type_settings(self, url: str, queue_id: int, page_type: str):
+        """Test detecting settings page types."""
         context = extract_url_context(url)
-
-        assert context.queue_id == 12345
-        assert context.page_type == "hooks_settings"
+        assert context.queue_id == queue_id
+        assert context.page_type == page_type
 
     def test_extract_hook_id_from_my_extensions(self):
         """Test extracting hook_id from my-extensions URL."""
@@ -154,24 +148,13 @@ class TestRossumUrlContext:
         context = RossumUrlContext()
         assert context.is_empty()
 
-    def test_is_empty_false_when_queue_id_set(self):
-        """Test is_empty returns False when queue_id is set."""
-        context = RossumUrlContext(queue_id=12345)
-        assert not context.is_empty()
-
-    def test_is_empty_false_when_annotation_id_set(self):
-        """Test is_empty returns False when annotation_id is set."""
-        context = RossumUrlContext(annotation_id=12345)
-        assert not context.is_empty()
-
-    def test_is_empty_false_when_hook_id_set(self):
-        """Test is_empty returns False when hook_id is set."""
-        context = RossumUrlContext(hook_id=12345)
-        assert not context.is_empty()
-
-    def test_is_empty_false_when_engine_id_set(self):
-        """Test is_empty returns False when engine_id is set."""
-        context = RossumUrlContext(engine_id=12345)
+    @pytest.mark.parametrize(
+        "field",
+        ["queue_id", "annotation_id", "hook_id", "engine_id"],
+    )
+    def test_is_empty_false_when_id_set(self, field: str):
+        """Test is_empty returns False when any ID field is set."""
+        context = RossumUrlContext(**{field: 12345})
         assert not context.is_empty()
 
     def test_to_context_string_with_annotation_id(self):

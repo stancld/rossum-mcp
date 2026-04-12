@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 
+import pytest
 from rossum_agent.utils import (
     BASE_OUTPUT_DIR,
     create_session_output_dir,
@@ -14,46 +15,38 @@ from rossum_agent.utils import (
 class TestExtractTextFromContent:
     """Test extract_text_from_content function."""
 
-    def test_extract_from_none(self):
-        assert extract_text_from_content(None) == ""
-
-    def test_extract_from_string(self):
-        assert extract_text_from_content("Hello world") == "Hello world"
-
-    def test_extract_from_list_with_text_blocks(self):
-        content = [
-            {"type": "text", "text": "Hello"},
-            {"type": "text", "text": "world"},
-        ]
-        assert extract_text_from_content(content) == "Hello world"
-
-    def test_extract_from_list_with_mixed_blocks(self):
-        content = [
-            {"type": "text", "text": "Hello"},
-            {"type": "image", "url": "http://example.com/img.png"},
-            {"type": "text", "text": "world"},
-        ]
-        assert extract_text_from_content(content) == "Hello world"
-
-    def test_extract_from_list_with_missing_text(self):
-        content = [
-            {"type": "text"},
-            {"type": "text", "text": "world"},
-        ]
-        assert extract_text_from_content(content) == " world"
-
-    def test_extract_from_empty_list(self):
-        assert extract_text_from_content([]) == ""
-
-    def test_extract_from_list_with_non_dict_items(self):
-        content = [
-            "not a dict",
-            {"type": "text", "text": "hello"},
-        ]
-        assert extract_text_from_content(content) == "hello"
-
-    def test_extract_from_unsupported_type(self):
-        assert extract_text_from_content(123) == ""
+    @pytest.mark.parametrize(
+        ("content", "expected"),
+        [
+            (None, ""),
+            ("Hello world", "Hello world"),
+            ([{"type": "text", "text": "Hello"}, {"type": "text", "text": "world"}], "Hello world"),
+            (
+                [
+                    {"type": "text", "text": "Hello"},
+                    {"type": "image", "url": "http://example.com/img.png"},
+                    {"type": "text", "text": "world"},
+                ],
+                "Hello world",
+            ),
+            ([{"type": "text"}, {"type": "text", "text": "world"}], " world"),
+            ([], ""),
+            (["not a dict", {"type": "text", "text": "hello"}], "hello"),
+            (123, ""),
+        ],
+        ids=[
+            "none",
+            "string",
+            "text_blocks",
+            "mixed_blocks",
+            "missing_text",
+            "empty_list",
+            "non_dict_items",
+            "unsupported_type",
+        ],
+    )
+    def test_extract(self, content, expected: str):
+        assert extract_text_from_content(content) == expected
 
 
 class TestCreateSessionOutputDir:

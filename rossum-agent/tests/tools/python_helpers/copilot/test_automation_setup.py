@@ -6,6 +6,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
+import pytest
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_helpers.copilot.automation_setup import (
     _build_automation_targets_url,
@@ -19,29 +20,22 @@ from rossum_agent.tools.python_helpers.copilot.automation_setup import (
 
 
 class TestBuildUrls:
-    def test_current_stats_url(self) -> None:
-        url = _build_current_stats_url("https://elis.rossum.ai/api/v1", 123)
-        assert url == "https://elis.rossum.ai/api/v1/queues/123/automation_setup_current_stats"
-
-    def test_current_stats_url_trailing_slash(self) -> None:
-        url = _build_current_stats_url("https://elis.rossum.ai/api/v1/", 123)
-        assert url == "https://elis.rossum.ai/api/v1/queues/123/automation_setup_current_stats"
-
-    def test_projections_url(self) -> None:
-        url = _build_projections_url("https://elis.rossum.ai/api/v1", 456)
-        assert url == "https://elis.rossum.ai/api/v1/queues/456/automation_setup_projections"
-
-    def test_projections_url_trailing_slash(self) -> None:
-        url = _build_projections_url("https://elis.rossum.ai/api/v1/", 456)
-        assert url == "https://elis.rossum.ai/api/v1/queues/456/automation_setup_projections"
-
-    def test_automation_targets_url(self) -> None:
-        url = _build_automation_targets_url("https://elis.rossum.ai/api/v1", 789)
-        assert url == "https://elis.rossum.ai/api/v1/queues/789/automation_targets"
-
-    def test_automation_targets_url_trailing_slash(self) -> None:
-        url = _build_automation_targets_url("https://elis.rossum.ai/api/v1/", 789)
-        assert url == "https://elis.rossum.ai/api/v1/queues/789/automation_targets"
+    @pytest.mark.parametrize(
+        ("builder", "queue_id", "expected"),
+        [
+            (_build_current_stats_url, 123, "https://elis.rossum.ai/api/v1/queues/123/automation_setup_current_stats"),
+            (_build_projections_url, 456, "https://elis.rossum.ai/api/v1/queues/456/automation_setup_projections"),
+            (_build_automation_targets_url, 789, "https://elis.rossum.ai/api/v1/queues/789/automation_targets"),
+        ],
+        ids=["current_stats", "projections", "automation_targets"],
+    )
+    @pytest.mark.parametrize(
+        "base_url",
+        ["https://elis.rossum.ai/api/v1", "https://elis.rossum.ai/api/v1/"],
+        ids=["clean", "trailing_slash"],
+    )
+    def test_build_url(self, base_url: str, builder: object, queue_id: int, expected: str) -> None:
+        assert builder(base_url, queue_id) == expected
 
 
 class TestGetAutomationCurrentStats:
