@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING
 from rossum_agent.api.models.schemas import FileInfo
 
 if TYPE_CHECKING:
-    from rossum_agent.storage import ChatStorage
+    from rossum_agent.postgres_storage import PostgresStorage
 
 
 class FileService:
     """Wraps storage file operations with MIME type detection."""
 
-    def __init__(self, storage: ChatStorage) -> None:
+    def __init__(self, storage: PostgresStorage) -> None:
         self._storage = storage
 
     @property
-    def storage(self) -> ChatStorage:
+    def storage(self) -> PostgresStorage:
         return self._storage
 
     def list_files(self, chat_id: str) -> list[FileInfo]:

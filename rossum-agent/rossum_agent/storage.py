@@ -1,15 +1,14 @@
-"""Storage protocol and shared data types for chat persistence backends."""
+"""Shared data types for chat persistence backends."""
 
 from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING
 
 from rossum_agent.api.models.schemas import MCPMode, Persona
 
 if TYPE_CHECKING:
-    from pathlib import Path
     from typing import Any
 
 CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
@@ -113,51 +112,3 @@ def _build_chat_list_item(
         "total_steps": metadata.total_steps,
         "summary": metadata.summary,
     }
-
-
-@runtime_checkable
-class ChatStorage(Protocol):
-    """Protocol defining the interface for chat persistence backends."""
-
-    def save_chat(
-        self,
-        user_id: str | None,
-        chat_id: str,
-        messages: list[dict[str, Any]],
-        output_dir: str | Path | None = None,
-        metadata: ChatMetadata | None = None,
-    ) -> bool: ...
-
-    def load_chat(self, user_id: str | None, chat_id: str, output_dir: Path | None = None) -> ChatData | None: ...
-
-    def delete_chat(self, user_id: str | None, chat_id: str) -> bool: ...
-
-    def chat_exists(self, user_id: str | None, chat_id: str) -> bool: ...
-
-    def is_connected(self) -> bool: ...
-
-    def list_all_chats(self, user_id: str | None = None) -> list[dict[str, Any]]: ...
-
-    def save_file(self, chat_id: str, file_path: Path | str, content: bytes | None = None) -> bool: ...
-
-    def load_file(self, chat_id: str, filename: str) -> bytes | None: ...
-
-    def list_files(self, chat_id: str) -> list[dict[str, Any]]: ...
-
-    def delete_file(self, chat_id: str, filename: str) -> bool: ...
-
-    def delete_all_files(self, chat_id: str) -> int: ...
-
-    def save_all_files(self, chat_id: str, output_dir: Path) -> int: ...
-
-    def load_all_files(self, chat_id: str, output_dir: Path) -> int: ...
-
-    def save_feedback(self, user_id: str | None, chat_id: str, turn_index: int, is_positive: bool) -> bool: ...
-
-    def get_feedback(self, user_id: str | None, chat_id: str) -> dict[int, bool]: ...
-
-    def delete_feedback(self, user_id: str | None, chat_id: str, turn_index: int) -> bool: ...
-
-    def delete_all_feedback(self, user_id: str | None, chat_id: str) -> bool: ...
-
-    def close(self) -> None: ...
