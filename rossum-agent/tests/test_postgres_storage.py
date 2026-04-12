@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
-from rossum_agent.postgres_storage import PostgresStorage, _preview_from_first_msg
-from rossum_agent.storage import ChatMetadata
+from rossum_agent.postgres_storage import PostgresStorage
+from rossum_agent.storage import ChatMetadata, _extract_preview_from_first_msg
 
 
 def _make_storage_with_mock_engine():
@@ -497,29 +497,29 @@ class TestPostgresStorageConnection:
 
 
 class TestPreviewFromFirstMsg:
-    """Test _preview_from_first_msg standalone function."""
+    """Test _extract_preview_from_first_msg standalone function."""
 
     def test_none_msg(self):
-        assert _preview_from_first_msg(None) == ""
+        assert _extract_preview_from_first_msg(None) == ""
 
     def test_empty_dict(self):
-        assert _preview_from_first_msg({}) == ""
+        assert _extract_preview_from_first_msg({}) == ""
 
     def test_task_step_msg(self):
         msg = {"type": "task_step", "task": "Analyze schema"}
-        assert _preview_from_first_msg(msg) == "Analyze schema"
+        assert _extract_preview_from_first_msg(msg) == "Analyze schema"
 
     def test_task_step_no_task(self):
         msg = {"type": "task_step"}
-        assert _preview_from_first_msg(msg) == ""
+        assert _extract_preview_from_first_msg(msg) == ""
 
     def test_user_role_msg(self):
         msg = {"role": "user", "content": "Hello world"}
-        assert _preview_from_first_msg(msg) == "Hello world"
+        assert _extract_preview_from_first_msg(msg) == "Hello world"
 
     def test_assistant_role_returns_empty(self):
         msg = {"role": "assistant", "content": "Hi there"}
-        assert _preview_from_first_msg(msg) == ""
+        assert _extract_preview_from_first_msg(msg) == ""
 
 
 class TestSaveChatWithOutputDir:

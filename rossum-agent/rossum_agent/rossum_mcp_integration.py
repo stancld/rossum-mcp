@@ -15,7 +15,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass, field, is_dataclass
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
 
 from anthropic.types import ToolParam
 from fastmcp import Client
@@ -35,11 +35,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+Operation: TypeAlias = Literal["create", "update", "delete"]  # noqa: UP040 - `type` keyword causes cyclic definition with `from __future__ import annotations`
+
 _TRACKED_RESOURCES_KEY = "_tracked_resources"
 _WRITE_PREFIXES = ("create_", "update_", "delete_", "patch_")
 _READ_PREFIXES = ("get_", "list_")
 
-_OPERATION_MAP: dict[str, Literal["create", "update", "delete"]] = {
+_OPERATION_MAP: dict[str, Operation] = {
     "create_": "create",
     "update_": "update",
     "patch_": "update",
@@ -47,7 +49,7 @@ _OPERATION_MAP: dict[str, Literal["create", "update", "delete"]] = {
 }
 
 # Tools that don't follow the standard prefix convention
-_TOOL_OVERRIDES: dict[str, tuple[str, Literal["create", "update", "delete"]]] = {
+_TOOL_OVERRIDES: dict[str, tuple[str, Operation]] = {
     "prune_schema_fields": ("schema", "update"),
     "create_queue_from_template": ("queue", "create"),
     "create_hook_from_template": ("hook", "create"),
@@ -103,7 +105,7 @@ def extract_entity_name(data: dict | None) -> str:
     return ""
 
 
-def classify_operation(tool_name: str) -> Literal["create", "update", "delete"]:
+def classify_operation(tool_name: str) -> Operation:
     """Classify the operation type from tool name."""
     if tool_name in _TOOL_OVERRIDES:
         return _TOOL_OVERRIDES[tool_name][1]
@@ -204,7 +206,7 @@ class MCPConnection:
         if name == "delete" and "entity" in arguments and "entity_id" in arguments:
             entity_type = arguments["entity"]
             entity_id = str(arguments["entity_id"])
-            operation: Literal["create", "update", "delete"] = "delete"
+            operation: Operation = "delete"
         else:
             entity_type = extract_entity_type(name)
             entity_id = extract_entity_id(entity_type or "", arguments) if entity_type else None
@@ -229,7 +231,7 @@ class MCPConnection:
     def _record_tracked_resources(
         self,
         tracked: list[dict[str, Any]],
-        operation: Literal["create", "update", "delete"],
+        operation: Operation,
     ) -> None:
         """Create EntityChange entries for side-effect resources reported by MCP tools."""
         for entry in tracked:
@@ -255,7 +257,7 @@ class MCPConnection:
         self,
         entity_type: str | None,
         entity_id: str | None,
-        operation: Literal["create", "update", "delete"],
+        operation: Operation,
     ) -> None:
         # Auto-commit when the same entity already has pending changes with a
         # *different* operation type (e.g. create→delete, create→update).
@@ -272,7 +274,7 @@ class MCPConnection:
         self,
         entity_type: str | None,
         entity_id: str | None,
-        operation: Literal["create", "update", "delete"],
+        operation: Operation,
     ) -> dict | None:
         if not (entity_type and entity_id):
             return None
@@ -285,7 +287,7 @@ class MCPConnection:
 
     async def _get_after_snapshot(
         self,
-        operation: Literal["create", "update", "delete"],
+        operation: Operation,
         entity_type: str | None,
         entity_id: str | None,
         result: Any,
@@ -308,7 +310,7 @@ class MCPConnection:
         arguments: dict[str, Any],
         entity_type: str | None,
         entity_id: str | None,
-        operation: Literal["create", "update", "delete"],
+        operation: Operation,
         before: dict | None,
         after: dict | None,
     ) -> None:

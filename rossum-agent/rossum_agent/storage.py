@@ -15,7 +15,6 @@ CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
 
 def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str:
-    """Extract text from message content which can be a string or multimodal list."""
     if content is None:
         return ""
     if isinstance(content, str):
@@ -27,8 +26,7 @@ def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str
     return ""
 
 
-def _preview_from_first_msg(msg: dict[str, Any] | None) -> str:
-    """Extract preview text from a single message dict."""
+def _extract_preview_from_first_msg(msg: dict[str, Any] | None) -> str:
     if not msg:
         return ""
     if msg.get("type") == "task_step":
@@ -40,8 +38,6 @@ def _preview_from_first_msg(msg: dict[str, Any] | None) -> str:
 
 @dataclass
 class ChatMetadata:
-    """Metadata for a chat session."""
-
     commit_sha: str | None = None
     total_input_tokens: int = 0
     total_output_tokens: int = 0
@@ -90,12 +86,8 @@ class ChatData:
 
 
 def _build_chat_list_item(
-    chat_id: str,
-    message_count: int,
-    first_message_preview: str,
-    metadata: ChatMetadata,
+    chat_id: str, message_count: int, first_message_preview: str, metadata: ChatMetadata
 ) -> dict[str, Any]:
-    """Build a standardized chat list item dict from common fields."""
     timestamp_str = chat_id.split("_")[1]
     timestamp = int(dt.datetime.strptime(timestamp_str, CHAT_ID_TIMESTAMP_FORMAT).timestamp())
     preview = first_message_preview[:100]
