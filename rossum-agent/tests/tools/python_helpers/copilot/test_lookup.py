@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from typing import ClassVar
 
 import httpx
+import pytest
 from rossum_agent.tools.core import AgentContext, set_context
 from rossum_agent.tools.python_helpers.copilot._shared import (
     _build_mdh_aggregate_url,
@@ -37,44 +38,30 @@ from rossum_agent.tools.python_helpers.copilot.lookup import (
 )
 
 
-class TestBuildSuggestComputedFieldUrl:
-    def test_appends_internal_path(self) -> None:
-        url = _build_suggest_computed_field_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/api/v1/internal/schemas/suggest_computed_field"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_suggest_computed_field_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/api/v1/internal/schemas/suggest_computed_field"
-
-
-class TestBuildEvaluateComputedFieldsUrl:
-    def test_appends_internal_path(self) -> None:
-        url = _build_evaluate_computed_fields_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/api/v1/internal/schemas/evaluate_computed_fields"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_evaluate_computed_fields_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/api/v1/internal/schemas/evaluate_computed_fields"
-
-
-class TestBuildMdhDatasetsUrl:
-    def test_appends_mdh_datasets_path(self) -> None:
-        url = _build_mdh_datasets_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets?limit=1000"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_mdh_datasets_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets?limit=1000"
-
-
-class TestBuildMdhAggregateUrl:
-    def test_appends_mdh_aggregate_path(self) -> None:
-        url = _build_mdh_aggregate_url("https://elis.rossum.ai/api/v1")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v1/data/aggregate"
-
-    def test_handles_trailing_slash(self) -> None:
-        url = _build_mdh_aggregate_url("https://elis.rossum.ai/api/v1/")
-        assert url == "https://elis.rossum.ai/svc/master-data-hub/api/v1/data/aggregate"
+class TestBuildUrls:
+    @pytest.mark.parametrize(
+        ("builder", "expected"),
+        [
+            (
+                _build_suggest_computed_field_url,
+                "https://elis.rossum.ai/api/v1/internal/schemas/suggest_computed_field",
+            ),
+            (
+                _build_evaluate_computed_fields_url,
+                "https://elis.rossum.ai/api/v1/internal/schemas/evaluate_computed_fields",
+            ),
+            (_build_mdh_datasets_url, "https://elis.rossum.ai/svc/master-data-hub/api/v2/datasets?limit=1000"),
+            (_build_mdh_aggregate_url, "https://elis.rossum.ai/svc/master-data-hub/api/v1/data/aggregate"),
+        ],
+        ids=["suggest_computed_field", "evaluate_computed_fields", "mdh_datasets", "mdh_aggregate"],
+    )
+    @pytest.mark.parametrize(
+        "base_url",
+        ["https://elis.rossum.ai/api/v1", "https://elis.rossum.ai/api/v1/"],
+        ids=["clean", "trailing_slash"],
+    )
+    def test_build_url(self, base_url: str, builder: object, expected: str) -> None:
+        assert builder(base_url) == expected
 
 
 class TestResolveMdhDatasetIdentifier:
@@ -264,8 +251,6 @@ class TestRequestWithRetry:
         )
         mock_client = MagicMock()
         mock_client.get.return_value = mock_response
-
-        import pytest
 
         with pytest.raises(httpx.HTTPStatusError):
             _request_with_retry(mock_client, "get", "https://example.com/api")

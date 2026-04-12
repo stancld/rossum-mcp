@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from rossum_agent.mermaid_sanitizer import (
     sanitize_mermaid_block,
     sanitize_mermaid_in_markdown,
@@ -7,30 +8,28 @@ from rossum_agent.mermaid_sanitizer import (
 
 
 class TestQuoteSpecialLabels:
-    def test_quotes_label_with_parentheses(self):
-        block = "    A[Label (main)]\n"
-        result = sanitize_mermaid_block(block)
-        assert result == '    A["Label (main)"]\n'
+    @pytest.mark.parametrize(
+        ("block", "expected"),
+        [
+            ("    A[Label (main)]\n", '    A["Label (main)"]\n'),
+            ("    A[Label {details}]\n", '    A["Label {details}"]\n'),
+        ],
+        ids=["parentheses", "curly_braces"],
+    )
+    def test_quotes_label_with_special_chars(self, block: str, expected: str):
+        assert sanitize_mermaid_block(block) == expected
 
-    def test_quotes_label_with_curly_braces(self):
-        block = "    A[Label {details}]\n"
-        result = sanitize_mermaid_block(block)
-        assert result == '    A["Label {details}"]\n'
-
-    def test_preserves_already_quoted_label(self):
-        block = '    A["Label (main)"]\n'
-        result = sanitize_mermaid_block(block)
-        assert result == block
-
-    def test_preserves_simple_label(self):
-        block = "    A[Simple Label]\n"
-        result = sanitize_mermaid_block(block)
-        assert result == block
-
-    def test_preserves_label_without_special_chars(self):
-        block = "    A[Label with spaces and numbers 123]\n"
-        result = sanitize_mermaid_block(block)
-        assert result == block
+    @pytest.mark.parametrize(
+        "block",
+        [
+            '    A["Label (main)"]\n',
+            "    A[Simple Label]\n",
+            "    A[Label with spaces and numbers 123]\n",
+        ],
+        ids=["already_quoted", "simple", "spaces_and_numbers"],
+    )
+    def test_preserves_label(self, block: str):
+        assert sanitize_mermaid_block(block) == block
 
     def test_multiple_labels_on_different_lines(self):
         block = "    A[Label (a)] --> B[Label (b)]\n"
