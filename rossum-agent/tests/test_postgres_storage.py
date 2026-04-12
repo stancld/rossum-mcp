@@ -693,34 +693,3 @@ class TestErrorPaths:
         storage, mock_conn = pg_storage
         mock_conn.execute.side_effect = Exception("DB error")
         assert storage.delete_all_feedback("user1", "chat_1") is False
-
-
-class TestPostgresStorageProtocol:
-    """Test that PostgresStorage satisfies the ChatStorage protocol."""
-
-    def test_satisfies_protocol(self):
-        """Test that PostgresStorage is a valid ChatStorage implementation."""
-
-        assert isinstance(PostgresStorage, type)
-        # Verify all protocol methods exist
-        for method_name in [
-            "save_chat",
-            "load_chat",
-            "delete_chat",
-            "chat_exists",
-            "is_connected",
-            "list_all_chats",
-            "save_file",
-            "load_file",
-            "list_files",
-            "delete_file",
-            "delete_all_files",
-            "save_all_files",
-            "load_all_files",
-            "save_feedback",
-            "get_feedback",
-            "delete_feedback",
-            "delete_all_feedback",
-            "close",
-        ]:
-            assert hasattr(PostgresStorage, method_name), f"Missing method: {method_name}"

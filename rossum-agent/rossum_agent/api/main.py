@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from starlette.types import ASGIApp, Receive, Scope, Send
 
-    from rossum_agent.storage import ChatStorage
+    from rossum_agent.postgres_storage import PostgresStorage
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -151,7 +151,7 @@ async def _drain_and_shutdown() -> None:
     os.kill(os.getpid(), signal.SIGINT)
 
 
-def _create_storage() -> ChatStorage:
+def _create_storage() -> PostgresStorage:
     """Create the PostgreSQL chat storage backend."""
     storage = PostgresStorage()
     storage.initialize()
