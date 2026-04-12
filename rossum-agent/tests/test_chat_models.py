@@ -1,11 +1,11 @@
-"""Tests for rossum_agent.storage module."""
+"""Tests for rossum_agent.chat_models module."""
 
 from __future__ import annotations
 
 import tempfile
 from pathlib import Path
 
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 class TestChatMetadata:

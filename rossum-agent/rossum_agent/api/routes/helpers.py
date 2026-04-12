@@ -19,7 +19,7 @@ from rossum_agent.api.services.agent_service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_small_model_id
 from rossum_agent.change_tracking.store import CommitStore
-from rossum_agent.storage import ChatData
+from rossum_agent.chat_models import ChatData
 from rossum_agent.valkey_client import ValkeyConnection
 
 if TYPE_CHECKING:

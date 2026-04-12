@@ -15,7 +15,7 @@ from rossum_agent.api.commands import (
 )
 from rossum_agent.api.models.schemas import ChatListResponse, ChatSummary
 from rossum_agent.change_tracking.models import ConfigCommit, EntityChange
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 def _make_ctx(

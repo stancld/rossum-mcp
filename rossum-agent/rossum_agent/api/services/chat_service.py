@@ -17,7 +17,7 @@ from rossum_agent.api.models.schemas import (
     Message,
     Persona,
 )
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 def _extract_text(content: object) -> str | None:

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from rossum_agent.agent.models import FinalAnswerStep
 from rossum_agent.api.main import app
 from rossum_agent.api.models.schemas import StreamDoneEvent
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 from .conftest import create_mock_httpx_client
 

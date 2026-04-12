@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
 
-def _extract_preview_from_first_msg(msg: dict[str, Any] | None) -> str:
+def extract_preview_from_first_msg(msg: dict[str, Any] | None) -> str:
     if not msg:
         return ""
     if msg.get("type") == "task_step":
@@ -74,7 +74,7 @@ class ChatData:
     metadata: ChatMetadata = field(default_factory=ChatMetadata)
 
 
-def _build_chat_list_item(
+def build_chat_list_item(
     chat_id: str, message_count: int, first_message_preview: str, metadata: ChatMetadata
 ) -> dict[str, Any]:
     timestamp_str = chat_id.split("_")[1]
