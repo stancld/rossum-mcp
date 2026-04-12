@@ -10,13 +10,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from rossum_agent.agent import (
     AgentConfig,
-    MemoryStep,
     RossumAgent,
     ToolCall,
     ToolResult,
 )
 from rossum_agent.agent.models import (
-    ToolResultStep,
     ToolStartStep,
 )
 from rossum_agent.agent.tool_execution import (
@@ -103,98 +101,6 @@ class TestParseJsonEncodedStrings:
         assert isinstance(result["changes"], str)
         # fields_to_keep is parsed
         assert result["fields_to_keep"] == ["field_a", "field_b"]
-
-
-class TestToolCallFingerprint:
-    """Test _tool_call_fingerprint function."""
-
-    def test_same_call_same_fingerprint(self):
-        """Identical tool calls produce the same fingerprint."""
-        from rossum_agent.agent.tool_execution import _tool_call_fingerprint
-
-        tc1 = ToolCall(id="tc_1", name="search", arguments={"entity": "workspace"})
-        tc2 = ToolCall(id="tc_2", name="search", arguments={"entity": "workspace"})
-
-        assert _tool_call_fingerprint(tc1) == _tool_call_fingerprint(tc2)
-
-    def test_different_args_different_fingerprint(self):
-        """Tool calls with different arguments produce different fingerprints."""
-        from rossum_agent.agent.tool_execution import _tool_call_fingerprint
-
-        tc1 = ToolCall(id="tc_1", name="search", arguments={"entity": "workspace"})
-        tc2 = ToolCall(id="tc_2", name="search", arguments={"entity": "queue"})
-
-        assert _tool_call_fingerprint(tc1) != _tool_call_fingerprint(tc2)
-
-    def test_different_name_different_fingerprint(self):
-        """Tool calls with different names produce different fingerprints."""
-        from rossum_agent.agent.tool_execution import _tool_call_fingerprint
-
-        tc1 = ToolCall(id="tc_1", name="search", arguments={})
-        tc2 = ToolCall(id="tc_2", name="list_queues", arguments={})
-
-        assert _tool_call_fingerprint(tc1) != _tool_call_fingerprint(tc2)
-
-    def test_fingerprint_ignores_id(self):
-        """Fingerprint does not include the tool call ID."""
-        from rossum_agent.agent.tool_execution import _tool_call_fingerprint
-
-        tc1 = ToolCall(id="different_id_1", name="tool", arguments={"x": 1})
-        tc2 = ToolCall(id="different_id_2", name="tool", arguments={"x": 1})
-
-        assert _tool_call_fingerprint(tc1) == _tool_call_fingerprint(tc2)
-
-
-class TestDeduplicateToolCalls:
-    """Test _deduplicate_tool_calls function."""
-
-    def test_no_duplicates(self):
-        """All unique calls are preserved."""
-        from rossum_agent.agent.tool_execution import _deduplicate_tool_calls
-
-        tool_calls = [
-            ToolCall(id="tc_1", name="tool_a", arguments={"x": 1}),
-            ToolCall(id="tc_2", name="tool_b", arguments={"y": 2}),
-        ]
-
-        deduped, dupes_map = _deduplicate_tool_calls(tool_calls, step_num=1)
-
-        assert len(deduped) == 2
-        assert dupes_map["tc_1"] == []
-        assert dupes_map["tc_2"] == []
-
-    def test_removes_duplicates(self):
-        """Duplicate calls are removed; primary call kept."""
-        from rossum_agent.agent.tool_execution import _deduplicate_tool_calls
-
-        tool_calls = [
-            ToolCall(id="tc_1", name="search", arguments={"q": "test"}),
-            ToolCall(id="tc_2", name="search", arguments={"q": "test"}),
-            ToolCall(id="tc_3", name="search", arguments={"q": "test"}),
-        ]
-
-        deduped, dupes_map = _deduplicate_tool_calls(tool_calls, step_num=1)
-
-        assert len(deduped) == 1
-        assert deduped[0].id == "tc_1"
-        assert len(dupes_map["tc_1"]) == 2
-        assert dupes_map["tc_1"][0].id == "tc_2"
-        assert dupes_map["tc_1"][1].id == "tc_3"
-
-    def test_mixed_unique_and_duplicates(self):
-        """Mix of unique and duplicate calls is handled correctly."""
-        from rossum_agent.agent.tool_execution import _deduplicate_tool_calls
-
-        tool_calls = [
-            ToolCall(id="tc_1", name="search", arguments={"q": "a"}),
-            ToolCall(id="tc_2", name="list_queues", arguments={}),
-            ToolCall(id="tc_3", name="search", arguments={"q": "a"}),
-        ]
-
-        deduped, _dupes_map = _deduplicate_tool_calls(tool_calls, step_num=1)
-
-        assert len(deduped) == 2
-        assert {tc.name for tc in deduped} == {"search", "list_queues"}
 
 
 class TestSchemaStagger:
@@ -550,56 +456,6 @@ class TestExecuteToolsInParallel:
         # First step should be progress indicator
         assert isinstance(steps[0], ToolStartStep)
         assert steps[0].tool_progress == (0, 2)
-
-    @pytest.mark.asyncio
-    async def test_deduplicates_identical_tool_calls_within_step(self):
-        """Test that identical tool calls execute once but keep per-call memory results."""
-        agent = self._create_agent()
-
-        execution_count = 0
-
-        async def counting_tool(name, args):
-            nonlocal execution_count
-            execution_count += 1
-            return f"result_{name}"
-
-        agent.mcp_connection.call_tool = counting_tool
-
-        tool_calls = [
-            ToolCall(id="tc_1", name="search", arguments={"entity": "workspace"}),
-            ToolCall(id="tc_2", name="search", arguments={"entity": "workspace"}),
-        ]
-
-        steps = []
-        async for step in execute_tools_with_progress(
-            agent.mcp_connection,
-            agent.tokens,
-            agent.memory,
-            step_num=1,
-            response_text="",
-            tool_calls=tool_calls,
-            input_tokens=100,
-            output_tokens=50,
-        ):
-            steps.append(step)
-
-        assert execution_count == 1
-        assert isinstance(steps[0], ToolStartStep)
-        assert len(steps[0].tool_calls) == 1
-        assert steps[0].tool_progress == (0, 1)
-
-        final_step = steps[-1]
-        assert isinstance(final_step, ToolResultStep)
-        assert len(final_step.tool_results) == 1
-        assert final_step.tool_results[0].tool_call_id == "tc_1"
-
-        memory_step = agent.memory.steps[-1]
-        assert isinstance(memory_step, MemoryStep)
-        assert len(memory_step.tool_calls) == 2
-        assert len(memory_step.tool_results) == 2
-        assert memory_step.tool_results[0].tool_call_id == "tc_1"
-        assert memory_step.tool_results[1].tool_call_id == "tc_2"
-        assert memory_step.tool_results[0].content == memory_step.tool_results[1].content
 
     @pytest.mark.asyncio
     async def test_cancellation_cancels_child_tasks_and_reraises(self):
