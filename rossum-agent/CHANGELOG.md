@@ -16,6 +16,17 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)
 
+### Internal
+- Large-scale codebase consolidation and cleanup ([#362](https://github.com/stancld/rossum-agents/pull/362), [#363](https://github.com/stancld/rossum-agents/pull/363), [#365](https://github.com/stancld/rossum-agents/pull/365), [#366](https://github.com/stancld/rossum-agents/pull/366), [#368](https://github.com/stancld/rossum-agents/pull/368), [#369](https://github.com/stancld/rossum-agents/pull/369)):
+  - Removed `ChatStorage` protocol in favor of direct `PostgresStorage` usage
+  - Cleaned up type aliases, renamed helpers, removed trivial docstrings
+  - Removed tool call deduplication logic
+  - Consolidated `python_tools` into `tools/python_helper`
+  - Split `models.py` into a submodule package
+  - Replaced `AgentConfig` dataclass with module-level constants
+  - Reused `extract_text_from_content` instead of duplicate `_extract_text_from_prompt`
+  - Cleaned up URL context builder
+
 ## [2.0.0] - 2026-04-09
 
 ### Added
