@@ -61,7 +61,7 @@ uv sync
 **With extras:**
 ```bash
 uv sync --extra all        # All extras (api, docs, tests)
-uv sync --extra api        # REST API (FastAPI, PostgreSQL, Redis)
+uv sync --extra api        # REST API (FastAPI, PostgreSQL, Valkey)
 ```
 
 ## Environment Variables
@@ -79,8 +79,9 @@ uv sync --extra api        # REST API (FastAPI, PostgreSQL, Redis)
 | `POSTGRES_DB` | No | PostgreSQL database name (default: `rossum_agent`) |
 | `POSTGRES_USER` | No | PostgreSQL user (default: `rossum`) |
 | `POSTGRES_PASSWORD` | No | PostgreSQL password (default: `rossum`) |
-| `REDIS_HOST` | No | Redis host for change tracking (default: `localhost`) |
-| `REDIS_PORT` | No | Redis port for change tracking (default: `6379`) |
+| `VALKEY_HOST` | No | Valkey host for change tracking (default: `localhost`) |
+| `VALKEY_PORT` | No | Valkey port for change tracking (default: `6379`) |
+| `VALKEY_PASSWORD` | No | Valkey authentication password |
 | `ROSSUM_MCP_MODE` | No | MCP mode: `read-write` (default) or `read-only` |
 | `ROSSUM_AGENT_PERSONA` | No | Agent persona: `default` (default) or `cautious` — read by the TUI client, not the server |
 | `ADDITIONAL_ALLOWED_ROSSUM_HOSTS` | No | Comma-separated regex patterns for additional allowed Rossum API hosts |

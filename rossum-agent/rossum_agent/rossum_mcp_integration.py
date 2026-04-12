@@ -27,7 +27,7 @@ from rossum_agent.change_tracking.models import EntityChange
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    import redis
+    import valkey
     from mcp.types import Tool as MCPTool
 
     from rossum_agent.api.models.schemas import MCPMode
@@ -137,7 +137,7 @@ class MCPConnection:
     client: Client
     write_tools: set[str] = field(default_factory=set)
     chat_id: str | None = None
-    redis_client: redis.Redis | None = None
+    valkey_client: valkey.Valkey | None = None
     cache_ttl_seconds: int = 30 * 24 * 3600
     _tools: list[MCPTool] | None = field(default=None, init=False, repr=False)
     _read_cache: dict[tuple[str, str], dict] = field(default_factory=dict, init=False, repr=False)
@@ -187,17 +187,17 @@ class MCPConnection:
         return None
 
     def _cache_get(self, entity_type: str, entity_id: str) -> dict | None:
-        if self.redis_client and self.chat_id:
-            raw = self.redis_client.get(f"read_cache:{self.chat_id}:{entity_type}:{entity_id}")
+        if self.valkey_client and self.chat_id:
+            raw = self.valkey_client.get(f"read_cache:{self.chat_id}:{entity_type}:{entity_id}")
             if raw is not None:
                 return json.loads(cast("bytes", raw))
             return None
         return self._read_cache.get((entity_type, entity_id))
 
     def _cache_set(self, entity_type: str, entity_id: str, data: dict) -> None:
-        if self.redis_client and self.chat_id:
+        if self.valkey_client and self.chat_id:
             key = f"read_cache:{self.chat_id}:{entity_type}:{entity_id}"
-            self.redis_client.setex(key, self.cache_ttl_seconds, json.dumps(data, default=str))
+            self.valkey_client.setex(key, self.cache_ttl_seconds, json.dumps(data, default=str))
         else:
             self._read_cache[(entity_type, entity_id)] = data
 
@@ -391,7 +391,7 @@ class MCPConnection:
         """Configure change tracking on this connection."""
         self.write_tools = write_tools
         self.chat_id = chat_id
-        self.redis_client = commit_store.client
+        self.valkey_client = commit_store.client
         self._commit_store = commit_store
         self._snapshot_store = snapshot_store
         self._environment = environment

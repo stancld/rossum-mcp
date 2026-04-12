@@ -24,18 +24,18 @@ from .conftest import create_mock_httpx_client
 
 
 @pytest.fixture
-def mock_redis_connection():
-    """Create a mock RedisConnection for change tracking."""
+def mock_valkey_connection():
+    """Create a mock ValkeyConnection for change tracking."""
     return MagicMock()
 
 
 @pytest.fixture
-def client(mock_chat_service, mock_agent_service, mock_file_service, mock_redis_connection):
+def client(mock_chat_service, mock_agent_service, mock_file_service, mock_valkey_connection):
     """Create test client with mocked services injected via app.state."""
     app.state.chat_service = mock_chat_service
     app.state.agent_service = mock_agent_service
     app.state.file_service = mock_file_service
-    app.state.redis_connection = mock_redis_connection
+    app.state.valkey_connection = mock_valkey_connection
 
     with TestClient(app, raise_server_exceptions=False) as client:
         yield client
@@ -45,7 +45,7 @@ class TestHealthEndpoint:
     """Tests for /api/v1/health endpoint."""
 
     def test_health_healthy(self, client, mock_chat_service):
-        """Test health check when Redis is connected."""
+        """Test health check when storage is connected."""
         mock_chat_service.is_connected.return_value = True
 
         response = client.get("/api/v1/health")
@@ -57,7 +57,7 @@ class TestHealthEndpoint:
         assert "version" in data
 
     def test_health_unhealthy(self, client, mock_chat_service):
-        """Test health check when Redis is disconnected."""
+        """Test health check when storage is disconnected."""
         mock_chat_service.is_connected.return_value = False
 
         response = client.get("/api/v1/health")
@@ -499,10 +499,10 @@ class TestListChatCommitsEndpoint:
         assert response.status_code == 404
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_no_commits(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
+    def test_no_commits(self, mock_httpx, client, mock_chat_service, mock_valkey_connection, valid_headers):
         mock_httpx.return_value = create_mock_httpx_client()
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=ChatMetadata())
-        mock_redis_connection.is_connected.return_value = False
+        mock_valkey_connection.is_connected.return_value = False
 
         response = client.get("/api/v1/chats/chat_123/commits", headers=valid_headers)
 
@@ -510,12 +510,12 @@ class TestListChatCommitsEndpoint:
         assert response.json() == {"commits": []}
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_with_commits(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
+    def test_with_commits(self, mock_httpx, client, mock_chat_service, mock_valkey_connection, valid_headers):
         mock_httpx.return_value = create_mock_httpx_client()
 
         metadata = ChatMetadata(config_commits=["abc123"])
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=metadata)
-        mock_redis_connection.is_connected.return_value = True
+        mock_valkey_connection.is_connected.return_value = True
 
         commit = ConfigCommit(
             hash="abc123",
@@ -557,12 +557,14 @@ class TestListChatCommitsEndpoint:
         }
 
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
-    def test_expired_commit_skipped(self, mock_httpx, client, mock_chat_service, mock_redis_connection, valid_headers):
+    def test_expired_commit_skipped(
+        self, mock_httpx, client, mock_chat_service, mock_valkey_connection, valid_headers
+    ):
         mock_httpx.return_value = create_mock_httpx_client()
 
         metadata = ChatMetadata(config_commits=["expired"])
         mock_chat_service.get_chat_data.return_value = ChatData(messages=[], metadata=metadata)
-        mock_redis_connection.is_connected.return_value = True
+        mock_valkey_connection.is_connected.return_value = True
 
         mock_commit_store = MagicMock()
         mock_commit_store.get_commit.return_value = None
@@ -620,28 +622,28 @@ class TestServiceDependencies:
         with pytest.raises(RuntimeError, match="File service not initialized"):
             get_file_service(mock_request)
 
-    def test_get_redis_connection_not_initialized_error(self):
-        """Test that accessing redis_connection without initialization raises RuntimeError."""
-        from rossum_agent.api.dependencies import get_redis_connection
+    def test_get_valkey_connection_not_initialized_error(self):
+        """Test that accessing valkey_connection without initialization raises RuntimeError."""
+        from rossum_agent.api.dependencies import get_valkey_connection
         from starlette.datastructures import State
 
         mock_request = MagicMock()
         mock_request.app = MagicMock()
         mock_request.app.state = State()
 
-        with pytest.raises(RuntimeError, match="Redis connection not initialized"):
-            get_redis_connection(mock_request)
+        with pytest.raises(RuntimeError, match="Valkey connection not initialized"):
+            get_valkey_connection(mock_request)
 
-    def test_get_redis_connection_returns_instance(self):
-        """Test that get_redis_connection returns the redis_connection from app state."""
-        from rossum_agent.api.dependencies import get_redis_connection
+    def test_get_valkey_connection_returns_instance(self):
+        """Test that get_valkey_connection returns the valkey_connection from app state."""
+        from rossum_agent.api.dependencies import get_valkey_connection
         from starlette.datastructures import State
 
-        mock_redis = MagicMock()
+        mock_valkey = MagicMock()
         mock_request = MagicMock()
         mock_request.app = MagicMock()
         mock_request.app.state = State()
-        mock_request.app.state.redis_connection = mock_redis
+        mock_request.app.state.valkey_connection = mock_valkey
 
-        result = get_redis_connection(mock_request)
-        assert result is mock_redis
+        result = get_valkey_connection(mock_request)
+        assert result is mock_valkey

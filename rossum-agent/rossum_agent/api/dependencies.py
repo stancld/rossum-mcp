@@ -16,7 +16,7 @@ from fastapi import Header, HTTPException, Request, status
 from rossum_agent.api.services.agent_service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
-from rossum_agent.redis_client import RedisConnection
+from rossum_agent.valkey_client import ValkeyConnection
 
 logger = logging.getLogger(__name__)
 
@@ -179,8 +179,8 @@ def get_file_service(request: Request) -> FileService:
     return request.app.state.file_service
 
 
-def get_redis_connection(request: Request) -> RedisConnection:
-    """Get the shared RedisConnection for change tracking."""
-    if not hasattr(request.app.state, "redis_connection"):
-        raise RuntimeError("Redis connection not initialized - ensure lifespan context is used")
-    return request.app.state.redis_connection
+def get_valkey_connection(request: Request) -> ValkeyConnection:
+    """Get the shared ValkeyConnection for change tracking."""
+    if not hasattr(request.app.state, "valkey_connection"):
+        raise RuntimeError("Valkey connection not initialized - ensure lifespan context is used")
+    return request.app.state.valkey_connection

@@ -2471,15 +2471,6 @@ wheels = [
 ]
 
 [[package]]
-name = "redis"
-version = "7.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7b/7f/3759b1d0d72b7c92f0d70ffd9dc962b7b7b5ee74e135f9d7d8ab06b8a318/redis-7.4.0.tar.gz", hash = "sha256:64a6ea7bf567ad43c964d2c30d82853f8df927c5c9017766c55a1d1ed95d18ad", size = 4943913, upload-time = "2026-03-24T09:14:37.53Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/3a/95deec7db1eb53979973ebd156f3369a72732208d1391cd2e5d127062a32/redis-7.4.0-py3-none-any.whl", hash = "sha256:a9c74a5c893a5ef8455a5adb793a31bb70feb821c86eccb62eebef5a19c429ec", size = 409772, upload-time = "2026-03-24T09:14:35.968Z" },
-]
-
-[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2607,7 +2598,6 @@ all = [
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
     { name = "python-multipart" },
-    { name = "redis" },
     { name = "rossum-api" },
     { name = "slack-sdk", extra = ["optional"] },
     { name = "slowapi" },
@@ -2620,6 +2610,7 @@ all = [
     { name = "tqdm" },
     { name = "ty" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "valkey" },
     { name = "xlrd" },
 ]
 api = [
@@ -2628,11 +2619,11 @@ api = [
     { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
     { name = "python-multipart" },
-    { name = "redis" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
     { name = "sse-starlette" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "valkey" },
 ]
 docs = [
     { name = "furo" },
@@ -2710,8 +2701,6 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.0.0" },
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.22" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.22" },
-    { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
-    { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
     { name = "rossum-api", specifier = ">=3.13.1" },
     { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.13.1" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
@@ -2737,6 +2726,8 @@ requires-dist = [
     { name = "ty", marker = "extra == 'tests'", specifier = ">=0.0.11" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'all'", specifier = ">=0.32.0" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = ">=0.32.0" },
+    { name = "valkey", marker = "extra == 'all'", specifier = ">=6.1.0" },
+    { name = "valkey", marker = "extra == 'api'", specifier = ">=6.1.0" },
     { name = "xlrd", marker = "extra == 'agent'", specifier = ">=2.0.1" },
     { name = "xlrd", marker = "extra == 'all'", specifier = ">=2.0.1" },
 ]
@@ -3273,6 +3264,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/37/945b4ca0ac27e3dc4952642d4c900edd030b3da6c9634875af6e13ae80e5/uvloop-0.22.1-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b91328c72635f6f9e0282e4a57da7470c7350ab1c9f48546c0f2866205349d21", size = 4467065, upload-time = "2025-10-16T22:16:58.206Z" },
     { url = "https://files.pythonhosted.org/packages/97/cc/48d232f33d60e2e2e0b42f4e73455b146b76ebe216487e862700457fbf3c/uvloop-0.22.1-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:daf620c2995d193449393d6c62131b3fbd40a63bf7b307a1527856ace637fe88", size = 4328384, upload-time = "2025-10-16T22:16:59.36Z" },
     { url = "https://files.pythonhosted.org/packages/e4/16/c1fd27e9549f3c4baf1dc9c20c456cd2f822dbf8de9f463824b0c0357e06/uvloop-0.22.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:6cde23eeda1a25c75b2e07d39970f3374105d5eafbaab2a4482be82f272d5a5e", size = 4296730, upload-time = "2025-10-16T22:17:00.744Z" },
+]
+
+[[package]]
+name = "valkey"
+version = "6.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/ee/7fd930fc712275084722ddd464a0ea296abdb997d2da396320507968daeb/valkey-6.1.1.tar.gz", hash = "sha256:5880792990c6c2b5eb604a5ed5f98f300880b6dd92d123819b66ed54bb259731", size = 4601372, upload-time = "2025-08-11T06:41:10.63Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/a2/252afa4da08c714460f49e943070f86a02931f99f886182765194002fe33/valkey-6.1.1-py3-none-any.whl", hash = "sha256:e2691541c6e1503b53c714ad9a35551ac9b7c0bbac93865f063dbc859a46de92", size = 259474, upload-time = "2025-08-11T06:41:08.769Z" },
 ]
 
 [[package]]

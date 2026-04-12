@@ -37,7 +37,7 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.api.shutdown import shutdown_state
 from rossum_agent.postgres_storage import PostgresStorage
-from rossum_agent.redis_client import RedisConnection
+from rossum_agent.valkey_client import ValkeyConnection
 
 logger = logging.getLogger(__name__)
 
@@ -170,8 +170,8 @@ def _init_services(app: FastAPI) -> None:
         app.state.agent_service = AgentService()
     if not hasattr(app.state, "file_service"):
         app.state.file_service = FileService(storage=app.state.chat_service.storage)
-    if not hasattr(app.state, "redis_connection"):
-        app.state.redis_connection = RedisConnection()
+    if not hasattr(app.state, "valkey_connection"):
+        app.state.valkey_connection = ValkeyConnection()
 
 
 @asynccontextmanager

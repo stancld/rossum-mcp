@@ -25,14 +25,14 @@ def client(mock_chat_service, mock_agent_service, mock_file_service):
 
 
 class TestSlashCommandInterception:
-    @patch("rossum_agent.api.routes.helpers.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.ValkeyConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_commands_returns_sse(
-        self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
+        self, mock_httpx, mock_valkey_connection, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Slash commands return SSE events without invoking the agent."""
         mock_httpx.return_value = create_mock_httpx_client()
-        mock_redis_connection.return_value.is_connected.return_value = False
+        mock_valkey_connection.return_value.is_connected.return_value = False
 
         mock_chat_service.get_chat_data.return_value = ChatData(
             messages=[], metadata=ChatMetadata(mcp_mode="read-only")
@@ -62,7 +62,7 @@ class TestSlashCommandInterception:
     def test_list_commands_does_not_initialize_commit_store(
         self, mock_httpx, mock_get_commit_store, client, mock_chat_service, valid_headers
     ):
-        """List commands should work without touching commit store/Redis."""
+        """List commands should work without touching commit store/Valkey."""
         mock_httpx.return_value = create_mock_httpx_client()
         mock_get_commit_store.side_effect = AssertionError("should not be called")
 
@@ -109,14 +109,14 @@ class TestSlashCommandInterception:
         content = response.text
         assert "Hello!" in content
 
-    @patch("rossum_agent.api.routes.helpers.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.ValkeyConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_unknown_command_returns_error(
-        self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
+        self, mock_httpx, mock_valkey_connection, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Unknown commands return an error message, not sent to agent."""
         mock_httpx.return_value = create_mock_httpx_client()
-        mock_redis_connection.return_value.is_connected.return_value = False
+        mock_valkey_connection.return_value.is_connected.return_value = False
 
         mock_chat_service.get_chat_data.return_value = ChatData(
             messages=[], metadata=ChatMetadata(mcp_mode="read-only")
@@ -135,14 +135,14 @@ class TestSlashCommandInterception:
 
         mock_agent_service.run_agent.assert_not_called()
 
-    @patch("rossum_agent.api.routes.helpers.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.ValkeyConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_command_does_not_save_to_history(
-        self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
+        self, mock_httpx, mock_valkey_connection, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """Command interactions are not saved to conversation history."""
         mock_httpx.return_value = create_mock_httpx_client()
-        mock_redis_connection.return_value.is_connected.return_value = False
+        mock_valkey_connection.return_value.is_connected.return_value = False
 
         mock_chat_service.get_chat_data.return_value = ChatData(
             messages=[], metadata=ChatMetadata(mcp_mode="read-only")
@@ -157,14 +157,14 @@ class TestSlashCommandInterception:
         assert response.status_code == 200
         mock_chat_service.save_messages.assert_not_called()
 
-    @patch("rossum_agent.api.routes.helpers.RedisConnection")
+    @patch("rossum_agent.api.routes.helpers.ValkeyConnection")
     @patch("rossum_agent.api.dependencies.httpx.AsyncClient")
     def test_list_commits_handles_commit_store_init_failure(
-        self, mock_httpx, mock_redis_connection, client, mock_chat_service, mock_agent_service, valid_headers
+        self, mock_httpx, mock_valkey_connection, client, mock_chat_service, mock_agent_service, valid_headers
     ):
         """List commits should degrade gracefully when commit store init fails."""
         mock_httpx.return_value = create_mock_httpx_client()
-        mock_redis_connection.side_effect = ValueError("invalid REDIS_PORT")
+        mock_valkey_connection.side_effect = ValueError("invalid VALKEY_PORT")
 
         mock_chat_service.get_chat_data.return_value = ChatData(
             messages=[],

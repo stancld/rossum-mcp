@@ -95,7 +95,7 @@ def _unwrap_snapshot(data: dict) -> dict:
     1. FastMCP's {"result": ...} wrapper
     2. Unified get tool's {"entity": ..., "id": ..., "data": {...}} wrapper
 
-    Defense-in-depth for snapshots stored in Redis before the _call_mcp fix.
+    Defense-in-depth for snapshots stored in Valkey before the _call_mcp fix.
     """
     inner = unwrap(data)
     if "data" in inner and "entity" in inner and isinstance(inner["data"], dict):

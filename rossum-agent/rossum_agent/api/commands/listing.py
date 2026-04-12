@@ -26,7 +26,7 @@ async def handle_list_commands(ctx: CommandContext) -> str:
 
 async def handle_list_commits(ctx: CommandContext) -> str:
     if ctx.commit_store is None:
-        return "Commit tracking is not available (Redis not connected)."
+        return "Commit tracking is not available (Valkey not connected)."
 
     chat_data = ctx.chat_service.get_chat_data(user_id=ctx.user_id, chat_id=ctx.chat_id)
     if chat_data is None:

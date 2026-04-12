@@ -2379,15 +2379,6 @@ wheels = [
 ]
 
 [[package]]
-name = "redis"
-version = "7.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7b/7f/3759b1d0d72b7c92f0d70ffd9dc962b7b7b5ee74e135f9d7d8ab06b8a318/redis-7.4.0.tar.gz", hash = "sha256:64a6ea7bf567ad43c964d2c30d82853f8df927c5c9017766c55a1d1ed95d18ad", size = 4943913, upload-time = "2026-03-24T09:14:37.53Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/3a/95deec7db1eb53979973ebd156f3369a72732208d1391cd2e5d127062a32/redis-7.4.0-py3-none-any.whl", hash = "sha256:a9c74a5c893a5ef8455a5adb793a31bb70feb821c86eccb62eebef5a19c429ec", size = 409772, upload-time = "2026-03-24T09:14:35.968Z" },
-]
-
-[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2453,7 +2444,7 @@ wheels = [
 
 [[package]]
 name = "rossum-agent"
-version = "2.0.0.dev0"
+version = "2.1.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -2486,7 +2477,6 @@ all = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "python-multipart" },
-    { name = "redis" },
     { name = "slack-sdk", extra = ["optional"] },
     { name = "slowapi" },
     { name = "sphinx" },
@@ -2497,6 +2487,7 @@ all = [
     { name = "tqdm" },
     { name = "uvicorn" },
     { name = "uvicorn-worker" },
+    { name = "valkey" },
     { name = "wsproto" },
 ]
 api = [
@@ -2505,12 +2496,12 @@ api = [
     { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
     { name = "python-multipart" },
-    { name = "redis" },
     { name = "slowapi" },
     { name = "sqlalchemy", extra = ["postgresql-psycopg"] },
     { name = "sse-starlette" },
     { name = "uvicorn" },
     { name = "uvicorn-worker" },
+    { name = "valkey" },
     { name = "wsproto" },
 ]
 docs = [
@@ -2535,9 +2526,9 @@ tests = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
-    { name = "redis" },
     { name = "slack-sdk", extra = ["optional"] },
     { name = "sqlalchemy", extra = ["postgresql-psycopg"] },
+    { name = "valkey" },
 ]
 
 [package.dev-dependencies]
@@ -2585,9 +2576,6 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=4.0.0" },
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.22" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.22" },
-    { name = "redis", marker = "extra == 'all'", specifier = ">=7.0.0" },
-    { name = "redis", marker = "extra == 'api'", specifier = ">=7.0.0" },
-    { name = "redis", marker = "extra == 'tests'", specifier = ">=7.0.0" },
     { name = "rossum-api", specifier = ">=3.13.1" },
     { name = "rossum-mcp", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
@@ -2612,6 +2600,9 @@ requires-dist = [
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.32.0" },
     { name = "uvicorn-worker", marker = "extra == 'all'", specifier = ">=0.3.0" },
     { name = "uvicorn-worker", marker = "extra == 'api'", specifier = ">=0.3.0" },
+    { name = "valkey", marker = "extra == 'all'", specifier = ">=6.1.0" },
+    { name = "valkey", marker = "extra == 'api'", specifier = ">=6.1.0" },
+    { name = "valkey", marker = "extra == 'tests'", specifier = ">=6.1.0" },
     { name = "wsproto", marker = "extra == 'all'", specifier = ">=1.2.0" },
     { name = "wsproto", marker = "extra == 'api'", specifier = ">=1.2.0" },
     { name = "xlrd", specifier = ">=2.0.1" },
@@ -3107,6 +3098,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/59/9101b9c0680fd80e9d26c07deb822a5d18a324339fcf9cd017885ee808ad/uvicorn_worker-0.4.0.tar.gz", hash = "sha256:8ee5306070d8f38dce124adce488c3c0b50f20cf0c0222b12c66188da7214493", size = 9361, upload-time = "2025-09-20T10:47:01.218Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/90/25/09cd7a90c8bb7fb693be0d6704fccd5f9778d5513214b7a01cc4a94ff314/uvicorn_worker-0.4.0-py3-none-any.whl", hash = "sha256:e2ed952cef976f5e9e429d7269640bbcafbd36c80aa80f1003c8c77a6797abde", size = 5364, upload-time = "2025-09-20T10:46:59.776Z" },
+]
+
+[[package]]
+name = "valkey"
+version = "6.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/ee/7fd930fc712275084722ddd464a0ea296abdb997d2da396320507968daeb/valkey-6.1.1.tar.gz", hash = "sha256:5880792990c6c2b5eb604a5ed5f98f300880b6dd92d123819b66ed54bb259731", size = 4601372, upload-time = "2025-08-11T06:41:10.63Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/a2/252afa4da08c714460f49e943070f86a02931f99f886182765194002fe33/valkey-6.1.1-py3-none-any.whl", hash = "sha256:e2691541c6e1503b53c714ad9a35551ac9b7c0bbac93865f063dbc859a46de92", size = 259474, upload-time = "2025-08-11T06:41:08.769Z" },
 ]
 
 [[package]]

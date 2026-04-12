@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-import redis
+import valkey
 from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
 from rossum_agent.agent.models import AgentConfig
@@ -31,14 +31,18 @@ if TYPE_CHECKING:
 ENV_FILE = Path(__file__).parent / ".env"
 
 
-def try_connect_redis() -> redis.Redis | None:
-    """Return a connected Redis client, or None if Redis is unreachable."""
+def try_connect_valkey() -> valkey.Valkey | None:
+    """Return a connected Valkey client, or None if Valkey is unreachable."""
     try:
-        host = os.getenv("REDIS_HOST")
-        port = os.getenv("REDIS_PORT")
+        host = os.getenv("VALKEY_HOST")
+        port = os.getenv("VALKEY_PORT")
         if not host or not port:
             return None
-        client = redis.Redis(host=host, port=int(port), socket_connect_timeout=1)
+        kwargs: dict[str, object] = {"host": host, "port": int(port), "socket_connect_timeout": 1}
+        password = os.getenv("VALKEY_PASSWORD")
+        if password:
+            kwargs["password"] = password
+        client = valkey.Valkey(**kwargs)
         client.ping()
         return client
     except Exception:
@@ -46,8 +50,8 @@ def try_connect_redis() -> redis.Redis | None:
 
 
 def _create_stores() -> tuple[CommitStore, SnapshotStore] | None:
-    """Create CommitStore and SnapshotStore from the same Redis client, or None if unreachable."""
-    client = try_connect_redis()
+    """Create CommitStore and SnapshotStore from the same Valkey client, or None if unreachable."""
+    client = try_connect_valkey()
     return (CommitStore(client), SnapshotStore(client)) if client else None
 
 
@@ -201,7 +205,7 @@ def create_live_agent(
             commit_store = None
             snapshot_store = None
             environment = None
-            if case.requires_redis:
+            if case.requires_valkey:
                 stores = _create_stores()
                 if stores:
                     commit_store, snapshot_store = stores

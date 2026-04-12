@@ -196,7 +196,7 @@ EOF
 docker-compose up rossum-agent-api
 ```
 
-Redis is included in the compose stack and used for change tracking.
+Valkey is included in the compose stack and used for change tracking.
 
 ---
 

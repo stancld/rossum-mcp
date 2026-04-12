@@ -30,7 +30,7 @@ from rossum_agent.tools.dynamic_tools import get_write_tools_async
 from rossum_agent.tools.task_tracker import TaskTracker
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 
-from regression_tests.conftest import try_connect_redis
+from regression_tests.conftest import try_connect_valkey
 from regression_tests.framework.runner import run_regression_test
 from regression_tests.test_cases import REGRESSION_TEST_CASES
 from regression_tests.test_regressions import _evaluate_criteria
@@ -80,8 +80,8 @@ def _load_env_tokens() -> dict[str, str]:
 
 
 def _create_commit_store() -> CommitStore | None:
-    """Create a CommitStore if Redis is reachable."""
-    client = try_connect_redis()
+    """Create a CommitStore if Valkey is reachable."""
+    client = try_connect_valkey()
     return CommitStore(client) if client else None
 
 
@@ -109,7 +109,7 @@ async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Pat
     ) as mcp_connection:
         commit_store = None
         environment = None
-        if case.requires_redis:
+        if case.requires_valkey:
             commit_store = _create_commit_store()
             if commit_store:
                 write_tools = await get_write_tools_async(mcp_connection)
@@ -169,7 +169,7 @@ async def run_single_attempt(case: RegressionTestCase, api_token: str, output_di
 
 async def run_all(cli_token: str | None = None) -> list[TestResult]:
     env_tokens = _load_env_tokens()
-    redis_available = try_connect_redis() is not None
+    valkey_available = try_connect_valkey() is not None
     results: list[TestResult] = []
 
     for i, case in enumerate(REGRESSION_TEST_CASES):
@@ -179,12 +179,12 @@ async def run_all(cli_token: str | None = None) -> list[TestResult]:
             print(f"  {case.description}")
         print(f"{'=' * 70}")
 
-        if case.requires_redis and not redis_available:
-            print("  SKIPPED (Redis not available)")
+        if case.requires_valkey and not valkey_available:
+            print("  SKIPPED (Valkey not available)")
             results.append(
                 TestResult(
                     name=case.name,
-                    attempts=[AttemptResult(passed=False, failures=[], error="Redis not available")],
+                    attempts=[AttemptResult(passed=False, failures=[], error="Valkey not available")],
                 )
             )
             continue
