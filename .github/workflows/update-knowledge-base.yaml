@@ -58,7 +58,7 @@ jobs:
         id: summary
         run: |
           python3 - <<'PYEOF'
-          import json, os
+          import difflib, json, os
 
           old = json.loads(open("/tmp/rossum-kb-old.json").read())
           new = json.loads(open("rossum-agent/rossum_agent/data/rossum-kb.json").read())
@@ -79,6 +79,25 @@ jobs:
           new_chars = sum(len(a["content"]) for a in new["articles"])
           growth = ((new_chars - old_chars) / old_chars * 100) if old_chars else 0
 
+          MAX_DIFF_LINES = 50
+          MAX_BODY_CHARS = 60000  # GitHub PR body limit is 65536
+
+          def article_diff(old_content: str, new_content: str, slug: str) -> str:
+              diff_lines = list(difflib.unified_diff(
+                  old_content.splitlines(),
+                  new_content.splitlines(),
+                  fromfile=f"a/{slug}",
+                  tofile=f"b/{slug}",
+                  lineterm="",
+              ))
+              if not diff_lines:
+                  return ""
+              truncated = ""
+              if len(diff_lines) > MAX_DIFF_LINES:
+                  diff_lines = diff_lines[:MAX_DIFF_LINES]
+                  truncated = f"\n... ({len(diff_lines)} lines shown, diff truncated)"
+              return "\n".join(diff_lines) + truncated
+
           lines = []
           lines.append(f"**{len(new['articles'])}** articles total "
                        f"(was {len(old['articles'])})")
@@ -98,11 +117,20 @@ jobs:
               lines.append(f"\n### Updated articles ({len(updated)})")
               for s in updated:
                   title = new_by_slug[s].get("title", s)
-                  lines.append(f"- {title} (`{s}`)")
+                  diff = article_diff(
+                      old_by_slug[s]["content"],
+                      new_by_slug[s]["content"],
+                      s,
+                  )
+                  lines.append(f"\n<details>\n<summary>{title} (<code>{s}</code>)</summary>\n")
+                  lines.append(f"```diff\n{diff}\n```")
+                  lines.append("</details>")
           if not added and not removed and not updated:
               lines.append("\nNo article-level changes detected (metadata only).")
 
           body = "\n".join(lines)
+          if len(body) > MAX_BODY_CHARS:
+              body = body[:MAX_BODY_CHARS] + "\n\n... (truncated due to size)"
           print(body)
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               # Multiline output
