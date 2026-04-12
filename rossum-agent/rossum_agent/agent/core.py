@@ -64,7 +64,7 @@ from rossum_agent.agent.streaming import StreamState, extract_thinking_blocks, p
 from rossum_agent.agent.tool_execution import execute_tools_with_progress
 from rossum_agent.api.models.schemas import TokenUsageBreakdown
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_model_id
-from rossum_agent.rossum_mcp_integration import mcp_tools_to_anthropic_format
+from rossum_agent.rossum_mcp_integration.tools import mcp_tools_to_anthropic_format
 from rossum_agent.tools import get_internal_tools
 from rossum_agent.tools.core import SubAgentTokenUsage, get_context
 from rossum_agent.tools.dynamic_tools import (
@@ -84,7 +84,7 @@ if TYPE_CHECKING:
     from anthropic.types import MessageParam, TextBlockParam, ThinkingConfigAdaptiveParam, ToolParam
 
     from rossum_agent.agent.types import UserContent
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 logger = logging.getLogger(__name__)
 

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     from rossum_agent.agent.core import TokenTracker
     from rossum_agent.agent.memory import AgentMemory
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 logger = logging.getLogger(__name__)
 

@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.models import EntityChange
-from rossum_agent.rossum_mcp_integration import (
-    MCPConnection,
+from rossum_agent.rossum_mcp_integration.connection import MCPConnection
+from rossum_agent.rossum_mcp_integration.tools import (
     classify_operation,
     extract_entity_id,
     extract_entity_name,

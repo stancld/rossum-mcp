@@ -17,7 +17,7 @@ from rossum_api.dtos import Token
 from rossum_mcp.tools.validation import sanitize_schema_content
 
 from rossum_agent.change_tracking.models import EntityChange
-from rossum_agent.rossum_mcp_integration import unwrap
+from rossum_agent.rossum_mcp_integration.tools import unwrap
 from rossum_agent.tools.core import get_context
 from rossum_agent.utils import compute_json_diff
 

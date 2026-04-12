@@ -124,7 +124,7 @@ API docs available at `/api/docs` (Swagger) and `/api/redoc`.
 ```python
 import asyncio
 from rossum_agent.agent import create_agent
-from rossum_agent.rossum_mcp_integration import create_mcp_connection
+from rossum_agent.rossum_mcp_integration.connection import connect_mcp_server
 
 async def main():
     mcp_connection = await create_mcp_connection()
