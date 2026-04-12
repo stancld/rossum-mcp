@@ -15,7 +15,7 @@ from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
 from rossum_agent.bedrock_client import create_async_bedrock_client
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
+from rossum_agent.rossum_mcp_integration.connection import connect_mcp_server
 from rossum_agent.system_prompt import get_system_prompt
 from rossum_agent.tools.core import AgentContext, reset_context, set_context
 from rossum_agent.tools.dynamic_tools import get_write_tools_async

@@ -1,190 +1,58 @@
-"""MCP Tools Integration Module.
+"""Change tracking mixin for MCPConnection.
 
-Provides functionality to connect to the rossum-mcp server and convert MCP tools
-to Anthropic tool format for use with the Claude API.
-
-MCPConnection supports optional change tracking: when write_tools is provided,
-the connection intercepts write operations, caches read results, and tracks
-entity changes for version control.
+Intercepts write operations, caches read results, and tracks entity changes
+for version control.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
-from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass, field, is_dataclass
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
-
-from anthropic.types import ToolParam
-from fastmcp import Client
-from fastmcp.client.transports import StdioTransport
+from typing import TYPE_CHECKING, Any, cast
 
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.models import EntityChange
+from rossum_agent.rossum_mcp_integration.tools import (
+    Operation,
+    _pop_tracked_resources,
+    classify_operation,
+    extract_entity_id,
+    extract_entity_name,
+    extract_entity_type,
+    to_dict,
+    unwrap,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
     import valkey
-    from mcp.types import Tool as MCPTool
 
-    from rossum_agent.api.models.schemas import MCPMode
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 logger = logging.getLogger(__name__)
 
-Operation: TypeAlias = Literal["create", "update", "delete"]  # noqa: UP040 - `type` keyword causes cyclic definition with `from __future__ import annotations`
 
-_TRACKED_RESOURCES_KEY = "_tracked_resources"
-_WRITE_PREFIXES = ("create_", "update_", "delete_", "patch_")
-_READ_PREFIXES = ("get_", "list_")
+class ChangeTrackingMixin:
+    """Mixin that adds change tracking capabilities to MCPConnection.
 
-_OPERATION_MAP: dict[str, Operation] = {
-    "create_": "create",
-    "update_": "update",
-    "patch_": "update",
-    "delete_": "delete",
-}
-
-# Tools that don't follow the standard prefix convention
-_TOOL_OVERRIDES: dict[str, tuple[str, Operation]] = {
-    "prune_schema_fields": ("schema", "update"),
-    "create_queue_from_template": ("queue", "create"),
-    "create_hook_from_template": ("hook", "create"),
-}
-
-
-def extract_entity_type(tool_name: str) -> str | None:
-    """Extract entity type from tool name (e.g., 'update_queue' -> 'queue')."""
-    if tool_name in _TOOL_OVERRIDES:
-        return _TOOL_OVERRIDES[tool_name][0]
-    for prefix in (*_WRITE_PREFIXES, *_READ_PREFIXES):
-        if tool_name.startswith(prefix):
-            return tool_name[len(prefix) :]
-    return None
-
-
-def extract_entity_id(entity_type: str, arguments: dict[str, Any]) -> str | None:
-    """Extract entity ID from tool arguments (e.g., queue_id from update_queue args)."""
-    id_key = f"{entity_type}_id"
-    entity_id = arguments.get(id_key)
-    if entity_id is not None:
-        return str(entity_id)
-    if "id" in arguments:
-        return str(arguments["id"])
-    return None
-
-
-def to_dict(obj: Any) -> dict | None:
-    """Convert MCP result to a plain dict. Handles Pydantic models, dataclasses, and dicts."""
-    if isinstance(obj, dict):
-        return obj
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump()
-    if is_dataclass(obj) and not isinstance(obj, type):
-        return asdict(obj)
-    return None
-
-
-def unwrap(data: dict) -> dict:
-    """Unwrap FastMCP's {"result": ...} wrapper if present."""
-    inner = data.get("result")
-    return inner if isinstance(inner, dict) else data
-
-
-def extract_entity_name(data: dict | None) -> str:
-    """Extract a human-readable name from entity data, unwrapping FastMCP wrapper."""
-    if data is None:
-        return ""
-    source = unwrap(data)
-    for key in ("name", "label", "title", "subject"):
-        if source.get(key):
-            return str(source[key])
-    return ""
-
-
-def classify_operation(tool_name: str) -> Operation:
-    """Classify the operation type from tool name."""
-    if tool_name in _TOOL_OVERRIDES:
-        return _TOOL_OVERRIDES[tool_name][1]
-    for prefix, operation in _OPERATION_MAP.items():
-        if tool_name.startswith(prefix):
-            return operation
-    return "update"
-
-
-def _pop_tracked_resources(result: Any) -> list[dict[str, Any]]:
-    """Extract and remove _tracked_resources from a dict result.
-
-    Returns the list of tracked resource entries, or an empty list if the
-    result is not a dict or has no tracked resources.
-    """
-    if isinstance(result, dict):
-        return result.pop(_TRACKED_RESOURCES_KEY, [])
-    return []
-
-
-@dataclass
-class MCPConnection:
-    """MCP client connection with optional change tracking.
-
-    When write_tools is provided, the connection intercepts write operations,
-    caches read results, and tracks entity changes for version control.
+    Expects the host class to provide these attributes/methods:
+    write_tools, chat_id, valkey_client, cache_ttl_seconds,
+    _read_cache, _changes, _commit_store, _snapshot_store, _environment,
+    and _call_mcp().
     """
 
-    client: Client
-    write_tools: set[str] = field(default_factory=set)
-    chat_id: str | None = None
-    valkey_client: valkey.Valkey | None = None
-    cache_ttl_seconds: int = 30 * 24 * 3600
-    _tools: list[MCPTool] | None = field(default=None, init=False, repr=False)
-    _read_cache: dict[tuple[str, str], dict] = field(default_factory=dict, init=False, repr=False)
-    _changes: list[EntityChange] = field(default_factory=list, init=False, repr=False)
-    _commit_store: CommitStore | None = field(default=None, init=False, repr=False)
-    _snapshot_store: SnapshotStore | None = field(default=None, init=False, repr=False)
-    _environment: str | None = field(default=None, init=False, repr=False)
-
-    async def get_tools(self) -> list[MCPTool]:
-        """Get the list of available MCP tools (cached)."""
-        if self._tools is None:
-            self._tools = await self.client.list_tools()
-        return self._tools
-
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
-        """Call an MCP tool by name with the given arguments."""
-        arguments = arguments or {}
-
-        if name in self.write_tools:
-            return await self._handle_write(name, arguments)
-
-        result = await self._call_mcp(name, arguments)
-        self._try_cache_read(name, arguments, result)
-        return result
+    write_tools: set[str]
+    chat_id: str | None
+    valkey_client: valkey.Valkey | None
+    cache_ttl_seconds: int
+    _read_cache: dict[tuple[str, str], dict]
+    _changes: list[EntityChange]
+    _commit_store: CommitStore | None
+    _snapshot_store: SnapshotStore | None
+    _environment: str | None
 
     async def _call_mcp(self, name: str, arguments: dict[str, Any]) -> Any:
-        """Execute the raw MCP tool call and extract the result."""
-        logger.info(f"Calling MCP tool {name}")
-
-        result = await self.client.call_tool(name, arguments)
-        # Prefer structured_content (raw dict) over data (parsed pydantic model)
-        # because FastMCP's json_schema_to_type has a bug where nested dict fields
-        # like config: dict[str, Any] become empty dataclasses, losing all data.
-        if result.structured_content is not None:
-            raw = result.structured_content
-            # FastMCP sometimes wraps return values in {"result": ...}
-            if isinstance(raw, dict):
-                return unwrap(raw)
-            return raw
-        if result.data is not None:
-            return result.data
-        if result.content:
-            text_parts = [str(block.text) for block in result.content if hasattr(block, "text") and block.text]
-            if len(text_parts) == 1:
-                return text_parts[0]
-            return "\n".join(text_parts) if text_parts else None
-        return None
+        raise NotImplementedError
 
     def _cache_get(self, entity_type: str, entity_id: str) -> dict | None:
         if self.valkey_client and self.chat_id:
@@ -401,7 +269,10 @@ class MCPConnection:
         if not (self._commit_store and self._snapshot_store and self._environment and self._changes):
             return
         CommitService(self._commit_store, self._snapshot_store).create_commit(
-            self, self.chat_id or "unknown", user_request, self._environment
+            cast("MCPConnection", self),
+            self.chat_id or "unknown",
+            user_request,
+            self._environment,  # type: ignore[arg-type]
         )
 
     def get_changes(self) -> list[EntityChange]:
@@ -415,43 +286,3 @@ class MCPConnection:
     def clear_changes(self) -> None:
         """Clear tracked changes (after committing)."""
         self._changes.clear()
-
-
-def create_mcp_transport(
-    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: MCPMode = "read-only"
-) -> StdioTransport:
-    """Create a StdioTransport for the rossum-mcp server."""
-    return StdioTransport(
-        command="rossum-mcp",
-        args=[],
-        env={
-            **os.environ,
-            "ROSSUM_API_BASE_URL": rossum_api_base_url.rstrip("/"),
-            "ROSSUM_API_TOKEN": rossum_api_token,
-            "ROSSUM_MCP_MODE": mcp_mode,
-        },
-    )
-
-
-@asynccontextmanager
-async def connect_mcp_server(
-    rossum_api_token: str, rossum_api_base_url: str, mcp_mode: MCPMode = "read-only"
-) -> AsyncIterator[MCPConnection]:
-    """Connect to the rossum-mcp server and yield an MCPConnection.
-
-    This context manager handles the lifecycle of the MCP client connection.
-    Tools are cached after the first retrieval for efficiency.
-    """
-    transport = create_mcp_transport(
-        rossum_api_token=rossum_api_token, rossum_api_base_url=rossum_api_base_url, mcp_mode=mcp_mode
-    )
-    async with (client := Client(transport)):
-        yield MCPConnection(client=client)
-
-
-def mcp_tools_to_anthropic_format(mcp_tools: list[MCPTool]) -> list[ToolParam]:
-    """Convert MCP tools to Anthropic tool format."""
-    return [
-        ToolParam(name=mcp_tool.name, description=mcp_tool.description or "", input_schema=mcp_tool.inputSchema)
-        for mcp_tool in mcp_tools
-    ]

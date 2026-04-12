@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from rossum_agent.change_tracking.models import ConfigCommit, EntityChange
-from rossum_agent.rossum_mcp_integration import unwrap
+from rossum_agent.rossum_mcp_integration.tools import unwrap
 from rossum_agent.tools.change_history import (
     _collapsed_operation,
     _compute_revert_patch,

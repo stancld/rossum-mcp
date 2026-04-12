@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from rossum_agent.agent.models import ToolCall, ToolResult
 from rossum_agent.api.models.schemas import Persona
-from rossum_agent.rossum_mcp_integration import classify_operation, extract_entity_id, extract_entity_type
+from rossum_agent.rossum_mcp_integration.tools import classify_operation, extract_entity_id, extract_entity_type
 from rossum_agent.tools import INTERNAL_WRITE_TOOL_NAMES
 from rossum_agent.tools.core import (
     CAUTIOUS_APPROVAL_LABEL,
@@ -26,7 +26,7 @@ from rossum_agent.tools.dynamic_tools import is_mcp_write_tool
 from rossum_agent.utils import compute_json_diff
 
 if TYPE_CHECKING:
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 logger = logging.getLogger(__name__)
 

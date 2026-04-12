@@ -13,14 +13,14 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
-from rossum_agent.rossum_mcp_integration import mcp_tools_to_anthropic_format
+from rossum_agent.rossum_mcp_integration.tools import mcp_tools_to_anthropic_format
 from rossum_agent.tools.core import get_context
 
 if TYPE_CHECKING:
     from anthropic.types import ToolParam
     from mcp.types import Tool as MCPTool
 
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 logger = logging.getLogger(__name__)
 

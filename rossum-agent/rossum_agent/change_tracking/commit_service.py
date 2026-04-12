@@ -12,7 +12,7 @@ from rossum_agent.change_tracking.models import ConfigCommit, compute_commit_has
 if TYPE_CHECKING:
     from rossum_agent.change_tracking.models import EntityChange
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
 _EPOCH = datetime.min.replace(tzinfo=UTC)
 

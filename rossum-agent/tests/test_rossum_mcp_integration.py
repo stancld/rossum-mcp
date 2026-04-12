@@ -8,13 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.change_tracking.models import EntityChange
-from rossum_agent.rossum_mcp_integration import (
-    MCPConnection,
-    _pop_tracked_resources,
-    connect_mcp_server,
-    create_mcp_transport,
-    mcp_tools_to_anthropic_format,
-)
+from rossum_agent.rossum_mcp_integration.connection import MCPConnection, connect_mcp_server, create_mcp_transport
+from rossum_agent.rossum_mcp_integration.tools import _pop_tracked_resources, mcp_tools_to_anthropic_format
 
 
 class TestCreateMCPTransport:
@@ -221,7 +216,7 @@ class TestConnectMCPServer:
         mock_tools = [MagicMock(name="tool1")]
         mock_client_instance.list_tools.return_value = mock_tools
 
-        with patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class:
+        with patch("rossum_agent.rossum_mcp_integration.connection.Client") as mock_client_class:
             mock_client_class.return_value = mock_client_instance
             mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
             mock_client_instance.__aexit__ = AsyncMock(return_value=None)
@@ -242,8 +237,8 @@ class TestConnectMCPServer:
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
 
         with (
-            patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class,
-            patch("rossum_agent.rossum_mcp_integration.create_mcp_transport") as mock_create_transport,
+            patch("rossum_agent.rossum_mcp_integration.connection.Client") as mock_client_class,
+            patch("rossum_agent.rossum_mcp_integration.connection.create_mcp_transport") as mock_create_transport,
         ):
             mock_transport = MagicMock()
             mock_create_transport.return_value = mock_transport
@@ -780,7 +775,7 @@ class TestHandleWriteTrackedResources:
         )
 
         # Should not raise and should not call CommitService
-        with patch("rossum_agent.rossum_mcp_integration.CommitService") as mock_cs:
+        with patch("rossum_agent.rossum_mcp_integration.change_tracking.CommitService") as mock_cs:
             conn.flush_and_commit("test request")
             mock_cs.assert_not_called()
 
