@@ -16,9 +16,13 @@ at multiple points to provide real-time updates to the client. The yield flow is
         │                                            ├── #3 Thinking tokens (chain-of-thought)
         │                                            └── #4 Text deltas (after initial buffer)
         │
-        ├── #6 Final answer (no tools, response complete)
+        ├── #6 Finalize thinking (thinking → tool_use with no intermediate text)
         │
-        └── #7 forwards from execute_tools_with_progress
+        ├── #7 Misclassification correction (text reclassified as INTERMEDIATE when tool_use follows)
+        │
+        ├── #8 Final answer (no tools, response complete)
+        │
+        └── #9 forwards from execute_tools_with_progress
                 ├── Tool starting (which tool is about to run)
                 └── Sub-agent progress (from nested agent tools like patch_schema_with_subagent)
 
