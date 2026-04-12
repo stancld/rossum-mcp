@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from rossum_agent.agent import (
-    AgentConfig,
     AgentStep,
     ErrorStep,
     FinalAnswerStep,
@@ -18,7 +17,6 @@ from rossum_agent.agent import (
 __version__ = "2.1.0dev0"
 
 __all__ = [
-    "AgentConfig",
     "AgentStep",
     "ErrorStep",
     "FinalAnswerStep",

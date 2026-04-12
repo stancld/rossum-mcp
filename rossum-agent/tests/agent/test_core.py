@@ -9,16 +9,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from anthropic import APIError, APITimeoutError, RateLimitError
 from rossum_agent.agent import (
-    AgentConfig,
     AgentMemory,
     MemoryStep,
     RossumAgent,
     TaskStep,
     ToolCall,
     ToolResult,
-    truncate_content,
 )
-from rossum_agent.agent.core import create_agent
+from rossum_agent.agent.core import REQUEST_DELAY, create_agent
 from rossum_agent.agent.models import (
     ErrorStep,
     FinalAnswerStep,
@@ -28,51 +26,6 @@ from rossum_agent.agent.models import (
 )
 from rossum_agent.tools.core import AgentContext, SubAgentTokenUsage, reset_context, set_context
 from rossum_agent.utils import add_message_cache_breakpoint
-
-
-class TestTruncateContent:
-    """Test truncate_content function."""
-
-    def test_returns_content_unchanged_when_under_limit(self):
-        """Test that content under the limit is returned unchanged."""
-        content = "Short content"
-        result = truncate_content(content, max_length=100)
-        assert result == content
-
-    def test_truncates_content_when_over_limit(self):
-        """Test that content over the limit is truncated with head and tail."""
-        content = "A" * 1000
-        result = truncate_content(content, max_length=100)
-        assert "truncated" in result.lower()
-        assert result.startswith("A" * 50)
-        assert result.endswith("A" * 50)
-
-    def test_uses_default_max_length(self):
-        """Test that default max_length is used when not specified."""
-        content = "A" * 10
-        result = truncate_content(content)
-        assert result == content
-
-
-class TestAgentConfig:
-    """Test AgentConfig dataclass."""
-
-    def test_default_values(self):
-        """Test default configuration values."""
-        config = AgentConfig()
-        assert config.max_output_tokens == 128000
-        assert config.max_steps == 50
-        assert config.temperature == 1.0  # Required for extended thinking
-
-    def test_custom_values(self):
-        """Test custom configuration values."""
-        config = AgentConfig(
-            max_output_tokens=4096,
-            max_steps=10,
-        )
-        assert config.max_output_tokens == 4096
-        assert config.max_steps == 10
-        assert config.temperature == 1.0  # Must be 1.0 for extended thinking
 
 
 class TestAgentStepTypes:
@@ -508,12 +461,10 @@ class TestRossumAgentMemoryIntegration:
         """Helper to create an agent with mocked dependencies."""
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     def test_reset_clears_memory_and_tokens(self):
@@ -600,12 +551,10 @@ class TestAgentRun:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig(max_steps=3)
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     @pytest.mark.asyncio
@@ -680,6 +629,7 @@ class TestAgentRun:
         with (
             patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
             patch("rossum_agent.agent.core.asyncio.sleep", new_callable=AsyncMock),
+            patch("rossum_agent.agent.core.MAX_STEPS", 3),
         ):
             steps = []
             async for step in agent.run("Test prompt"):
@@ -882,12 +832,10 @@ class TestAgentRunRequestDelay:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig(max_steps=3, request_delay=1.0)
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     @pytest.mark.asyncio
@@ -911,11 +859,11 @@ class TestAgentRunRequestDelay:
 
         async def capture_sleep(duration):
             sleep_calls.append(duration)
-            # Don't actually sleep in tests
 
         with (
             patch.object(agent, "_stream_model_response", side_effect=mock_stream_response),
             patch("rossum_agent.agent.core.asyncio.sleep", side_effect=capture_sleep),
+            patch("rossum_agent.agent.core.MAX_STEPS", 3),
         ):
             steps = []
             async for step in agent.run("Test prompt"):
@@ -923,7 +871,7 @@ class TestAgentRunRequestDelay:
 
         # Should have delays for step 2 and 3 (not step 1)
         assert len(sleep_calls) == 2
-        assert all(d == 1.0 for d in sleep_calls)
+        assert all(d == REQUEST_DELAY for d in sleep_calls)
 
 
 class TestAgentAddAssistantMessage:
@@ -933,12 +881,10 @@ class TestAgentAddAssistantMessage:
         """Helper to create an agent."""
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     def test_adds_memory_step_with_text(self):
@@ -960,12 +906,10 @@ class TestAgentGetTools:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     @pytest.mark.asyncio
@@ -1075,25 +1019,6 @@ class TestCreateAgentFactory:
         assert agent.system_prompt == "Test system prompt"
         mock_create_client.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_creates_agent_with_custom_config(self):
-        """Test that create_agent respects custom config."""
-
-        mock_mcp = AsyncMock()
-        config = AgentConfig(max_steps=10)
-
-        with patch("rossum_agent.agent.core.create_async_bedrock_client") as mock_create_client:
-            mock_create_client.return_value = MagicMock()
-
-            agent = await create_agent(
-                mcp_connection=mock_mcp,
-                system_prompt="Test",
-                config=config,
-            )
-
-        assert agent.config.max_steps == 10
-        assert agent.config.temperature == 1.0  # Must be 1.0 for extended thinking
-
 
 class TestPreloadInjection:
     """Test that pre-loaded tool categories are communicated to the agent."""
@@ -1103,12 +1028,10 @@ class TestPreloadInjection:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig(max_steps=1)
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     @pytest.mark.asyncio
@@ -1203,12 +1126,10 @@ class TestCalculateRateLimitDelay:
         """Helper to create an agent."""
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     def test_first_retry_uses_base_delay(self):
@@ -1285,7 +1206,7 @@ class TestRossumAgentProperties:
             mock_mcp = MagicMock()
             mock_mcp.list_tools.return_value = MagicMock(tools=[])
 
-            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt", config=None)
+            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt")
             yield agent
 
     def test_messages_property(self, mock_agent):
@@ -1334,7 +1255,7 @@ class TestRossumAgentTokenTracking:
             mock_mcp = MagicMock()
             mock_mcp.list_tools.return_value = MagicMock(tools=[])
 
-            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt", config=None)
+            agent = RossumAgent(client=mock_client, mcp_connection=mock_mcp, system_prompt="Test prompt")
             yield agent
 
     def test_initial_token_counters_are_zero(self, mock_agent):

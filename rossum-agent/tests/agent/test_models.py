@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
 from rossum_agent.agent.models import (
-    AgentConfig,
     ErrorStep,
     FinalAnswerStep,
     ReasoningStep,
@@ -16,40 +14,8 @@ from rossum_agent.agent.models import (
     ToolResult,
     ToolResultStep,
     ToolStartStep,
-    truncate_content,
 )
 from rossum_agent.api.models.schemas import TokenUsageBreakdown
-
-
-class TestTruncateContent:
-    """Test truncate_content function."""
-
-    def test_returns_content_unchanged_when_under_limit(self):
-        content = "Short content"
-        result = truncate_content(content, max_length=100)
-        assert result == content
-
-    def test_returns_content_unchanged_when_equal_to_limit(self):
-        content = "A" * 100
-        result = truncate_content(content, max_length=100)
-        assert result == content
-
-    def test_truncates_content_when_over_limit(self):
-        content = "A" * 1000
-        result = truncate_content(content, max_length=100)
-        assert "truncated" in result.lower()
-        assert result.startswith("A" * 50)
-        assert result.endswith("A" * 50)
-
-    def test_uses_default_max_length(self):
-        content = "A" * 10
-        result = truncate_content(content)
-        assert result == content
-
-    def test_truncation_message_includes_max_length(self):
-        content = "B" * 500
-        result = truncate_content(content, max_length=200)
-        assert "200" in result
 
 
 class TestToolCallSerialization:
@@ -129,27 +95,6 @@ class TestToolResultSerialization:
     def test_default_is_error_is_false(self):
         tool_result = ToolResult(tool_call_id="tc1", name="tool", content="ok")
         assert tool_result.is_error is False
-
-
-class TestAgentConfig:
-    """Test AgentConfig dataclass."""
-
-    def test_default_values(self):
-        config = AgentConfig()
-        assert config.max_output_tokens == 128000
-        assert config.max_steps == 50
-        assert config.temperature == 1.0  # Required for extended thinking
-
-    def test_request_delay_default(self):
-        config = AgentConfig()
-        assert config.request_delay == 3.0
-
-    def test_custom_values(self):
-        config = AgentConfig(max_output_tokens=4096, max_steps=10, request_delay=1.0)
-        assert config.max_output_tokens == 4096
-        assert config.max_steps == 10
-        assert config.temperature == 1.0  # Must be 1.0 for extended thinking
-        assert config.request_delay == 1.0
 
 
 class TestReasoningStep:
@@ -320,18 +265,6 @@ class TestThinkingBlockData:
         restored = ThinkingBlockData.from_dict(serialized)
         assert restored.thinking == original.thinking
         assert restored.signature == original.signature
-
-
-class TestAgentConfigValidation:
-    """Test AgentConfig validation."""
-
-    def test_temperature_must_be_one(self):
-        with pytest.raises(ValueError, match=r"temperature must be 1\.0"):
-            AgentConfig(temperature=0.5)
-
-    def test_default_effort(self):
-        config = AgentConfig()
-        assert config.effort == "high"
 
 
 class TestTokenUsageBreakdown:

@@ -16,7 +16,7 @@ from anthropic.types import (
     ToolUseBlock,
     Usage,
 )
-from rossum_agent.agent import AgentConfig, RossumAgent, ToolCall
+from rossum_agent.agent import RossumAgent, ToolCall
 from rossum_agent.agent.models import (
     FinalAnswerStep,
     ReasoningStep,
@@ -552,12 +552,10 @@ class TestStreamModelResponse:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     def _create_mock_stream(self, events: list, final_message: Message):

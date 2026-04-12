@@ -26,7 +26,6 @@ from rossum_agent.agent.models import (
     ToolResult,
     ToolResultStep,
     ToolStartStep,
-    truncate_content,
 )
 from rossum_agent.agent.spillover import maybe_spill
 from rossum_agent.tools import execute_internal_tool, get_internal_tool_names
@@ -41,6 +40,16 @@ if TYPE_CHECKING:
     from rossum_agent.rossum_mcp_integration import MCPConnection
 
 logger = logging.getLogger(__name__)
+
+MAX_TOOL_OUTPUT_LENGTH = 30000
+
+
+def truncate_content(content: str, max_length: int = MAX_TOOL_OUTPUT_LENGTH) -> str:
+    """Truncate content preserving head and tail."""
+    if len(content) <= max_length:
+        return content
+    half = max_length // 2
+    return content[:half] + f"\n..._Content truncated to stay below {max_length} characters_...\n" + content[-half:]
 
 
 def _parse_json_encoded_strings(arguments: dict) -> dict:

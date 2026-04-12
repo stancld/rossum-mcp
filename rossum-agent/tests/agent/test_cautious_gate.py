@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from rossum_agent.agent import AgentConfig, RossumAgent, ToolCall, ToolResult
+from rossum_agent.agent import RossumAgent, ToolCall, ToolResult
 from rossum_agent.agent.cautious_gate import is_write_tool
 from rossum_agent.agent.tool_execution import execute_tool_with_progress
 from rossum_agent.tools.core import CAUTIOUS_CONFIRMATION_MARKER, AgentContext, reset_context, set_context
@@ -19,12 +19,10 @@ class TestCautiousWriteGate:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     async def _get_final_result(self, agent: RossumAgent, tool_call: ToolCall) -> ToolResult:
