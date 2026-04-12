@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from rossum_agent.python_tools.copilot._shared import (
+from rossum_agent.tools.python_helpers.copilot._shared import (
     _fetch_schema_content,
     _find_field_in_schema,
     _inject_field_into_schema,
@@ -19,7 +19,7 @@ class TestJsonHeaders:
 
 
 class TestFetchSchemaContent:
-    @patch("rossum_agent.python_tools.copilot._shared.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot._shared.httpx.Client")
     def test_fetches_schema_content(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {"content": [{"id": "section", "category": "section", "children": []}]}

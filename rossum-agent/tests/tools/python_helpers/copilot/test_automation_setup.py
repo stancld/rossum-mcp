@@ -6,7 +6,8 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
-from rossum_agent.python_tools.copilot.automation_setup import (
+from rossum_agent.tools.core import AgentContext, set_context
+from rossum_agent.tools.python_helpers.copilot.automation_setup import (
     _build_automation_targets_url,
     _build_current_stats_url,
     _build_projections_url,
@@ -15,7 +16,6 @@ from rossum_agent.python_tools.copilot.automation_setup import (
     list_automation_targets,
     save_automation_target,
 )
-from rossum_agent.tools.core import AgentContext, set_context
 
 
 class TestBuildUrls:
@@ -46,7 +46,7 @@ class TestBuildUrls:
 
 class TestGetAutomationCurrentStats:
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_success(self, mock_client_class: MagicMock) -> None:
         api_response = {
             "estimated_error_rate": 0.05,
@@ -85,7 +85,7 @@ class TestGetAutomationCurrentStats:
         assert "credentials not available" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_http_error(self, mock_client_class: MagicMock) -> None:
         mock_response = Mock()
         mock_response.status_code = 503
@@ -107,7 +107,7 @@ class TestGetAutomationCurrentStats:
 
 class TestGetAutomationProjections:
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_success(self, mock_client_class: MagicMock) -> None:
         api_response = {
             "total_document_count": 1000,
@@ -138,7 +138,7 @@ class TestGetAutomationProjections:
         assert sent_json == {"fields": fields}
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_with_exclude_blockers(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {"baseline": {}, "projections": []}
@@ -162,7 +162,7 @@ class TestGetAutomationProjections:
         assert sent_params == {"exclude_blockers": "error_message,extension"}
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_without_exclude_blockers_passes_none(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {"baseline": {}, "projections": []}
@@ -191,7 +191,7 @@ class TestGetAutomationProjections:
         assert "credentials not available" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_http_error(self, mock_client_class: MagicMock) -> None:
         mock_response = Mock()
         mock_response.status_code = 400
@@ -213,7 +213,7 @@ class TestGetAutomationProjections:
 
 class TestListAutomationTargets:
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_success(self, mock_client_class: MagicMock) -> None:
         api_response = {
             "results": [
@@ -271,7 +271,7 @@ class TestSaveAutomationTarget:
         assert "read-write mode" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_success(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext(mcp_mode="read-write"))
         api_response = {
@@ -313,7 +313,7 @@ class TestSaveAutomationTarget:
         assert sent_json["datapoint_automation_targets"] == datapoint_targets
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_legacy_thresholds_type(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext(mcp_mode="read-write"))
         mock_response = MagicMock()
@@ -353,7 +353,7 @@ class TestSaveAutomationTarget:
         assert "credentials not available" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_http_error(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext(mcp_mode="read-write"))
         mock_response = Mock()
@@ -379,7 +379,7 @@ class TestSaveAutomationTarget:
         assert "HTTP 403" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.automation_setup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.automation_setup.httpx.Client")
     def test_generic_error(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext(mcp_mode="read-write"))
         mock_client = MagicMock()

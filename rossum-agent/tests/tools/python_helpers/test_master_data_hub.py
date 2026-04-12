@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-from rossum_agent.python_tools.master_data_hub import (
+from rossum_agent.tools.core import AgentContext, set_context
+from rossum_agent.tools.python_helpers.master_data_hub import (
     _extract_dataset_name,
     _extract_field_names,
     list_datasets,
     search_dataset,
 )
-from rossum_agent.tools.core import AgentContext, set_context
 
 _ENV = {"ROSSUM_API_BASE_URL": "https://example.rossum.app/api/v1", "ROSSUM_API_TOKEN": "test-token"}
 
@@ -54,7 +54,7 @@ class TestExtractFieldNames:
 
 class TestListDatasets:
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_returns_formatted_datasets(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext())
         mock_response = MagicMock()
@@ -96,7 +96,7 @@ class TestListDatasets:
         assert "description" not in result["datasets"][1]
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_handles_list_response(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext())
         mock_response = MagicMock()
@@ -118,7 +118,7 @@ class TestListDatasets:
         assert result["count"] == 1
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_handles_empty_response(self, mock_client_class: MagicMock) -> None:
         set_context(AgentContext())
         mock_response = MagicMock()
@@ -148,8 +148,8 @@ class TestListDatasets:
 
 class TestSearchDataset:
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_simple_match_query(self, mock_client_class: MagicMock, mock_resolve: MagicMock) -> None:
         set_context(AgentContext())
         mock_resolve.return_value = "imported-abc"
@@ -180,8 +180,8 @@ class TestSearchDataset:
         assert {"$limit": 50} in payload["aggregate"]
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_pipeline_query(self, mock_client_class: MagicMock, mock_resolve: MagicMock) -> None:
         set_context(AgentContext())
         mock_resolve.return_value = "imported-abc"
@@ -211,8 +211,8 @@ class TestSearchDataset:
         assert payload["aggregate"] == [{"$sort": {"Name": 1}}, {"$limit": 10}]
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_match_plus_pipeline_combined(self, mock_client_class: MagicMock, mock_resolve: MagicMock) -> None:
         set_context(AgentContext())
         mock_resolve.return_value = "imported-abc"
@@ -244,8 +244,8 @@ class TestSearchDataset:
         assert {"$limit": 50} in payload["aggregate"]
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_no_filters_fetches_first_rows(self, mock_client_class: MagicMock, mock_resolve: MagicMock) -> None:
         set_context(AgentContext())
         mock_resolve.return_value = "imported-abc"
@@ -277,8 +277,8 @@ class TestSearchDataset:
         assert "non-empty" in result["error"]
 
     @patch.dict("os.environ", _ENV)
-    @patch("rossum_agent.python_tools.master_data_hub._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.master_data_hub.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.master_data_hub.httpx.Client")
     def test_handles_list_response_format(self, mock_client_class: MagicMock, mock_resolve: MagicMock) -> None:
         set_context(AgentContext())
         mock_resolve.return_value = "imported-abc"

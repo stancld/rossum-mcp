@@ -1,8 +1,4 @@
-"""Formula field suggestion helpers for the Rossum Agent.
-
-This module provides functions to get formula suggestions from Rossum's internal API
-for formula fields based on natural language descriptions.
-"""
+"""Formula field suggestion helpers for the Rossum Agent."""
 
 from __future__ import annotations
 
@@ -13,8 +9,14 @@ from typing import Literal
 
 import httpx
 
-from rossum_agent.python_tools.copilot._shared import _fetch_schema_content, _inject_field_into_schema, _json_headers
 from rossum_agent.tools.core import get_context
+from rossum_agent.tools.python_helpers.copilot._shared import (
+    _fetch_schema_content,
+    _handle_api_error,
+    _inject_field_into_schema,
+    _json_headers,
+    _request_with_retry,
+)
 
 FormulaFieldType = Literal["string", "number", "date", "enum"]
 
@@ -24,11 +26,6 @@ _SUGGEST_FORMULA_TIMEOUT = 60
 
 
 def _build_suggest_formula_url(api_base_url: str) -> str:
-    """Build the suggest_formula endpoint URL.
-
-    Uses the base URL directly (e.g., https://elis.rossum.ai/api/v1)
-    and appends the internal endpoint path.
-    """
     return f"{api_base_url.rstrip('/')}/internal/schemas/suggest_formula"
 
 
@@ -37,7 +34,6 @@ def _create_formula_field_definition(
     field_schema_id: str | None = None,
     field_type: FormulaFieldType = "string",
 ) -> dict:
-    """Create a properly structured formula field definition."""
     if not field_schema_id:
         field_schema_id = label.lower().replace(" ", "_")
     return {
@@ -91,12 +87,8 @@ def suggest_formula_field(
 
         payload = {"field_schema_id": field_schema_id, "hint": hint, "schema_content": enriched_schema}
 
-        logger.debug(f"Calling suggest_formula API: {url}")
-        logger.debug(f"suggest_formula payload: {json.dumps(payload, indent=2)}")
-
         with httpx.Client(timeout=_SUGGEST_FORMULA_TIMEOUT) as client:
-            response = client.post(url, json=payload, headers=_json_headers(token))
-            response.raise_for_status()
+            response = _request_with_retry(client, "post", url, json=payload, headers=_json_headers(token))
             result = response.json()
 
         suggestions = result.get("results", [])
@@ -111,33 +103,23 @@ def suggest_formula_field(
         if summary:
             summary = _clean_html(summary)
 
-        field_definition = _create_formula_field_definition(label, field_schema_id, field_type)
-        field_definition["formula"] = formula
+        # Reuse field_def from above instead of creating a duplicate
+        field_def["formula"] = formula
 
         return json.dumps(
             {
                 "status": "success",
                 "formula": formula,
-                "field_definition": field_definition,
+                "field_definition": field_def,
                 "section_id": section_id,
                 "summary": summary,
                 "description": _clean_html(top_suggestion.get("description", "")),
             }
         )
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in suggest_formula_field")
-        return json.dumps(
-            {
-                "status": "error",
-                "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}",
-            }
-        )
     except Exception as e:
-        logger.exception("Error in suggest_formula_field")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "suggest_formula_field")
 
 
 def _clean_html(text: str) -> str:
-    """Remove HTML tags from text (simple cleanup for display)."""
     return re.sub(r"<[^>]+>", "", text)

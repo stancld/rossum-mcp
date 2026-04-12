@@ -1,8 +1,4 @@
-"""Automation setup helpers for the Rossum Agent.
-
-This module provides functions to retrieve automation statistics, run projections,
-and manage automation targets for document processing queues via the Rossum API.
-"""
+"""Automation setup helpers for the Rossum Agent."""
 
 from __future__ import annotations
 
@@ -11,8 +7,8 @@ import logging
 
 import httpx
 
-from rossum_agent.python_tools.copilot._shared import _json_headers
 from rossum_agent.tools.core import get_context
+from rossum_agent.tools.python_helpers.copilot._shared import _handle_api_error, _json_headers, _request_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -48,18 +44,13 @@ def get_automation_current_stats(queue_id: int) -> str:
         url = _build_current_stats_url(api_base_url, queue_id)
 
         with httpx.Client(timeout=_AUTOMATION_SETUP_TIMEOUT) as client:
-            response = client.get(url, headers=_json_headers(token))
-            response.raise_for_status()
+            response = _request_with_retry(client, "get", url, headers=_json_headers(token))
             result = response.json()
 
         return json.dumps({"status": "success", **result})
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in get_automation_current_stats")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in get_automation_current_stats")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "get_automation_current_stats")
 
 
 def get_automation_projections(
@@ -89,23 +80,20 @@ def get_automation_projections(
             params["exclude_blockers"] = ",".join(exclude_blockers)
 
         with httpx.Client(timeout=_AUTOMATION_SETUP_TIMEOUT) as client:
-            response = client.post(
+            response = _request_with_retry(
+                client,
+                "post",
                 url,
                 json={"fields": fields},
                 headers=_json_headers(token),
                 params=params or None,
             )
-            response.raise_for_status()
             result = response.json()
 
         return json.dumps({"status": "success", **result})
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in get_automation_projections")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in get_automation_projections")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "get_automation_projections")
 
 
 def list_automation_targets(queue_id: int) -> str:
@@ -124,18 +112,13 @@ def list_automation_targets(queue_id: int) -> str:
         url = _build_automation_targets_url(api_base_url, queue_id)
 
         with httpx.Client(timeout=_AUTOMATION_SETUP_TIMEOUT) as client:
-            response = client.get(url, headers=_json_headers(token))
-            response.raise_for_status()
+            response = _request_with_retry(client, "get", url, headers=_json_headers(token))
             result = response.json()
 
         return json.dumps({"status": "success", **result})
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in list_automation_targets")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in list_automation_targets")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "list_automation_targets")
 
 
 def save_automation_target(
@@ -177,15 +160,10 @@ def save_automation_target(
         }
 
         with httpx.Client(timeout=_AUTOMATION_SETUP_TIMEOUT) as client:
-            response = client.post(url, json=payload, headers=_json_headers(token))
-            response.raise_for_status()
+            response = _request_with_retry(client, "post", url, json=payload, headers=_json_headers(token))
             result = response.json()
 
         return json.dumps({"status": "success", **result})
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in save_automation_target")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in save_automation_target")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "save_automation_target")

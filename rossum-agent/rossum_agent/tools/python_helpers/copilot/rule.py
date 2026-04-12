@@ -1,8 +1,4 @@
-"""Rule suggestion helpers for the Rossum Agent.
-
-This module provides functions to get rule suggestions from Rossum's internal API
-based on natural language descriptions.
-"""
+"""Rule suggestion helpers for the Rossum Agent."""
 
 from __future__ import annotations
 
@@ -11,8 +7,8 @@ import logging
 
 import httpx
 
-from rossum_agent.python_tools.copilot._shared import _json_headers
 from rossum_agent.tools.core import get_context
+from rossum_agent.tools.python_helpers.copilot._shared import _handle_api_error, _json_headers, _request_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +53,13 @@ def suggest_rule(user_query: str, queue_id: int) -> str:
         payload = {"queue": queue_url, "user_query": user_query}
 
         with httpx.Client(timeout=_SUGGEST_RULE_TIMEOUT) as client:
-            response = client.post(
+            response = _request_with_retry(
+                client,
+                "post",
                 _build_suggest_rule_url(api_base_url),
                 json=payload,
                 headers=_json_headers(token),
             )
-            response.raise_for_status()
             result = response.json()
 
         suggestions = result.get("results", [])
@@ -83,12 +80,8 @@ def suggest_rule(user_query: str, queue_id: int) -> str:
             }
         )
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in suggest_rule")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in suggest_rule")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "suggest_rule")
 
 
 def evaluate_rules(queue_id: int, annotation_id: int, schema_rules: list[dict]) -> str:
@@ -109,11 +102,12 @@ def evaluate_rules(queue_id: int, annotation_id: int, schema_rules: list[dict]) 
         headers = _json_headers(token)
 
         with httpx.Client(timeout=_SUGGEST_RULE_TIMEOUT) as client:
-            content_response = client.get(
+            content_response = _request_with_retry(
+                client,
+                "get",
                 _build_annotation_content_url(api_base_url, annotation_id),
                 headers=headers,
             )
-            content_response.raise_for_status()
             content_data = content_response.json()
             annotation_content = (
                 content_data.get("results", content_data) if isinstance(content_data, dict) else content_data
@@ -125,17 +119,16 @@ def evaluate_rules(queue_id: int, annotation_id: int, schema_rules: list[dict]) 
                 "annotation_content": annotation_content,
                 "schema_rules": schema_rules,
             }
-            eval_response = client.post(
+            eval_response = _request_with_retry(
+                client,
+                "post",
                 _build_evaluate_rules_url(api_base_url),
                 json=payload,
                 headers=headers,
             )
-            eval_response.raise_for_status()
-            return eval_response.text
+            result = eval_response.json()
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in evaluate_rules")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
+        return json.dumps({"status": "success", **result})
+
     except Exception as e:
-        logger.exception("Error in evaluate_rules")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "evaluate_rules")
