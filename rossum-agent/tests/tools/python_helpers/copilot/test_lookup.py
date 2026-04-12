@@ -10,10 +10,15 @@ if TYPE_CHECKING:
     from typing import ClassVar
 
 import httpx
-from rossum_agent.python_tools.copilot.lookup import (
-    _build_evaluate_computed_fields_url,
+from rossum_agent.tools.core import AgentContext, set_context
+from rossum_agent.tools.python_helpers.copilot._shared import (
     _build_mdh_aggregate_url,
     _build_mdh_datasets_url,
+    _request_with_retry,
+    _resolve_mdh_dataset_identifier,
+)
+from rossum_agent.tools.python_helpers.copilot.lookup import (
+    _build_evaluate_computed_fields_url,
     _build_suggest_computed_field_url,
     _cache_dataset,
     _collect_datapoint_values,
@@ -24,15 +29,12 @@ from rossum_agent.python_tools.copilot.lookup import (
     _field_definition_cache,
     _find_lookup_field_ids,
     _get_placeholder_field_ids,
-    _request_with_retry,
-    _resolve_mdh_dataset_identifier,
     _update_or_inject_field,
     evaluate_lookup_field,
     get_lookup_dataset_raw_values,
     query_lookup_dataset,
     suggest_lookup_field,
 )
-from rossum_agent.tools.core import AgentContext, set_context
 
 
 class TestBuildSuggestComputedFieldUrl:
@@ -76,7 +78,7 @@ class TestBuildMdhAggregateUrl:
 
 
 class TestResolveMdhDatasetIdentifier:
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_resolves_dataset_name_to_identifier(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = [
@@ -94,7 +96,7 @@ class TestResolveMdhDatasetIdentifier:
 
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_resolves_when_id_is_not_imported_but_dataset_id_is(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = [
@@ -116,7 +118,7 @@ class TestResolveMdhDatasetIdentifier:
 
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_returns_none_when_not_found(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = [{"id": "imported-aaa", "name": "other-dataset"}]
@@ -132,7 +134,7 @@ class TestResolveMdhDatasetIdentifier:
 
         assert resolved is None
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_keeps_imported_identifier_unchanged(self, mock_client_class: MagicMock) -> None:
         resolved = _resolve_mdh_dataset_identifier(
             "https://example.rossum.app/api/v1",
@@ -143,7 +145,7 @@ class TestResolveMdhDatasetIdentifier:
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
         mock_client_class.assert_not_called()
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_matches_dataset_aliases_with_different_spacing(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = [
@@ -161,7 +163,7 @@ class TestResolveMdhDatasetIdentifier:
 
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_reads_dataset_items_from_wrapped_results_payload(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -179,7 +181,7 @@ class TestResolveMdhDatasetIdentifier:
 
         assert resolved == "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_matches_metadata_name_from_wrapped_results_payload(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -217,7 +219,7 @@ class TestRequestWithRetry:
         mock_client.get.assert_called_once()
         mock_response.raise_for_status.assert_called_once()
 
-    @patch("rossum_agent.python_tools.copilot.lookup.time.sleep")
+    @patch("rossum_agent.tools.python_helpers.copilot._shared.time.sleep")
     def test_retries_on_429(self, mock_sleep: MagicMock) -> None:
         rate_limited = MagicMock()
         rate_limited.status_code = 429
@@ -234,7 +236,7 @@ class TestRequestWithRetry:
         assert mock_client.post.call_count == 2
         mock_sleep.assert_called_once_with(2.0)
 
-    @patch("rossum_agent.python_tools.copilot.lookup.time.sleep")
+    @patch("rossum_agent.tools.python_helpers.copilot._shared.time.sleep")
     def test_exponential_backoff(self, mock_sleep: MagicMock) -> None:
         rate_limited = MagicMock()
         rate_limited.status_code = 429
@@ -272,7 +274,7 @@ class TestRequestWithRetry:
 
 
 class TestFetchAnnotationContent:
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_strips_api_v1_prefix_from_relative_url(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {"content": [{"id": "section"}]}
@@ -291,7 +293,7 @@ class TestFetchAnnotationContent:
             headers={"Authorization": "Bearer token"},
         )
 
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_uses_absolute_url_as_is(self, mock_client_class: MagicMock) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {"content": []}
@@ -386,8 +388,8 @@ class TestUpdateOrInjectField:
 
 class TestSuggestLookupField:
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_dataset_appended_to_hint(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
 
@@ -415,8 +417,8 @@ class TestSuggestLookupField:
         assert call_payload["hint"] == "Match by VAT (dataset: Vendors)"
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_successful_suggestion(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "vendor_section", "category": "section", "children": []}]
 
@@ -466,8 +468,8 @@ class TestSuggestLookupField:
         mock_fetch.assert_called_once_with("https://api.rossum.ai/v1", "test_token", 12345)
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_no_suggestions(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
 
@@ -506,8 +508,8 @@ class TestSuggestLookupField:
         assert "credentials not available" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_dataset_in_top_level_response(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
 
@@ -546,8 +548,8 @@ class TestSuggestLookupField:
         assert parsed["dataset"] == "imported-0d652b68-vendors"
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_dataset_prepopulated_in_stub(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         """When dataset is provided, it's set in the stub so the backend shows it as 'Preselected dataset'."""
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
@@ -601,8 +603,8 @@ class TestSuggestLookupField:
         assert parsed["dataset"] == "imported-0d652b68-vendors"
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_dataset_none_when_missing_from_config(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
 
@@ -628,8 +630,8 @@ class TestSuggestLookupField:
         assert parsed["dataset"] is None
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_http_error(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         mock_fetch.return_value = [{"id": "section", "category": "section", "children": []}]
 
@@ -660,8 +662,8 @@ class TestSuggestLookupField:
         assert "HTTP 500" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_caches_field_definition(self, mock_client_class: MagicMock, mock_fetch: MagicMock) -> None:
         _field_definition_cache.clear()
         mock_fetch.return_value = [{"id": "vendor_section", "category": "section", "children": []}]
@@ -935,9 +937,9 @@ class TestEvaluateLookupField:
         ]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content")
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_single_annotation(
         self, mock_client_class: MagicMock, mock_fetch_schema: MagicMock, mock_fetch_annotation: MagicMock
     ) -> None:
@@ -987,9 +989,9 @@ class TestEvaluateLookupField:
         )
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content")
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_multiple_annotations_fetches_schema_once(
         self, mock_client_class: MagicMock, mock_fetch_schema: MagicMock, mock_fetch_annotation: MagicMock
     ) -> None:
@@ -1045,9 +1047,9 @@ class TestEvaluateLookupField:
         assert "credentials not available" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content")
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_http_error(
         self, mock_client_class: MagicMock, mock_fetch_schema: MagicMock, mock_fetch_annotation: MagicMock
     ) -> None:
@@ -1074,9 +1076,9 @@ class TestEvaluateLookupField:
         assert "HTTP 400" in parsed["error"]
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content")
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_field_definition_overrides_schema(
         self, mock_client_class: MagicMock, mock_fetch_schema: MagicMock, mock_fetch_annotation: MagicMock
     ) -> None:
@@ -1163,9 +1165,9 @@ class TestEvaluateLookupField:
         assert sent_field["matching"]["configuration"]["dataset"] == "imported-abc"
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content")
-    @patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_uses_cached_definition_via_field_schema_id(
         self, mock_client_class: MagicMock, mock_fetch_schema: MagicMock, mock_fetch_annotation: MagicMock
     ) -> None:
@@ -1257,9 +1259,11 @@ class TestEvaluateLookupField:
             patch.dict(
                 "os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"}
             ),
-            patch("rossum_agent.python_tools.copilot.lookup._fetch_annotation_content") as mock_fetch_annotation,
-            patch("rossum_agent.python_tools.copilot.lookup._fetch_schema_content") as mock_fetch_schema,
-            patch("rossum_agent.python_tools.copilot.lookup.httpx.Client") as mock_client_class,
+            patch(
+                "rossum_agent.tools.python_helpers.copilot.lookup._fetch_annotation_content"
+            ) as mock_fetch_annotation,
+            patch("rossum_agent.tools.python_helpers.copilot.lookup._fetch_schema_content") as mock_fetch_schema,
+            patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client") as mock_client_class,
         ):
             mock_fetch_schema.return_value = self._SCHEMA
             mock_fetch_annotation.return_value = [{"category": "section", "children": []}]
@@ -1287,8 +1291,8 @@ class TestEvaluateLookupField:
 
 class TestGetLookupDatasetRawValues:
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_fetches_raw_dataset(self, mock_client_class: MagicMock, mock_resolve_dataset: MagicMock) -> None:
         mock_resolve_dataset.return_value = "imported-0d652b68-fd8b-4fc8-9cee-d39105b1304b"
 
@@ -1325,8 +1329,8 @@ class TestGetLookupDatasetRawValues:
         )
 
     @patch.dict("os.environ", {"ROSSUM_API_BASE_URL": "https://api.rossum.ai/v1", "ROSSUM_API_TOKEN": "test_token"})
-    @patch("rossum_agent.python_tools.copilot.lookup._resolve_mdh_dataset_identifier")
-    @patch("rossum_agent.python_tools.copilot.lookup.httpx.Client")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup._resolve_mdh_dataset_identifier")
+    @patch("rossum_agent.tools.python_helpers.copilot.lookup.httpx.Client")
     def test_populates_cache(self, mock_client_class: MagicMock, mock_resolve_dataset: MagicMock) -> None:
         _dataset_cache.clear()
         mock_resolve_dataset.return_value = "imported-abc123"

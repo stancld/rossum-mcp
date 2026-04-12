@@ -11,31 +11,32 @@ import logging
 
 import httpx
 
-from rossum_agent.python_tools.copilot._shared import _json_headers
-from rossum_agent.python_tools.copilot.lookup import (
+from rossum_agent.tools.core import get_context
+from rossum_agent.tools.python_helpers.copilot._shared import (
+    MDH_ALIAS_KEYS,
+    OUTPUT_LIMIT,
     _build_mdh_aggregate_url,
     _build_mdh_datasets_url,
+    _extract_rows,
+    _handle_api_error,
+    _json_headers,
     _request_with_retry,
     _resolve_mdh_dataset_identifier,
 )
-from rossum_agent.tools.core import get_context
 from rossum_agent.tools.utils import _truncate_output
 
 logger = logging.getLogger(__name__)
 
-_OUTPUT_LIMIT = 50000
-_MDH_ALIAS_KEYS = ("name", "label", "title", "dataset_name", "slug")
-
 
 def _extract_dataset_name(item: dict) -> str:
-    """Extract a human-readable name from a dataset catalog entry."""
+    """Extract a human-readable name, preferring metadata over top-level keys."""
     metadata = item.get("metadata")
     if isinstance(metadata, dict):
-        for key in _MDH_ALIAS_KEYS:
+        for key in MDH_ALIAS_KEYS:
             value = metadata.get(key)
             if isinstance(value, str) and value:
                 return value
-    for key in _MDH_ALIAS_KEYS:
+    for key in MDH_ALIAS_KEYS:
         value = item.get(key)
         if isinstance(value, str) and value:
             return value
@@ -43,7 +44,6 @@ def _extract_dataset_name(item: dict) -> str:
 
 
 def _extract_field_names(item: dict) -> list[str]:
-    """Extract field/column names from a dataset schema."""
     schema = item.get("schema")
     if isinstance(schema, dict):
         properties = schema.get("properties")
@@ -91,14 +91,10 @@ def list_datasets() -> str:
             datasets.append(entry)
 
         output = json.dumps({"status": "success", "count": len(datasets), "datasets": datasets})
-        return _truncate_output(output, _OUTPUT_LIMIT)
+        return _truncate_output(output, OUTPUT_LIMIT)
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in list_datasets")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in list_datasets")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "list_datasets")
 
 
 def search_dataset(
@@ -160,15 +156,7 @@ def search_dataset(
             response = _request_with_retry(client, "post", aggregate_url, json=payload, headers=_json_headers(token))
             raw = response.json()
 
-        rows: list
-        if isinstance(raw, list):
-            rows = raw
-        elif isinstance(raw, dict) and isinstance(raw.get("results"), list):
-            rows = raw["results"]
-        elif isinstance(raw, dict) and isinstance(raw.get("list"), list):
-            rows = raw["list"]
-        else:
-            rows = []
+        rows = _extract_rows(raw)
 
         output = json.dumps(
             {
@@ -178,11 +166,7 @@ def search_dataset(
                 "rows": rows,
             }
         )
-        return _truncate_output(output, _OUTPUT_LIMIT)
+        return _truncate_output(output, OUTPUT_LIMIT)
 
-    except httpx.HTTPStatusError as e:
-        logger.exception("HTTP error in search_dataset")
-        return json.dumps({"status": "error", "error": f"HTTP {e.response.status_code}: {e.response.text[:500]}"})
     except Exception as e:
-        logger.exception("Error in search_dataset")
-        return json.dumps({"status": "error", "error": str(e)})
+        return _handle_api_error(e, "search_dataset")
