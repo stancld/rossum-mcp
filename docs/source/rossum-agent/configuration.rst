@@ -32,9 +32,12 @@ Environment Variables
    * - ``POSTGRES_DB`` / ``POSTGRES_USER`` / ``POSTGRES_PASSWORD``
      - No
      - PostgreSQL credentials (default: ``rossum_agent``/``rossum``/``rossum``)
-   * - ``REDIS_HOST`` / ``REDIS_PORT``
+   * - ``VALKEY_HOST`` / ``VALKEY_PORT``
      - No
-     - Redis for change tracking (default: ``localhost:6379``)
+     - Valkey for change tracking (default: ``localhost:6379``)
+   * - ``VALKEY_PASSWORD``
+     - No
+     - Valkey authentication password
    * - ``ROSSUM_MCP_MODE``
      - No
      - ``read-write`` (default) or ``read-only``
@@ -54,7 +57,7 @@ The agent automatically applies Anthropic's ``cache_control`` breakpoints to red
 2. **Last tool definition** -- stable per agent iteration
 3. **Last message** -- moves forward with each turn to maximize cache reuse
 
-Works transparently on AWS Bedrock -- no configuration needed. Token usage metrics are reported in the ``done`` SSE event.
+Works transparently on AWS Bedrock -- no configuration needed. Token usage metrics are reported in the ``finish`` SSE event.
 
 Slash Commands
 --------------
@@ -70,7 +73,7 @@ Messages starting with ``/`` are intercepted before reaching the agent and retur
    * - ``/list-commands``
      - List all available slash commands
    * - ``/list-commits``
-     - List configuration commits made in this chat (requires Redis)
+     - List configuration commits made in this chat (requires Valkey)
    * - ``/list-skills``
      - List available agent skills with slugs and descriptions
    * - ``/list-mcp-tools``
