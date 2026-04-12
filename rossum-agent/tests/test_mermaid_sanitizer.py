@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from rossum_agent.api.mermaid_sanitizer import (
+from rossum_agent.mermaid_sanitizer import (
     sanitize_mermaid_block,
     sanitize_mermaid_in_markdown,
 )

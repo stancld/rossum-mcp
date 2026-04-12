@@ -17,8 +17,8 @@ from rossum_agent.agent.models import (
     ToolResultStep,
     ToolStartStep,
 )
-from rossum_agent.api.mermaid_sanitizer import sanitize_mermaid_in_markdown
 from rossum_agent.api.services.agent_service import StreamEvent
+from rossum_agent.mermaid_sanitizer import sanitize_mermaid_in_markdown
 
 logger = logging.getLogger(__name__)
 
