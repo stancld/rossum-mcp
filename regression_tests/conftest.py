@@ -13,7 +13,6 @@ import pytest
 import valkey
 from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
-from rossum_agent.agent.models import AgentConfig
 from rossum_agent.bedrock_client import create_async_bedrock_client
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
@@ -197,8 +196,6 @@ def create_live_agent(
                 "Use --sandbox-api-token flag or set DEFAULT_SANDBOX_API_TOKEN in .env"
             )
 
-        config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
-
         async with connect_mcp_server(
             rossum_api_token=token, rossum_api_base_url=case.api_base_url, mcp_mode=case.mode
         ) as mcp_connection:
@@ -238,9 +235,7 @@ def create_live_agent(
                     context_section = format_context_for_prompt(url_context)
                     system_prompt = system_prompt + "\n\n---\n" + context_section
 
-            agent = RossumAgent(
-                client=client, mcp_connection=mcp_connection, system_prompt=system_prompt, config=config
-            )
+            agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt)
 
             try:
                 yield LiveAgentContext(agent=agent, api_token=token)

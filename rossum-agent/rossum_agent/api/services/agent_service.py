@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Any
 from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.memory import AgentMemory
 from rossum_agent.agent.models import (
-    AgentConfig,
     AgentQuestionPart,
     AgentStep,
     ErrorStep,
@@ -453,9 +452,7 @@ class AgentService:
                         mcp_connection, chat_id, rossum_api_base_url
                     )
 
-                    agent = await create_agent(
-                        mcp_connection=mcp_connection, system_prompt=system_prompt, config=AgentConfig()
-                    )
+                    agent = await create_agent(mcp_connection=mcp_connection, system_prompt=system_prompt)
 
                     agent_ctx.mcp_connection = mcp_connection
                     agent_ctx.mcp_event_loop = asyncio.get_running_loop()

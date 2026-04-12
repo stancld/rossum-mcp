@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent import (
-    AgentConfig,
     RossumAgent,
     ToolCall,
     ToolResult,
@@ -22,7 +21,39 @@ from rossum_agent.agent.tool_execution import (
     execute_tool_with_progress,
     execute_tools_with_progress,
     serialize_tool_result,
+    truncate_content,
 )
+
+
+class TestTruncateContent:
+    """Test truncate_content function."""
+
+    def test_returns_content_unchanged_when_under_limit(self):
+        content = "Short content"
+        result = truncate_content(content, max_length=100)
+        assert result == content
+
+    def test_returns_content_unchanged_when_equal_to_limit(self):
+        content = "A" * 100
+        result = truncate_content(content, max_length=100)
+        assert result == content
+
+    def test_truncates_content_when_over_limit(self):
+        content = "A" * 1000
+        result = truncate_content(content, max_length=100)
+        assert "truncated" in result.lower()
+        assert result.startswith("A" * 50)
+        assert result.endswith("A" * 50)
+
+    def test_uses_default_max_length(self):
+        content = "A" * 10
+        result = truncate_content(content)
+        assert result == content
+
+    def test_truncation_message_includes_max_length(self):
+        content = "B" * 500
+        result = truncate_content(content, max_length=200)
+        assert "200" in result
 
 
 class TestParseJsonEncodedStrings:
@@ -203,12 +234,10 @@ class TestExecuteTool:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     async def _get_final_result(self, agent: RossumAgent, tool_call: ToolCall) -> ToolResult:
@@ -299,12 +328,10 @@ class TestExecuteToolsInParallel:
         mock_client = MagicMock()
         mock_mcp_connection = AsyncMock()
         mock_mcp_connection.get_tools.return_value = []
-        config = AgentConfig()
         return RossumAgent(
             client=mock_client,
             mcp_connection=mock_mcp_connection,
             system_prompt="Test prompt",
-            config=config,
         )
 
     @pytest.mark.asyncio

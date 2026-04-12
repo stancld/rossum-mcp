@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
-from rossum_agent.agent.models import AgentConfig
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.change_tracking.store import CommitStore
 from rossum_agent.rossum_mcp_integration import connect_mcp_server
@@ -102,8 +101,6 @@ def _get_token(case: RegressionTestCase, env_tokens: dict[str, str], cli_token: 
 
 @asynccontextmanager
 async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Path) -> AsyncIterator[RossumAgent]:
-    config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
-
     async with connect_mcp_server(
         rossum_api_token=api_token, rossum_api_base_url=case.api_base_url, mcp_mode=case.mode
     ) as mcp_connection:
@@ -138,7 +135,7 @@ async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Pat
                 context_section = format_context_for_prompt(url_context)
                 system_prompt = system_prompt + "\n\n---\n" + context_section
 
-        agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt, config=config)
+        agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt)
 
         try:
             yield agent
