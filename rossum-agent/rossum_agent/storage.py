@@ -7,23 +7,12 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from rossum_agent.api.models.schemas import MCPMode, Persona
+from rossum_agent.utils import extract_text_from_content
 
 if TYPE_CHECKING:
     from typing import Any
 
 CHAT_ID_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
-
-
-def extract_text_from_content(content: str | list[dict[str, Any]] | None) -> str:
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return " ".join(
-            block.get("text", "") for block in content if isinstance(block, dict) and block.get("type") == "text"
-        )
-    return ""
 
 
 def _extract_preview_from_first_msg(msg: dict[str, Any] | None) -> str:

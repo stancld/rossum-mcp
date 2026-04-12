@@ -874,55 +874,6 @@ class TestAgentRun:
                 pass
 
 
-class TestExtractTextFromPrompt:
-    """Test RossumAgent._extract_text_from_prompt method."""
-
-    def _create_agent(self) -> RossumAgent:
-        """Helper to create an agent with mocked dependencies."""
-        mock_client = MagicMock()
-        mock_mcp_connection = AsyncMock()
-        config = AgentConfig()
-        return RossumAgent(
-            client=mock_client,
-            mcp_connection=mock_mcp_connection,
-            system_prompt="Test prompt",
-            config=config,
-        )
-
-    def test_extracts_from_string(self):
-        """Test extraction from simple string prompt."""
-        agent = self._create_agent()
-        result = agent._extract_text_from_prompt("Hello world")
-        assert result == "Hello world"
-
-    def test_extracts_from_list_with_text_blocks(self):
-        """Test extraction from list of content blocks."""
-        agent = self._create_agent()
-        prompt = [
-            {"type": "text", "text": "First part"},
-            {"type": "text", "text": "Second part"},
-        ]
-        result = agent._extract_text_from_prompt(prompt)
-        assert result == "First part Second part"
-
-    def test_ignores_non_text_blocks(self):
-        """Test that non-text blocks are ignored."""
-        agent = self._create_agent()
-        prompt = [
-            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "abc"}},
-            {"type": "text", "text": "Analyze this"},
-        ]
-        result = agent._extract_text_from_prompt(prompt)
-        assert result == "Analyze this"
-
-    def test_handles_missing_text_field(self):
-        """Test handling of blocks with missing text field."""
-        agent = self._create_agent()
-        prompt = [{"type": "text"}, {"type": "text", "text": "Valid"}]
-        result = agent._extract_text_from_prompt(prompt)
-        assert result == "Valid"
-
-
 class TestAgentRunRequestDelay:
     """Test RossumAgent.run() request delay behavior."""
 

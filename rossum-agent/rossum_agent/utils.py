@@ -8,10 +8,23 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from typing import Any
 
 # Compact JSON separators for token-efficient serialization
 COMPACT_JSON_SEPARATORS: tuple[str, str] = (",", ":")
+
+
+def extract_text_from_content(content: str | Sequence[Mapping[str, Any]] | None) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            block.get("text", "") for block in content if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return ""
 
 
 def compute_json_diff(
