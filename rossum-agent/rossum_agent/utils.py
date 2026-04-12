@@ -38,11 +38,6 @@ BASE_OUTPUT_DIR = Path(tempfile.gettempdir()) / "rossum_agent_outputs"
 
 
 def create_session_output_dir() -> Path:
-    """Create a new session-specific output directory.
-
-    Returns:
-        Path to the newly created session directory
-    """
     session_id = str(uuid.uuid4())
     session_dir = BASE_OUTPUT_DIR / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
@@ -52,9 +47,8 @@ def create_session_output_dir() -> Path:
 def add_message_cache_breakpoint(messages: list[dict[str, Any]]) -> None:
     """Add cache_control to the last content block of the last message.
 
-    Mutates messages in-place. Removes any previous message-level
-    cache_control breakpoints first to stay within Anthropic's
-    4-breakpoint limit.
+    Mutates messages in-place. Removes any previous message-level cache_control breakpoints first to stay
+    within Anthropic's 4-breakpoint limit.
     """
     if not messages:
         return

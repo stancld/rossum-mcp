@@ -14,7 +14,7 @@ from alembic.config import Config
 from sqlalchemy.dialects.postgresql import BYTEA, JSONB, insert
 from sqlalchemy.dialects.postgresql import array as pg_array
 
-from rossum_agent.storage import ChatData, ChatMetadata, _build_chat_list_item, _preview_from_first_msg
+from rossum_agent.storage import ChatData, ChatMetadata, _build_chat_list_item, _extract_preview_from_first_msg
 
 if TYPE_CHECKING:
     from typing import Any
@@ -276,7 +276,7 @@ class PostgresStorage:
                 _build_chat_list_item(
                     row.chat_id,
                     row.message_count,
-                    _preview_from_first_msg(row.first_msg),
+                    _extract_preview_from_first_msg(row.first_msg),
                     ChatMetadata.from_dict(row.metadata_),
                 )
                 for row in rows

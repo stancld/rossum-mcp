@@ -30,12 +30,7 @@ from rossum_agent.agent.models import (
 )
 from rossum_agent.agent.spillover import maybe_spill
 from rossum_agent.tools import execute_internal_tool, get_internal_tool_names
-from rossum_agent.tools.core import (
-    AgentContext,
-    SubAgentTokenUsage,
-    get_context,
-    set_context,
-)
+from rossum_agent.tools.core import AgentContext, SubAgentTokenUsage, get_context, set_context
 from rossum_agent.utils import COMPACT_JSON_SEPARATORS
 
 if TYPE_CHECKING:
