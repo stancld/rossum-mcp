@@ -7,9 +7,10 @@ tags from prompts, and assembly of multimodal user-content payloads.
 from __future__ import annotations
 
 import base64
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import structlog
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from rossum_agent.agent.types import UserContent
     from rossum_agent.api.models.schemas import DocumentContent, ImageContent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _FILE_CONTENT_OPEN_TAG = '<file_content path="'
 _FILE_CONTENT_CLOSE_TAG = "\n</file_content>"
