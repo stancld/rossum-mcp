@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
+
+import structlog
 
 from rossum_agent.agent.models import (
     AgentQuestionPart,
@@ -20,7 +21,7 @@ from rossum_agent.agent.models import (
 from rossum_agent.api.services.agent_service import StreamEvent
 from rossum_agent.mermaid_sanitizer import sanitize_mermaid_in_markdown
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

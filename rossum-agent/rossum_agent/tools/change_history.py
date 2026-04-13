@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import random
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import structlog
 from anthropic import beta_tool
 from rossum_api import APIClientError, AsyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Entity types that can be reverted programmatically via rossum_api
 _ENTITY_TYPE_TO_RESOURCE: dict[str, Resource] = {

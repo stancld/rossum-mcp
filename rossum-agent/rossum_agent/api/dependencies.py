@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 from dataclasses import dataclass
@@ -11,6 +10,7 @@ from typing import Annotated
 from urllib.parse import urlparse
 
 import httpx
+import structlog
 from fastapi import Header, HTTPException, Request, status
 
 from rossum_agent.api.services.agent_service import AgentService
@@ -18,7 +18,7 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.valkey_client import ValkeyConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Base allowed hosts pattern
 _BASE_ALLOWED_HOSTS = r"elis\.rossum\.ai|api\.elis\.rossum\.ai|(.*\.)?api\.rossum\.ai|.*\.rossum\.(app|ai)|(elis|api\.elis)\.develop\.r8\.lol"

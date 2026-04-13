@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 - `VALKEY_PASSWORD` environment variable for authenticated Valkey connections [#356](https://github.com/stancld/rossum-agents/pull/356)
 - Structured logging via `structlog` (reusing `rossum_mcp.logging_config`); configurable with `ROSSUM_AGENT_LOG_LEVEL` and `ROSSUM_AGENT_LOG_FORMAT` environment variables [#373](https://github.com/stancld/rossum-agents/pull/373)
+- Migrate all `rossum_agent` module loggers from stdlib `logging.getLogger` to `structlog.get_logger` so package log records render via structlog processors [#375](https://github.com/stancld/rossum-agents/pull/375)
+- Emit structured `tool_call.completed` / `tool_call.failed` events with `tool_name`, `duration_seconds`, `status` (and `error_type` on failure) for each tool invocation, mirroring the `rossum_mcp.middleware` observability format [#375](https://github.com/stancld/rossum-agents/pull/375)
 
 ### Fixed
 - Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)

@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
+
+import structlog
 
 from rossum_agent.rossum_mcp_integration.tools import mcp_tools_to_anthropic_format
 from rossum_agent.tools.core import get_context
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
     from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

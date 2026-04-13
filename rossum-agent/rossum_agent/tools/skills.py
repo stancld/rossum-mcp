@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-import logging
 
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.agent.skills import get_skill, get_skill_registry
 from rossum_agent.tools.dynamic_tools import load_tool, mark_skill_loaded
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _auto_load_tools(tool_names: list[str]) -> str | None:

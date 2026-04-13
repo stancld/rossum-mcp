@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import datetime as dt
-import logging
 import secrets
 from typing import TYPE_CHECKING
+
+import structlog
 
 from rossum_agent.api.models.schemas import (
     ChatDetail,
@@ -72,7 +73,7 @@ if TYPE_CHECKING:
 
     from rossum_agent.postgres_storage import PostgresStorage
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ChatService:

@@ -6,13 +6,13 @@ import ast
 import functools
 import io
 import json
-import logging
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pandas
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.tools.core import get_context
@@ -24,7 +24,7 @@ from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool as _call_mcp_
 if TYPE_CHECKING:
     from anthropic.types import ToolParam
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _MAX_CODE_LENGTH = 25000
 _SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls"})

@@ -8,14 +8,15 @@ The agent can then use run_jq or run_grep to query the full content.
 from __future__ import annotations
 
 import json
-import logging
 import re
 from typing import TYPE_CHECKING
+
+import structlog
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SPILLOVER_THRESHOLD = 30_000
 _PREVIEW_ITEMS = 3

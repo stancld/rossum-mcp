@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
-import logging
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+import structlog
 from anthropic.types import TextBlock
 
 from rossum_agent.agent.memory import AgentMemory
@@ -25,7 +25,7 @@ from rossum_agent.valkey_client import ValkeyConnection
 if TYPE_CHECKING:
     from rossum_agent.api.services.agent_service import StreamEvent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SSE_KEEPALIVE_INTERVAL = 15
 SSE_KEEPALIVE_COMMENT = ": keepalive\n\n"

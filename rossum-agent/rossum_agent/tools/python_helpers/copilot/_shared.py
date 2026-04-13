@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import re
 import time
 
 import httpx
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _handle_api_error(e: Exception, func_name: str) -> str:

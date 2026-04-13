@@ -7,9 +7,9 @@ complementing the lookup field tools in lookup.py.
 from __future__ import annotations
 
 import json
-import logging
 
 import httpx
+import structlog
 
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.python_helpers.copilot._shared import (
@@ -25,7 +25,7 @@ from rossum_agent.tools.python_helpers.copilot._shared import (
 )
 from rossum_agent.tools.utils import truncate_output
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _extract_dataset_name(item: dict) -> str:

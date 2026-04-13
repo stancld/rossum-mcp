@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import datetime as dt
 import functools
-import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
 
 import sqlalchemy as sa
+import structlog
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.dialects.postgresql import BYTEA, JSONB, insert
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.engine import Engine
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 T = TypeVar("T")
 P = ParamSpec("P")

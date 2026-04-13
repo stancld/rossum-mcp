@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import json
-import logging
 import queue
+import time
 from contextvars import copy_context
 from functools import partial
 from typing import TYPE_CHECKING, ClassVar
 
+import structlog
 from pydantic import BaseModel
 
 from rossum_agent.agent.cautious_gate import check_cautious_write_gate
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from rossum_agent.agent.memory import AgentMemory
     from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 MAX_TOOL_OUTPUT_LENGTH = 30000
 
@@ -154,8 +155,9 @@ async def execute_tool_with_progress(
     def token_callback(usage: SubAgentTokenUsage) -> None:
         token_queue.put(usage)
 
-    logger.info("Tool call: %s(%s)", tool_call.name, tool_call.arguments)
+    logger.info("tool_call.started", tool_name=tool_call.name, arguments=tool_call.arguments)
 
+    start = time.perf_counter()
     try:
         if tool_call.name in get_internal_tool_names():
             logger.info(f"Calling internal tool {tool_call.name}")
@@ -190,13 +192,27 @@ async def execute_tool_with_progress(
             result = await mcp_connection.call_tool(tool_call.name, tool_call.arguments)
             content = serialize_tool_result(result)
 
+        logger.info(
+            "tool_call.completed",
+            tool_name=tool_call.name,
+            duration_seconds=round(time.perf_counter() - start, 3),
+            status="success",
+        )
+
         content = maybe_spill(content, tool_call.name, step_num, get_context().get_output_dir(), tool_call.id)
         content = truncate_content(content)
         yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
 
     except Exception as e:
         error_msg = f"Tool {tool_call.name} failed: {e}"
-        logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
+        logger.warning(
+            "tool_call.failed",
+            tool_name=tool_call.name,
+            duration_seconds=round(time.perf_counter() - start, 3),
+            status="error",
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
         yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
 

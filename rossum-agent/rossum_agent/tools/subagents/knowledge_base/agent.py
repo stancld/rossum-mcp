@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING
 
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.tools.data_tools import run_jq
@@ -31,7 +31,7 @@ from rossum_agent.tools.subagents.knowledge_base.tools import (
 if TYPE_CHECKING:
     from typing import Any
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _TOOL_RESULT_LIMIT = 15000
 _TOOL_RESULT_INNER_LIMIT = 12000
