@@ -20,6 +20,14 @@ from rossum_agent.api.models.schemas import (
 )
 from rossum_agent.chat_models import ChatData, ChatMetadata
 
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any
+
+    from rossum_agent.postgres_storage import PostgresStorage
+
+logger = structlog.get_logger(__name__)
+
 
 def _extract_text(content: object) -> str | None:
     """Extract plain text from a message content field.
@@ -65,15 +73,6 @@ def _normalize_content(content: object) -> str | list[dict[str, Any]]:
         else:
             normalized.append(block)
     return normalized or ""
-
-
-if TYPE_CHECKING:
-    from pathlib import Path
-    from typing import Any
-
-    from rossum_agent.postgres_storage import PostgresStorage
-
-logger = structlog.get_logger(__name__)
 
 
 class ChatService:
