@@ -48,7 +48,7 @@ from rossum_agent.api.routes.stream_adapter import (
     build_finish_events,
     convert_agent_event,
 )
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.url_context import extract_url_context
 

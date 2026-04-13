@@ -33,7 +33,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from rossum_agent import __version__
 from rossum_agent.api.routes import chats, commands, files, health, messages, slack
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.api.shutdown import shutdown_state

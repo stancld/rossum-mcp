@@ -9,7 +9,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from rossum_agent.api.models.schemas import DocumentContent, MessageRequest
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.file_intake import (
+    extract_and_save_text_files,
+    save_documents_to_output_dir,
+)
+from rossum_agent.api.services.agent_service.history import build_updated_history
 
 
 class TestDocumentContent:
@@ -179,8 +183,6 @@ class TestAgentServiceDocumentStorage:
 
     def test_save_documents_to_output_dir(self) -> None:
         """Test that documents are saved correctly to output directory."""
-        service = AgentService()
-
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
             pdf_content = b"%PDF-1.4 test content"
@@ -193,7 +195,7 @@ class TestAgentServiceDocumentStorage:
                 )
             ]
 
-            service._save_documents_to_output_dir(docs, output_dir)
+            save_documents_to_output_dir(docs, output_dir)
 
             saved_file = Path(tmpdir) / "test_invoice.pdf"
             assert saved_file.exists()
@@ -201,8 +203,6 @@ class TestAgentServiceDocumentStorage:
 
     def test_save_multiple_documents(self) -> None:
         """Test saving multiple documents."""
-        service = AgentService()
-
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
             docs = []
@@ -217,7 +217,7 @@ class TestAgentServiceDocumentStorage:
                     )
                 )
 
-            service._save_documents_to_output_dir(docs, output_dir)
+            save_documents_to_output_dir(docs, output_dir)
 
             for i in range(3):
                 saved_file = Path(tmpdir) / f"doc{i}.pdf"
@@ -233,7 +233,7 @@ class TestExtractAndSaveTextFiles:
         prompt = 'Check this:\n\n<file_content path="notes.md">\n# Hello\nWorld\n</file_content>'
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
-            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            paths = extract_and_save_text_files(prompt, output_dir)
 
             assert len(paths) == 1
             assert paths[0].name == "notes.md"
@@ -247,7 +247,7 @@ class TestExtractAndSaveTextFiles:
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
-            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            paths = extract_and_save_text_files(prompt, output_dir)
 
             assert len(paths) == 2
             names = {p.name for p in paths}
@@ -258,7 +258,7 @@ class TestExtractAndSaveTextFiles:
         prompt = '<file_content path="data.xlsx">\n/tmp/data.xlsx\n</file_content>'
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
-            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            paths = extract_and_save_text_files(prompt, output_dir)
 
             assert len(paths) == 0
 
@@ -267,7 +267,7 @@ class TestExtractAndSaveTextFiles:
         prompt = '<file_content path="../../etc/passwd">\nsecret\n</file_content>'
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
-            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            paths = extract_and_save_text_files(prompt, output_dir)
 
             assert len(paths) == 1
             assert paths[0].name == "passwd"
@@ -278,7 +278,7 @@ class TestExtractAndSaveTextFiles:
         prompt = "Just a regular message"
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir)
-            paths = AgentService._extract_and_save_text_files(prompt, output_dir)
+            paths = extract_and_save_text_files(prompt, output_dir)
             assert len(paths) == 0
 
 
@@ -287,15 +287,13 @@ class TestBuildUpdatedHistoryWithDocuments:
 
     def test_history_includes_document_info(self) -> None:
         """Test that document filenames are included in history."""
-        service = AgentService()
-
         data = base64.b64encode(b"PDF").decode()
         docs = [
             DocumentContent(media_type="application/pdf", data=data, filename="invoice.pdf"),
             DocumentContent(media_type="application/pdf", data=data, filename="receipt.pdf"),
         ]
 
-        history = service.build_updated_history(
+        history = build_updated_history(
             existing_history=[],
             user_prompt="Process these documents",
             final_response="Done processing",

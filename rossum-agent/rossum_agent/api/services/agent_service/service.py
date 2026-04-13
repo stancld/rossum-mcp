@@ -1,20 +1,22 @@
-"""Agent service for running the Rossum Agent."""
+"""Agent service for running the Rossum Agent.
+
+Manages MCP connection lifecycle, per-chat run state, and event streaming for
+API requests. Helpers for file intake, conversation history, and cautious-
+persona pre-approval gating live in sibling modules.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import base64
 import contextlib
 import contextvars
 import dataclasses
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import structlog
 
 from rossum_agent.agent.core import RossumAgent, create_agent
-from rossum_agent.agent.memory import AgentMemory
 from rossum_agent.agent.models import (
     AgentQuestionPart,
     AgentStep,
@@ -39,12 +41,16 @@ from rossum_agent.api.models.schemas import (
     QuestionOptionSchema,
     StreamDoneEvent,
 )
+from rossum_agent.api.services.agent_service import (
+    cautious,
+    file_intake,
+    history,
+)
 from rossum_agent.bedrock_client import MAX_INPUT_TOKENS
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 from rossum_agent.rossum_mcp_integration.connection import MCPConnection, connect_mcp_server
 from rossum_agent.tools.core import (
-    CAUTIOUS_APPROVAL_LABEL,
     AgentContext,
     AgentQuestion,
     reset_context,
@@ -57,61 +63,13 @@ from rossum_agent.utils import create_session_output_dir
 from rossum_agent.valkey_client import ValkeyConnection
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
-    from anthropic.types import ImageBlockParam, TextBlockParam
-
-    from rossum_agent.agent.types import UserContent
+    from rossum_agent.agent.memory import AgentMemory
     from rossum_agent.change_tracking.models import ConfigCommit
 
 logger = structlog.get_logger(__name__)
-
-_FILE_CONTENT_OPEN_TAG = '<file_content path="'
-_FILE_CONTENT_CLOSE_TAG = "\n</file_content>"
-_SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls"})
-
-
-def _iter_file_content_tags(text: str) -> Iterator[tuple[str, str]]:
-    """Yield (filename, content) for each <file_content> tag in *text*.
-
-    Uses plain string search instead of regex to avoid ReDoS on untrusted input.
-    """
-    pos = 0
-    while True:
-        start = text.find(_FILE_CONTENT_OPEN_TAG, pos)
-        if start == -1:
-            break
-        path_start = start + len(_FILE_CONTENT_OPEN_TAG)
-        quote_end = text.find('">', path_start)
-        if quote_end == -1:
-            break
-        filename = Path(text[path_start:quote_end]).name
-        content_start = quote_end + len('">\n')
-        close = text.find(_FILE_CONTENT_CLOSE_TAG, content_start)
-        if close == -1:
-            break
-        content = text[content_start:close]
-        yield filename, content
-        pos = close + len(_FILE_CONTENT_CLOSE_TAG)
-
-
-def _sanitize_filename(raw_name: str) -> str:
-    """Return a safe filename derived from untrusted input.
-
-    Keeps only the basename and replaces path separators and other
-    potentially problematic characters with underscores.
-    """
-    # Take only the final path component to avoid traversal and embedded dirs.
-    name = Path(raw_name).name
-    # Replace any remaining path separators and whitespace/control chars.
-    safe_chars = []
-    for ch in name:
-        if ch.isalnum() or ch in {".", "-", "_"}:
-            safe_chars.append(ch)
-        else:
-            safe_chars.append("_")
-    sanitized = "".join(safe_chars).strip("._")
-    return sanitized or "file"
 
 
 async def _log_commit_hook(commit: ConfigCommit) -> str | None:
@@ -191,7 +149,6 @@ class AgentService:
     """
 
     def __init__(self) -> None:
-        """Initialize agent service."""
         self._chat_runs: dict[str, _ChatRunState] = {}
 
     def _get_or_create_stores(self) -> tuple[CommitStore | None, SnapshotStore | None]:
@@ -226,38 +183,9 @@ class AgentService:
             return ctx
 
     def _get_chat_run_state(self, chat_id: str) -> _ChatRunState:
-        """Get or create run state for a chat."""
         if chat_id not in self._chat_runs:
             self._chat_runs[chat_id] = _ChatRunState()
         return self._chat_runs[chat_id]
-
-    @staticmethod
-    def _resolve_cautious_preapprovals(
-        pending: set[str],
-        prompt: str,
-        unconsumed: set[str] | None = None,
-        approved: set[str] | None = None,
-    ) -> set[str]:
-        """Resolve pre-approved writes from blocked tools, unconsumed carry-overs, and lifetime approvals.
-
-        The front-end formats question answers as "1. <question>\\n<selected_label>".
-        We check for the approval label to avoid pre-approving on "No" or "Chat" answers.
-
-        Unconsumed pre-approvals from previous turns (where the agent asked
-        questions instead of executing the write) are always carried forward.
-
-        Lifetime-approved tools (already approved and executed in earlier turns)
-        are always included — the MCP server is re-instantiated each turn,
-        so approvals must persist at the service level.
-        """
-        result: set[str] = set()
-        if approved:
-            result.update(approved)
-        if unconsumed:
-            result.update(unconsumed)
-        if pending and CAUTIOUS_APPROVAL_LABEL in prompt:
-            result.update(pending)
-        return result
 
     async def _register_run(self, chat_id: str) -> int:
         """Register a new run for a chat, cancelling any existing run.
@@ -278,7 +206,6 @@ class AgentService:
             return state.run_id
 
     async def _clear_run(self, chat_id: str, run_id: int) -> None:
-        """Clear the active run if it matches the given run_id."""
         state = self._get_chat_run_state(chat_id)
         async with state.lock:
             if state.run_id == run_id:
@@ -297,7 +224,6 @@ class AgentService:
         return True
 
     def get_output_dir(self, chat_id: str) -> Path | None:
-        """Get the output directory for a chat's run."""
         state = self._chat_runs.get(chat_id)
         return state.output_dir if state else None
 
@@ -370,7 +296,6 @@ class AgentService:
 
     @staticmethod
     def _drain_queue(queue: asyncio.Queue[QueuedAgentEvent]) -> list[QueuedAgentEvent]:
-        """Drain all pending events from the queue."""
         events: list[QueuedAgentEvent] = []
         while not queue.empty():
             try:
@@ -413,8 +338,8 @@ class AgentService:
         logger.info(f"Created session output directory: {output_dir}")
 
         if documents:
-            self._save_documents_to_output_dir(documents, output_dir)
-        text_file_paths = self._extract_and_save_text_files(prompt, output_dir)
+            file_intake.save_documents_to_output_dir(documents, output_dir)
+        text_file_paths = file_intake.extract_and_save_text_files(prompt, output_dir)
 
         req_ctx.event_queue = asyncio.Queue(maxsize=100)
         req_ctx.event_loop = asyncio.get_running_loop()
@@ -423,7 +348,7 @@ class AgentService:
             output_dir=output_dir,
             rossum_credentials=(rossum_api_base_url, rossum_api_token),
             persona=persona,
-            cautious_preapproved_writes=self._resolve_cautious_preapprovals(
+            cautious_preapproved_writes=cautious.resolve_cautious_preapprovals(
                 chat_run_state.cautious_blocked_last_turn,
                 prompt,
                 chat_run_state.cautious_unconsumed_preapprovals,
@@ -438,7 +363,7 @@ class AgentService:
         ctx_token = set_context(agent_ctx)
 
         system_prompt = self._build_system_prompt(rossum_url, persona, mcp_mode)
-        system_prompt = self._inject_preapproval_into_system_prompt(
+        system_prompt = cautious.inject_preapproval_into_system_prompt(
             system_prompt, agent_ctx.cautious_preapproved_writes
         )
 
@@ -462,7 +387,7 @@ class AgentService:
                     agent_ctx.snapshot_store = snapshot_store
                     agent_ctx.rossum_environment = environment
 
-                    self._restore_conversation_history(agent, conversation_history)
+                    history.restore_conversation_history(agent, conversation_history)
                     if chat_run_state.last_main_input_tokens:
                         agent.tokens.last_main_input = chat_run_state.last_main_input_tokens
 
@@ -470,7 +395,9 @@ class AgentService:
                     total_input_tokens = 0
                     total_output_tokens = 0
 
-                    user_content = self._build_user_content(prompt, images, documents, output_dir, text_file_paths)
+                    user_content = file_intake.build_user_content(
+                        prompt, images, documents, output_dir, text_file_paths
+                    )
 
                     try:
                         async for step in agent.run(user_content):
@@ -604,203 +531,3 @@ class AgentService:
             return None
         commit_service = CommitService(commit_store, snapshot_store)
         return commit_service.create_commit(mcp_connection, chat_id, prompt, rossum_api_base_url.rstrip("/"))
-
-    def _save_documents_to_output_dir(self, documents: list[DocumentContent], output_dir: Path) -> None:
-        resolved_output_dir = output_dir.resolve()
-        for doc in documents:
-            safe_name = Path(doc.filename).name
-            if not safe_name or safe_name in {".", ".."}:
-                logger.error(f"Path traversal blocked for document: {doc.filename}")
-                continue
-            # safe_name is a single path component (Path.name strips dirs),
-            # so the join cannot escape resolved_output_dir.
-            file_path = resolved_output_dir / safe_name
-            try:
-                file_data = base64.b64decode(doc.data)
-                file_path.write_bytes(file_data)
-                logger.info(f"Saved document to {file_path}")
-            except Exception as e:
-                logger.error(f"Failed to save document {doc.filename}: {e}")
-
-    @staticmethod
-    def _extract_and_save_text_files(prompt: str, output_dir: Path) -> list[Path]:
-        """Extract text files from <file_content> tags in the prompt and save to output dir.
-
-        Skips spreadsheet files (passed by path, not content).
-        Returns list of saved file paths.
-        """
-        saved_paths: list[Path] = []
-        resolved_output_dir = output_dir.resolve()
-        for filename, content in _iter_file_content_tags(prompt):
-            if Path(filename).suffix.lower() in _SPREADSHEET_EXTENSIONS:
-                continue
-            safe_name = Path(_sanitize_filename(filename)).name
-            if not safe_name or safe_name in {".", ".."}:
-                logger.error(f"Path traversal blocked for text file: {filename}")
-                continue
-            # Build path from resolved base + sanitized single-component name.
-            # safe_name is guaranteed to contain no separators (_sanitize_filename
-            # strips them), so the join cannot escape resolved_output_dir.
-            file_path = resolved_output_dir / safe_name
-            try:
-                file_path.write_text(content, encoding="utf-8")
-                saved_paths.append(file_path)
-                logger.info(f"Saved text file to {file_path}")
-            except Exception as e:
-                logger.error(f"Failed to save text file {filename}: {e}")
-        return saved_paths
-
-    def _build_user_content(
-        self,
-        prompt: str,
-        images: list[ImageContent] | None,
-        documents: list[DocumentContent] | None = None,
-        output_dir: Path | None = None,
-        text_file_paths: list[Path] | None = None,
-    ) -> UserContent:
-        if not images and not documents and not text_file_paths:
-            return prompt
-
-        content: list[ImageBlockParam | TextBlockParam] = []
-        if images:
-            for img in images:
-                content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": img.media_type,
-                            "data": img.data,
-                        },
-                    }
-                )
-        if documents and output_dir:
-            text_media_types = {"text/plain", "text/markdown"}
-            inlineable_docs = [d for d in documents if d.media_type in text_media_types]
-            other_docs = [d for d in documents if d.media_type not in text_media_types]
-            if inlineable_docs:
-                inlined = []
-                for doc in inlineable_docs:
-                    text = base64.b64decode(doc.data).decode("utf-8")
-                    inlined.append(f'<file_content path="{doc.filename}">\n{text}\n</file_content>')
-                content.append({"type": "text", "text": "\n\n".join(inlined)})
-            if other_docs:
-                doc_paths = [str(output_dir / Path(doc.filename).name) for doc in other_docs]
-                doc_info = "\n".join(f"- {path}" for path in doc_paths)
-                content.append({"type": "text", "text": f"[Uploaded documents available for processing:\n{doc_info}]"})
-        if text_file_paths:
-            paths_info = "\n".join(f"- {path}" for path in text_file_paths)
-            content.append(
-                {
-                    "type": "text",
-                    "text": f"[Text files saved to workspace — readable via open() in execute_python:\n{paths_info}]",
-                }
-            )
-        content.append({"type": "text", "text": prompt})
-        return content
-
-    @staticmethod
-    def _inject_preapproval_into_system_prompt(system_prompt: str, preapproved: set[str]) -> str:
-        """Append pre-approval instructions to the system prompt.
-
-        When writes are pre-approved, the system prompt — which the model treats
-        as authoritative — must override the cautious persona's tendency to re-ask.
-        Placing this in the system prompt is stronger than a user-content hint
-        because it outranks the conversation history's "STOP" tool results.
-        """
-        if not preapproved:
-            return system_prompt
-        tools = ", ".join(sorted(preapproved))
-        return (
-            f"{system_prompt}\n\n"
-            f"# Pre-approved write operations\n"
-            f"The user has already approved the following write operations: {tools}. "
-            "Execute them directly without asking for confirmation again. "
-            "Do not call `ask_user_question` for these operations."
-        )
-
-    def _restore_conversation_history(self, agent: RossumAgent, history: list[dict[str, Any]]) -> None:
-        if not history:
-            return
-
-        first_item = history[0]
-        if "type" in first_item and first_item["type"] in ("task_step", "memory_step"):
-            agent.memory = AgentMemory.from_dict(history)
-        else:
-            for msg in history:
-                role = msg.get("role")
-                content = msg.get("content", "")
-                if role == "user":
-                    user_content = self._parse_stored_content(content)
-                    agent.add_user_message(user_content)
-                elif role == "assistant":
-                    agent.add_assistant_message(content)
-
-    def _parse_stored_content(self, content: str | list[dict[str, Any]]) -> UserContent:
-        if isinstance(content, str):
-            return content
-
-        result: list[ImageBlockParam | TextBlockParam] = []
-        for block in content:
-            block_type = block.get("type")
-            if block_type == "image":
-                source = block.get("source", {})
-                result.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": source.get("type", "base64"),
-                            "media_type": source.get("media_type", "image/png"),
-                            "data": source.get("data", ""),
-                        },
-                    }
-                )
-            elif block_type == "text":
-                result.append({"type": "text", "text": block.get("text", "")})
-
-        return result or ""
-
-    def build_updated_history(
-        self,
-        existing_history: list[dict[str, Any]],
-        user_prompt: str,
-        final_response: str | None,
-        images: list[ImageContent] | None = None,
-        documents: list[DocumentContent] | None = None,
-        memory: AgentMemory | None = None,
-    ) -> list[dict[str, Any]]:
-        if memory is not None:
-            lean_history: list[dict[str, Any]] = []
-            for step_dict in memory.to_dict():
-                if step_dict.get("type") == "task_step":
-                    lean_history.append(step_dict)
-                elif step_dict.get("type") == "memory_step":
-                    text = step_dict.get("text")
-                    thinking_blocks = step_dict.get("thinking_blocks", [])
-                    tool_calls = step_dict.get("tool_calls", [])
-                    tool_results = step_dict.get("tool_results", [])
-                    if text or thinking_blocks or tool_calls or tool_results:
-                        lean_history.append(
-                            {
-                                "type": "memory_step",
-                                "step_number": step_dict.get("step_number", 0),
-                                "text": text,
-                                "tool_calls": tool_calls,
-                                "tool_results": tool_results,
-                                "thinking_blocks": thinking_blocks,
-                            }
-                        )
-            return lean_history
-
-        updated = list(existing_history)
-        user_content = self._build_user_content(user_prompt, images)
-        if documents:
-            doc_names = ", ".join(doc.filename for doc in documents)
-            if isinstance(user_content, str):
-                user_content = f"[Uploaded documents: {doc_names}]\n\n{user_content}"
-            else:
-                user_content.insert(0, {"type": "text", "text": f"[Uploaded documents: {doc_names}]"})
-        updated.append({"role": "user", "content": user_content})
-        if final_response:
-            updated.append({"role": "assistant", "content": final_response})
-        return updated

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.agent.models import FinalAnswerStep
-from rossum_agent.api.services.agent_service import AgentService, _request_context
+from rossum_agent.api.services.agent_service.service import AgentService, _request_context
 
 
 class TestConcurrentAgentService:
@@ -53,11 +53,14 @@ class TestConcurrentAgentService:
             output_dir.mkdir(exist_ok=True)
 
             with (
-                patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-                patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-                patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=output_dir),
-                patch("rossum_agent.api.services.agent_service.get_system_prompt", return_value="test prompt"),
-                patch("rossum_agent.api.services.agent_service.extract_url_context") as mock_extract,
+                patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+                patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+                patch(
+                    "rossum_agent.api.services.agent_service.service.create_session_output_dir",
+                    return_value=output_dir,
+                ),
+                patch("rossum_agent.api.services.agent_service.service.get_system_prompt", return_value="test prompt"),
+                patch("rossum_agent.api.services.agent_service.service.extract_url_context") as mock_extract,
                 patch.object(
                     AgentService,
                     "_setup_change_tracking",
@@ -135,11 +138,14 @@ class TestConcurrentAgentService:
             output_dir.mkdir(exist_ok=True)
 
             with (
-                patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-                patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-                patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=output_dir),
-                patch("rossum_agent.api.services.agent_service.get_system_prompt", return_value="test"),
-                patch("rossum_agent.api.services.agent_service.extract_url_context") as mock_extract,
+                patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+                patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+                patch(
+                    "rossum_agent.api.services.agent_service.service.create_session_output_dir",
+                    return_value=output_dir,
+                ),
+                patch("rossum_agent.api.services.agent_service.service.get_system_prompt", return_value="test"),
+                patch("rossum_agent.api.services.agent_service.service.extract_url_context") as mock_extract,
                 patch.object(
                     AgentService,
                     "_setup_change_tracking",
@@ -207,11 +213,14 @@ class TestConcurrentAgentService:
             output_dir.mkdir(exist_ok=True)
 
             with (
-                patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-                patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-                patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=output_dir),
-                patch("rossum_agent.api.services.agent_service.get_system_prompt", return_value="test"),
-                patch("rossum_agent.api.services.agent_service.extract_url_context") as mock_extract,
+                patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+                patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+                patch(
+                    "rossum_agent.api.services.agent_service.service.create_session_output_dir",
+                    return_value=output_dir,
+                ),
+                patch("rossum_agent.api.services.agent_service.service.get_system_prompt", return_value="test"),
+                patch("rossum_agent.api.services.agent_service.service.extract_url_context") as mock_extract,
                 patch.object(
                     AgentService,
                     "_setup_change_tracking",
