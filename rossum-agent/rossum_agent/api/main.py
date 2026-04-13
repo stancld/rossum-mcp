@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import uvicorn
 from fastapi import FastAPI, Request, status
 from gunicorn.app.base import BaseApplication
+from rossum_mcp.logging_config import LogFormat, LogLevel, setup_logging
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -177,7 +178,10 @@ def _init_services(app: FastAPI) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Lifespan context manager for startup and shutdown events."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    setup_logging(
+        log_level=LogLevel(os.environ.get("ROSSUM_AGENT_LOG_LEVEL", "INFO").upper()),
+        log_format=LogFormat(os.environ.get("ROSSUM_AGENT_LOG_FORMAT", "console").lower()),
+    )
     logger.info("Rossum Agent API starting up...")
 
     shutdown_state.shutting_down = False
