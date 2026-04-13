@@ -13,7 +13,7 @@ import httpx
 import structlog
 from fastapi import Header, HTTPException, Request, status
 
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.valkey_client import ValkeyConnection

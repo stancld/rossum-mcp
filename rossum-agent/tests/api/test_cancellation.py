@@ -10,7 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from rossum_agent.api.main import app
 from rossum_agent.api.routes.helpers import watch_disconnect
-from rossum_agent.api.services.agent_service import AgentService, _ChatRunState
+from rossum_agent.api.services.agent_service.service import AgentService, _ChatRunState
 
 
 class TestChatRunState:
