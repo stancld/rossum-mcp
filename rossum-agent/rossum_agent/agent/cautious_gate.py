@@ -7,8 +7,9 @@ For update operations on identifiable entities, a field-level diff is shown inst
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING
+
+import structlog
 
 from rossum_agent.agent.models import ToolCall, ToolResult
 from rossum_agent.api.models.schemas import Persona
@@ -28,7 +29,7 @@ from rossum_agent.utils import compute_json_diff
 if TYPE_CHECKING:
     from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def is_write_tool(name: str) -> bool:

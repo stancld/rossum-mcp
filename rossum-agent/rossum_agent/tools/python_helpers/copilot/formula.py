@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import logging
 import re
 from typing import Literal
 
 import httpx
+import structlog
 
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.python_helpers.copilot._shared import (
@@ -20,7 +20,7 @@ from rossum_agent.tools.python_helpers.copilot._shared import (
 
 FormulaFieldType = Literal["string", "number", "date", "enum"]
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _SUGGEST_FORMULA_TIMEOUT = 60
 

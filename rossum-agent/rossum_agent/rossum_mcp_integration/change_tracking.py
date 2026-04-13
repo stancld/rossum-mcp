@@ -7,8 +7,9 @@ for version control.
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING, Any, cast
+
+import structlog
 
 from rossum_agent.change_tracking.commit_service import CommitService
 from rossum_agent.change_tracking.models import EntityChange
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
     from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ChangeTrackingMixin:

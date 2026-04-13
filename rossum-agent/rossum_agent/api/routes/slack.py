@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import logging
 import os
 from dataclasses import dataclass
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from rossum_api import APIClientError, AsyncRossumAPIClient
 from rossum_api.dtos import Token
@@ -17,7 +17,7 @@ from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.slack_service import SlackService, SlackServiceError
 from rossum_agent.url_context import extract_url_context
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 

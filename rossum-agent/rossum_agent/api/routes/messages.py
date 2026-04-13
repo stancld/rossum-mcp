@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
@@ -79,7 +79,7 @@ RESPONSE_HEADERS = {
     "x-vercel-ai-ui-message-stream": "v1",
 }
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 

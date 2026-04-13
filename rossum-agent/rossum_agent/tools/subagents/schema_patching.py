@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import re
 import time
 from dataclasses import asdict, is_dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
+
+import structlog
 
 if TYPE_CHECKING:
     from typing import Any
@@ -36,7 +37,7 @@ from rossum_agent.tools.subagents.base import (
 )
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class SchemaFieldType(StrEnum):

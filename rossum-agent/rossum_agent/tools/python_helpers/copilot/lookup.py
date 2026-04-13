@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import re
 
 import httpx
 import jq as jq_lib  # ty: ignore[unresolved-import] - no type stubs for jq
+import structlog
 
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.python_helpers.copilot._shared import (
@@ -28,7 +28,7 @@ from rossum_agent.tools.python_helpers.copilot._shared import (
 )
 from rossum_agent.tools.utils import truncate_output
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _SUGGEST_COMPUTED_FIELD_TIMEOUT = 60
 _EVALUATE_COMPUTED_FIELDS_TIMEOUT = 60

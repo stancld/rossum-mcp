@@ -21,6 +21,11 @@ from rossum_agent.tools.core import AgentContext, reset_context, set_context
 from rossum_agent.tools.dynamic_tools import get_write_tools_async
 from rossum_agent.tools.task_tracker import TaskTracker
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
+from rossum_mcp.logging_config import LogFormat, LogLevel, setup_logging
+
+# Route structlog and stdlib loggers through the shared setup so regression test
+# output uses the same ISO timestamps and contextvars as production.
+setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.CONSOLE)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable

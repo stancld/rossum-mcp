@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
+import structlog
 
 from rossum_agent.bedrock_client import create_bedrock_client, get_small_model_id
 from rossum_agent.change_tracking.models import ConfigCommit, compute_commit_hash
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 _EPOCH = datetime.min.replace(tzinfo=UTC)
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _format_changes_for_message(changes: list[EntityChange]) -> str:

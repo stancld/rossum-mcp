@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+import structlog
 
 if TYPE_CHECKING:
     from typing import Any
@@ -18,7 +19,7 @@ from rossum_agent.tools.core import (
 )
 from rossum_agent.utils import add_message_cache_breakpoint
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

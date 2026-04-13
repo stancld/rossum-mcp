@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING, cast
+
+import structlog
 
 from rossum_agent.change_tracking.models import ConfigCommit
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
     import valkey
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Default TTL for commit data (30 days, matching chat TTL)
 DEFAULT_COMMIT_TTL_SECONDS = 30 * 24 * 3600

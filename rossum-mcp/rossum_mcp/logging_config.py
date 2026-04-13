@@ -69,8 +69,8 @@ def setup_logging(
     return root_logger
 
 
-def _get_processors(log_format: LogFormat) -> list:
-    common = [
+def _get_processors(log_format: LogFormat) -> list[structlog.types.Processor]:
+    common: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.stdlib.add_log_level,
@@ -82,6 +82,7 @@ def _get_processors(log_format: LogFormat) -> list:
     if log_format == LogFormat.CONSOLE:
         return [
             *common,
+            structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
             structlog.dev.ConsoleRenderer(),
         ]

@@ -6,14 +6,14 @@ Read/write tools for the agent's output directory and workspace files.
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.tools.core import get_context
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @beta_tool

@@ -6,12 +6,12 @@ and the connect_mcp_server context manager.
 
 from __future__ import annotations
 
-import logging
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import structlog
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from rossum_agent.change_tracking.models import EntityChange
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

@@ -5,10 +5,10 @@ from __future__ import annotations
 import ast
 import io
 import json
-import logging
 import re
 from contextlib import redirect_stdout
 
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.tools.subagents.knowledge_base.cache import cache
@@ -20,7 +20,7 @@ from rossum_agent.tools.subagents.knowledge_base.ranking import (
     rank_article,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _GREP_MATCH_LIMIT = 200
 _GREP_OUTPUT_LIMIT = 50000

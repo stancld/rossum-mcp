@@ -41,13 +41,13 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import logging
 import random
 import time
 from contextvars import copy_context
 from functools import partial
 from typing import TYPE_CHECKING, Literal
 
+import structlog
 from anthropic import APIError, APITimeoutError, RateLimitError
 from anthropic._types import Omit
 
@@ -86,7 +86,7 @@ if TYPE_CHECKING:
     from rossum_agent.agent.types import UserContent
     from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 EFFORT: Literal["max", "high", "medium", "low"] = "high"
 MAX_OUTPUT_TOKENS = 128000  # Opus 4.6 limit

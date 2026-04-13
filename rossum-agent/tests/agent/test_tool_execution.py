@@ -305,6 +305,43 @@ class TestExecuteTool:
         assert "Connection failed" in result.content
 
     @pytest.mark.asyncio
+    async def test_logs_completion_with_duration_on_success(self, caplog):
+        """Test that successful tool calls emit tool_call.completed with duration."""
+        agent = self._create_agent()
+        agent.mcp_connection.call_tool.return_value = "ok"
+
+        tool_call = ToolCall(id="tc_1", name="some_tool", arguments={})
+
+        with caplog.at_level("INFO", logger="rossum_agent.agent.tool_execution"):
+            await self._get_final_result(agent, tool_call)
+
+        completed = [r for r in caplog.records if "tool_call.completed" in r.getMessage()]
+        assert len(completed) == 1
+        event = completed[0].msg
+        assert event["tool_name"] == "some_tool"
+        assert event["status"] == "success"
+        assert isinstance(event["duration_seconds"], float)
+
+    @pytest.mark.asyncio
+    async def test_logs_failure_with_duration_on_error(self, caplog):
+        """Test that failed tool calls emit tool_call.failed with duration and error_type."""
+        agent = self._create_agent()
+        agent.mcp_connection.call_tool.side_effect = RuntimeError("boom")
+
+        tool_call = ToolCall(id="tc_1", name="bad_tool", arguments={})
+
+        with caplog.at_level("WARNING", logger="rossum_agent.agent.tool_execution"):
+            await self._get_final_result(agent, tool_call)
+
+        failed = [r for r in caplog.records if "tool_call.failed" in r.getMessage()]
+        assert len(failed) == 1
+        event = failed[0].msg
+        assert event["tool_name"] == "bad_tool"
+        assert event["status"] == "error"
+        assert event["error_type"] == "RuntimeError"
+        assert isinstance(event["duration_seconds"], float)
+
+    @pytest.mark.asyncio
     async def test_spills_long_content_to_file(self):
         """Test that long tool output is spilled to a workspace file."""
         agent = self._create_agent()

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import json
-import logging
 
 import httpx
+import structlog
 
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.python_helpers.copilot._shared import _handle_api_error, _json_headers, _request_with_retry
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _SUGGEST_RULE_TIMEOUT = 60
 

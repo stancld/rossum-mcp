@@ -6,16 +6,17 @@ Provides common utilities for calling MCP tools from synchronous thread contexts
 from __future__ import annotations
 
 import asyncio
-import logging
 import time
 from typing import TYPE_CHECKING
+
+import structlog
 
 from rossum_agent.tools.core import get_context
 
 if TYPE_CHECKING:
     from typing import Any
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def call_mcp_tool(name: str, arguments: dict[str, Any], timeout: int = 60) -> Any:

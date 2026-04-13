@@ -7,10 +7,11 @@ import base64
 import contextlib
 import contextvars
 import dataclasses
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import structlog
 
 from rossum_agent.agent.core import RossumAgent, create_agent
 from rossum_agent.agent.memory import AgentMemory
@@ -63,7 +64,7 @@ if TYPE_CHECKING:
     from rossum_agent.agent.types import UserContent
     from rossum_agent.change_tracking.models import ConfigCommit
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _FILE_CONTENT_OPEN_TAG = '<file_content path="'
 _FILE_CONTENT_CLOSE_TAG = "\n</file_content>"
