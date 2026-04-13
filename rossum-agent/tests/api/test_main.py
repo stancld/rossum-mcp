@@ -194,6 +194,7 @@ class TestLifespan:
         mock_chat_service.is_connected.return_value = True
 
         with (
+            patch("rossum_agent.api.main.setup_logging"),
             patch("rossum_agent.api.main._create_storage"),
             patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
             patch("rossum_agent.api.main.AgentService"),
@@ -214,6 +215,7 @@ class TestLifespan:
         mock_chat_service.is_connected.return_value = False
 
         with (
+            patch("rossum_agent.api.main.setup_logging"),
             patch("rossum_agent.api.main._create_storage"),
             patch("rossum_agent.api.main.ChatService", return_value=mock_chat_service),
             patch("rossum_agent.api.main.AgentService"),

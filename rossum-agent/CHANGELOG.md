@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `VALKEY_PASSWORD` environment variable for authenticated Valkey connections [#356](https://github.com/stancld/rossum-agents/pull/356)
+- Structured logging via `structlog` (reusing `rossum_mcp.logging_config`); configurable with `ROSSUM_AGENT_LOG_LEVEL` and `ROSSUM_AGENT_LOG_FORMAT` environment variables [#373](https://github.com/stancld/rossum-agents/pull/373)
 
 ### Fixed
 - Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)

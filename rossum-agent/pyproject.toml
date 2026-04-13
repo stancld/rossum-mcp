@@ -36,6 +36,7 @@ dependencies = [
     "pydantic>2.0.0",
     "rossum-api>=3.13.1",
     "rossum-mcp>=2.2.0,<3.0.0",
+    "structlog>=24.1.0",
     # Required by pandas for reading legacy .xls files in sandboxed execution
     "xlrd>=2.0.1",
 ]
