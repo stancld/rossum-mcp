@@ -486,15 +486,15 @@ class TestPostgresStorageConnection:
         storage._engine = None
         storage.close()  # should not raise
 
-    def test_user_id_db_with_user(self, pg_storage):
-        """Test _user_id_db with a user_id."""
+    def test_normalize_user_id_with_user(self, pg_storage):
+        """Test _normalize_user_id with a user_id."""
         storage, _ = pg_storage
-        assert storage._user_id_db("user1") == "user1"
+        assert storage._normalize_user_id("user1") == "user1"
 
-    def test_user_id_db_without_user(self, pg_storage):
-        """Test _user_id_db without a user_id."""
+    def test_normalize_user_id_without_user(self, pg_storage):
+        """Test _normalize_user_id without a user_id."""
         storage, _ = pg_storage
-        assert storage._user_id_db(None) == ""
+        assert storage._normalize_user_id(None) == ""
 
 
 class TestPreviewFromFirstMsg:
