@@ -10,6 +10,7 @@ from rossum_agent.tools.dynamic_tools import (
     DELETE_TOOL_NAME,
     DISCOVERY_TOOL_NAME,
     CatalogData,
+    _fetch_catalog_async,
     _fetch_catalog_from_mcp,
     _filter_mcp_tools_by_names,
     _load_categories_impl,
@@ -179,7 +180,7 @@ class TestLoadCategoriesImpl:
 
         mock_connection = MagicMock()
         mock_loop = MagicMock()
-        set_context(AgentContext(mcp_connection=mock_connection, mcp_event_loop=mock_loop))
+        set_context(AgentContext(mcp_connection=mock_connection, mcp_event_loop=mock_loop, mcp_mode="read-write"))
         try:
             # Create mock tools that match the queues category
             mock_tool1 = MagicMock()
@@ -311,17 +312,113 @@ class TestContextHoldsDynamicToolsState:
         assert ctx2.dynamic_tools.loaded_categories == set()
 
 
-class TestFetchCatalogFromMcp:
-    """Tests for _fetch_catalog_from_mcp function."""
+class TestFetchCatalogAsync:
+    """Tests for _fetch_catalog_async — source of truth for fetching + parsing."""
 
     def setup_method(self) -> None:
-        """Clear cache before each test."""
         import rossum_agent.tools.dynamic_tools as dt
 
         dt._catalog_cache = None
 
     def teardown_method(self) -> None:
-        """Clear cache after each test."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+        set_context(AgentContext())
+
+    @pytest.mark.asyncio
+    async def test_parses_list_result_directly(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = [
+            {
+                "name": "queues",
+                "tools": [{"name": "get_queue"}, {"name": "list_queues"}],
+                "keywords": ["queue", "inbox"],
+            }
+        ]
+
+        result = await _fetch_catalog_async(connection)
+
+        assert result.catalog["queues"] == {"get_queue", "list_queues"}
+        assert result.keywords["queues"] == ["queue", "inbox"]
+        assert result.write_tools == set()
+
+    @pytest.mark.asyncio
+    async def test_parses_json_string_result(self) -> None:
+        import json
+
+        connection = AsyncMock()
+        connection.call_tool.return_value = json.dumps(
+            [{"name": "schemas", "tools": [{"name": "get_schema"}], "keywords": ["schema"]}]
+        )
+
+        result = await _fetch_catalog_async(connection)
+
+        assert result.catalog["schemas"] == {"get_schema"}
+
+    @pytest.mark.asyncio
+    async def test_parses_wrapped_result(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = {
+            "result": [{"name": "hooks", "tools": [{"name": "get_hook"}], "keywords": ["hook", "extension"]}]
+        }
+
+        result = await _fetch_catalog_async(connection)
+
+        assert result.catalog["hooks"] == {"get_hook"}
+
+    @pytest.mark.asyncio
+    async def test_parses_double_wrapped_json_string(self) -> None:
+        import json
+
+        connection = AsyncMock()
+        inner_list = [{"name": "users", "tools": [{"name": "list_users"}], "keywords": ["user"]}]
+        connection.call_tool.return_value = {"result": json.dumps(inner_list)}
+
+        result = await _fetch_catalog_async(connection)
+
+        assert "users" in result.catalog
+
+    @pytest.mark.asyncio
+    async def test_handles_missing_keywords(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = [{"name": "rules", "tools": [{"name": "get_rule"}]}]
+
+        result = await _fetch_catalog_async(connection)
+
+        assert result.keywords["rules"] == []
+
+    @pytest.mark.asyncio
+    async def test_caches_result(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = [{"name": "queues", "tools": [{"name": "get_queue"}], "keywords": []}]
+
+        await _fetch_catalog_async(connection)
+        await _fetch_catalog_async(connection)
+
+        assert connection.call_tool.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_on_exception(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.side_effect = Exception("Network error")
+
+        result = await _fetch_catalog_async(connection)
+
+        assert result.catalog == {}
+        assert result.keywords == {}
+        assert result.write_tools == set()
+
+
+class TestFetchCatalogFromMcp:
+    """Tests for the sync wrapper _fetch_catalog_from_mcp."""
+
+    def setup_method(self) -> None:
+        import rossum_agent.tools.dynamic_tools as dt
+
+        dt._catalog_cache = None
+
+    def teardown_method(self) -> None:
         import rossum_agent.tools.dynamic_tools as dt
 
         dt._catalog_cache = None
@@ -332,158 +429,48 @@ class TestFetchCatalogFromMcp:
 
         result = _fetch_catalog_from_mcp()
 
-        assert result.catalog == {}
-        assert result.keywords == {}
-        assert result.write_tools == set()
+        assert result == CatalogData()
 
     def test_returns_empty_when_no_event_loop(self) -> None:
         set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=None))
 
         result = _fetch_catalog_from_mcp()
 
-        assert result.catalog == {}
-        assert result.keywords == {}
-        assert result.write_tools == set()
+        assert result == CatalogData()
 
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_parses_list_result_directly(self, mock_run_coro: MagicMock) -> None:
-        """Test parsing when MCP returns a list directly."""
+    def test_delegates_to_async(self, mock_run_coro: MagicMock) -> None:
+        """Sync wrapper schedules the async fetch on the MCP event loop."""
         set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
 
+        expected = CatalogData(catalog={"queues": {"get_queue"}}, keywords={"queues": []}, write_tools=set())
         mock_future = MagicMock()
-        mock_future.result.return_value = [
-            {
-                "name": "queues",
-                "tools": [{"name": "get_queue"}, {"name": "list_queues"}],
-                "keywords": ["queue", "inbox"],
-            }
-        ]
+        mock_future.result.return_value = expected
         mock_run_coro.return_value = mock_future
 
         result = _fetch_catalog_from_mcp()
 
-        assert "queues" in result.catalog
-        assert result.catalog["queues"] == {"get_queue", "list_queues"}
-        assert result.keywords["queues"] == ["queue", "inbox"]
-        assert result.write_tools == set()
+        # The coroutine returned by _fetch_catalog_async was scheduled via run_coroutine_threadsafe.
+        # Close it to avoid "coroutine was never awaited" warnings.
+        scheduled_coro = mock_run_coro.call_args.args[0]
+        scheduled_coro.close()
 
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_parses_json_string_result(self, mock_run_coro: MagicMock) -> None:
-        """Test parsing when MCP returns a JSON string."""
-        import json
+        assert result is expected
+        mock_run_coro.assert_called_once()
 
+    def test_returns_cached_result_without_scheduling(self) -> None:
+        """When cache is populated, sync wrapper returns it without touching the event loop."""
+        import rossum_agent.tools.dynamic_tools as dt
+
+        cached = CatalogData(catalog={"queues": {"get_queue"}}, keywords={"queues": []}, write_tools=set())
+        dt._catalog_cache = cached
         set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
 
-        mock_future = MagicMock()
-        mock_future.result.return_value = json.dumps(
-            [
-                {
-                    "name": "schemas",
-                    "tools": [{"name": "get_schema"}],
-                    "keywords": ["schema"],
-                }
-            ]
-        )
-        mock_run_coro.return_value = mock_future
+        with patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe") as mock_run_coro:
+            result = _fetch_catalog_from_mcp()
 
-        result = _fetch_catalog_from_mcp()
-
-        assert "schemas" in result.catalog
-        assert result.catalog["schemas"] == {"get_schema"}
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_parses_wrapped_result(self, mock_run_coro: MagicMock) -> None:
-        """Test parsing when MCP wraps list in {'result': [...]}."""
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = {
-            "result": [
-                {
-                    "name": "hooks",
-                    "tools": [{"name": "get_hook"}],
-                    "keywords": ["hook", "extension"],
-                }
-            ]
-        }
-        mock_run_coro.return_value = mock_future
-
-        result = _fetch_catalog_from_mcp()
-
-        assert "hooks" in result.catalog
-        assert result.catalog["hooks"] == {"get_hook"}
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_parses_double_wrapped_json_string(self, mock_run_coro: MagicMock) -> None:
-        """Test parsing when MCP wraps a JSON string in {'result': json_string}."""
-        import json
-
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        inner_list = [
-            {
-                "name": "users",
-                "tools": [{"name": "list_users"}],
-                "keywords": ["user"],
-            }
-        ]
-        mock_future.result.return_value = {"result": json.dumps(inner_list)}
-        mock_run_coro.return_value = mock_future
-
-        result = _fetch_catalog_from_mcp()
-
-        assert "users" in result.catalog
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_handles_missing_keywords(self, mock_run_coro: MagicMock) -> None:
-        """Test that missing keywords defaults to empty list."""
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = [
-            {
-                "name": "rules",
-                "tools": [{"name": "get_rule"}],
-            }
-        ]
-        mock_run_coro.return_value = mock_future
-
-        result = _fetch_catalog_from_mcp()
-
-        assert result.keywords["rules"] == []
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_caches_result(self, mock_run_coro: MagicMock) -> None:
-        """Test that catalog is cached after first fetch."""
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = [{"name": "queues", "tools": [{"name": "get_queue"}], "keywords": []}]
-        mock_run_coro.return_value = mock_future
-
-        # First call
-        _fetch_catalog_from_mcp()
-        # Second call
-        _fetch_catalog_from_mcp()
-
-        # Should only call MCP once due to caching
-        assert mock_run_coro.call_count == 1
-
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_returns_empty_on_exception(self, mock_run_coro: MagicMock) -> None:
-        """Test that exceptions return empty catalogs."""
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.side_effect = Exception("Network error")
-        mock_run_coro.return_value = mock_future
-
-        result = _fetch_catalog_from_mcp()
-
-        assert result.catalog == {}
-        assert result.keywords == {}
-        assert result.write_tools == set()
+        assert result is cached
+        mock_run_coro.assert_not_called()
 
 
 class TestGetLoadToolDefinition:
@@ -544,7 +531,7 @@ class TestLoadToolsByName:
         mock_convert: MagicMock,
     ) -> None:
         reset_dynamic_tools()
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
+        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock(), mcp_mode="read-write"))
         try:
             mock_tool = MagicMock()
             mock_tool.name = "delete_hook"
@@ -564,7 +551,7 @@ class TestLoadToolsByName:
     @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
     def test_returns_already_loaded_message(self, mock_run_coro: MagicMock) -> None:
         reset_dynamic_tools()
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
+        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock(), mcp_mode="read-write"))
         try:
             mock_tool = MagicMock()
             mock_tool.name = "delete_hook"
@@ -655,7 +642,7 @@ class TestGetWriteTools:
 
         result = get_write_tools()
 
-        assert result == {"create_hook", "delete"}
+        assert result == {"create_hook", DELETE_TOOL_NAME}
 
     @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
     def test_always_includes_unified_delete_tool(self, mock_fetch: MagicMock) -> None:
@@ -667,7 +654,17 @@ class TestGetWriteTools:
 
         result = get_write_tools()
 
-        assert result == {"delete"}
+        assert result == {DELETE_TOOL_NAME}
+
+    @patch("rossum_agent.tools.dynamic_tools._fetch_catalog_from_mcp")
+    def test_does_not_mutate_cached_write_tools(self, mock_fetch: MagicMock) -> None:
+        """Ensure the unified delete tool is not added back into the cached set."""
+        cached = CatalogData(write_tools={"create_hook"})
+        mock_fetch.return_value = cached
+
+        get_write_tools()
+
+        assert cached.write_tools == {"create_hook"}
 
 
 class TestGetWriteToolsAsync:
@@ -711,7 +708,7 @@ class TestGetWriteToolsAsync:
 
 
 class TestFetchCatalogParsesWriteTools:
-    """Tests for _fetch_catalog_from_mcp parsing read_only field."""
+    """Tests for catalog parsing of the read_only field."""
 
     def setup_method(self) -> None:
         import rossum_agent.tools.dynamic_tools as dt
@@ -724,12 +721,10 @@ class TestFetchCatalogParsesWriteTools:
         dt._catalog_cache = None
         set_context(AgentContext())
 
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_parses_write_tools_from_read_only_field(self, mock_run_coro: MagicMock) -> None:
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = [
+    @pytest.mark.asyncio
+    async def test_parses_write_tools_from_read_only_field(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = [
             {
                 "name": "schemas",
                 "tools": [
@@ -740,32 +735,24 @@ class TestFetchCatalogParsesWriteTools:
                 "keywords": ["schema"],
             }
         ]
-        mock_run_coro.return_value = mock_future
 
-        result = _fetch_catalog_from_mcp()
+        result = await _fetch_catalog_async(connection)
 
-        assert "schemas" in result.catalog
         assert result.catalog["schemas"] == {"get_schema", "create_hook", "update_schema"}
         assert result.write_tools == {"create_hook", "update_schema"}
 
-    @patch("rossum_agent.tools.dynamic_tools.asyncio.run_coroutine_threadsafe")
-    def test_defaults_to_read_only_when_field_missing(self, mock_run_coro: MagicMock) -> None:
-        set_context(AgentContext(mcp_connection=MagicMock(), mcp_event_loop=MagicMock()))
-
-        mock_future = MagicMock()
-        mock_future.result.return_value = [
+    @pytest.mark.asyncio
+    async def test_defaults_to_read_only_when_field_missing(self) -> None:
+        connection = AsyncMock()
+        connection.call_tool.return_value = [
             {
                 "name": "schemas",
-                "tools": [
-                    {"name": "get_schema"},
-                    {"name": "list_schemas"},
-                ],
+                "tools": [{"name": "get_schema"}, {"name": "list_schemas"}],
                 "keywords": ["schema"],
             }
         ]
-        mock_run_coro.return_value = mock_future
 
-        result = _fetch_catalog_from_mcp()
+        result = await _fetch_catalog_async(connection)
 
         assert result.write_tools == set()
 
