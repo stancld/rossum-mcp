@@ -13,6 +13,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy.dialects.postgresql import BYTEA, JSONB, insert
 from sqlalchemy.dialects.postgresql import array as pg_array
+from sqlalchemy.exc import SQLAlchemyError
 
 from rossum_agent.chat_models import ChatData, ChatMetadata, build_chat_list_item, extract_preview_from_first_msg
 
@@ -169,7 +170,7 @@ class PostgresStorage:
                 f"(messages={len(messages)}, user: {user_id or 'shared'}, files={files_saved})"
             )
             return True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to save chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -206,7 +207,7 @@ class PostgresStorage:
                 f"({len(messages)} messages, {files_loaded} files, user: {user_id or 'shared'})"
             )
             return ChatData(messages=messages, output_dir=stored_output_dir, metadata=chat_metadata)
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to load chat {chat_id}: {e}", exc_info=True)
             return None
 
@@ -223,7 +224,7 @@ class PostgresStorage:
                 deleted = result.rowcount > 0
             logger.info(f"Deleted chat {chat_id} from PostgreSQL (deleted={deleted}, user: {user_id or 'shared'})")
             return deleted
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to delete chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -239,7 +240,7 @@ class PostgresStorage:
                     )
                 ).first()
                 return row is not None
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to check if chat {chat_id} exists: {e}", exc_info=True)
             return False
 
@@ -248,7 +249,7 @@ class PostgresStorage:
             with self.engine.connect() as conn:
                 conn.execute(sa.text("SELECT 1"))
             return True
-        except Exception:
+        except SQLAlchemyError:
             return False
 
     def list_all_chats(self, user_id: str | None = None) -> list[dict[str, Any]]:
@@ -284,7 +285,7 @@ class PostgresStorage:
 
             logger.info(f"Found {len(chats)} chats in PostgreSQL (user: {user_id or 'shared'})")
             return chats
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to list chats: {e}", exc_info=True)
             return []
 
@@ -321,7 +322,7 @@ class PostgresStorage:
 
             logger.info(f"Saved file {filename} for chat {chat_id} to PostgreSQL ({len(content)} bytes)")
             return True
-        except Exception as e:
+        except (SQLAlchemyError, OSError) as e:
             logger.error(f"Failed to save file for chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -343,7 +344,7 @@ class PostgresStorage:
             content = bytes(row.content)
             logger.info(f"Loaded file {filename} for chat {chat_id} ({len(content)} bytes)")
             return content
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to load file {filename} for chat {chat_id}: {e}", exc_info=True)
             return None
 
@@ -371,7 +372,7 @@ class PostgresStorage:
             ]
             logger.info(f"Found {len(files)} files for chat {chat_id}")
             return files
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to list files for chat {chat_id}: {e}", exc_info=True)
             return []
 
@@ -387,7 +388,7 @@ class PostgresStorage:
                 deleted = result.rowcount > 0
             logger.info(f"Deleted file {filename} for chat {chat_id} (deleted={deleted})")
             return deleted
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to delete file {filename} for chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -398,7 +399,7 @@ class PostgresStorage:
                 deleted = result.rowcount
             logger.info(f"Deleted {deleted} files for chat {chat_id}")
             return deleted
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to delete files for chat {chat_id}: {e}", exc_info=True)
             return 0
 
@@ -419,7 +420,7 @@ class PostgresStorage:
 
             logger.info(f"Saved {len(files)} files for chat {chat_id} to PostgreSQL")
             return len(files)
-        except Exception as e:
+        except (SQLAlchemyError, OSError) as e:
             logger.error(f"Failed to save files for chat {chat_id}: {e}", exc_info=True)
             return 0
 
@@ -444,7 +445,7 @@ class PostgresStorage:
 
             logger.info(f"Loaded {loaded_count} files for chat {chat_id} from PostgreSQL")
             return loaded_count
-        except Exception as e:
+        except (SQLAlchemyError, OSError) as e:
             logger.error(f"Failed to load files for chat {chat_id}: {e}", exc_info=True)
             return loaded_count
 
@@ -479,7 +480,7 @@ class PostgresStorage:
 
             logger.info(f"Saved feedback for chat {chat_id} turn {turn_index}: {is_positive}")
             return True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to save feedback for chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -504,7 +505,7 @@ class PostgresStorage:
                 if fb is not None:
                     result[i] = fb
             return result
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to get feedback for chat {chat_id}: {e}", exc_info=True)
             return {}
 
@@ -545,7 +546,7 @@ class PostgresStorage:
 
             logger.info(f"Deleted feedback for chat {chat_id} turn {turn_index}")
             return True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to delete feedback for chat {chat_id}: {e}", exc_info=True)
             return False
 
@@ -576,7 +577,7 @@ class PostgresStorage:
 
             logger.info(f"Deleted all feedback for chat {chat_id}")
             return True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Failed to delete all feedback for chat {chat_id}: {e}", exc_info=True)
             return False
 
