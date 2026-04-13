@@ -685,21 +685,3 @@ class TestCollapseToolResults:
         # Stored data should be untouched
         assert memory.steps[1].tool_results[0].content == "original content"
         assert memory.steps[2].tool_results[0].content == "final content"
-
-    def test_empty_collapsible_tools_set_skips_collapsing(self):
-        memory = AgentMemory(COLLAPSIBLE_TOOLS=set())
-        memory.add_task("Update")
-        memory.add_step(self._make_tool_step(1, "tc1", "patch_schema", "result 1"))
-        memory.add_step(self._make_tool_step(2, "tc2", "patch_schema", "result 2"))
-
-        messages = memory.write_to_messages()
-
-        tool_results = [
-            block
-            for msg in messages
-            if msg["role"] == "user" and isinstance(msg["content"], list)
-            for block in msg["content"]
-            if isinstance(block, dict) and block.get("type") == "tool_result"
-        ]
-        assert tool_results[0]["content"] == "result 1"
-        assert tool_results[1]["content"] == "result 2"

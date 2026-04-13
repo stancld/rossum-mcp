@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from anthropic.types import MessageParam, TextBlockParam, ThinkingBlockParam, ToolResultBlockParam, ToolUseBlockParam
 
@@ -151,7 +151,7 @@ class TaskStep:
 class AgentMemory:
     """Memory storage for agent steps."""
 
-    COLLAPSIBLE_TOOLS: set[str] = field(default_factory=lambda: {"patch_schema"}, repr=False)
+    COLLAPSIBLE_TOOLS: ClassVar[frozenset[str]] = frozenset({"patch_schema"})
 
     steps: list[TaskStep | MemoryStep] = field(default_factory=list)
 
@@ -182,9 +182,6 @@ class AgentMemory:
         Scans messages to find the last occurrence of each collapsible tool,
         then replaces all earlier occurrences' content strings.
         """
-        if not self.COLLAPSIBLE_TOOLS:
-            return messages
-
         tool_use_id_to_name = self._build_collapsible_tool_map(messages)
         if not tool_use_id_to_name:
             return messages
