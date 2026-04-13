@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
   - Reused `extract_text_from_content` instead of duplicate `_extract_text_from_prompt`
   - Cleaned up URL context builder
   - Split `rossum_mcp_integration` module into a subpackage (`connection`, `change_tracking`, `tools`)
+  - Consolidated `dynamic_tools` catalog fetch around the async path (removed sync duplication)
 
 ## [2.0.0] - 2026-04-09
 
