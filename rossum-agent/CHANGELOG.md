@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [2.1.0] - 2026-04-13
+
 ### Changed
 - Bump `rossum-mcp` dependency from `>=2.1.3` to `>=2.2.0`
 - Migrate from Redis to Valkey for change tracking storage [#356](https://github.com/stancld/rossum-agents/pull/356)
