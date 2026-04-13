@@ -272,7 +272,7 @@ class ChangeTrackingMixin:
             cast("MCPConnection", self),
             self.chat_id or "unknown",
             user_request,
-            self._environment,  # type: ignore[arg-type]
+            self._environment,
         )
 
     def get_changes(self) -> list[EntityChange]:
