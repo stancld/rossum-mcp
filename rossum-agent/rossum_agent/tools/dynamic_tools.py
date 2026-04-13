@@ -8,21 +8,22 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
-from rossum_agent.rossum_mcp_integration import mcp_tools_to_anthropic_format
+import structlog
+
+from rossum_agent.rossum_mcp_integration.tools import mcp_tools_to_anthropic_format
 from rossum_agent.tools.core import get_context
 
 if TYPE_CHECKING:
     from anthropic.types import ToolParam
     from mcp.types import Tool as MCPTool
 
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -95,32 +96,6 @@ def _parse_catalog_result(result: object) -> CatalogData:
     return CatalogData(catalog=catalog, keywords=keywords, write_tools=write_tools)
 
 
-def _fetch_catalog_from_mcp() -> CatalogData:
-    """Fetch tool catalog from MCP server (sync, uses global connection)."""
-    global _catalog_cache
-
-    if _catalog_cache is not None:
-        return _catalog_cache
-
-    ctx = get_context()
-
-    if ctx.mcp_connection is None or ctx.mcp_event_loop is None:
-        logger.warning("MCP connection not available, returning empty catalog")
-        return CatalogData()
-
-    try:
-        result = asyncio.run_coroutine_threadsafe(
-            ctx.mcp_connection.call_tool("list_tool_categories", {}), ctx.mcp_event_loop
-        ).result(timeout=10)
-        _catalog_cache = _parse_catalog_result(result)
-        logger.info(f"Fetched catalog with {len(_catalog_cache.catalog)} categories from MCP")
-        return _catalog_cache
-
-    except Exception as e:
-        logger.error(f"Failed to fetch catalog from MCP: {e}")
-        return CatalogData()
-
-
 async def _fetch_catalog_async(mcp_connection: MCPConnection) -> CatalogData:
     """Fetch tool catalog from MCP server (async, accepts connection directly)."""
     global _catalog_cache
@@ -138,6 +113,21 @@ async def _fetch_catalog_async(mcp_connection: MCPConnection) -> CatalogData:
         return CatalogData()
 
 
+def _fetch_catalog_from_mcp() -> CatalogData:
+    """Fetch tool catalog from MCP server (sync, uses global connection)."""
+    if _catalog_cache is not None:
+        return _catalog_cache
+
+    ctx = get_context()
+    if ctx.mcp_connection is None or ctx.mcp_event_loop is None:
+        logger.warning("MCP connection not available, returning empty catalog")
+        return CatalogData()
+
+    return asyncio.run_coroutine_threadsafe(_fetch_catalog_async(ctx.mcp_connection), ctx.mcp_event_loop).result(
+        timeout=10
+    )
+
+
 def get_category_tool_names() -> dict[str, set[str]]:
     """Get mapping of category names to tool names (fetched from MCP)."""
     return _fetch_catalog_from_mcp().catalog
@@ -148,11 +138,13 @@ def get_category_keywords() -> dict[str, list[str]]:
     return _fetch_catalog_from_mcp().keywords
 
 
-def get_write_tools() -> set[str]:
-    tools = _fetch_catalog_from_mcp().write_tools
+async def get_write_tools_async(mcp_connection: MCPConnection) -> set[str]:
     # The unified delete tool lives outside any category but is always a write tool
-    tools.add(DELETE_TOOL_NAME)
-    return tools
+    return (await _fetch_catalog_async(mcp_connection)).write_tools | {DELETE_TOOL_NAME}
+
+
+def get_write_tools() -> set[str]:
+    return _fetch_catalog_from_mcp().write_tools | {DELETE_TOOL_NAME}
 
 
 def is_mcp_write_tool(name: str) -> bool:
@@ -165,13 +157,6 @@ def is_mcp_write_tool(name: str) -> bool:
 def get_cached_category_tool_names() -> dict[str, set[str]] | None:
     """Get cached category→tool mapping, or None if catalog not yet fetched."""
     return _catalog_cache.catalog if _catalog_cache is not None else None
-
-
-async def get_write_tools_async(mcp_connection: MCPConnection) -> set[str]:
-    tools = (await _fetch_catalog_async(mcp_connection)).write_tools
-    # The unified delete tool lives outside any category but is always a write tool
-    tools.add(DELETE_TOOL_NAME)
-    return tools
 
 
 def suggest_categories_for_request(request_text: str) -> list[str]:

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import logging
 import random
 import string
 import unicodedata
@@ -16,6 +15,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import structlog
 from anthropic import beta_tool
 from fpdf import FPDF
 
@@ -24,7 +24,7 @@ from rossum_agent.tools.core import get_context
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Override values can be str, int, or float — converted to str before use
 OverrideValue = str | int | float

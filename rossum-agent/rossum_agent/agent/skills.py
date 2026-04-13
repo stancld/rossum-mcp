@@ -7,12 +7,13 @@ after the closing ``---`` is the skill content delivered to the agent.
 
 from __future__ import annotations
 
-import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 # Default skills directory path relative to rossum_agent package
 _SKILLS_DIR = Path(__file__).parent.parent / "skills"

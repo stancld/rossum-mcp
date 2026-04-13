@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from rossum_agent.api.services.chat_service import ChatService
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 class TestChatServiceInit:

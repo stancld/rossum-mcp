@@ -547,7 +547,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         description="Create queue, replace schema with a formula field, then revert to original",
         api_base_url="https://mr-fabry.rossum.app/api/v1",
         rossum_url=None,
-        requires_redis=True,
+        requires_valkey=True,
         prompt=(
             "# Create queue, replace schema with a formula field, then revert\n\n"
             "Workspace: 785638\n"
@@ -586,7 +586,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         description="Create queue with hook, delete hook, then revert the deletion",
         api_base_url="https://mr-fabry.rossum.app/api/v1",
         rossum_url=None,
-        requires_redis=True,
+        requires_valkey=True,
         prompt=(
             "# Create queue with hook, delete hook, then revert\n\n"
             "Workspace: 785638\n"
@@ -625,7 +625,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         description="Empty a pre-loaded schema (with formula + mixed types) and revert — validates type safety",
         api_base_url="https://mr-fabry.rossum.app/api/v1",
         rossum_url=None,
-        requires_redis=True,
+        requires_valkey=True,
         setup_fn=create_queue_with_schema,
         prompt=(
             "# Empty schema and revert\n\n"
@@ -659,7 +659,7 @@ REGRESSION_TEST_CASES: list[RegressionTestCase] = [
         ),
         api_base_url="https://mr-fabry.rossum.app/api/v1",
         rossum_url=None,
-        requires_redis=True,
+        requires_valkey=True,
         prompts=[
             "Create a 'New revert queue' in workspace 785638. Use EU Invoice template.",
             (

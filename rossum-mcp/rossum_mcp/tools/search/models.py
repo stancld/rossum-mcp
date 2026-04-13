@@ -12,7 +12,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from rossum_mcp.tools.models import EmailTemplateType, EngineType, LogLevel
+from rossum_mcp.logging_config import LogLevel
+from rossum_mcp.models.email_template import EmailTemplateType
+from rossum_mcp.models.engine import EngineType
 
 
 class QueueSearch(BaseModel):

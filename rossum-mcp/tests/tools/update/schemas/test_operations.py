@@ -10,8 +10,8 @@ from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
 from rossum_api.domain_logic.resources import Resource
 from rossum_mcp.tools.search.models import SchemaListItem
-from rossum_mcp.tools.search.registry import _list_schemas
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.search.schemas import _list_schemas
+from rossum_mcp.tools.update.schemas.handler import register_schema_tools
 
 
 @pytest.mark.unit
@@ -350,7 +350,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_add_datapoint(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test adding a datapoint to a section."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -389,7 +389,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_update_datapoint(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test updating properties of an existing datapoint."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -432,7 +432,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_remove_datapoint(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test removing a datapoint from a section."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -470,7 +470,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_retries_on_412(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that patch_schema retries on 412 Precondition Failed."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -507,7 +507,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_raises_after_max_retries_on_412(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that patch_schema raises after exhausting retries on 412."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {
@@ -537,7 +537,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_invalid_operation(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that invalid operation returns error."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         patch_schema = mock_mcp._tools["patch_schema"]
         with pytest.raises(ToolError, match="Invalid operation 'invalid'"):
@@ -550,7 +550,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_unexpected_content_format(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test patch_schema when schema content is not a list."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_client._http_client.request_json.return_value = {"content": "not_a_list"}
 
@@ -569,7 +569,7 @@ class TestPatchSchema:
     @pytest.mark.asyncio
     async def test_patch_schema_node_not_found(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that updating a non-existent node returns error."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         existing_content = [
             {

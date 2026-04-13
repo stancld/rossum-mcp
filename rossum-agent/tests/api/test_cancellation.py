@@ -10,7 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from rossum_agent.api.main import app
 from rossum_agent.api.routes.helpers import watch_disconnect
-from rossum_agent.api.services.agent_service import AgentService, _ChatRunState
+from rossum_agent.api.services.agent_service.service import AgentService, _ChatRunState
 
 
 class TestChatRunState:
@@ -249,7 +249,7 @@ class TestSendMessageCancellation:
 
     @pytest.mark.asyncio
     async def test_send_message_passes_chat_id_to_run_agent(self, mock_httpx_success, mock_run_agent_factory):
-        from rossum_agent.storage import ChatData, ChatMetadata
+        from rossum_agent.chat_models import ChatData, ChatMetadata
 
         calls, mock_run_agent = mock_run_agent_factory()
 
@@ -285,7 +285,7 @@ class TestSendMessageCancellation:
 
     @pytest.mark.asyncio
     async def test_cancelled_request_does_not_save_history(self, mock_httpx_success):
-        from rossum_agent.storage import ChatData, ChatMetadata
+        from rossum_agent.chat_models import ChatData, ChatMetadata
 
         mock_chat_service = MagicMock()
         mock_chat_service.get_chat_data.return_value = ChatData(

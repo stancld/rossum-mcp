@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.schemas.handler import register_schema_tools
 from rossum_mcp.tools.update.schemas.pruning import (
     _collect_all_field_ids,
     _remove_fields_from_content,
@@ -140,7 +140,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_with_fields_to_keep(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test pruning with fields_to_keep."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -171,7 +171,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_with_fields_to_remove(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test pruning with fields_to_remove."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -199,7 +199,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_both_params_error(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test error when both fields_to_keep and fields_to_remove provided."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
         with pytest.raises(ToolError, match="not both"):
@@ -208,7 +208,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_no_params_error(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test error when neither parameter provided."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         prune_schema_fields = mock_mcp._tools["prune_schema_fields"]
         with pytest.raises(ToolError, match="Must specify"):
@@ -219,7 +219,7 @@ class TestPruneSchemaFields:
         self, mock_mcp: Mock, mock_client: AsyncMock
     ) -> None:
         """Test that keeping a nested field preserves its parent containers (multivalue, section)."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -303,7 +303,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_all_fields_kept(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test prune when fields_to_keep matches all fields so remove_set is empty."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -334,7 +334,7 @@ class TestPruneSchemaFields:
         tuple_children: list[dict],
     ) -> None:
         """Configure mock with a multivalue schema."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -407,7 +407,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_removes_empty_sections(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that sections with no remaining children are removed (API rejects empty sections)."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -447,7 +447,7 @@ class TestPruneSchemaFields:
         self, mock_mcp: Mock, mock_client: AsyncMock
     ) -> None:
         """Test that fields_to_keep=[] removes all fields (empty schema)."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -478,7 +478,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_allows_empty_result(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that pruning all fields empties the schema."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -510,7 +510,7 @@ class TestPruneSchemaFields:
         self, mock_mcp: Mock, mock_client: AsyncMock
     ) -> None:
         """Test that section IDs in fields_to_keep are preserved as empty containers."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -548,7 +548,7 @@ class TestPruneSchemaFields:
     @pytest.mark.asyncio
     async def test_prune_schema_fields_retries_on_412(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test that prune_schema_fields retries on 412 Precondition Failed."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,
@@ -583,7 +583,7 @@ class TestPruneSchemaFields:
         self, mock_mcp: Mock, mock_client: AsyncMock
     ) -> None:
         """Test that prune_schema_fields raises after exhausting retries on 412."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_schema_tools(mock_mcp, mock_client)
 
         mock_schema_dict = {
             "id": 50,

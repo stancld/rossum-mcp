@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+## [2.2.0] - 2026-04-11
+
+### Added
+- Add structured logging with `structlog` and observability middleware for request/response tracing [#357](https://github.com/stancld/rossum-agents/pull/357)
+
+### Fixed
+- Fix user creation by including the required `organization` field in the payload [#354](https://github.com/stancld/rossum-agents/pull/354)
+
+### Changed
+- Refactor `server.py` into `RossumMCPServer` class in `server.py` and thin `run.py` entry point [#348](https://github.com/stancld/rossum-agents/pull/348)
+- Replace `Literal` type aliases with `StrEnum` for `MCPMode` and `LogLevel` — drops manual validation in favor of enum construction [#348](https://github.com/stancld/rossum-agents/pull/348)
+- Extract shared models into dedicated `models` module with resource-level separation [#349](https://github.com/stancld/rossum-agents/pull/349)
+- Decompose monolithic `create/handler.py` into per-domain register functions (`annotations`, `email_templates`, `engines`, `hooks`, `queues`, `rules`, `users`, `workspaces`) [#351](https://github.com/stancld/rossum-agents/pull/351)
+- Decompose monolithic `update/handler.py` into per-domain register functions (`annotations`, `engines`, `hooks`, `queues`, `rules`, `schemas`, `users`) [#351](https://github.com/stancld/rossum-agents/pull/351)
+- Decompose `get/handler.py` — extract `annotations`, `engines`, `schemas` tool registrations into own modules; handler retained as `register_core_tools` for the unified `get`/`search` tools [#351](https://github.com/stancld/rossum-agents/pull/351)
+- Decompose `search/registry.py` — extract all search implementations into per-domain modules (`annotations`, `email_templates`, `engines`, `hooks`, `organization_groups`, `queue_templates`, `queues`, `relations`, `rules`, `schemas`, `users`, `workspaces`); registry retained as thin dispatch map [#351](https://github.com/stancld/rossum-agents/pull/351)
+- Decompose `delete/registry.py` — extract delete implementations into per-domain modules (`annotations`, `hooks`, `queues`, `rules`, `schemas`, `workspaces`); registry retained as thin dispatch map [#351](https://github.com/stancld/rossum-agents/pull/351)
+
 ## [2.1.3] - 2026-04-08
 
 ### Added

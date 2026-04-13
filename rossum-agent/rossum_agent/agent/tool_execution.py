@@ -1,41 +1,23 @@
-"""Tool dispatch, serialization, deduplication and staggering for the Rossum agent.
-
-This module handles all tool execution concerns: parsing tool arguments,
-deduplicating identical calls, serializing results, and orchestrating parallel
-execution with progress reporting.
-"""
-
 from __future__ import annotations
 
 import asyncio
 import dataclasses
 import json
-import logging
 import queue
+import time
 from contextvars import copy_context
 from functools import partial
 from typing import TYPE_CHECKING, ClassVar
 
+import structlog
 from pydantic import BaseModel
 
 from rossum_agent.agent.cautious_gate import check_cautious_write_gate
 from rossum_agent.agent.memory import MemoryStep
-from rossum_agent.agent.models import (
-    ThinkingBlockData,
-    ToolCall,
-    ToolResult,
-    ToolResultStep,
-    ToolStartStep,
-    truncate_content,
-)
+from rossum_agent.agent.models import ThinkingBlockData, ToolCall, ToolResult, ToolResultStep, ToolStartStep
 from rossum_agent.agent.spillover import maybe_spill
 from rossum_agent.tools import execute_internal_tool, get_internal_tool_names
-from rossum_agent.tools.core import (
-    AgentContext,
-    SubAgentTokenUsage,
-    get_context,
-    set_context,
-)
+from rossum_agent.tools.core import AgentContext, SubAgentTokenUsage, get_context, set_context
 from rossum_agent.utils import COMPACT_JSON_SEPARATORS
 
 if TYPE_CHECKING:
@@ -43,16 +25,25 @@ if TYPE_CHECKING:
 
     from rossum_agent.agent.core import TokenTracker
     from rossum_agent.agent.memory import AgentMemory
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+MAX_TOOL_OUTPUT_LENGTH = 30000
+
+
+def truncate_content(content: str, max_length: int = MAX_TOOL_OUTPUT_LENGTH) -> str:
+    if len(content) <= max_length:
+        return content
+    half = max_length // 2
+    return content[:half] + f"\n..._Content truncated to stay below {max_length} characters_...\n" + content[-half:]
 
 
 def _parse_json_encoded_strings(arguments: dict) -> dict:
     """Recursively parse JSON-encoded strings in tool arguments.
 
-    LLMs sometimes generate JSON-encoded strings for list/dict arguments instead of
-    actual lists/dicts. This function detects and parses such strings.
+    LLMs sometimes generate JSON-encoded strings for list/dict arguments instead of actual lists/dicts.
+    This function detects and parses such strings.
 
     For example, converts:
         {"fields_to_keep": "[\"a\", \"b\"]"}
@@ -69,10 +60,7 @@ def _parse_json_encoded_strings(arguments: dict) -> dict:
         elif isinstance(value, str) and value.startswith(("[", "{")):
             try:
                 parsed = json.loads(value)
-                if isinstance(parsed, (list, dict)):
-                    result[key] = parsed
-                else:
-                    result[key] = value
+                result[key] = parsed if isinstance(parsed, (list, dict)) else value
             except json.JSONDecodeError:
                 result[key] = value
         elif isinstance(value, dict):
@@ -80,47 +68,6 @@ def _parse_json_encoded_strings(arguments: dict) -> dict:
         else:
             result[key] = value
     return result
-
-
-def _tool_call_fingerprint(tool_call: ToolCall) -> str:
-    """Create a stable fingerprint for deduplicating identical tool calls in one step."""
-    return json.dumps(
-        {"name": tool_call.name, "arguments": tool_call.arguments},
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    )
-
-
-def _deduplicate_tool_calls(
-    tool_calls: list[ToolCall], step_num: int
-) -> tuple[list[ToolCall], dict[str, list[ToolCall]]]:
-    """Deduplicate identical tool calls, returning unique calls and a map of duplicates by primary ID."""
-    deduped: list[ToolCall] = []
-    duplicate_calls_by_id: dict[str, list[ToolCall]] = {}
-    seen_fingerprints: dict[str, ToolCall] = {}
-
-    for tool_call in tool_calls:
-        fingerprint = _tool_call_fingerprint(tool_call)
-        primary_call = seen_fingerprints.get(fingerprint)
-        if primary_call is None:
-            seen_fingerprints[fingerprint] = tool_call
-            deduped.append(tool_call)
-            duplicate_calls_by_id[tool_call.id] = []
-        else:
-            duplicate_calls_by_id[primary_call.id].append(tool_call)
-
-    duplicate_count = len(tool_calls) - len(deduped)
-    if duplicate_count > 0:
-        logger.info(
-            "Step %s: deduplicated %s duplicate tool call(s) (%s requested, %s executed)",
-            step_num,
-            duplicate_count,
-            len(tool_calls),
-            len(deduped),
-        )
-
-    return deduped, duplicate_calls_by_id
 
 
 class _SchemaStagger:
@@ -208,8 +155,9 @@ async def execute_tool_with_progress(
     def token_callback(usage: SubAgentTokenUsage) -> None:
         token_queue.put(usage)
 
-    logger.info("Tool call: %s(%s)", tool_call.name, tool_call.arguments)
+    logger.info("tool_call.started", tool_name=tool_call.name, arguments=tool_call.arguments)
 
+    start = time.perf_counter()
     try:
         if tool_call.name in get_internal_tool_names():
             logger.info(f"Calling internal tool {tool_call.name}")
@@ -244,13 +192,27 @@ async def execute_tool_with_progress(
             result = await mcp_connection.call_tool(tool_call.name, tool_call.arguments)
             content = serialize_tool_result(result)
 
+        logger.info(
+            "tool_call.completed",
+            tool_name=tool_call.name,
+            duration_seconds=round(time.perf_counter() - start, 3),
+            status="success",
+        )
+
         content = maybe_spill(content, tool_call.name, step_num, get_context().get_output_dir(), tool_call.id)
         content = truncate_content(content)
         yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=content)
 
     except Exception as e:
         error_msg = f"Tool {tool_call.name} failed: {e}"
-        logger.warning(f"Tool {tool_call.name} failed: {e}", exc_info=True)
+        logger.warning(
+            "tool_call.failed",
+            tool_name=tool_call.name,
+            duration_seconds=round(time.perf_counter() - start, 3),
+            status="error",
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
         yield ToolResult(tool_call_id=tool_call.id, name=tool_call.name, content=error_msg, is_error=True)
 
 
@@ -275,14 +237,9 @@ async def execute_tools_with_progress(
         output_tokens=output_tokens,
     )
 
-    deduped_tool_calls, duplicate_calls_by_id = _deduplicate_tool_calls(tool_calls, step_num)
-    total_tools = len(deduped_tool_calls)
+    total_tools = len(tool_calls)
 
-    yield ToolStartStep(
-        step_number=step_num,
-        tool_calls=deduped_tool_calls,
-        tool_progress=(0, total_tools),
-    )
+    yield ToolStartStep(step_number=step_num, tool_calls=tool_calls, tool_progress=(0, total_tools))
 
     progress_queue: asyncio.Queue[ToolStartStep] = asyncio.Queue()
     results_by_id: dict[str, ToolResult] = {}
@@ -290,29 +247,19 @@ async def execute_tools_with_progress(
     # Stagger schema patch calls to avoid 412 conflicts from concurrent writes
     stagger = _SchemaStagger()
 
-    async def _execute_single_tool(tool_call: ToolCall, duplicate_calls: list[ToolCall], idx: int) -> None:
+    async def _execute_single_tool(tool_call: ToolCall, idx: int) -> None:
         await stagger.maybe_delay(tool_call.name)
 
         tool_progress = (idx, total_tools)
         async for progress_or_result in execute_tool_with_progress(
-            tool_call, step_num, deduped_tool_calls, tool_progress, mcp_connection, tokens
+            tool_call, step_num, tool_calls, tool_progress, mcp_connection, tokens
         ):
             if isinstance(progress_or_result, ToolStartStep):
                 await progress_queue.put(progress_or_result)
             elif isinstance(progress_or_result, ToolResult):
                 results_by_id[tool_call.id] = progress_or_result
-                for duplicate_call in duplicate_calls:
-                    results_by_id[duplicate_call.id] = ToolResult(
-                        tool_call_id=duplicate_call.id,
-                        name=duplicate_call.name,
-                        content=progress_or_result.content,
-                        is_error=progress_or_result.is_error,
-                    )
 
-    tasks = [
-        asyncio.create_task(_execute_single_tool(tool_call, duplicate_calls_by_id[tool_call.id], idx))
-        for idx, tool_call in enumerate(deduped_tool_calls, 1)
-    ]
+    tasks = [asyncio.create_task(_execute_single_tool(tool_call, idx)) for idx, tool_call in enumerate(tool_calls, 1)]
 
     try:
         pending = set(tasks)
@@ -331,15 +278,14 @@ async def execute_tools_with_progress(
         await asyncio.gather(*tasks, return_exceptions=True)
         raise
 
-    memory_results = [results_by_id[tc.id] for tc in tool_calls if tc.id in results_by_id]
-    streamed_results = [results_by_id[tc.id] for tc in deduped_tool_calls if tc.id in results_by_id]
-    memory_step.tool_results = memory_results
+    results = [results_by_id[tc.id] for tc in tool_calls if tc.id in results_by_id]
+    memory_step.tool_results = results
     memory.add_step(memory_step)
 
     yield ToolResultStep(
         step_number=step_num,
-        tool_calls=deduped_tool_calls,
-        tool_results=streamed_results,
+        tool_calls=tool_calls,
+        tool_results=results,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
     )

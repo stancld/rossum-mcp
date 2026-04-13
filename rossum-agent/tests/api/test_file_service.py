@@ -11,7 +11,7 @@ from rossum_agent.api.services.file_service import FileService
 
 @pytest.fixture
 def mock_storage():
-    """Create a mock ChatStorage."""
+    """Create a mock PostgresStorage."""
     return MagicMock()
 
 
@@ -98,7 +98,7 @@ class TestStorageProperty:
     """Tests for FileService.storage property."""
 
     def test_storage_property_returns_storage(self, file_service, mock_storage):
-        """Test that storage property returns the ChatStorage instance."""
+        """Test that storage property returns the storage instance."""
         result = file_service.storage
 
         assert result is mock_storage

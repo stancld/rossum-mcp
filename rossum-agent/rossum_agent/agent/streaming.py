@@ -10,10 +10,10 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import json
-import logging
 import time
 from typing import TYPE_CHECKING
 
+import structlog
 from anthropic.types import (
     ContentBlockStopEvent,
     InputJSONDelta,
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     from anthropic.types import Message, MessageStreamEvent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Buffer text tokens for this duration before first flush to allow time to determine
 # whether this is an intermediate step (with tool calls) or final answer text.

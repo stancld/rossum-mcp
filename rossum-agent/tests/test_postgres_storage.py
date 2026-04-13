@@ -8,8 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
-from rossum_agent.postgres_storage import PostgresStorage, _preview_from_first_msg
-from rossum_agent.storage import ChatMetadata
+from rossum_agent.chat_models import ChatMetadata, extract_preview_from_first_msg
+from rossum_agent.postgres_storage import PostgresStorage
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def _make_storage_with_mock_engine():
@@ -159,7 +160,7 @@ class TestPostgresStorageChat:
     def test_save_chat_failure(self, pg_storage):
         """Test save_chat handles exceptions."""
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
 
         result = storage.save_chat("user1", "chat_123", [])
         assert result is False
@@ -191,7 +192,7 @@ class TestPostgresStorageChat:
     def test_load_chat_failure(self, pg_storage):
         """Test load_chat handles exceptions."""
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
 
         result = storage.load_chat("user1", "chat_123")
         assert result is None
@@ -467,7 +468,7 @@ class TestPostgresStorageConnection:
     def test_is_connected_false(self, pg_storage):
         """Test is_connected when DB is unreachable."""
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("Connection refused")
+        mock_conn.execute.side_effect = SQLAlchemyError("Connection refused")
 
         assert storage.is_connected() is False
 
@@ -485,41 +486,41 @@ class TestPostgresStorageConnection:
         storage._engine = None
         storage.close()  # should not raise
 
-    def test_user_id_db_with_user(self, pg_storage):
-        """Test _user_id_db with a user_id."""
+    def test_normalize_user_id_with_user(self, pg_storage):
+        """Test _normalize_user_id with a user_id."""
         storage, _ = pg_storage
-        assert storage._user_id_db("user1") == "user1"
+        assert storage._normalize_user_id("user1") == "user1"
 
-    def test_user_id_db_without_user(self, pg_storage):
-        """Test _user_id_db without a user_id."""
+    def test_normalize_user_id_without_user(self, pg_storage):
+        """Test _normalize_user_id without a user_id."""
         storage, _ = pg_storage
-        assert storage._user_id_db(None) == ""
+        assert storage._normalize_user_id(None) == ""
 
 
 class TestPreviewFromFirstMsg:
-    """Test _preview_from_first_msg standalone function."""
+    """Test extract_preview_from_first_msg standalone function."""
 
     def test_none_msg(self):
-        assert _preview_from_first_msg(None) == ""
+        assert extract_preview_from_first_msg(None) == ""
 
     def test_empty_dict(self):
-        assert _preview_from_first_msg({}) == ""
+        assert extract_preview_from_first_msg({}) == ""
 
     def test_task_step_msg(self):
         msg = {"type": "task_step", "task": "Analyze schema"}
-        assert _preview_from_first_msg(msg) == "Analyze schema"
+        assert extract_preview_from_first_msg(msg) == "Analyze schema"
 
     def test_task_step_no_task(self):
         msg = {"type": "task_step"}
-        assert _preview_from_first_msg(msg) == ""
+        assert extract_preview_from_first_msg(msg) == ""
 
     def test_user_role_msg(self):
         msg = {"role": "user", "content": "Hello world"}
-        assert _preview_from_first_msg(msg) == "Hello world"
+        assert extract_preview_from_first_msg(msg) == "Hello world"
 
     def test_assistant_role_returns_empty(self):
         msg = {"role": "assistant", "content": "Hi there"}
-        assert _preview_from_first_msg(msg) == ""
+        assert extract_preview_from_first_msg(msg) == ""
 
 
 class TestSaveChatWithOutputDir:
@@ -585,7 +586,7 @@ class TestSaveAllFilesEdgeCases:
 
     def test_save_all_files_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             Path(tmpdir, "f.txt").write_bytes(b"data")
@@ -603,7 +604,7 @@ class TestSaveFileStrPath:
 
     def test_save_file_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         result = storage.save_file("chat_1", Path("/mock/test.txt"), content=b"hello")
         assert result is False
 
@@ -619,7 +620,7 @@ class TestSaveFeedbackNegative:
 
     def test_save_feedback_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         result = storage.save_feedback("user1", "chat_1", 0, True)
         assert result is False
 
@@ -629,32 +630,32 @@ class TestErrorPaths:
 
     def test_delete_chat_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.delete_chat("user1", "chat_1") is False
 
     def test_chat_exists_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.chat_exists("user1", "chat_1") is False
 
     def test_list_all_chats_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.list_all_chats("user1") == []
 
     def test_load_file_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.load_file("chat_1", "f.txt") is None
 
     def test_list_files_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.list_files("chat_1") == []
 
     def test_delete_file_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.delete_file("chat_1", "f.txt") is False
 
     def test_delete_file_not_found(self, pg_storage):
@@ -664,24 +665,24 @@ class TestErrorPaths:
 
     def test_delete_all_files_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.delete_all_files("chat_1") == 0
 
     def test_load_all_files_failure(self, pg_storage):
         storage, _ = pg_storage
-        storage._engine.connect.side_effect = Exception("DB error")
+        storage._engine.connect.side_effect = SQLAlchemyError("DB error")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             assert storage.load_all_files("chat_1", Path(tmpdir)) == 0
 
     def test_get_feedback_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.get_feedback("user1", "chat_1") == {}
 
     def test_delete_feedback_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.delete_feedback("user1", "chat_1", 0) is False
 
     def test_delete_feedback_chat_not_found(self, pg_storage):
@@ -691,36 +692,5 @@ class TestErrorPaths:
 
     def test_delete_all_feedback_failure(self, pg_storage):
         storage, mock_conn = pg_storage
-        mock_conn.execute.side_effect = Exception("DB error")
+        mock_conn.execute.side_effect = SQLAlchemyError("DB error")
         assert storage.delete_all_feedback("user1", "chat_1") is False
-
-
-class TestPostgresStorageProtocol:
-    """Test that PostgresStorage satisfies the ChatStorage protocol."""
-
-    def test_satisfies_protocol(self):
-        """Test that PostgresStorage is a valid ChatStorage implementation."""
-
-        assert isinstance(PostgresStorage, type)
-        # Verify all protocol methods exist
-        for method_name in [
-            "save_chat",
-            "load_chat",
-            "delete_chat",
-            "chat_exists",
-            "is_connected",
-            "list_all_chats",
-            "save_file",
-            "load_file",
-            "list_files",
-            "delete_file",
-            "delete_all_files",
-            "save_all_files",
-            "load_all_files",
-            "save_feedback",
-            "get_feedback",
-            "delete_feedback",
-            "delete_all_feedback",
-            "close",
-        ]:
-            assert hasattr(PostgresStorage, method_name), f"Missing method: {method_name}"

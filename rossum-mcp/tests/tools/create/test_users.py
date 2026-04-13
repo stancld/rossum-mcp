@@ -5,8 +5,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from rossum_api.models.organization import Organization
 from rossum_api.models.user import User
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 
 
 def create_mock_user(**kwargs) -> User:
@@ -36,12 +37,32 @@ def create_mock_user(**kwargs) -> User:
     return User(**defaults)
 
 
+def create_mock_organization(**kwargs) -> Organization:
+    defaults = {
+        "id": 1,
+        "url": "https://api.test.rossum.ai/v1/organizations/1",
+        "name": "Test Org",
+        "workspaces": [],
+        "users": [],
+        "organization_group": "https://api.test.rossum.ai/v1/organization_groups/1",
+        "is_trial": False,
+        "created_at": "2024-01-01T00:00:00Z",
+    }
+    defaults.update(kwargs)
+    return Organization(**defaults)
+
+
 @pytest.fixture
 def mock_client() -> AsyncMock:
     """Create a mock AsyncRossumAPIClient."""
     client = AsyncMock()
     client._http_client = AsyncMock()
     client._deserializer = Mock(side_effect=lambda resource, raw: raw)
+
+    async def _mock_list_organizations(**filters):
+        yield create_mock_organization()
+
+    client.list_organizations = _mock_list_organizations
     return client
 
 
@@ -88,6 +109,7 @@ class TestCreateUser:
             {
                 "username": "new.user@example.com",
                 "email": "new.user@example.com",
+                "organization": "https://api.test.rossum.ai/v1/organizations/1",
                 "is_active": True,
                 "auth_type": "password",
             }
@@ -121,6 +143,7 @@ class TestCreateUser:
         assert result.id == 101
         call_data = mock_client.create_new_user.call_args[0][0]
         assert call_data["username"] == "jane@example.com"
+        assert call_data["organization"] == "https://api.test.rossum.ai/v1/organizations/1"
         assert call_data["first_name"] == "Jane"
         assert call_data["last_name"] == "Smith"
         assert call_data["queues"] == ["https://api.test.rossum.ai/v1/queues/1"]

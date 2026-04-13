@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from rossum_mcp.tools.models import (
-    SchemaDatapoint,
-    SchemaMultivalue,
-    SchemaTuple,
-)
+from rossum_mcp.models.schema import SchemaDatapoint, SchemaMultivalue, SchemaTuple
 
 
 class TestSchemaDataclasses:

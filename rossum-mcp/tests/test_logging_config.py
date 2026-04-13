@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import io
+import json
 import logging
 
-from rossum_mcp.logging_config import setup_logging
+import pytest
+import structlog
+from rossum_mcp.logging_config import LogFormat, LogLevel, setup_logging
 
 
 class TestSetupLogging:
-    """Test setup_logging function."""
-
     def teardown_method(self):
-        """Clean up handlers after each test."""
         root_logger = logging.getLogger()
         handlers_to_remove = [
             h
@@ -21,75 +22,114 @@ class TestSetupLogging:
         for handler in handlers_to_remove:
             root_logger.removeHandler(handler)
         root_logger.setLevel(logging.WARNING)
+        structlog.contextvars.clear_contextvars()
 
     def test_configures_basic_logging(self):
-        logger = setup_logging(log_level="INFO")
+        logger = setup_logging(log_level=LogLevel.INFO)
 
         assert logger.level == logging.INFO
-        console_handlers = [
-            h
-            for h in logger.handlers
-            if isinstance(h, logging.StreamHandler)
-            and not isinstance(h, logging.FileHandler)
-            and h.__class__.__name__ != "LogCaptureHandler"
-        ]
-        assert len(console_handlers) >= 1
+        handler = self._get_stream_handler(logger)
+        assert handler is not None
+        assert isinstance(handler.formatter, structlog.stdlib.ProcessorFormatter)
 
     def test_respects_log_level_parameter(self):
-        logger = setup_logging(log_level="WARNING")
-
+        logger = setup_logging(log_level=LogLevel.WARNING)
         assert logger.level == logging.WARNING
-
-    def test_always_has_console_handler(self):
-        logger = setup_logging()
-
-        console_handlers = [
-            h
-            for h in logger.handlers
-            if isinstance(h, logging.StreamHandler)
-            and not isinstance(h, logging.FileHandler)
-            and h.__class__.__name__ != "LogCaptureHandler"
-        ]
-        assert len(console_handlers) >= 1
 
     def test_returns_root_logger(self):
         logger = setup_logging()
-
         assert logger == logging.getLogger()
 
     def test_multiple_calls_clear_previous_handlers(self):
-        logger1 = setup_logging()
-        handler_count_1 = len([h for h in logger1.handlers if h.__class__.__name__ != "LogCaptureHandler"])
+        setup_logging()
+        count_1 = len(self._get_all_stream_handlers(logging.getLogger()))
 
-        logger2 = setup_logging()
-        handler_count_2 = len([h for h in logger2.handlers if h.__class__.__name__ != "LogCaptureHandler"])
+        setup_logging()
+        count_2 = len(self._get_all_stream_handlers(logging.getLogger()))
 
-        assert handler_count_1 == handler_count_2
-
-    def test_log_level_case_insensitive(self):
-        logger1 = setup_logging(log_level="debug")
-        assert logger1.level == logging.DEBUG
-
-        logger2 = setup_logging(log_level="DEBUG")
-        assert logger2.level == logging.DEBUG
-
-        logger3 = setup_logging(log_level="Debug")
-        assert logger3.level == logging.DEBUG
+        assert count_1 == count_2
 
     def test_default_parameters(self):
         logger = setup_logging()
-
         assert logger.level == logging.INFO
-        console_handlers = [
+
+    def test_invalid_log_level_raises(self):
+        with pytest.raises(KeyError):
+            setup_logging(log_level="BOGUS")  # type: ignore[arg-type]
+
+    def test_json_format_produces_json_output(self):
+        setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.JSON)
+        buf = self._add_capture_handler()
+        logging.getLogger("test.json").info("hello json")
+
+        parsed = json.loads(buf.getvalue().strip())
+        assert parsed["event"] == "hello json"
+        assert parsed["level"] == "info"
+        assert "timestamp" in parsed
+        assert "logger" in parsed
+
+    def test_json_key_ordering(self):
+        setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.JSON)
+        buf = self._add_capture_handler()
+        structlog.contextvars.bind_contextvars(session_id="sess-1", request_id="req-1")
+        logging.getLogger("test.order").info("ordered")
+
+        keys = list(json.loads(buf.getvalue().strip()).keys())
+        assert keys.index("timestamp") < keys.index("event")
+        assert keys.index("session_id") < keys.index("event")
+        assert keys.index("request_id") < keys.index("event")
+
+    def test_console_format_does_not_produce_json(self):
+        setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.CONSOLE)
+        buf = self._add_capture_handler()
+        logging.getLogger("test.console").info("hello console")
+
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(buf.getvalue().strip())
+
+    def test_contextvars_appear_in_json_output(self):
+        setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.JSON)
+        buf = self._add_capture_handler()
+        structlog.contextvars.bind_contextvars(session_id="sess-abc", request_id="req-123")
+        logging.getLogger("test.ctx").info("with context")
+
+        parsed = json.loads(buf.getvalue().strip())
+        assert parsed["session_id"] == "sess-abc"
+        assert parsed["request_id"] == "req-123"
+
+    def test_verbose_loggers_suppressed(self):
+        setup_logging(log_level=LogLevel.INFO)
+        assert logging.getLogger("httpx").level == logging.WARNING
+        assert logging.getLogger("httpcore").level == logging.WARNING
+
+    @staticmethod
+    def _get_stream_handler(logger: logging.Logger) -> logging.StreamHandler | None:
+        for h in logger.handlers:
+            if (
+                isinstance(h, logging.StreamHandler)
+                and not isinstance(h, logging.FileHandler)
+                and h.__class__.__name__ != "LogCaptureHandler"
+            ):
+                return h
+        return None
+
+    @staticmethod
+    def _get_all_stream_handlers(logger: logging.Logger) -> list[logging.StreamHandler]:
+        return [
             h
             for h in logger.handlers
             if isinstance(h, logging.StreamHandler)
             and not isinstance(h, logging.FileHandler)
             and h.__class__.__name__ != "LogCaptureHandler"
         ]
-        assert len(console_handlers) >= 1
 
-    def test_invalid_log_level_falls_back_to_info(self):
-        logger = setup_logging(log_level="BOGUS")
-
-        assert logger.level == logging.INFO
+    @staticmethod
+    def _add_capture_handler() -> io.StringIO:
+        """Add a StringIO handler that shares the ProcessorFormatter with the root handler."""
+        buf = io.StringIO()
+        root = logging.getLogger()
+        formatter = root.handlers[0].formatter
+        handler = logging.StreamHandler(buf)
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+        return buf

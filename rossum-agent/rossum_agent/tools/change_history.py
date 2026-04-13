@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import random
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import structlog
 from anthropic import beta_tool
 from rossum_api import APIClientError, AsyncRossumAPIClient
 from rossum_api.domain_logic.resources import Resource
@@ -17,7 +17,7 @@ from rossum_api.dtos import Token
 from rossum_mcp.tools.validation import sanitize_schema_content
 
 from rossum_agent.change_tracking.models import EntityChange
-from rossum_agent.rossum_mcp_integration import unwrap
+from rossum_agent.rossum_mcp_integration.tools import unwrap
 from rossum_agent.tools.core import get_context
 from rossum_agent.utils import compute_json_diff
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Entity types that can be reverted programmatically via rossum_api
 _ENTITY_TYPE_TO_RESOURCE: dict[str, Resource] = {
@@ -95,7 +95,7 @@ def _unwrap_snapshot(data: dict) -> dict:
     1. FastMCP's {"result": ...} wrapper
     2. Unified get tool's {"entity": ..., "id": ..., "data": {...}} wrapper
 
-    Defense-in-depth for snapshots stored in Redis before the _call_mcp fix.
+    Defense-in-depth for snapshots stored in Valkey before the _call_mcp fix.
     """
     inner = unwrap(data)
     if "data" in inner and "entity" in inner and isinstance(inner["data"], dict):

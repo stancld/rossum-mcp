@@ -5,34 +5,21 @@ import dataclasses
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Generic, Literal, Protocol, TypeVar
+from enum import StrEnum
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar
 
 from rossum_api.domain_logic.resources import Resource
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from typing import Any, Self
+    from typing import Any
 
     from rossum_api import AsyncRossumAPIClient
 
+
 logger = logging.getLogger(__name__)
 
-
-class RossumResource(Protocol):
-    __dataclass_fields__: ClassVar[dict[str, dataclasses.Field]]
-
-
-T = TypeVar("T", bound=RossumResource)
-
-
-@dataclass
-class RossumResourceWithResolvedWorkspaces(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-autodoc-typehints with PEP 563
-    workspaces: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_base(cls, resource: T, workspaces: list[str]) -> Self:
-        base_fields: dict[str, Any] = {f.name: getattr(resource, f.name) for f in dataclasses.fields(resource)}
-        return cls(**base_fields, workspaces=workspaces)
+T = TypeVar("T")
 
 
 @dataclass
@@ -41,9 +28,15 @@ class GracefulListResult(Generic[T]):  # noqa: UP046 - PEP 695 breaks sphinx-aut
     skipped_ids: list[int | str] = field(default_factory=list)
 
 
-type McpMode = Literal["read-only", "read-write"]
+class MCPMode(StrEnum):
+    READ_ONLY = "read-only"
+    READ_WRITE = "read-write"
 
-VALID_MODES: tuple[McpMode, ...] = ("read-only", "read-write")
+
+def serialize_dataclass(obj: object) -> object:
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)
+    return obj
 
 
 def extract_id_from_url(url: str) -> int:
@@ -112,6 +105,46 @@ def get_queue_engine_url(queue: object) -> str | None:
     return None
 
 
+class HasQueues(Protocol):
+    @property
+    def queues(self) -> list[str]: ...
+
+
+class HasQueue(Protocol):
+    @property
+    def queue(self) -> str | None: ...
+
+
+def get_multi_queue_urls[T: HasQueues](items: list[T]) -> set[str]:
+    """Collect queue URLs from items with a `.queues` list attribute."""
+    return {url for item in items for url in item.queues}
+
+
+def get_single_queue_urls[T: HasQueue](items: list[T]) -> set[str]:
+    """Collect queue URLs from items with a singular `.queue` attribute."""
+    return {item.queue for item in items if item.queue}
+
+
+async def search_with_workspace_resolution[T, U](
+    client: AsyncRossumAPIClient,
+    resource: Resource,
+    resource_label: str,
+    *,
+    enrich: Callable[[T, dict[str, str]], U],
+    get_queue_urls: Callable[[list[T]], set[str]],
+    filters: dict[str, int | str | bool] | None = None,
+    workspace_id: int | None = None,
+    name: str | None = None,
+    use_regex: bool = False,
+    max_items: int | None = None,
+) -> list[U]:
+    """List resources, resolve queue→workspace mappings, enrich items, and filter."""
+    result = await graceful_list(client, resource, resource_label, max_items=max_items, **(filters or {}))
+    queue_workspace_map = await resolve_queue_workspaces(client, get_queue_urls(result.items))
+    items = [enrich(item, queue_workspace_map) for item in result.items]
+    return filter_by_name_regex(filter_by_workspace_id(items, workspace_id), name, use_regex)
+
+
 async def resolve_queue_workspaces(client: AsyncRossumAPIClient, queue_urls: set[str]) -> dict[str, str]:
     """Map queue URLs to their workspace URLs by fetching queue data."""
     if not queue_urls:
@@ -148,12 +181,6 @@ async def delete_resource(
     """Generic delete operation.
 
     Write-access is enforced at the MCP layer via tags={"write"} + mcp.disable().
-
-    Args:
-        resource_type: Name of the resource (e.g., "queue", "workspace")
-        resource_id: ID of the resource to delete
-        delete_fn: Async function that performs the deletion
-        success_message: Custom success message. If None, uses default format.
     """
     logger.debug(f"Deleting {resource_type}: {resource_type}_id={resource_id}")
     await delete_fn(resource_id)

@@ -20,17 +20,16 @@ from typing import TYPE_CHECKING
 
 from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
-from rossum_agent.agent.models import AgentConfig
 from rossum_agent.bedrock_client import create_bedrock_client
 from rossum_agent.change_tracking.store import CommitStore
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
+from rossum_agent.rossum_mcp_integration.connection import connect_mcp_server
 from rossum_agent.system_prompt import get_system_prompt
 from rossum_agent.tools.core import AgentContext, reset_context, set_context
 from rossum_agent.tools.dynamic_tools import get_write_tools_async
 from rossum_agent.tools.task_tracker import TaskTracker
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
 
-from regression_tests.conftest import try_connect_redis
+from regression_tests.conftest import try_connect_valkey
 from regression_tests.framework.runner import run_regression_test
 from regression_tests.test_cases import REGRESSION_TEST_CASES
 from regression_tests.test_regressions import _evaluate_criteria
@@ -80,8 +79,8 @@ def _load_env_tokens() -> dict[str, str]:
 
 
 def _create_commit_store() -> CommitStore | None:
-    """Create a CommitStore if Redis is reachable."""
-    client = try_connect_redis()
+    """Create a CommitStore if Valkey is reachable."""
+    client = try_connect_valkey()
     return CommitStore(client) if client else None
 
 
@@ -102,14 +101,12 @@ def _get_token(case: RegressionTestCase, env_tokens: dict[str, str], cli_token: 
 
 @asynccontextmanager
 async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Path) -> AsyncIterator[RossumAgent]:
-    config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
-
     async with connect_mcp_server(
         rossum_api_token=api_token, rossum_api_base_url=case.api_base_url, mcp_mode=case.mode
     ) as mcp_connection:
         commit_store = None
         environment = None
-        if case.requires_redis:
+        if case.requires_valkey:
             commit_store = _create_commit_store()
             if commit_store:
                 write_tools = await get_write_tools_async(mcp_connection)
@@ -138,7 +135,7 @@ async def create_agent(case: RegressionTestCase, api_token: str, output_dir: Pat
                 context_section = format_context_for_prompt(url_context)
                 system_prompt = system_prompt + "\n\n---\n" + context_section
 
-        agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt, config=config)
+        agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt)
 
         try:
             yield agent
@@ -169,7 +166,7 @@ async def run_single_attempt(case: RegressionTestCase, api_token: str, output_di
 
 async def run_all(cli_token: str | None = None) -> list[TestResult]:
     env_tokens = _load_env_tokens()
-    redis_available = try_connect_redis() is not None
+    valkey_available = try_connect_valkey() is not None
     results: list[TestResult] = []
 
     for i, case in enumerate(REGRESSION_TEST_CASES):
@@ -179,12 +176,12 @@ async def run_all(cli_token: str | None = None) -> list[TestResult]:
             print(f"  {case.description}")
         print(f"{'=' * 70}")
 
-        if case.requires_redis and not redis_available:
-            print("  SKIPPED (Redis not available)")
+        if case.requires_valkey and not valkey_available:
+            print("  SKIPPED (Valkey not available)")
             results.append(
                 TestResult(
                     name=case.name,
-                    attempts=[AttemptResult(passed=False, failures=[], error="Redis not available")],
+                    attempts=[AttemptResult(passed=False, failures=[], error="Valkey not available")],
                 )
             )
             continue

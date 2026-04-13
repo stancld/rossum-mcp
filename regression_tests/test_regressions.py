@@ -25,13 +25,13 @@ from typing import TYPE_CHECKING
 import pytest
 from rossum_agent.agent.models import ErrorStep, FinalAnswerStep, ToolStartStep
 
-from regression_tests.conftest import try_connect_redis
+from regression_tests.conftest import try_connect_valkey
 from regression_tests.framework.assertions import assert_files_created, assert_tokens_within_budget, assert_tools_match
 from regression_tests.framework.mermaid_analyzer import extract_mermaid_diagrams, validate_mermaid_diagrams
 from regression_tests.framework.runner import run_multiturn_regression_test, run_regression_test
 from regression_tests.test_cases import REGRESSION_TEST_CASES
 
-_REDIS_AVAILABLE = try_connect_redis() is not None
+_VALKEY_AVAILABLE = try_connect_valkey() is not None
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -178,8 +178,8 @@ def _apply_mode_marker(case: RegressionTestCase) -> pytest.ParameterSet:
     """Wrap test case in pytest.param with readonly/readwrite marker based on case.mode."""
     marks: list[pytest.MarkDecorator] = []
     marks.append(pytest.mark.readonly if case.mode == "read-only" else pytest.mark.readwrite)
-    if case.requires_redis and not _REDIS_AVAILABLE:
-        marks.append(pytest.mark.skip(reason="Redis not available"))
+    if case.requires_valkey and not _VALKEY_AVAILABLE:
+        marks.append(pytest.mark.skip(reason="Valkey not available"))
     return pytest.param(case, marks=marks, id=case.name)
 
 

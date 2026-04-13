@@ -1,4 +1,4 @@
-"""Tests for rossum_mcp.tools.delete.handler — unified delete tool."""
+"""Tests for rossum_mcp.tools.delete — unified delete tool."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from fastmcp.exceptions import ToolError
 from rossum_api import APIClientError
-from rossum_mcp.tools.delete.handler import register_delete_tools
+from rossum_mcp.tools.delete import register_delete_tools
 from rossum_mcp.tools.delete.registry import build_delete_registry
 
 if TYPE_CHECKING:
@@ -60,65 +60,35 @@ class TestToolRegistration:
 
 @pytest.mark.unit
 class TestDeleteRouting:
+    @pytest.mark.parametrize(
+        ("entity", "entity_id", "message_fragment"),
+        [
+            ("queue", 100, "scheduled for deletion"),
+            ("schema", 50, "deleted successfully"),
+            ("hook", 123, "deleted successfully"),
+            ("rule", 123, "deleted successfully"),
+            ("workspace", 100, "deleted successfully"),
+            ("annotation", 12345, "deleted"),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_delete_queue(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_queue.return_value = None
+    async def test_delete_entity(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        setup_env: None,
+        entity: str,
+        entity_id: int,
+        message_fragment: str,
+    ) -> None:
+        delete_method = getattr(mock_client, f"delete_{entity}")
+        delete_method.return_value = None
         register_delete_tools(mock_mcp, mock_client)
 
-        result = await mock_mcp._tools["delete"](entity="queue", entity_id=100)
-        assert "scheduled for deletion" in result["message"]
-        assert "100" in result["message"]
-        mock_client.delete_queue.assert_called_once_with(100)
-
-    @pytest.mark.asyncio
-    async def test_delete_schema(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_schema.return_value = None
-        register_delete_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["delete"](entity="schema", entity_id=50)
-        assert "deleted successfully" in result["message"]
-        assert "50" in result["message"]
-        mock_client.delete_schema.assert_called_once_with(50)
-
-    @pytest.mark.asyncio
-    async def test_delete_hook(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_hook.return_value = None
-        register_delete_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["delete"](entity="hook", entity_id=123)
-        assert "deleted successfully" in result["message"]
-        assert "123" in result["message"]
-        mock_client.delete_hook.assert_called_once_with(123)
-
-    @pytest.mark.asyncio
-    async def test_delete_rule(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_rule.return_value = None
-        register_delete_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["delete"](entity="rule", entity_id=123)
-        assert "deleted successfully" in result["message"]
-        assert "123" in result["message"]
-        mock_client.delete_rule.assert_called_once_with(123)
-
-    @pytest.mark.asyncio
-    async def test_delete_workspace(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_workspace.return_value = None
-        register_delete_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["delete"](entity="workspace", entity_id=100)
-        assert "deleted successfully" in result["message"]
-        assert "100" in result["message"]
-        mock_client.delete_workspace.assert_called_once_with(100)
-
-    @pytest.mark.asyncio
-    async def test_delete_annotation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.delete_annotation.return_value = None
-        register_delete_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["delete"](entity="annotation", entity_id=12345)
-        assert "deleted" in result["message"]
-        assert "12345" in result["message"]
-        mock_client.delete_annotation.assert_called_once_with(12345)
+        result = await mock_mcp._tools["delete"](entity=entity, entity_id=entity_id)
+        assert message_fragment in result["message"]
+        assert str(entity_id) in result["message"]
+        delete_method.assert_called_once_with(entity_id)
 
 
 @pytest.mark.unit

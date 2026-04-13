@@ -1,6 +1,6 @@
 # Development Guidelines
 
-**Goal**: Maintain code quality, consistency, and documentation across rossum-agents packages (rossum-mcp, rossum-agent, rossum-deploy, rossum-agent-client).
+**Goal**: Maintain code quality, consistency, and documentation across rossum-agents packages (rossum-mcp, rossum-agent, rossum-agent-client).
 
 ## Critical Constraints
 
@@ -18,7 +18,6 @@
 | Setup | `uv sync` or `uv pip install -e .` |
 | Server | `rossum-mcp` (installed) or `python -m rossum_mcp.server` (dev) |
 | Tests | `pytest` or `pytest path/to/test.py` |
-| rossum-deploy tests | `cd rossum-deploy && pytest tests/` (required when modifying `workspace.py`) |
 | Lint | `pre-commit run --all-files` |
 | TUI lint | `cd rossum-agent-tui && npm run lint && npm run format:check && npm run typecheck` |
 
@@ -99,8 +98,8 @@ When adding/modifying tools, update:
 
 | Tool Type | Files to Update |
 |-----------|-----------------|
-| MCP tools | `rossum-mcp/README.md`, `docs/source/index.rst`, `docs/source/usage.rst`, `docs/source/mcp_reference.rst` |
-| Agent tools | `rossum-agent/README.md`, `docs/source/index.rst`, `docs/source/usage.rst`, `docs/source/skills_and_subagents.rst` |
+| MCP tools | `rossum-mcp/README.md`, `docs/source/rossum-mcp/tools.rst`, `docs/source/rossum-mcp/configuration.rst` |
+| Agent tools | `rossum-agent/README.md`, `docs/source/rossum-agent/tools.rst`, `docs/source/rossum-agent/skills.rst`, `docs/source/rossum-agent/subagents.rst` |
 | Agent API | Regenerate OpenAPI spec and TUI types (see [OpenAPI Spec](#openapi-spec-rossum-agent-client) section) |
 
 Include: tool name, description, parameters with types, return format with JSON examples.
@@ -152,7 +151,7 @@ TUI imports OpenAPI types from `rossum-agent-client` — there is no separate `g
 | Bug fixes | Regression tests |
 | Modified logic | Update + add tests |
 
-Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at file top.
+Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at file top. Use `pytest.mark.parametrize` to eliminate repetitive test functions that differ only in inputs/expected outputs.
 
 **Exception**: `rossum-agent-tui` — dev-only test-bed, tests not required.
 
@@ -222,9 +221,13 @@ The adapter layer (`stream_adapter.py`) converts internal events to wire format:
 | `ROSSUM_API_BASE_URL` | Required - API endpoint |
 | `POSTGRES_HOST`, `POSTGRES_PORT` | Optional - PostgreSQL connection (default: localhost:5432) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Optional - PostgreSQL credentials (default: rossum_agent/rossum/rossum) |
-| `REDIS_HOST`, `REDIS_PORT` | Optional - Redis connection for change tracking (default: localhost:6379) |
+| `VALKEY_HOST`, `VALKEY_PORT` | Optional - Valkey connection for change tracking (default: localhost:6379) |
+| `VALKEY_PASSWORD` | Optional - Valkey authentication password |
 | `ROSSUM_MCP_MODE` | Optional - read-only or read-write |
 | `ROSSUM_MCP_LOG_LEVEL` | Optional - MCP server log level (default: INFO) |
+| `ROSSUM_MCP_LOG_FORMAT` | Optional - MCP server log format: json or console (default: console) |
+| `ROSSUM_AGENT_LOG_LEVEL` | Optional - Agent API log level (default: INFO) |
+| `ROSSUM_AGENT_LOG_FORMAT` | Optional - Agent API log format: json or console (default: console) |
 | `AWS_REGION` | Optional - AWS region for Bedrock (default: us-east-1) |
 | `AWS_BEDROCK_MODEL_ARN` | Optional - Custom ARN for Opus model |
 | `AWS_BEDROCK_MODEL_ARN_SMALL` | Optional - Custom ARN for Haiku model |

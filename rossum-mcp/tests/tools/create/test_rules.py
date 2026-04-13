@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_rule
 from rossum_api.models.rule import RuleAction, ShowMessagePayload
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 from rossum_mcp.tools.validation import actions_to_dicts
 
 

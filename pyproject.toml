@@ -22,6 +22,7 @@ dependencies = [
     "fastmcp==3.2.0",
     "mcp>=1.0.0",
     "rossum-api>=3.13.1",
+    "structlog>=24.1.0",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +47,7 @@ api = [
     "gunicorn>=23.0.0",
     "psycopg[binary]>=3.1.0",
     "python-multipart>=0.0.22",
-    "redis>=7.0.0",
+    "valkey>=6.1.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.0",
     "sse-starlette>=2.0.0",
@@ -58,6 +59,7 @@ docs = [
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6.0",
     "furo",
 ]
 # MCP server dependencies
@@ -102,7 +104,7 @@ all = [
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
     "python-multipart>=0.0.22",
-    "redis>=7.0.0",
+    "valkey>=6.1.0",
     "rossum-api>=3.13.1",
     "slack-sdk[optional]>=3.27.0",
     "slowapi>=0.1.9",
@@ -111,6 +113,7 @@ all = [
     "sphinx-copybutton>=0.5.2",
     "sqlalchemy>=2.0.0",
     "sse-starlette>=2.0.0",
+    "structlog>=24.1.0",
     "tqdm>=4.66",
     "ty>=0.0.11",
     "uvicorn[standard]>=0.32.0",
@@ -123,11 +126,11 @@ all = [
 exclude-dependencies = ["diskcache"]
 
 [tool.setuptools.packages.find]
-where = ["rossum-mcp", "rossum-deploy", "rossum-agent", "rossum-agent-client"]
-include = ["rossum_mcp*", "rossum_deploy*", "rossum_agent*", "rossum_agent_client*"]
+where = ["rossum-mcp", "rossum-agent", "rossum-agent-client"]
+include = ["rossum_mcp*", "rossum_agent*", "rossum_agent_client*"]
 
 [project.scripts]
-rossum-mcp = "rossum_mcp.server:main"
+rossum-mcp = "rossum_mcp.run:main"
 rossum-agent-api = "rossum_agent.api.main:main"
 
 [tool.pytest.ini_options]
@@ -136,7 +139,7 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: Unit tests that test individual functions/methods in isolation",
 ]
-testpaths = ["rossum-mcp/tests", "rossum-deploy/tests", "rossum-agent/tests", "rossum-agent-client/tests"]
+testpaths = ["rossum-mcp/tests", "rossum-agent/tests", "rossum-agent-client/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -148,10 +151,10 @@ rossum_agent = ["assets/*.png", "data/*.json"]
 
 [tool.ty.environment]
 python-version = "3.12"
-extra-paths = ["rossum-mcp", "rossum-agent", "rossum-deploy", "rossum-agent-client"]
+extra-paths = ["rossum-mcp", "rossum-agent", "rossum-agent-client"]
 
 [tool.ty.src]
-include = ["rossum-mcp", "rossum-agent", "rossum-deploy", "rossum-agent-client"]
+include = ["rossum-mcp", "rossum-agent", "rossum-agent-client"]
 exclude = ["**/tests/**", "**/outputs/**", "build/**"]
 
 # FastAPI/Starlette middleware and Anthropic TypedDict literals
@@ -161,9 +164,9 @@ include = ["**/api/**"]
 invalid-argument-type = "ignore"
 deprecated = "ignore"
 
-# Redis async iterators return complex union types
+# Valkey async iterators return complex union types
 [[tool.ty.overrides]]
-include = ["**/redis_storage.py"]
+include = ["**/valkey_client.py"]
 [tool.ty.overrides.rules]
 not-iterable = "ignore"
 invalid-argument-type = "ignore"

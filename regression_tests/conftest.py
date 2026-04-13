@@ -10,18 +10,22 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-import redis
+import valkey
 from dotenv import dotenv_values
 from rossum_agent.agent.core import RossumAgent
-from rossum_agent.agent.models import AgentConfig
+from rossum_agent.agent.system_prompt import get_system_prompt
 from rossum_agent.bedrock_client import create_async_bedrock_client
 from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
-from rossum_agent.system_prompt import get_system_prompt
+from rossum_agent.rossum_mcp_integration.connection import connect_mcp_server
 from rossum_agent.tools.core import AgentContext, reset_context, set_context
 from rossum_agent.tools.dynamic_tools import get_write_tools_async
 from rossum_agent.tools.task_tracker import TaskTracker
 from rossum_agent.url_context import extract_url_context, format_context_for_prompt
+from rossum_mcp.logging_config import LogFormat, LogLevel, setup_logging
+
+# Route structlog and stdlib loggers through the shared setup so regression test
+# output uses the same ISO timestamps and contextvars as production.
+setup_logging(log_level=LogLevel.INFO, log_format=LogFormat.CONSOLE)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -31,14 +35,18 @@ if TYPE_CHECKING:
 ENV_FILE = Path(__file__).parent / ".env"
 
 
-def try_connect_redis() -> redis.Redis | None:
-    """Return a connected Redis client, or None if Redis is unreachable."""
+def try_connect_valkey() -> valkey.Valkey | None:
+    """Return a connected Valkey client, or None if Valkey is unreachable."""
     try:
-        host = os.getenv("REDIS_HOST")
-        port = os.getenv("REDIS_PORT")
+        host = os.getenv("VALKEY_HOST")
+        port = os.getenv("VALKEY_PORT")
         if not host or not port:
             return None
-        client = redis.Redis(host=host, port=int(port), socket_connect_timeout=1)
+        kwargs: dict[str, object] = {"host": host, "port": int(port), "socket_connect_timeout": 1}
+        password = os.getenv("VALKEY_PASSWORD")
+        if password:
+            kwargs["password"] = password
+        client = valkey.Valkey(**kwargs)
         client.ping()
         return client
     except Exception:
@@ -46,8 +54,8 @@ def try_connect_redis() -> redis.Redis | None:
 
 
 def _create_stores() -> tuple[CommitStore, SnapshotStore] | None:
-    """Create CommitStore and SnapshotStore from the same Redis client, or None if unreachable."""
-    client = try_connect_redis()
+    """Create CommitStore and SnapshotStore from the same Valkey client, or None if unreachable."""
+    client = try_connect_valkey()
     return (CommitStore(client), SnapshotStore(client)) if client else None
 
 
@@ -193,15 +201,13 @@ def create_live_agent(
                 "Use --sandbox-api-token flag or set DEFAULT_SANDBOX_API_TOKEN in .env"
             )
 
-        config = AgentConfig(max_output_tokens=64000, max_steps=50, temperature=1.0, request_delay=3.0)
-
         async with connect_mcp_server(
             rossum_api_token=token, rossum_api_base_url=case.api_base_url, mcp_mode=case.mode
         ) as mcp_connection:
             commit_store = None
             snapshot_store = None
             environment = None
-            if case.requires_redis:
+            if case.requires_valkey:
                 stores = _create_stores()
                 if stores:
                     commit_store, snapshot_store = stores
@@ -234,9 +240,7 @@ def create_live_agent(
                     context_section = format_context_for_prompt(url_context)
                     system_prompt = system_prompt + "\n\n---\n" + context_section
 
-            agent = RossumAgent(
-                client=client, mcp_connection=mcp_connection, system_prompt=system_prompt, config=config
-            )
+            agent = RossumAgent(client=client, mcp_connection=mcp_connection, system_prompt=system_prompt)
 
             try:
                 yield LiveAgentContext(agent=agent, api_token=token)

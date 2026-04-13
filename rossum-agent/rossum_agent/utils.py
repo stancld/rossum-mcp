@@ -8,10 +8,23 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from typing import Any
 
 # Compact JSON separators for token-efficient serialization
 COMPACT_JSON_SEPARATORS: tuple[str, str] = (",", ":")
+
+
+def extract_text_from_content(content: str | Sequence[Mapping[str, Any]] | None) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            block.get("text", "") for block in content if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return ""
 
 
 def compute_json_diff(
@@ -38,11 +51,6 @@ BASE_OUTPUT_DIR = Path(tempfile.gettempdir()) / "rossum_agent_outputs"
 
 
 def create_session_output_dir() -> Path:
-    """Create a new session-specific output directory.
-
-    Returns:
-        Path to the newly created session directory
-    """
     session_id = str(uuid.uuid4())
     session_dir = BASE_OUTPUT_DIR / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
@@ -52,9 +60,8 @@ def create_session_output_dir() -> Path:
 def add_message_cache_breakpoint(messages: list[dict[str, Any]]) -> None:
     """Add cache_control to the last content block of the last message.
 
-    Mutates messages in-place. Removes any previous message-level
-    cache_control breakpoints first to stay within Anthropic's
-    4-breakpoint limit.
+    Mutates messages in-place. Removes any previous message-level cache_control breakpoints first to stay
+    within Anthropic's 4-breakpoint limit.
     """
     if not messages:
         return

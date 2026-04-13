@@ -21,7 +21,7 @@ from rossum_agent.api.routes.stream_adapter import (
     build_finish_events,
     convert_agent_event,
 )
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 class TestFormatSSE:

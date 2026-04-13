@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from anthropic.types import MessageParam, TextBlockParam, ThinkingBlockParam, ToolResultBlockParam, ToolUseBlockParam
 
@@ -22,14 +22,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class MemoryStep:
-    """A single step stored in agent memory.
-
-    This is the structured storage format. Steps are converted to messages
-    on-the-fly via to_messages(), allowing summary_mode to compress old steps.
-
-    Attributes:
-        text: Model's text output (reasoning before tool calls, or final answer).
-    """
+    """A single step stored in agent memory."""
 
     step_number: int
     text: str | None = None
@@ -40,14 +33,7 @@ class MemoryStep:
     output_tokens: int = 0
 
     def to_messages(self) -> list[MessageParam]:
-        """Convert this step to Anthropic message format.
-
-        For tool-use steps: Includes text block followed by tool_use blocks.
-        For final answer steps: Includes text as assistant content.
-
-        Returns:
-            List of message dicts for the Anthropic API.
-        """
+        """Convert this step to Anthropic message format."""
         messages: list[MessageParam] = []
 
         if self.tool_calls:
@@ -114,11 +100,7 @@ _PRELOAD_PATTERN = re.compile(
 
 @dataclass
 class TaskStep:
-    """Represents the initial user task/prompt.
-
-    Supports both text-only and multimodal content (with images).
-    preload_info is stored separately so the user's original text stays clean in DB.
-    """
+    """Represents the user prompt."""
 
     task: UserContent
     preload_info: str | None = None
@@ -142,9 +124,8 @@ class TaskStep:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TaskStep:
         task = data["task"]
-        preload_info = data.get("preload_info")
         # Backward compat: extract preload info baked into old-format tasks
-        if preload_info is None:
+        if (preload_info := data.get("preload_info")) is None:
             task, preload_info = cls._extract_legacy_preload_info(task)
         return cls(task=task, preload_info=preload_info)
 
@@ -168,12 +149,9 @@ class TaskStep:
 
 @dataclass
 class AgentMemory:
-    """Memory storage for agent steps.
+    """Memory storage for agent steps."""
 
-    Stores structured step objects and rebuilds messages on demand.
-    """
-
-    COLLAPSIBLE_TOOLS: set[str] = field(default_factory=lambda: {"patch_schema"}, repr=False)
+    COLLAPSIBLE_TOOLS: ClassVar[frozenset[str]] = frozenset({"patch_schema"})
 
     steps: list[TaskStep | MemoryStep] = field(default_factory=list)
 
@@ -194,9 +172,6 @@ class AgentMemory:
 
         Collapses intermediate results of repeated collapsible tools
         to reduce context size — only the last result is kept in full.
-
-        Returns:
-            List of message dicts ready for Anthropic API.
         """
         messages = [msg for step in self.steps for msg in step.to_messages()]
         return self._collapse_tool_results(messages)
@@ -207,9 +182,6 @@ class AgentMemory:
         Scans messages to find the last occurrence of each collapsible tool,
         then replaces all earlier occurrences' content strings.
         """
-        if not self.COLLAPSIBLE_TOOLS:
-            return messages
-
         tool_use_id_to_name = self._build_collapsible_tool_map(messages)
         if not tool_use_id_to_name:
             return messages
@@ -280,7 +252,6 @@ class AgentMemory:
 
     @classmethod
     def from_dict(cls, data: list[dict[str, Any]]) -> AgentMemory:
-        """Deserialize from a list of step dictionaries."""
         memory = cls()
         for step_data in data:
             step_type = step_data.get("type")

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
+from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
+from rossum_api import AsyncRossumAPIClient
 from rossum_api.models.hook import Hook, HookAction, HookEvent, HookEventAndAction
 
+from rossum_mcp.models.hook import (
+    HookSideload,  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
+)
 from rossum_mcp.tools.base import extract_id_from_url
-from rossum_mcp.tools.models import HookSideload  # noqa: TC001 - needed at runtime for FastMCP parameter serialization
 from rossum_mcp.tools.validation import validate_hook_events
-
-if TYPE_CHECKING:
-    from rossum_api import AsyncRossumAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -128,3 +128,43 @@ async def _generate_hook_payload(
     if previous_status is not None:
         body["previous_status"] = previous_status
     return await client._http_client.request_json("POST", f"hooks/{hook_id}/generate_payload", json=body)
+
+
+def register_hook_tools(mcp: FastMCP, client: AsyncRossumAPIClient) -> None:
+    @mcp.tool(
+        description="Patch a hook; only provided fields change. secrets is a dict of key-value env vars for serverless functions (write-only, values never returned). token_owner is a User URL for API token generation (cannot be organization_group_admin). run_after is a list of hook URLs that must execute before this hook. sideload controls which related objects are included in hook request payloads.",
+        tags={"hooks", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def update_hook(
+        hook_id: int,
+        name: str | None = None,
+        queues: list[str] | None = None,
+        events: list[HookEventAndAction] | None = None,
+        config: dict | None = None,
+        settings: dict | None = None,
+        active: bool | None = None,
+        secrets: dict[str, str] | None = None,
+        token_owner: str | None = None,
+        run_after: list[str] | None = None,
+        sideload: list[HookSideload] | None = None,
+    ) -> Hook:
+        return await _update_hook(
+            client, hook_id, name, queues, events, config, settings, active, secrets, token_owner, run_after, sideload
+        )
+
+    @mcp.tool(
+        description="Test a hook by auto-generating a realistic payload and executing it. For annotation_content/annotation_status events, annotation and status are auto-resolved from the hook's queues if not provided. If no annotations exist on the hook's queues, ask the user to upload a document first — never upload documents yourself.",
+        tags={"hooks", "write"},
+        annotations={"readOnlyHint": False},
+    )
+    async def test_hook(
+        hook_id: int,
+        event: HookEvent,
+        action: HookAction,
+        annotation: str | None = None,
+        status: str | None = None,
+        previous_status: str | None = None,
+        config: dict | None = None,
+    ) -> dict:
+        return await _test_hook(client, hook_id, event, action, annotation, status, previous_status, config)

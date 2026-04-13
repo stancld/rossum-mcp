@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
@@ -48,7 +48,7 @@ from rossum_agent.api.routes.stream_adapter import (
     build_finish_events,
     convert_agent_event,
 )
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.url_context import extract_url_context
 
@@ -79,7 +79,7 @@ RESPONSE_HEADERS = {
     "x-vercel-ai-ui-message-stream": "v1",
 }
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -269,7 +269,7 @@ async def send_message(
             logger.error(f"Error during agent execution: {e}", exc_info=True)
             for event in build_finish_events(state):
                 yield _format_sse(event)
-            yield _format_sse({"type": "error", "errorText": str(e)})
+            yield _format_sse({"type": "error", "errorText": "An internal error has occurred"})
             yield STREAM_DONE
             return
 

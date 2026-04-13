@@ -1,12 +1,8 @@
-"""URL context extraction for Rossum application URLs.
-
-This module provides utilities to extract context (queue_id, annotation_id, hook_id, engine_id)
-from Rossum application URLs, enabling the agent to understand the user's current
-context when they paste a URL.
-"""
+"""URL context extraction for Rossum application URLs."""
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -83,7 +79,7 @@ def _extract_documents_view_context(url: str, context: RossumUrlContext) -> None
     Parses the filtering query parameter to extract queue_id and other context.
     Example URL: /documents?filtering={"items":[{"field":"queue","value":["3866808"],...}]}
     """
-    try:
+    with contextlib.suppress(json.JSONDecodeError, KeyError, ValueError, IndexError):
         parsed = urlparse(url)
         query_params = parse_qs(parsed.query)
 
@@ -101,9 +97,6 @@ def _extract_documents_view_context(url: str, context: RossumUrlContext) -> None
 
         if "level" in query_params:
             context.additional_context["view_level"] = query_params["level"][0]
-
-    except (json.JSONDecodeError, KeyError, ValueError, IndexError):
-        pass
 
 
 def extract_url_context(url: str | None) -> RossumUrlContext:
@@ -145,14 +138,6 @@ def extract_url_context(url: str | None) -> RossumUrlContext:
 
 
 def format_context_for_prompt(context: RossumUrlContext) -> str:
-    """Format the URL context for inclusion in the agent prompt.
-
-    Args:
-        context: The extracted URL context.
-
-    Returns:
-        A formatted string to prepend to user messages.
-    """
     if context.is_empty():
         return ""
 

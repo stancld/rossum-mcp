@@ -35,6 +35,17 @@ jobs:
           cd rossum-mcp
           uv build
 
+      - name: Build documentation
+        run: |
+          uv sync --extra docs --no-install-project
+          cd docs
+          uv run make html
+
+      - name: Package documentation
+        run: |
+          cd docs/build/html
+          tar czf ../../../docs.tar.gz .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -44,6 +55,7 @@ jobs:
           prerelease: ${{ contains(steps.package_version.outputs.version, '-') }}
           files: |
             rossum-mcp/dist/*
+            docs.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

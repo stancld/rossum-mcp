@@ -55,13 +55,36 @@ jobs:
           # Create site directory with landing page at root
           mkdir -p _site
           cp -r docs/landing/* _site/
-          # Move Sphinx docs to /source/ subdirectory
+          # Move Sphinx docs to /source/ subdirectory (latest)
           cp -r docs/build/html _site/source
           # Add OpenAPI spec and Redoc viewer at /api-reference/
           mkdir -p _site/api-reference
           cp rossum-agent/rossum_agent/api/openapi.json _site/api-reference/openapi.json
           cp rossum-agent/scripts/openapi_redoc.html _site/api-reference/index.html
         shell: bash
+
+      - name: Collect versioned docs from GitHub Releases
+        run: |
+          doc_versions=""
+          for tag in $(gh release list --json tagName --jq '.[].tagName' | grep -E '^rossum-(mcp|agent)-v' | sort -Vr); do
+            # Extract package name and version from tag (e.g. rossum-mcp-v2.2.0 -> rossum-mcp, 2.2.0)
+            package="${tag%-v*}"
+            version="${tag#*-v}"
+            dir_name="${package}-${version}"
+            tmpdir=$(mktemp -d)
+            if gh release download "$tag" --pattern "docs.tar.gz" --output "$tmpdir/docs.tar.gz" 2>/dev/null; then
+              mkdir -p "_site/source/${dir_name}"
+              tar xzf "$tmpdir/docs.tar.gz" -C "_site/source/${dir_name}"
+              doc_versions="${doc_versions}\"${dir_name}\","
+            fi
+            rm -rf "$tmpdir"
+          done
+          if [ -n "$doc_versions" ]; then
+            echo "[${doc_versions%,}]" > _site/source/versions.json
+          fi
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Collect versioned API specs from GitHub Releases
         run: |

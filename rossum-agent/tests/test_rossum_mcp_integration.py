@@ -8,13 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from rossum_agent.change_tracking.models import EntityChange
-from rossum_agent.rossum_mcp_integration import (
-    MCPConnection,
-    _pop_tracked_resources,
-    connect_mcp_server,
-    create_mcp_transport,
-    mcp_tools_to_anthropic_format,
-)
+from rossum_agent.rossum_mcp_integration.connection import MCPConnection, connect_mcp_server, create_mcp_transport
+from rossum_agent.rossum_mcp_integration.tools import _pop_tracked_resources, mcp_tools_to_anthropic_format
 
 
 class TestCreateMCPTransport:
@@ -221,7 +216,7 @@ class TestConnectMCPServer:
         mock_tools = [MagicMock(name="tool1")]
         mock_client_instance.list_tools.return_value = mock_tools
 
-        with patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class:
+        with patch("rossum_agent.rossum_mcp_integration.connection.Client") as mock_client_class:
             mock_client_class.return_value = mock_client_instance
             mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
             mock_client_instance.__aexit__ = AsyncMock(return_value=None)
@@ -242,8 +237,8 @@ class TestConnectMCPServer:
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
 
         with (
-            patch("rossum_agent.rossum_mcp_integration.Client") as mock_client_class,
-            patch("rossum_agent.rossum_mcp_integration.create_mcp_transport") as mock_create_transport,
+            patch("rossum_agent.rossum_mcp_integration.connection.Client") as mock_client_class,
+            patch("rossum_agent.rossum_mcp_integration.connection.create_mcp_transport") as mock_create_transport,
         ):
             mock_transport = MagicMock()
             mock_create_transport.return_value = mock_transport
@@ -519,30 +514,30 @@ class TestCacheInMemory:
         assert conn._cache_get("queue", "999") is None
 
 
-class TestCacheRedis:
-    def test_redis_set_and_get(self):
+class TestCacheValkey:
+    def test_valkey_set_and_get(self):
         conn = _make_connection()
         conn.chat_id = "chat-1"
-        mock_redis = MagicMock()
-        conn.redis_client = mock_redis
+        mock_valkey = MagicMock()
+        conn.valkey_client = mock_valkey
 
         data = {"id": 1, "name": "Q"}
         conn._cache_set("queue", "1", data)
 
         expected_key = "read_cache:chat-1:queue:1"
-        mock_redis.setex.assert_called_once_with(expected_key, conn.cache_ttl_seconds, json.dumps(data, default=str))
+        mock_valkey.setex.assert_called_once_with(expected_key, conn.cache_ttl_seconds, json.dumps(data, default=str))
 
-        # Simulate redis get
-        mock_redis.get.return_value = json.dumps(data).encode()
+        # Simulate valkey get
+        mock_valkey.get.return_value = json.dumps(data).encode()
         result = conn._cache_get("queue", "1")
         assert result == data
 
-    def test_redis_miss(self):
+    def test_valkey_miss(self):
         conn = _make_connection()
         conn.chat_id = "chat-1"
-        mock_redis = MagicMock()
-        mock_redis.get.return_value = None
-        conn.redis_client = mock_redis
+        mock_valkey = MagicMock()
+        mock_valkey.get.return_value = None
+        conn.valkey_client = mock_valkey
 
         assert conn._cache_get("queue", "999") is None
 
@@ -780,7 +775,7 @@ class TestHandleWriteTrackedResources:
         )
 
         # Should not raise and should not call CommitService
-        with patch("rossum_agent.rossum_mcp_integration.CommitService") as mock_cs:
+        with patch("rossum_agent.rossum_mcp_integration.change_tracking.CommitService") as mock_cs:
             conn.flush_and_commit("test request")
             mock_cs.assert_not_called()
 

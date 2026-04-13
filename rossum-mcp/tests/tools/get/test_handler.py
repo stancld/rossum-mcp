@@ -1,4 +1,4 @@
-"""Tests for rossum_mcp.tools.get.handler — unified get + search tools."""
+"""Tests for rossum_mcp.tools.get.handler and rossum_mcp.tools.search."""
 
 from __future__ import annotations
 
@@ -17,8 +17,9 @@ from conftest import (
     create_mock_workspace,
 )
 from fastmcp.exceptions import ToolError
-from rossum_mcp.tools.get.handler import register_get_tools
+from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import build_get_registry
+from rossum_mcp.tools.search import register_search_tools
 from rossum_mcp.tools.search.models import (
     AnnotationSearch,
     DocumentRelationSearch,
@@ -75,14 +76,17 @@ def setup_env(monkeypatch: MonkeyPatch) -> None:
 
 @pytest.mark.unit
 class TestToolRegistration:
-    def test_registers_get_and_search(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_registers_get_tool(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         register_get_tools(mock_mcp, mock_client)
         assert "get" in mock_mcp._tools
+
+    def test_registers_search_tool(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+        register_search_tools(mock_mcp, mock_client)
         assert "search" in mock_mcp._tools
 
-    def test_registers_exactly_five_tools(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_registers_exactly_four_get_tools(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         register_get_tools(mock_mcp, mock_client)
-        assert len(mock_mcp._tools) == 5
+        assert len(mock_mcp._tools) == 4
         assert "get_annotation_content" in mock_mcp._tools
         assert "get_schema_tree_structure" in mock_mcp._tools
         assert "get_engine_fields" in mock_mcp._tools
@@ -93,21 +97,39 @@ class TestToolRegistration:
 
 @pytest.mark.unit
 class TestGetRouting:
+    @pytest.mark.parametrize(
+        ("entity", "entity_id"),
+        [
+            ("queue", 42),
+            ("engine", 7),
+            ("workspace", 3),
+            ("user", 8),
+            ("organization_group", 20),
+            ("organization_limit", 30),
+            ("document_relation", 60),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_get_queue(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_queue = create_mock_queue(id=42, name="My Queue")
-        mock_client.retrieve_queue.return_value = mock_queue
+    async def test_get_simple_entity(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        setup_env: None,
+        entity: str,
+        entity_id: int,
+    ) -> None:
+        retrieve_method = getattr(mock_client, f"retrieve_{entity}")
+        retrieve_method.return_value = Mock(id=entity_id)
         register_get_tools(mock_mcp, mock_client)
 
-        result = await mock_mcp._tools["get"](entity="queue", entity_id=42)
-        assert result["entity"] == "queue"
-        assert result["id"] == 42
-        mock_client.retrieve_queue.assert_called_once_with(42)
+        result = await mock_mcp._tools["get"](entity=entity, entity_id=entity_id)
+        assert result["entity"] == entity
+        assert result["id"] == entity_id
+        retrieve_method.assert_called_once_with(entity_id)
 
     @pytest.mark.asyncio
     async def test_get_schema(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_schema = create_mock_schema(id=10)
-        mock_client.retrieve_schema.return_value = mock_schema
+        mock_client.retrieve_schema.return_value = create_mock_schema(id=10)
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="schema", entity_id=10)
@@ -116,25 +138,13 @@ class TestGetRouting:
 
     @pytest.mark.asyncio
     async def test_get_hook(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_hook = create_mock_hook(id=5)
-        mock_client.retrieve_hook.return_value = mock_hook
+        mock_client.retrieve_hook.return_value = create_mock_hook(id=5)
         register_get_tools(mock_mcp, mock_client)
 
         result = await mock_mcp._tools["get"](entity="hook", entity_id=5)
         assert result["entity"] == "hook"
         assert result["id"] == 5
         mock_client.retrieve_hook.assert_called_once_with(5)
-
-    @pytest.mark.asyncio
-    async def test_get_engine(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_engine = create_mock_engine(id=7)
-        mock_client.retrieve_engine.return_value = mock_engine
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="engine", entity_id=7)
-        assert result["entity"] == "engine"
-        assert result["id"] == 7
-        mock_client.retrieve_engine.assert_called_once_with(7)
 
     @pytest.mark.asyncio
     async def test_get_annotation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
@@ -154,27 +164,6 @@ class TestGetRouting:
         assert result["entity"] == "annotation"
         assert result["id"] == 99
         mock_client.retrieve_annotation.assert_called_once_with(99)
-
-    @pytest.mark.asyncio
-    async def test_get_workspace(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_ws = create_mock_workspace(id=3)
-        mock_client.retrieve_workspace.return_value = mock_ws
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="workspace", entity_id=3)
-        assert result["entity"] == "workspace"
-        assert result["id"] == 3
-        mock_client.retrieve_workspace.assert_called_once_with(3)
-
-    @pytest.mark.asyncio
-    async def test_get_user(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_user.return_value = Mock(id=8, name="Test User")
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="user", entity_id=8)
-        assert result["entity"] == "user"
-        assert result["id"] == 8
-        mock_client.retrieve_user.assert_called_once_with(8)
 
     @pytest.mark.asyncio
     async def test_get_rule(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
@@ -215,26 +204,6 @@ class TestGetRouting:
         mock_client.retrieve_email_template.assert_called_once_with(15)
 
     @pytest.mark.asyncio
-    async def test_get_organization_group(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_organization_group.return_value = Mock(id=20)
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="organization_group", entity_id=20)
-        assert result["entity"] == "organization_group"
-        assert result["id"] == 20
-        mock_client.retrieve_organization_group.assert_called_once_with(20)
-
-    @pytest.mark.asyncio
-    async def test_get_organization_limit(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_organization_limit.return_value = Mock(id=30)
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="organization_limit", entity_id=30)
-        assert result["entity"] == "organization_limit"
-        assert result["id"] == 30
-        mock_client.retrieve_organization_limit.assert_called_once_with(30)
-
-    @pytest.mark.asyncio
     async def test_get_relation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_client._http_client.fetch_one.return_value = {"id": 50, "type": "edit"}
         register_get_tools(mock_mcp, mock_client)
@@ -243,33 +212,30 @@ class TestGetRouting:
         assert result["entity"] == "relation"
         assert result["id"] == 50
 
+    @pytest.mark.parametrize(
+        ("entity_id", "return_value"),
+        [
+            (123, ["SLACK_TOKEN", "API_KEY"]),
+            (456, []),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_get_document_relation(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client.retrieve_document_relation.return_value = Mock(id=60)
+    async def test_get_hook_secrets_keys(
+        self,
+        mock_mcp: Mock,
+        mock_client: AsyncMock,
+        setup_env: None,
+        entity_id: int,
+        return_value: list,
+    ) -> None:
+        mock_client._http_client.request_json.return_value = return_value
         register_get_tools(mock_mcp, mock_client)
 
-        result = await mock_mcp._tools["get"](entity="document_relation", entity_id=60)
-        assert result["entity"] == "document_relation"
-        assert result["id"] == 60
-
-    @pytest.mark.asyncio
-    async def test_get_hook_secrets_keys(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client._http_client.request_json.return_value = ["SLACK_TOKEN", "API_KEY"]
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=123)
+        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=entity_id)
         assert result["entity"] == "hook_secrets_keys"
-        assert result["id"] == 123
-        assert result["data"] == ["SLACK_TOKEN", "API_KEY"]
-        mock_client._http_client.request_json.assert_called_once_with("GET", "hooks/123/secrets_keys")
-
-    @pytest.mark.asyncio
-    async def test_get_hook_secrets_keys_empty(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        mock_client._http_client.request_json.return_value = []
-        register_get_tools(mock_mcp, mock_client)
-
-        result = await mock_mcp._tools["get"](entity="hook_secrets_keys", entity_id=456)
-        assert result["data"] == []
+        assert result["id"] == entity_id
+        assert result["data"] == return_value
+        mock_client._http_client.request_json.assert_called_once_with("GET", f"hooks/{entity_id}/secrets_keys")
 
 
 # ───────────────────────── GET Batch (list[int]) ─────────────────────────
@@ -369,7 +335,7 @@ class TestGetBatch:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         register_get_tools(mock_mcp, mock_client)
-        with pytest.raises(ToolError, match="does not support get"):
+        with pytest.raises(ToolError, match="Unknown entity type"):
             await mock_mcp._tools["get"](entity="hook_log", entity_id=[1, 2])
 
 
@@ -383,7 +349,7 @@ class TestGetErrors:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         register_get_tools(mock_mcp, mock_client)
-        with pytest.raises(ToolError, match="does not support get"):
+        with pytest.raises(ToolError, match="Unknown entity type"):
             await mock_mcp._tools["get"](entity="hook_log", entity_id=1)
 
     @pytest.mark.asyncio
@@ -403,57 +369,54 @@ class TestSearchRouting:
     @pytest.mark.asyncio
     async def test_search_queues(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_queue = create_mock_queue(id=1, name="Q1")
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_annotations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ann = create_mock_annotation(id=1)
-        with (
-            patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl,
-            patch("rossum_mcp.tools.search.registry.resolve_queue_workspaces", return_value={}) as _mock_rqw,
-        ):
-            mock_gl.return_value = Mock(items=[mock_ann])
-            register_get_tools(mock_mcp, mock_client)
+        with patch("rossum_mcp.tools.search.annotations.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_ann]
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=AnnotationSearch(queue_id=10))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_hooks(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_hook = create_mock_hook(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
-            mock_gl.return_value = Mock(items=[mock_hook])
-            register_get_tools(mock_mcp, mock_client)
+        with patch("rossum_mcp.tools.search.hooks.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_hook]
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=HookSearch(queue_id=5))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_engines(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_engine = create_mock_engine(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.engines.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_engine])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=EngineSearch(engine_type="extractor"))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_schemas(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_schema = create_mock_schema(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
-            mock_gl.return_value = Mock(items=[mock_schema])
-            register_get_tools(mock_mcp, mock_client)
+        with patch("rossum_mcp.tools.search.schemas.search_with_workspace_resolution") as mock_search:
+            mock_search.return_value = [mock_schema]
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=SchemaSearch(name="Test"))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_workspaces(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
         mock_ws = create_mock_workspace(id=1)
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.workspaces.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_ws])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=WorkspaceSearch(organization_id=1))
         assert len(result) == 1
 
@@ -462,9 +425,9 @@ class TestSearchRouting:
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
         mock_queue = create_mock_queue(id=1, name="Q1")
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.queues.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[mock_queue])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             await mock_mcp._tools["search"](query=QueueSearch(workspace_id=5), first_n=3)
         mock_gl.assert_called_once()
         assert mock_gl.call_args.kwargs.get("max_items") == 3
@@ -588,24 +551,14 @@ class TestRegistry:
             "annotation",
             "relation",
             "document_relation",
-            "hook_log",
-            "hook_template",
-            "user_role",
-            "queue_template_name",
             "hook_secrets_keys",
         }
         assert set(registry.keys()) == expected
 
-    def test_search_only_entities_have_no_retrieve(self, mock_client: AsyncMock, setup_env: None) -> None:
+    def test_all_entities_have_retrieve_fn(self, mock_client: AsyncMock, setup_env: None) -> None:
         registry = build_get_registry(mock_client)
-        for entity_name in ("hook_log", "hook_template", "user_role", "queue_template_name"):
-            assert registry[entity_name].retrieve_fn is None
-            assert registry[entity_name].search_fn is not None
-
-    def test_get_only_entity_has_no_search(self, mock_client: AsyncMock, setup_env: None) -> None:
-        registry = build_get_registry(mock_client)
-        assert registry["organization_limit"].search_fn is None
-        assert registry["organization_limit"].retrieve_fn is not None
+        for entity_name, config in registry.items():
+            assert config.retrieve_fn is not None, f"{entity_name} has no retrieve_fn"
 
 
 # ───────────────────────── SEARCH Error Cases ─────────────────────────
@@ -614,20 +567,14 @@ class TestRegistry:
 @pytest.mark.unit
 class TestSearchErrors:
     @pytest.mark.asyncio
-    async def test_search_unknown_entity_returns_error(
+    async def test_search_unsupported_entity_returns_error(
         self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None
     ) -> None:
-        register_get_tools(mock_mcp, mock_client)
-        # organization_limit has no search_fn
-        from rossum_mcp.tools.search.models import BaseModel
+        from rossum_mcp.tools.search.registry import build_search_registry
 
-        class FakeSearch(BaseModel):
-            entity: str = "organization_limit"
-
-        # Build a query that mimics searching organization_limit
-        registry = build_get_registry(mock_client)
-        config = registry["organization_limit"]
-        assert config.search_fn is None
+        search_registry = build_search_registry(mock_client)
+        # organization_limit is not searchable
+        assert "organization_limit" not in search_registry
 
 
 # ───────────────────────── SEARCH Relations ─────────────────────────
@@ -637,17 +584,17 @@ class TestSearchErrors:
 class TestSearchRelations:
     @pytest.mark.asyncio
     async def test_search_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=1, type="edit")])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=RelationSearch(type="edit"))
         assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_search_document_relations(self, mock_mcp: Mock, mock_client: AsyncMock, setup_env: None) -> None:
-        with patch("rossum_mcp.tools.search.registry.graceful_list") as mock_gl:
+        with patch("rossum_mcp.tools.search.relations.graceful_list") as mock_gl:
             mock_gl.return_value = Mock(items=[Mock(id=10, type="line_items")])
-            register_get_tools(mock_mcp, mock_client)
+            register_search_tools(mock_mcp, mock_client)
             result = await mock_mcp._tools["search"](query=DocumentRelationSearch(type="line_items"))
         assert len(result) == 1
 

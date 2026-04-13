@@ -135,17 +135,33 @@ table.docutils td, table.docutils th {
     padding: 0.5rem 0.75rem;
 }
 
-/* -- Version badge under sidebar title --------------------------- */
-.sidebar-version-badge {
-    display: inline-block;
+/* -- Version selector under sidebar title ------------------------- */
+.sidebar-version-selector {
+    margin-top: 0.35rem;
+    text-align: center;
+}
+
+#docs-version-select {
     font-size: 0.7rem;
     font-weight: 600;
     color: #1E6EE5;
     background: rgba(30, 110, 229, 0.1);
+    border: 1px solid rgba(30, 110, 229, 0.25);
     border-radius: 4px;
-    padding: 0.1em 0.5em;
-    margin-top: 0.25rem;
+    padding: 0.15em 0.4em;
+    cursor: pointer;
+    font-family: inherit;
     letter-spacing: 0.02em;
+}
+
+#docs-version-select:hover {
+    background: rgba(30, 110, 229, 0.18);
+}
+
+[data-theme="dark"] #docs-version-select {
+    color: #61A0FF;
+    background: rgba(97, 160, 255, 0.1);
+    border-color: rgba(97, 160, 255, 0.25);
 }
 
 /* -- Footer ----------------------------------------------------- */

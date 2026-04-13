@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 
 import pytest
-from rossum_agent.rossum_mcp_integration import connect_mcp_server
+from rossum_agent.rossum_mcp_integration.connection import connect_mcp_server
 
 ROSSUM_API_TOKEN = os.environ.get("ROSSUM_API_TOKEN", "")
 ROSSUM_API_BASE_URL = os.environ.get("ROSSUM_API_BASE_URL", "")

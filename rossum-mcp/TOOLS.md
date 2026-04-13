@@ -44,18 +44,18 @@ Lists/searches entities with typed, entity-specific filters. Pass a query object
 
 | Entity | Filters |
 |--------|---------|
-| `queue` | `id`, `workspace_id`, `name`, `use_regex` |
-| `schema` | `name`, `queue_id`, `use_regex` |
+| `queue` | `workspace_id`, `name`, `use_regex` |
+| `schema` | `name`, `queue_id`, `workspace_id`, `use_regex` |
 | `hook` | `queue_id`, `active`, `workspace_id` |
-| `engine` | `id`, `engine_type` (`extractor`\|`splitter`), `agenda_id` |
-| `rule` | `schema_id`, `organization_id`, `enabled` |
+| `engine` | `engine_type` (`extractor`\|`splitter`), `agenda_id` |
+| `rule` | `queue_id`, `workspace_id`, `organization_id`, `enabled` |
 | `user` | `username`, `email`, `first_name`, `last_name`, `is_active`, `is_organization_group_admin` |
 | `workspace` | `organization_id`, `name`, `use_regex` |
-| `email_template` | `queue_id`, `type`, `name`, `use_regex` |
+| `email_template` | `queue_id`, `workspace_id`, `type`, `name`, `use_regex` |
 | `organization_group` | `name`, `use_regex` |
-| `annotation` | `queue_id` (required), `status`, `ordering` |
-| `relation` | `id`, `type`, `parent`, `key`, `annotation` |
-| `document_relation` | `id`, `type`, `annotation`, `key`, `documents` |
+| `annotation` | `queue_id` (required), `workspace_id`, `status`, `ordering` |
+| `relation` | `type`, `parent`, `key`, `annotation` |
+| `document_relation` | `type`, `annotation`, `key`, `documents` |
 | `hook_log` | `hook_id`, `queue_id`, `annotation_id`, `email_id`, `log_level`, `status`, `status_code`, `request_id`, `timestamp_before`, `timestamp_after`, `start_before`, `start_after`, `end_before`, `end_after`, `search`, `page_size` |
 | `hook_template` | _(no filters)_ |
 | `user_role` | _(no filters)_ |
@@ -261,6 +261,8 @@ Patches a schema by adding, updating, or removing individual nodes without repla
 - `node_data` (object, optional): Data for `add`/`update` operations
 - `parent_id` (string, optional): Parent node ID for `add` operation
 - `position` (integer, optional): Position for `add` operation
+- `after_field` (string, optional): Insert after this field ID
+- `before_field` (string, optional): Insert before this field ID
 
 **Example usage:**
 ```python
@@ -430,14 +432,13 @@ Tests a hook by auto-generating a realistic payload and executing it. For `annot
 
 ### create_rule
 
-Creates a new business rule. At least one of `schema_id` or `queue_ids` is required to scope the rule.
+Creates a new business rule. Optionally scope with `queue_ids`.
 
 **Parameters:**
 - `name` (string, required): Rule name
 - `trigger_condition` (string, required): TxScript formula (e.g., `"field.amount > 10000"`)
 - `actions` (array, required): List of actions. Each action requires: `id` (unique string), `type`, `event`, `payload`
 - `enabled` (boolean, optional, default: true): Whether the rule is enabled
-- `schema_id` (integer, optional): Schema ID to scope the rule
 - `queue_ids` (array of integers, optional): Queue IDs to scope the rule to specific queues
 
 **Action types:** `show_message`, `add_automation_blocker`, `add_validation_source`, `change_queue`, `send_email`, `hide_field`, `show_field`, `show_hide_field`, `change_status`, `add_label`, `remove_label`, `custom`
@@ -456,7 +457,6 @@ Creates a new business rule. At least one of `schema_id` or `queue_ids` is requi
     }
   ],
   "enabled": true,
-  "schema_id": 12345,
   "queue_ids": [101, 102]
 }
 ```

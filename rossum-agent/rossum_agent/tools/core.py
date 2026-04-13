@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from anthropic.types import ToolParam
 
     from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
     from rossum_agent.tools.task_tracker import TaskTracker
 
 

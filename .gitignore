@@ -13,15 +13,6 @@ extension_explanation.md
 .agents/
 outputs/
 
-# rossum_deploy folders
-before-changes/
-after-changes/
-sandbox-after-changes/
-production-baseline/
-sandbox-workspace/
-sandbox-after/
-after/
-before/
 notebooks/
 
 # Generated OpenAPI spec

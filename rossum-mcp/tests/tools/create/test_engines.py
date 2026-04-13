@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from conftest import create_mock_engine, create_mock_engine_field
 from fastmcp.exceptions import ToolError
-from rossum_mcp.tools.create.handler import register_create_tools
+from rossum_mcp.tools.create import register_create_tools
 
 
 @pytest.fixture
@@ -92,9 +92,18 @@ class TestCreateEngineField:
         assert result.id == 500
         assert result.label == "Invoice Number"
 
+    @pytest.mark.parametrize(
+        ("multiline_kwargs", "expected_string"),
+        [
+            ({"multiline": True}, "true"),
+            ({}, "false"),
+        ],
+        ids=["multiline_true", "multiline_default_false"],
+    )
     @pytest.mark.asyncio
-    async def test_create_engine_field_multiline_sent_as_string(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        """Test that multiline bool is converted to lowercase string for the API."""
+    async def test_create_engine_field_multiline_sent_as_string(
+        self, mock_mcp: Mock, mock_client: AsyncMock, multiline_kwargs: dict, expected_string: str
+    ) -> None:
         register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         mock_field = create_mock_engine_field(id=501, label="Notes")
@@ -108,65 +117,34 @@ class TestCreateEngineField:
             label="Notes",
             field_type="string",
             schema_ids=[1],
-            multiline=True,
+            **multiline_kwargs,
         )
 
         create_call = mock_client._http_client.create.call_args
-        assert create_call[0][1]["multiline"] == "true"
+        assert create_call[0][1]["multiline"] == expected_string
 
+    @pytest.mark.parametrize(
+        ("extra_kwargs", "match"),
+        [
+            ({"schema_ids": [], "field_type": "string"}, "schema_ids cannot be empty"),
+            ({"schema_ids": [1], "field_type": "invalid"}, "Invalid field_type"),
+        ],
+        ids=["empty_schemas", "invalid_type"],
+    )
     @pytest.mark.asyncio
-    async def test_create_engine_field_multiline_default_sent_as_string(
-        self, mock_mcp: Mock, mock_client: AsyncMock
+    async def test_create_engine_field_validation_error(
+        self, mock_mcp: Mock, mock_client: AsyncMock, extra_kwargs: dict, match: str
     ) -> None:
-        """Test that default multiline=False is sent as 'false' string."""
-        register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
-
-        mock_field = create_mock_engine_field(id=502, label="Name")
-        mock_client._http_client.create.return_value = {"id": 502}
-        mock_client._deserializer = Mock(return_value=mock_field)
-
-        create_engine_field = mock_mcp._tools["create_engine_field"]
-        await create_engine_field(
-            engine_id=123,
-            name="name",
-            label="Name",
-            field_type="string",
-            schema_ids=[1],
-        )
-
-        create_call = mock_client._http_client.create.call_args
-        assert create_call[0][1]["multiline"] == "false"
-
-    @pytest.mark.asyncio
-    async def test_create_engine_field_empty_schemas(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        """Test create_engine_field fails with empty schema_ids."""
         register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
         create_engine_field = mock_mcp._tools["create_engine_field"]
 
-        with pytest.raises(ToolError, match="schema_ids cannot be empty"):
+        with pytest.raises(ToolError, match=match):
             await create_engine_field(
                 engine_id=123,
                 name="field",
                 label="Field",
-                field_type="string",
-                schema_ids=[],
-            )
-
-    @pytest.mark.asyncio
-    async def test_create_engine_field_invalid_type(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
-        """Test create_engine_field fails with invalid field type."""
-        register_create_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
-
-        create_engine_field = mock_mcp._tools["create_engine_field"]
-
-        with pytest.raises(ToolError, match="Invalid field_type"):
-            await create_engine_field(
-                engine_id=123,
-                name="field",
-                label="Field",
-                field_type="invalid",
-                schema_ids=[1],
+                **extra_kwargs,
             )
 
     @pytest.mark.asyncio

@@ -150,7 +150,6 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 - **[rossum-agent-client/](rossum-agent-client/)** - Typed Python client for the Rossum Agent API
 - **[rossum-agent-client-ts/](rossum-agent-client-ts/)** - Typed TypeScript client for the Rossum Agent API
-- **[rossum-deploy/](rossum-deploy/)** - Minimalistic pull/diff/push deployment tool (lightweight alternative to [deployment-manager](https://github.com/rossumai/deployment-manager))
 - **[rossum-agent-tui/](rossum-agent-tui/)** - Terminal UI for development and testing (Node.js)
 
 ## Quick Start
@@ -197,7 +196,7 @@ EOF
 docker-compose up rossum-agent-api
 ```
 
-Redis is included in the compose stack and used for change tracking.
+Valkey is included in the compose stack and used for change tracking.
 
 ---
 
@@ -221,7 +220,7 @@ export ROSSUM_MCP_MODE="read-write"
 rossum-agent-api                                # REST API
 ```
 
-For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md), [rossum-agent/README.md](rossum-agent/README.md), and [rossum-deploy/README.md](rossum-deploy/README.md).
+For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md).
 
 ---
 
@@ -235,11 +234,11 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 {
   "mcpServers": {
     "rossum": {
-      "command": "python",
-      "args": ["/path/to/rossum-mcp/rossum_mcp/server.py"],
+      "command": "uvx",
+      "args": ["rossum-mcp"],
       "env": {
-        "ROSSUM_API_TOKEN": "your-api-token",
-        "ROSSUM_API_BASE_URL": "https://api.elis.rossum.ai/v1",
+        "ROSSUM_API_TOKEN": "${ROSSUM_API_TOKEN}",
+        "ROSSUM_API_BASE_URL": "${ROSSUM_API_BASE_URL}",
         "ROSSUM_MCP_MODE": "read-write"
       }
     }
@@ -322,7 +321,6 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [ros
 - **[Full Documentation](https://stancld.github.io/rossum-agents/)** - Complete guides and API reference
 - **[MCP Server README](rossum-mcp/README.md)** - MCP server setup and tools
 - **[Agent README](rossum-agent/README.md)** - Agent toolkit and UI usage
-- **[Deploy README](rossum-deploy/README.md)** - Deployment tool usage
 - **[Examples](examples/)** - Sample workflows and use cases
 
 ## Resources
@@ -330,7 +328,6 @@ See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [ros
 - [Rossum API](https://rossum.app/api/docs/) - Official API documentation
 - [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
 - [Rossum API SDK](https://github.com/rossumai/rossum-api) - Python SDK
-- [Deployment Manager (PRD2)](https://github.com/rossumai/deployment-manager) - Full-featured deployment CLI
 
 
 ## Development

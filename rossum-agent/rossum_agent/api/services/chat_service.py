@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import datetime as dt
-import logging
 import secrets
 from typing import TYPE_CHECKING
+
+import structlog
 
 from rossum_agent.api.models.schemas import (
     ChatDetail,
@@ -17,7 +18,7 @@ from rossum_agent.api.models.schemas import (
     Message,
     Persona,
 )
-from rossum_agent.storage import ChatData, ChatMetadata
+from rossum_agent.chat_models import ChatData, ChatMetadata
 
 
 def _extract_text(content: object) -> str | None:
@@ -70,23 +71,23 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from rossum_agent.storage import ChatStorage
+    from rossum_agent.postgres_storage import PostgresStorage
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ChatService:
     """Service for managing chat sessions.
 
-    Wraps a ChatStorage backend to provide chat CRUD operations with proper
+    Wraps a PostgresStorage backend to provide chat CRUD operations with proper
     data transformation to/from API schemas.
     """
 
-    def __init__(self, storage: ChatStorage) -> None:
+    def __init__(self, storage: PostgresStorage) -> None:
         self._storage = storage
 
     @property
-    def storage(self) -> ChatStorage:
+    def storage(self) -> PostgresStorage:
         """Get the underlying storage instance."""
         return self._storage
 

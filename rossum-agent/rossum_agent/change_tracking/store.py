@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING, cast
+
+import structlog
 
 from rossum_agent.change_tracking.models import ConfigCommit
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    import redis
+    import valkey
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Default TTL for commit data (30 days, matching chat TTL)
 DEFAULT_COMMIT_TTL_SECONDS = 30 * 24 * 3600
@@ -21,9 +22,9 @@ DEFAULT_SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
 
 
 class CommitStore:
-    """Redis-backed persistence for ConfigCommit objects."""
+    """Valkey-backed persistence for ConfigCommit objects."""
 
-    def __init__(self, client: redis.Redis, ttl_seconds: int = DEFAULT_COMMIT_TTL_SECONDS) -> None:
+    def __init__(self, client: valkey.Valkey, ttl_seconds: int = DEFAULT_COMMIT_TTL_SECONDS) -> None:
         self.client = client
         self._ttl = ttl_seconds
 
@@ -81,13 +82,13 @@ class CommitStore:
 
 
 class SnapshotStore:
-    """Redis-backed entity snapshot store for point-in-time restore.
+    """Valkey-backed entity snapshot store for point-in-time restore.
 
     Stores full entity snapshots indexed by (entity_type, entity_id, commit_hash),
     enabling restore to any historical version within the TTL window.
     """
 
-    def __init__(self, client: redis.Redis, ttl_seconds: int = DEFAULT_SNAPSHOT_TTL_SECONDS) -> None:
+    def __init__(self, client: valkey.Valkey, ttl_seconds: int = DEFAULT_SNAPSHOT_TTL_SECONDS) -> None:
         self.client = client
         self._ttl = ttl_seconds
 

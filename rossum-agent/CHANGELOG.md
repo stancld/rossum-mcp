@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Bump `rossum-mcp` dependency from `>=2.1.3` to `>=2.2.0`
+- Migrate from Redis to Valkey for change tracking storage [#356](https://github.com/stancld/rossum-agents/pull/356)
+
+### Added
+- `VALKEY_PASSWORD` environment variable for authenticated Valkey connections [#356](https://github.com/stancld/rossum-agents/pull/356)
+- Structured logging via `structlog` (reusing `rossum_mcp.logging_config`); configurable with `ROSSUM_AGENT_LOG_LEVEL` and `ROSSUM_AGENT_LOG_FORMAT` environment variables [#373](https://github.com/stancld/rossum-agents/pull/373)
+- Migrate all `rossum_agent` module loggers from stdlib `logging.getLogger` to `structlog.get_logger` so package log records render via structlog processors [#375](https://github.com/stancld/rossum-agents/pull/375)
+- Emit structured `tool_call.completed` / `tool_call.failed` events with `tool_name`, `duration_seconds`, `status` (and `error_type` on failure) for each tool invocation, mirroring the `rossum_mcp.middleware` observability format [#375](https://github.com/stancld/rossum-agents/pull/375)
+
+### Fixed
+- Prevent leaking internal error details to clients — error SSE events now return a generic message instead of the raw exception string [#355](https://github.com/stancld/rossum-agents/pull/355)
+
+### Internal
+- Large-scale codebase consolidation and cleanup ([#362](https://github.com/stancld/rossum-agents/pull/362), [#363](https://github.com/stancld/rossum-agents/pull/363), [#365](https://github.com/stancld/rossum-agents/pull/365), [#366](https://github.com/stancld/rossum-agents/pull/366), [#368](https://github.com/stancld/rossum-agents/pull/368), [#369](https://github.com/stancld/rossum-agents/pull/369), [#371](https://github.com/stancld/rossum-agents/pull/371)):
+  - Removed `ChatStorage` protocol in favor of direct `PostgresStorage` usage
+  - Cleaned up type aliases, renamed helpers, removed trivial docstrings
+  - Removed tool call deduplication logic
+  - Consolidated `python_tools` into `tools/python_helper`
+  - Split `models.py` into a submodule package
+  - Replaced `AgentConfig` dataclass with module-level constants
+  - Reused `extract_text_from_content` instead of duplicate `_extract_text_from_prompt`
+  - Cleaned up URL context builder
+  - Split `rossum_mcp_integration` module into a subpackage (`connection`, `change_tracking`, `tools`)
+  - Consolidated `dynamic_tools` catalog fetch around the async path (removed sync duplication)
+
 ## [2.0.0] - 2026-04-09
 
 ### Added

@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, Mock
 import anyio
 import pytest
 from conftest import create_mock_annotation, create_mock_queue
-from rossum_mcp.tools.get.handler import register_get_tools
+from rossum_mcp.tools.get import register_get_tools
 from rossum_mcp.tools.get.registry import _get_annotation
-from rossum_mcp.tools.search.registry import _list_annotations
+from rossum_mcp.tools.search.annotations import _list_annotations
 
 
 @pytest.fixture

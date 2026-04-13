@@ -301,17 +301,17 @@ class TestSpecCacheLoad:
 
 
 class TestTruncateOutput:
-    """Tests for _truncate_output function."""
+    """Tests for truncate_output function."""
 
     def test_no_truncation_within_limit(self) -> None:
         """Test that output within limit is returned unchanged."""
         output = "short output"
-        assert openapi_module._truncate_output(output, 100) == output
+        assert openapi_module.truncate_output(output, 100) == output
 
     def test_truncates_at_line_boundary(self) -> None:
         """Test that truncation happens at a line boundary."""
         output = "line1\nline2\nline3\nline4\nline5"
-        result = openapi_module._truncate_output(output, 15)
+        result = openapi_module.truncate_output(output, 15)
         assert result.endswith("\n... (truncated)")
         content_before_marker = result.split("\n... (truncated)")[0]
         assert content_before_marker == "line1\nline2"
@@ -319,7 +319,7 @@ class TestTruncateOutput:
     def test_falls_back_to_char_limit_for_single_long_line(self) -> None:
         """Test char-based truncation when no line boundary found."""
         output = "x" * 100
-        result = openapi_module._truncate_output(output, 50)
+        result = openapi_module.truncate_output(output, 50)
         assert len(result) == 50 + len("\n... (truncated)")
         assert result.endswith("\n... (truncated)")
 

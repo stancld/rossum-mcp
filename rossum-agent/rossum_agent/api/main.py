@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 import os
 import signal
 import sys
@@ -12,16 +11,18 @@ import threading
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+import structlog
 import uvicorn
 from fastapi import FastAPI, Request, status
 from gunicorn.app.base import BaseApplication
+from rossum_mcp.logging_config import LogFormat, LogLevel, setup_logging
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from starlette.types import ASGIApp, Receive, Scope, Send
 
-    from rossum_agent.storage import ChatStorage
+    from rossum_agent.postgres_storage import PostgresStorage
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -32,14 +33,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from rossum_agent import __version__
 from rossum_agent.api.routes import chats, commands, files, health, messages, slack
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.api.services.file_service import FileService
 from rossum_agent.api.shutdown import shutdown_state
 from rossum_agent.postgres_storage import PostgresStorage
-from rossum_agent.redis_client import RedisConnection
+from rossum_agent.valkey_client import ValkeyConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10 MB (supports image uploads)
 
@@ -151,7 +152,7 @@ async def _drain_and_shutdown() -> None:
     os.kill(os.getpid(), signal.SIGINT)
 
 
-def _create_storage() -> ChatStorage:
+def _create_storage() -> PostgresStorage:
     """Create the PostgreSQL chat storage backend."""
     storage = PostgresStorage()
     storage.initialize()
@@ -170,14 +171,17 @@ def _init_services(app: FastAPI) -> None:
         app.state.agent_service = AgentService()
     if not hasattr(app.state, "file_service"):
         app.state.file_service = FileService(storage=app.state.chat_service.storage)
-    if not hasattr(app.state, "redis_connection"):
-        app.state.redis_connection = RedisConnection()
+    if not hasattr(app.state, "valkey_connection"):
+        app.state.valkey_connection = ValkeyConnection()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Lifespan context manager for startup and shutdown events."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    setup_logging(
+        log_level=LogLevel(os.environ.get("ROSSUM_AGENT_LOG_LEVEL", "INFO").upper()),
+        log_format=LogFormat(os.environ.get("ROSSUM_AGENT_LOG_FORMAT", "console").lower()),
+    )
     logger.info("Rossum Agent API starting up...")
 
     shutdown_state.shutting_down = False

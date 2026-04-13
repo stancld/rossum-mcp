@@ -51,7 +51,7 @@ class TestExecPython:
         assert parsed["result"] == "ok"
         assert parsed["stdout"] == "hello\n"
 
-    @patch("rossum_agent.python_tools.copilot.rule.suggest_rule")
+    @patch("rossum_agent.tools.python_helpers.copilot.rule.suggest_rule")
     def test_exposes_rule_helper(self, mock_suggest_rule) -> None:
         mock_suggest_rule.return_value = json.dumps(
             {"status": "success", "name": "Rule", "trigger_condition": "field.amount_total > 0", "actions": []}
@@ -68,7 +68,7 @@ class TestExecPython:
         assert parsed["result"]["name"] == "Rule"
         mock_suggest_rule.assert_called_once_with(user_query="Check total", queue_id=123)
 
-    @patch("rossum_agent.python_tools.copilot.formula.suggest_formula_field")
+    @patch("rossum_agent.tools.python_helpers.copilot.formula.suggest_formula_field")
     def test_exposes_copilot_namespace(self, mock_suggest_formula_field) -> None:
         mock_suggest_formula_field.return_value = json.dumps({"status": "success", "formula": "field.amount_total"})
 
@@ -334,7 +334,7 @@ class TestExecPython:
         assert parsed["status"] == "error"
         assert "only supports .xlsx and .xls" in parsed["error"]
 
-    def test_read_excel_allows_path_outside_workspace(self, tmp_path: Path) -> None:
+    def test_read_excel_rejects_path_outside_sandbox(self, tmp_path: Path) -> None:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.append(["col1"])
@@ -342,6 +342,23 @@ class TestExecPython:
         wb.save(xlsx_path)
 
         set_context(AgentContext(output_dir=tmp_path / "workspace"))
+        try:
+            result = execute_python(code=f'df = read_excel("{xlsx_path}")\nresult = list(df.columns)')
+        finally:
+            set_context(AgentContext())
+        parsed = json.loads(result)
+
+        assert parsed["status"] == "error"
+        assert "path must stay inside workspace or /var" in parsed["error"]
+
+    def test_read_excel_allows_workspace_path(self, tmp_path: Path) -> None:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(["col1"])
+        xlsx_path = tmp_path / "test.xlsx"
+        wb.save(xlsx_path)
+
+        set_context(AgentContext(output_dir=tmp_path))
         try:
             result = execute_python(code=f'df = read_excel("{xlsx_path}")\nresult = list(df.columns)')
         finally:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 import tempfile
@@ -13,15 +12,16 @@ from typing import TYPE_CHECKING
 
 import httpx
 import jq
+import structlog
 from anthropic import beta_tool
 
 from rossum_agent.tools.subagents.base import SubAgent, SubAgentConfig
-from rossum_agent.tools.utils import _truncate_output
+from rossum_agent.tools.utils import truncate_output
 
 if TYPE_CHECKING:
     from typing import Any
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # OpenAPI spec paths & output limits
@@ -209,7 +209,7 @@ def elis_openapi_jq(jq_query: str) -> str:
     except (ValueError, SystemError) as e:
         return json.dumps({"status": "error", "message": f"jq error: {e}"})
 
-    output = _truncate_output(output, _JQ_OUTPUT_LIMIT)
+    output = truncate_output(output, _JQ_OUTPUT_LIMIT)
     return json.dumps({"status": "success", "result": output})
 
 

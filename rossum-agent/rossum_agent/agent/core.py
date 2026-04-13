@@ -16,9 +16,13 @@ at multiple points to provide real-time updates to the client. The yield flow is
         │                                            ├── #3 Thinking tokens (chain-of-thought)
         │                                            └── #4 Text deltas (after initial buffer)
         │
-        ├── #6 Final answer (no tools, response complete)
+        ├── #6 Finalize thinking (thinking → tool_use with no intermediate text)
         │
-        └── #7 forwards from execute_tools_with_progress
+        ├── #7 Misclassification correction (text reclassified as INTERMEDIATE when tool_use follows)
+        │
+        ├── #8 Final answer (no tools, response complete)
+        │
+        └── #9 forwards from execute_tools_with_progress
                 ├── Tool starting (which tool is about to run)
                 └── Sub-agent progress (from nested agent tools like patch_schema_with_subagent)
 
@@ -37,19 +41,18 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import logging
 import random
 import time
 from contextvars import copy_context
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+import structlog
 from anthropic import APIError, APITimeoutError, RateLimitError
 from anthropic._types import Omit
 
 from rossum_agent.agent.memory import AgentMemory, MemoryStep
 from rossum_agent.agent.models import (
-    AgentConfig,
     AgentStep,
     ErrorStep,
     FinalAnswerStep,
@@ -61,7 +64,7 @@ from rossum_agent.agent.streaming import StreamState, extract_thinking_blocks, p
 from rossum_agent.agent.tool_execution import execute_tools_with_progress
 from rossum_agent.api.models.schemas import TokenUsageBreakdown
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_model_id
-from rossum_agent.rossum_mcp_integration import mcp_tools_to_anthropic_format
+from rossum_agent.rossum_mcp_integration.tools import mcp_tools_to_anthropic_format
 from rossum_agent.tools import get_internal_tools
 from rossum_agent.tools.core import SubAgentTokenUsage, get_context
 from rossum_agent.tools.dynamic_tools import (
@@ -72,7 +75,7 @@ from rossum_agent.tools.dynamic_tools import (
     preload_categories_for_request,
     reset_dynamic_tools,
 )
-from rossum_agent.utils import add_message_cache_breakpoint
+from rossum_agent.utils import add_message_cache_breakpoint, extract_text_from_content
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -81,9 +84,15 @@ if TYPE_CHECKING:
     from anthropic.types import MessageParam, TextBlockParam, ThinkingConfigAdaptiveParam, ToolParam
 
     from rossum_agent.agent.types import UserContent
-    from rossum_agent.rossum_mcp_integration import MCPConnection
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+EFFORT: Literal["max", "high", "medium", "low"] = "high"
+MAX_OUTPUT_TOKENS = 128000  # Opus 4.6 limit
+MAX_STEPS = 50
+REQUEST_DELAY = 3.0  # Delay in seconds between API calls to avoid rate limiting
+TEMPERATURE = 1.0  # Required for extended thinking
 
 RATE_LIMIT_MAX_RETRIES = 5
 RATE_LIMIT_BASE_DELAY = 2.0
@@ -175,13 +184,11 @@ class RossumAgent:
         client: AsyncAnthropicBedrock,
         mcp_connection: MCPConnection,
         system_prompt: str,
-        config: AgentConfig | None = None,
         additional_tools: list[ToolParam] | None = None,
     ) -> None:
         self.client = client
         self.mcp_connection = mcp_connection
         self.system_prompt = system_prompt
-        self.config = config or AgentConfig()
         self.additional_tools = additional_tools or []
 
         self.memory = AgentMemory()
@@ -277,13 +284,13 @@ class RossumAgent:
 
         async with self.client.messages.stream(
             model=model_id,
-            max_tokens=self.config.max_output_tokens,
+            max_tokens=MAX_OUTPUT_TOKENS,
             system=system,
             messages=messages,
             tools=tools or Omit(),
             thinking=thinking_config,
-            temperature=self.config.temperature,
-            output_config={"effort": self.config.effort},
+            temperature=TEMPERATURE,
+            output_config={"effort": EFFORT},
         ) as stream:
             # Yield #5: Forward all streaming steps from process_stream_events (yields #1-4)
             async for step in process_stream_events(step_num, stream, state):  # ty:ignore[invalid-argument-type] - AsyncMessageStream implements AsyncIterator protocol
@@ -357,18 +364,6 @@ class RossumAgent:
         ):
             yield step_or_result
 
-    def _extract_text_from_prompt(self, prompt: UserContent) -> str:
-        """Extract text content from a user prompt for classification."""
-        if isinstance(prompt, str):
-            return prompt
-        text_parts: list[str] = []
-        for block in prompt:
-            if block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    text_parts.append(text)
-        return " ".join(text_parts)
-
     def _calculate_rate_limit_delay(self, retries: int) -> float:
         """Calculate exponential backoff delay with jitter for rate limiting."""
         delay = min(RATE_LIMIT_BASE_DELAY * (2 ** (retries - 1)), RATE_LIMIT_MAX_DELAY)
@@ -391,7 +386,7 @@ class RossumAgent:
 
         # Pre-load tool categories based on keywords in the user's request
         # Run in thread pool to avoid blocking the event loop (preload uses sync MCP calls)
-        request_text = self._extract_text_from_prompt(prompt)
+        request_text = extract_text_from_content(prompt)
         ctx = copy_context()
         preload_result = await loop.run_in_executor(
             None, partial(ctx.run, preload_categories_for_request, request_text)
@@ -399,12 +394,12 @@ class RossumAgent:
 
         self.memory.add_task(prompt, preload_info=preload_result)
 
-        for step_num in range(1, self.config.max_steps + 1):
+        for step_num in range(1, MAX_STEPS + 1):
             rate_limit_retries = 0
 
             # Throttle requests to avoid rate limiting (skip delay on first step)
             if step_num > 1:
-                await asyncio.sleep(self.config.request_delay)
+                await asyncio.sleep(REQUEST_DELAY)
 
             while True:
                 try:
@@ -460,15 +455,14 @@ class RossumAgent:
 
         else:
             yield ErrorStep(
-                step_number=self.config.max_steps,
-                error=f"Maximum steps ({self.config.max_steps}) reached without final answer.",
+                step_number=MAX_STEPS,
+                error=f"Maximum steps ({MAX_STEPS}) reached without final answer.",
             )
 
 
 async def create_agent(
     mcp_connection: MCPConnection,
     system_prompt: str,
-    config: AgentConfig | None = None,
     additional_tools: list[ToolParam] | None = None,
 ) -> RossumAgent:
     """Create and configure a RossumAgent instance.
@@ -481,6 +475,5 @@ async def create_agent(
         client=client,
         mcp_connection=mcp_connection,
         system_prompt=system_prompt,
-        config=config,
         additional_tools=additional_tools,
     )

@@ -5,7 +5,12 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from rossum_mcp.tools.base import filter_by_workspace_id, resolve_workspace_from_queue, resolve_workspaces_from_queues
+from rossum_api.domain_logic.resources import Resource
+from rossum_mcp.tools.base import (
+    filter_by_workspace_id,
+    resolve_workspace_from_queue,
+    resolve_workspaces_from_queues,
+)
 
 
 @pytest.mark.unit
@@ -86,7 +91,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_success(self) -> None:
         """Test graceful_list returns all items when none are broken."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -107,7 +111,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_skips_broken_items(self) -> None:
         """Test graceful_list skips items that fail deserialization."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -134,7 +137,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_respects_max_items(self) -> None:
         """Test graceful_list respects max_items limit (counting only successful items)."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -163,7 +165,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_passes_filters(self) -> None:
         """Test graceful_list passes filters to cursor_fetch_all."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -186,7 +187,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_all_broken(self) -> None:
         """Test graceful_list returns empty when all items fail deserialization."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -207,7 +207,6 @@ class TestGracefulList:
     @pytest.mark.asyncio
     async def test_graceful_list_empty(self) -> None:
         """Test graceful_list with no items."""
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -230,7 +229,6 @@ class TestGracefulList:
         """Test graceful_list logs warnings for broken items."""
         import logging
 
-        from rossum_api.domain_logic.resources import Resource
         from rossum_mcp.tools.base import graceful_list
 
         client = AsyncMock()
@@ -349,3 +347,297 @@ class TestFilterByWorkspaceId:
 
     def test_empty_items_list(self) -> None:
         assert filter_by_workspace_id([], 10) == []
+
+
+@pytest.mark.unit
+class TestGetMultiQueueUrls:
+    """Tests for get_multi_queue_urls function."""
+
+    def test_collects_urls_from_multiple_items(self) -> None:
+        from rossum_mcp.tools.base import get_multi_queue_urls
+
+        items = [
+            Mock(queues=["https://api.rossum.ai/v1/queues/1", "https://api.rossum.ai/v1/queues/2"]),
+            Mock(queues=["https://api.rossum.ai/v1/queues/2", "https://api.rossum.ai/v1/queues/3"]),
+        ]
+        result = get_multi_queue_urls(items)
+        assert result == {
+            "https://api.rossum.ai/v1/queues/1",
+            "https://api.rossum.ai/v1/queues/2",
+            "https://api.rossum.ai/v1/queues/3",
+        }
+
+    def test_empty_queues(self) -> None:
+        from rossum_mcp.tools.base import get_multi_queue_urls
+
+        items = [Mock(queues=[]), Mock(queues=[])]
+        assert get_multi_queue_urls(items) == set()
+
+    def test_empty_items(self) -> None:
+        from rossum_mcp.tools.base import get_multi_queue_urls
+
+        assert get_multi_queue_urls([]) == set()
+
+
+@pytest.mark.unit
+class TestGetSingleQueueUrls:
+    """Tests for get_single_queue_urls function."""
+
+    def test_collects_urls_from_multiple_items(self) -> None:
+        from rossum_mcp.tools.base import get_single_queue_urls
+
+        items = [
+            Mock(queue="https://api.rossum.ai/v1/queues/1"),
+            Mock(queue="https://api.rossum.ai/v1/queues/2"),
+        ]
+        result = get_single_queue_urls(items)
+        assert result == {
+            "https://api.rossum.ai/v1/queues/1",
+            "https://api.rossum.ai/v1/queues/2",
+        }
+
+    def test_skips_none_queues(self) -> None:
+        from rossum_mcp.tools.base import get_single_queue_urls
+
+        items = [
+            Mock(queue="https://api.rossum.ai/v1/queues/1"),
+            Mock(queue=None),
+            Mock(queue="https://api.rossum.ai/v1/queues/3"),
+        ]
+        result = get_single_queue_urls(items)
+        assert result == {
+            "https://api.rossum.ai/v1/queues/1",
+            "https://api.rossum.ai/v1/queues/3",
+        }
+
+    def test_deduplicates(self) -> None:
+        from rossum_mcp.tools.base import get_single_queue_urls
+
+        items = [
+            Mock(queue="https://api.rossum.ai/v1/queues/1"),
+            Mock(queue="https://api.rossum.ai/v1/queues/1"),
+        ]
+        assert get_single_queue_urls(items) == {"https://api.rossum.ai/v1/queues/1"}
+
+    def test_empty_items(self) -> None:
+        from rossum_mcp.tools.base import get_single_queue_urls
+
+        assert get_single_queue_urls([]) == set()
+
+
+@pytest.mark.unit
+class TestSearchWithWorkspaceResolution:
+    """Tests for search_with_workspace_resolution function."""
+
+    @pytest.fixture
+    def mock_client(self) -> AsyncMock:
+        client = AsyncMock()
+        client._http_client = AsyncMock()
+        client._deserializer = Mock(side_effect=lambda r, raw: raw)
+        return client
+
+    @pytest.mark.asyncio
+    async def test_basic_list_enrich_and_return(self, mock_client: AsyncMock) -> None:
+        from conftest import create_mock_queue, create_mock_rule
+        from rossum_mcp.tools.base import get_multi_queue_urls, search_with_workspace_resolution
+
+        mock_rules = [
+            create_mock_rule(id=1, name="Rule 1", queues=["https://api.rossum.ai/v1/queues/10"]),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10, url="https://api.rossum.ai/v1/queues/10", workspace="https://api.rossum.ai/v1/workspaces/100"
+            ),
+        ]
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            items = mock_rules if resource == Resource.Rule else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        def enrich(rule, queue_ws_map):
+            return {"id": rule.id, "ws": list(queue_ws_map.values())}
+
+        result = await search_with_workspace_resolution(
+            mock_client,
+            Resource.Rule,
+            "rule",
+            enrich=enrich,
+            get_queue_urls=get_multi_queue_urls,
+        )
+        assert len(result) == 1
+        assert result[0]["id"] == 1
+        assert result[0]["ws"] == ["https://api.rossum.ai/v1/workspaces/100"]
+
+    @pytest.mark.asyncio
+    async def test_filters_by_workspace_id(self, mock_client: AsyncMock) -> None:
+        from conftest import create_mock_queue, create_mock_rule
+        from rossum_mcp.models.rule import Rule as McpRule
+        from rossum_mcp.tools.base import (
+            get_multi_queue_urls,
+            resolve_workspaces_from_queues,
+            search_with_workspace_resolution,
+        )
+
+        mock_rules = [
+            create_mock_rule(id=1, name="R1", queues=["https://api.rossum.ai/v1/queues/10"]),
+            create_mock_rule(id=2, name="R2", queues=["https://api.rossum.ai/v1/queues/20"]),
+        ]
+        mock_queues = [
+            create_mock_queue(
+                id=10, url="https://api.rossum.ai/v1/queues/10", workspace="https://api.rossum.ai/v1/workspaces/100"
+            ),
+            create_mock_queue(
+                id=20, url="https://api.rossum.ai/v1/queues/20", workspace="https://api.rossum.ai/v1/workspaces/200"
+            ),
+        ]
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            items = mock_rules if resource == Resource.Rule else mock_queues
+            for item in items:
+                yield item
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        def enrich(rule, queue_ws_map):
+            return McpRule.from_base(rule, workspaces=resolve_workspaces_from_queues(rule.queues, queue_ws_map))
+
+        result = await search_with_workspace_resolution(
+            mock_client,
+            Resource.Rule,
+            "rule",
+            enrich=enrich,
+            get_queue_urls=get_multi_queue_urls,
+            workspace_id=100,
+        )
+        assert len(result) == 1
+        assert result[0].id == 1
+
+    @pytest.mark.asyncio
+    async def test_filters_by_name_regex(self, mock_client: AsyncMock) -> None:
+        from conftest import create_mock_rule
+        from rossum_mcp.models.rule import Rule as McpRule
+        from rossum_mcp.tools.base import (
+            get_multi_queue_urls,
+            resolve_workspaces_from_queues,
+            search_with_workspace_resolution,
+        )
+
+        mock_rules = [
+            create_mock_rule(id=1, name="Invoice Rule", queues=[]),
+            create_mock_rule(id=2, name="Receipt Rule", queues=[]),
+            create_mock_rule(id=3, name="Invoice Validator", queues=[]),
+        ]
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            for item in mock_rules:
+                yield item
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        def enrich(rule, queue_ws_map):
+            return McpRule.from_base(rule, workspaces=resolve_workspaces_from_queues(rule.queues, queue_ws_map))
+
+        result = await search_with_workspace_resolution(
+            mock_client,
+            Resource.Rule,
+            "rule",
+            enrich=enrich,
+            get_queue_urls=get_multi_queue_urls,
+            name="Invoice",
+            use_regex=True,
+        )
+        assert len(result) == 2
+        assert {r.id for r in result} == {1, 3}
+
+    @pytest.mark.asyncio
+    async def test_passes_filters_to_graceful_list(self, mock_client: AsyncMock) -> None:
+        from rossum_mcp.tools.base import get_multi_queue_urls, search_with_workspace_resolution
+
+        received_filters: dict = {}
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            nonlocal received_filters
+            if resource == Resource.Hook:
+                received_filters = filters
+            return
+            yield
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        await search_with_workspace_resolution(
+            mock_client,
+            Resource.Hook,
+            "hook",
+            enrich=lambda item, m: item,
+            get_queue_urls=get_multi_queue_urls,
+            filters={"queue": 5, "active": True},
+        )
+        assert received_filters == {"queue": 5, "active": True}
+
+    @pytest.mark.asyncio
+    async def test_passes_max_items(self, mock_client: AsyncMock) -> None:
+        from conftest import create_mock_rule
+        from rossum_mcp.tools.base import get_multi_queue_urls, search_with_workspace_resolution
+
+        mock_rules = [create_mock_rule(id=i, name=f"Rule {i}", queues=[]) for i in range(5)]
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            for item in mock_rules:
+                yield item
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        result = await search_with_workspace_resolution(
+            mock_client,
+            Resource.Rule,
+            "rule",
+            enrich=lambda item, m: item,
+            get_queue_urls=get_multi_queue_urls,
+            max_items=2,
+        )
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_result(self, mock_client: AsyncMock) -> None:
+        from rossum_mcp.tools.base import get_single_queue_urls, search_with_workspace_resolution
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            return
+            yield
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        result = await search_with_workspace_resolution(
+            mock_client,
+            Resource.EmailTemplate,
+            "email_template",
+            enrich=lambda item, m: item,
+            get_queue_urls=get_single_queue_urls,
+        )
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_no_filters_defaults_to_empty(self, mock_client: AsyncMock) -> None:
+        from rossum_mcp.tools.base import get_multi_queue_urls, search_with_workspace_resolution
+
+        received_filters: dict = {}
+
+        async def mock_cursor_fetch_all(resource, **filters):
+            nonlocal received_filters
+            received_filters = filters
+            return
+            yield
+
+        mock_client._http_client.cursor_fetch_all = mock_cursor_fetch_all
+
+        await search_with_workspace_resolution(
+            mock_client,
+            Resource.Rule,
+            "rule",
+            enrich=lambda item, m: item,
+            get_queue_urls=get_multi_queue_urls,
+        )
+        assert received_filters == {}

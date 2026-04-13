@@ -1,0 +1,289 @@
+"""Change tracking mixin for MCPConnection.
+
+Intercepts write operations, caches read results, and tracks entity changes
+for version control.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING, Any, cast
+
+import structlog
+
+from rossum_agent.change_tracking.commit_service import CommitService
+from rossum_agent.change_tracking.models import EntityChange
+from rossum_agent.rossum_mcp_integration.tools import (
+    Operation,
+    _pop_tracked_resources,
+    classify_operation,
+    extract_entity_id,
+    extract_entity_name,
+    extract_entity_type,
+    to_dict,
+    unwrap,
+)
+
+if TYPE_CHECKING:
+    import valkey
+
+    from rossum_agent.change_tracking.store import CommitStore, SnapshotStore
+    from rossum_agent.rossum_mcp_integration.connection import MCPConnection
+
+logger = structlog.get_logger(__name__)
+
+
+class ChangeTrackingMixin:
+    """Mixin that adds change tracking capabilities to MCPConnection.
+
+    Expects the host class to provide these attributes/methods:
+    write_tools, chat_id, valkey_client, cache_ttl_seconds,
+    _read_cache, _changes, _commit_store, _snapshot_store, _environment,
+    and _call_mcp().
+    """
+
+    write_tools: set[str]
+    chat_id: str | None
+    valkey_client: valkey.Valkey | None
+    cache_ttl_seconds: int
+    _read_cache: dict[tuple[str, str], dict]
+    _changes: list[EntityChange]
+    _commit_store: CommitStore | None
+    _snapshot_store: SnapshotStore | None
+    _environment: str | None
+
+    async def _call_mcp(self, name: str, arguments: dict[str, Any]) -> Any:
+        raise NotImplementedError
+
+    def _cache_get(self, entity_type: str, entity_id: str) -> dict | None:
+        if self.valkey_client and self.chat_id:
+            raw = self.valkey_client.get(f"read_cache:{self.chat_id}:{entity_type}:{entity_id}")
+            if raw is not None:
+                return json.loads(cast("bytes", raw))
+            return None
+        return self._read_cache.get((entity_type, entity_id))
+
+    def _cache_set(self, entity_type: str, entity_id: str, data: dict) -> None:
+        if self.valkey_client and self.chat_id:
+            key = f"read_cache:{self.chat_id}:{entity_type}:{entity_id}"
+            self.valkey_client.setex(key, self.cache_ttl_seconds, json.dumps(data, default=str))
+        else:
+            self._read_cache[(entity_type, entity_id)] = data
+
+    async def _handle_write(self, name: str, arguments: dict[str, Any]) -> Any:
+        # Handle unified delete tool: delete(entity="queue", entity_id=123)
+        if name == "delete" and "entity" in arguments and "entity_id" in arguments:
+            entity_type = arguments["entity"]
+            entity_id = str(arguments["entity_id"])
+            operation: Operation = "delete"
+        else:
+            entity_type = extract_entity_type(name)
+            entity_id = extract_entity_id(entity_type or "", arguments) if entity_type else None
+            operation = classify_operation(name)
+
+        self._auto_commit_if_needed(entity_type, entity_id, operation)
+
+        before = await self._get_before_snapshot(entity_type, entity_id, operation)
+        result = await self._call_mcp(name, arguments)
+
+        tracked = _pop_tracked_resources(result)
+
+        after, entity_id = await self._get_after_snapshot(operation, entity_type, entity_id, result)
+
+        if after is not None and entity_type and entity_id:
+            self._cache_set(entity_type, entity_id, after)
+
+        self._record_change(name, arguments, entity_type, entity_id, operation, before, after)
+        self._record_tracked_resources(tracked, operation)
+        return result
+
+    def _record_tracked_resources(
+        self,
+        tracked: list[dict[str, Any]],
+        operation: Operation,
+    ) -> None:
+        """Create EntityChange entries for side-effect resources reported by MCP tools."""
+        for entry in tracked:
+            et = entry.get("entity_type", "")
+            eid = entry.get("entity_id", "")
+            data = entry.get("data")
+            if not (et and eid and isinstance(data, dict)):
+                continue
+            self._cache_set(et, eid, data)
+            self._changes.append(
+                EntityChange(
+                    entity_type=et,
+                    entity_id=eid,
+                    entity_name=extract_entity_name(data),
+                    operation=operation,
+                    before=None,
+                    after=data,
+                )
+            )
+            logger.info(f"Tracked side-effect {operation} on {et}:{eid}")
+
+    def _auto_commit_if_needed(
+        self,
+        entity_type: str | None,
+        entity_id: str | None,
+        operation: Operation,
+    ) -> None:
+        # Auto-commit when the same entity already has pending changes with a
+        # *different* operation type (e.g. create→delete, create→update).
+        # Same-type sequences (update→update like prune+patch) stay in one commit.
+        if not (entity_type and entity_id and self._changes and self._commit_store):
+            return
+        if any(
+            c.entity_type == entity_type and c.entity_id == entity_id and c.operation != operation
+            for c in self._changes
+        ):
+            self.flush_and_commit("auto-flush before new request")
+
+    async def _get_before_snapshot(
+        self,
+        entity_type: str | None,
+        entity_id: str | None,
+        operation: Operation,
+    ) -> dict | None:
+        if not (entity_type and entity_id):
+            return None
+        before = self._cache_get(entity_type, entity_id)
+        if before is None and operation != "create":
+            before = await self.fetch_snapshot(entity_type, entity_id)
+            if before is not None:
+                self._cache_set(entity_type, entity_id, before)
+        return before
+
+    async def _get_after_snapshot(
+        self,
+        operation: Operation,
+        entity_type: str | None,
+        entity_id: str | None,
+        result: Any,
+    ) -> tuple[dict | None, str | None]:
+        if operation == "create":
+            after = to_dict(result)
+            if after is not None and entity_id is None and entity_type:
+                source = unwrap(after)
+                entity_id = str(source.get("id", source.get(f"{entity_type}_id", "")))
+            return after, entity_id
+        if operation == "delete":
+            return None, entity_id
+        if entity_type and entity_id:
+            return await self.fetch_snapshot(entity_type, entity_id), entity_id
+        return None, entity_id
+
+    def _record_change(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        entity_type: str | None,
+        entity_id: str | None,
+        operation: Operation,
+        before: dict | None,
+        after: dict | None,
+    ) -> None:
+        if entity_type and entity_id:
+            self._changes.append(
+                EntityChange(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    entity_name=extract_entity_name(before) or extract_entity_name(after),
+                    operation=operation,
+                    before=before,
+                    after=after,
+                )
+            )
+            logger.info(f"Tracked {operation} on {entity_type}:{entity_id}")
+        else:
+            logger.warning(f"Could not extract entity identity from {name}({arguments})")
+
+    async def fetch_snapshot(self, entity_type: str, entity_id: str) -> dict | None:
+        """Fetch current entity state via the unified get tool."""
+        try:
+            try:
+                typed_id: int | str = int(entity_id)
+            except ValueError:
+                typed_id = entity_id
+            result = await self._call_mcp("get", {"entity": entity_type, "entity_id": typed_id})
+            as_dict = to_dict(result)
+            if as_dict is not None:
+                # Unwrap unified get response: {"entity": ..., "id": ..., "data": {...}}
+                if "data" in as_dict:
+                    data = as_dict["data"]
+                    if isinstance(data, dict):
+                        return data
+                return as_dict
+            logger.warning(
+                "fetch_snapshot get(%s, %s): result is %s, not convertible to dict",
+                entity_type,
+                entity_id,
+                type(result).__name__,
+            )
+        except Exception:
+            logger.warning("fetch_snapshot get(%s, %s) failed", entity_type, entity_id, exc_info=True)
+        return None
+
+    def _try_cache_read(self, name: str, arguments: dict[str, Any], result: Any) -> None:
+        """Cache a read result if it looks like a single-entity get."""
+        as_dict = to_dict(result)
+        if as_dict is None:
+            return
+
+        # Handle unified get tool: get(entity="queue", entity_id=123) → {"entity": "queue", "id": 123, "data": {...}}
+        if name == "get" and "entity" in arguments and "entity_id" in arguments:
+            entity_type = arguments["entity"]
+            entity_id = str(arguments["entity_id"])
+            data = as_dict.get("data", as_dict)
+            if isinstance(data, dict):
+                self._cache_set(entity_type, entity_id, data)
+            return
+
+        entity_type = extract_entity_type(name)
+        if entity_type is None:
+            return
+        entity_id = extract_entity_id(entity_type, arguments)
+        if entity_id is None and name.startswith("get_"):
+            entity_id = str(as_dict.get("id", ""))
+        if not entity_id:
+            return
+        self._cache_set(entity_type, entity_id, as_dict)
+
+    def setup_change_tracking(
+        self,
+        write_tools: set[str],
+        chat_id: str,
+        environment: str,
+        commit_store: CommitStore,
+        snapshot_store: SnapshotStore,
+    ) -> None:
+        """Configure change tracking on this connection."""
+        self.write_tools = write_tools
+        self.chat_id = chat_id
+        self.valkey_client = commit_store.client
+        self._commit_store = commit_store
+        self._snapshot_store = snapshot_store
+        self._environment = environment
+
+    def flush_and_commit(self, user_request: str) -> None:
+        """Commit pending changes to the store."""
+        if not (self._commit_store and self._snapshot_store and self._environment and self._changes):
+            return
+        CommitService(self._commit_store, self._snapshot_store).create_commit(
+            cast("MCPConnection", self),
+            self.chat_id or "unknown",
+            user_request,
+            self._environment,
+        )
+
+    def get_changes(self) -> list[EntityChange]:
+        """Get the list of tracked changes."""
+        return list(self._changes)
+
+    def has_changes(self) -> bool:
+        """Check if any writes were intercepted."""
+        return bool(self._changes)
+
+    def clear_changes(self) -> None:
+        """Clear tracked changes (after committing)."""
+        self._changes.clear()

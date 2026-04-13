@@ -5,27 +5,28 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import contextvars
-import logging
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+import structlog
 from anthropic.types import TextBlock
 
 from rossum_agent.agent.memory import AgentMemory
 from rossum_agent.api.dependencies import RossumCredentials
 from rossum_agent.api.models.schemas import DocumentContent, ImageContent, MessageRequest, Persona, StreamDoneEvent
-from rossum_agent.api.services.agent_service import AgentService
+from rossum_agent.api.services.agent_service.history import build_updated_history
+from rossum_agent.api.services.agent_service.service import AgentService
 from rossum_agent.api.services.chat_service import ChatService
 from rossum_agent.bedrock_client import create_async_bedrock_client, get_small_model_id
 from rossum_agent.change_tracking.store import CommitStore
-from rossum_agent.redis_client import RedisConnection
-from rossum_agent.storage import ChatData
+from rossum_agent.chat_models import ChatData
+from rossum_agent.valkey_client import ValkeyConnection
 
 if TYPE_CHECKING:
-    from rossum_agent.api.services.agent_service import StreamEvent
+    from rossum_agent.api.services.agent_service.service import StreamEvent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SSE_KEEPALIVE_INTERVAL = 15
 SSE_KEEPALIVE_COMMENT = ": keepalive\n\n"
@@ -84,7 +85,7 @@ def save_chat_history(
     if summary is not None:
         chat_data.metadata.summary = summary
 
-    updated_history = agent_service.build_updated_history(
+    updated_history = build_updated_history(
         existing_history=history,
         user_prompt=user_prompt,
         final_response=final_response,
@@ -164,7 +165,7 @@ async def with_sse_keepalive(
 
 def get_commit_store() -> CommitStore | None:
     try:
-        conn = RedisConnection()
+        conn = ValkeyConnection()
         if conn.is_connected():
             return CommitStore(conn.client)
     except Exception as e:

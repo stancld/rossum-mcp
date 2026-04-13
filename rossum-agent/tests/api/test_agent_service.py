@@ -22,7 +22,17 @@ from rossum_agent.agent.models import (
     ToolResultStep,
 )
 from rossum_agent.api.models.schemas import ImageContent
-from rossum_agent.api.services.agent_service import (
+from rossum_agent.api.services.agent_service.cautious import (
+    inject_preapproval_into_system_prompt,
+    resolve_cautious_preapprovals,
+)
+from rossum_agent.api.services.agent_service.file_intake import build_user_content
+from rossum_agent.api.services.agent_service.history import (
+    build_updated_history,
+    parse_stored_content,
+    restore_conversation_history,
+)
+from rossum_agent.api.services.agent_service.service import (
     AgentService,
     _log_commit_hook,
 )
@@ -34,10 +44,9 @@ class TestAgentServiceBuildUpdatedHistory:
 
     def test_build_history_with_response(self):
         """Test building history with final response."""
-        service = AgentService()
         existing = [{"role": "user", "content": "Previous message"}]
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=existing, user_prompt="New question", final_response="Here is the answer"
         )
 
@@ -48,22 +57,18 @@ class TestAgentServiceBuildUpdatedHistory:
 
     def test_build_history_without_response(self):
         """Test building history without final response."""
-        service = AgentService()
         existing = []
 
-        updated = service.build_updated_history(existing_history=existing, user_prompt="Question", final_response=None)
+        updated = build_updated_history(existing_history=existing, user_prompt="Question", final_response=None)
 
         assert len(updated) == 1
         assert updated[0] == {"role": "user", "content": "Question"}
 
     def test_build_history_does_not_mutate_original(self):
         """Test that building history doesn't mutate original list."""
-        service = AgentService()
         existing = [{"role": "user", "content": "Original"}]
 
-        updated = service.build_updated_history(
-            existing_history=existing, user_prompt="New", final_response="Response"
-        )
+        updated = build_updated_history(existing_history=existing, user_prompt="New", final_response="Response")
 
         assert len(existing) == 1
         assert len(updated) == 3
@@ -74,12 +79,11 @@ class TestAgentServiceRestoreConversationHistory:
 
     def test_restore_user_messages(self):
         """Test restoring user messages."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [{"role": "user", "content": "Hello"}, {"role": "user", "content": "Another question"}]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert mock_agent.add_user_message.call_count == 2
         mock_agent.add_user_message.assert_any_call("Hello")
@@ -87,7 +91,6 @@ class TestAgentServiceRestoreConversationHistory:
 
     def test_restore_assistant_messages(self):
         """Test restoring assistant messages."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -95,13 +98,12 @@ class TestAgentServiceRestoreConversationHistory:
             {"role": "assistant", "content": "Here to help"},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert mock_agent.add_assistant_message.call_count == 2
 
     def test_restore_mixed_messages(self):
         """Test restoring mixed user and assistant messages."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -111,14 +113,13 @@ class TestAgentServiceRestoreConversationHistory:
             {"role": "assistant", "content": "Answer 2"},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert mock_agent.add_user_message.call_count == 2
         assert mock_agent.add_assistant_message.call_count == 2
 
     def test_restore_ignores_other_roles(self):
         """Test that non-user/assistant messages are ignored."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -128,17 +129,16 @@ class TestAgentServiceRestoreConversationHistory:
             {"role": "assistant", "content": "Answer"},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert mock_agent.add_user_message.call_count == 1
         assert mock_agent.add_assistant_message.call_count == 1
 
     def test_restore_empty_history(self):
         """Test restoring empty history."""
-        service = AgentService()
         mock_agent = MagicMock()
 
-        service._restore_conversation_history(mock_agent, [])
+        restore_conversation_history(mock_agent, [])
 
         mock_agent.add_user_message.assert_not_called()
         mock_agent.add_assistant_message.assert_not_called()
@@ -149,7 +149,6 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
 
     def test_restore_new_format_sets_memory_directly(self):
         """Test that new format history sets agent.memory directly."""
-        service = AgentService()
         mock_agent = MagicMock()
         mock_agent.memory = AgentMemory()
 
@@ -166,7 +165,7 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
             },
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert isinstance(mock_agent.memory, AgentMemory)
         assert len(mock_agent.memory.steps) == 2
@@ -177,7 +176,6 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
 
     def test_restore_new_format_with_tool_calls(self):
         """Test restoring new format with tool calls and results."""
-        service = AgentService()
         mock_agent = MagicMock()
         mock_agent.memory = AgentMemory()
 
@@ -203,7 +201,7 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
             },
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert len(mock_agent.memory.steps) == 3
         step1 = mock_agent.memory.steps[1]
@@ -215,7 +213,6 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
 
     def test_restore_new_format_multi_turn(self):
         """Test restoring multi-turn conversation in new format."""
-        service = AgentService()
         mock_agent = MagicMock()
         mock_agent.memory = AgentMemory()
 
@@ -228,7 +225,7 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
             {"type": "memory_step", "step_number": 3, "text": "Why did the programmer quit? No arrays!"},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert len(mock_agent.memory.steps) == 6
         messages = mock_agent.memory.write_to_messages()
@@ -239,7 +236,6 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
 
     def test_restore_detects_legacy_format(self):
         """Test that legacy format (with 'role') uses old restore method."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -247,7 +243,7 @@ class TestAgentServiceRestoreConversationHistoryNewFormat:
             {"role": "assistant", "content": "Hi there!"},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         mock_agent.add_user_message.assert_called_once_with("Hello")
         mock_agent.add_assistant_message.assert_called_once_with("Hi there!")
@@ -258,13 +254,11 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_uses_stored_memory(self):
         """Test that build_updated_history uses memory when provided."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("What is 2+2?")
         memory.steps.append(MemoryStep(step_number=1, text="The answer is 4."))
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -276,8 +270,6 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_preserves_tool_calls_and_results(self):
         """Test that tool calls and results are preserved in history."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("Check the weather")
         memory.steps.append(
@@ -290,7 +282,7 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
         )
         memory.steps.append(MemoryStep(step_number=2, text="It's rainy in NYC."))
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -306,8 +298,6 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_preserves_steps_with_only_tool_calls(self):
         """Test that memory steps with tool calls but no text are preserved."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("Do something")
         memory.steps.append(
@@ -320,7 +310,7 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
         )
         memory.steps.append(MemoryStep(step_number=2, text="Final answer"))
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -337,8 +327,6 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_preserves_steps_with_only_tool_results(self):
         """Test that memory steps with tool results but no text are preserved."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("Do something")
         memory.steps.append(
@@ -351,7 +339,7 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
         )
         memory.steps.append(MemoryStep(step_number=2, text="Final answer"))
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -368,12 +356,8 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_falls_back_when_no_memory(self):
         """Test fallback to legacy behavior when memory is None."""
-        service = AgentService()
-
         existing = [{"role": "user", "content": "Previous"}]
-        updated = service.build_updated_history(
-            existing_history=existing, user_prompt="New question", final_response="Answer"
-        )
+        updated = build_updated_history(existing_history=existing, user_prompt="New question", final_response="Answer")
 
         assert len(updated) == 3
         assert updated[0] == {"role": "user", "content": "Previous"}
@@ -382,8 +366,6 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_preserves_thinking_blocks(self):
         """Test that thinking_blocks are preserved in lean history for extended thinking continuity."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("Analyze this document")
         memory.steps.append(
@@ -399,7 +381,7 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
             )
         )
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -416,8 +398,6 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
 
     def test_build_history_includes_step_with_only_thinking_blocks(self):
         """Test that memory steps with only thinking_blocks (no text) are preserved."""
-        service = AgentService()
-
         memory = AgentMemory()
         memory.add_task("Process request")
         memory.steps.append(
@@ -429,7 +409,7 @@ class TestAgentServiceBuildUpdatedHistoryWithMemory:
             )
         )
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=[], user_prompt="ignored", final_response="ignored", memory=memory
         )
 
@@ -466,9 +446,9 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(AgentService, "_try_create_config_commit", return_value=None),
         ):
             mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
@@ -508,9 +488,9 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -558,10 +538,10 @@ class TestAgentServiceRunAgent:
         ]
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
-            patch.object(service, "_restore_conversation_history") as mock_restore,
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.history.restore_conversation_history") as mock_restore,
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -606,10 +586,10 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
             patch(
-                "rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path
+                "rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path
             ) as mock_create_dir,
             patch.object(
                 AgentService,
@@ -659,9 +639,9 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -729,9 +709,9 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(AgentService, "_try_create_config_commit", return_value=None),
         ):
             mock_connect.return_value.__aenter__ = AsyncMock(return_value=mock_mcp_connection)
@@ -820,9 +800,9 @@ class TestAgentServiceRunAgent:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -855,16 +835,14 @@ class TestAgentServiceBuildUserContent:
 
     def test_text_only_returns_string(self):
         """Test that text-only prompt returns a plain string."""
-        service = AgentService()
-        result = service._build_user_content("Hello, agent!", None)
+        result = build_user_content("Hello, agent!", None)
         assert result == "Hello, agent!"
         assert isinstance(result, str)
 
     def test_with_images_returns_list(self):
         """Test that prompt with images returns a content list."""
-        service = AgentService()
         images = [ImageContent(media_type="image/png", data="aGVsbG8=")]
-        result = service._build_user_content("Analyze this", images)
+        result = build_user_content("Analyze this", images)
 
         assert isinstance(result, list)
         assert len(result) == 2
@@ -877,12 +855,11 @@ class TestAgentServiceBuildUserContent:
 
     def test_with_multiple_images(self):
         """Test that multiple images are included in correct order."""
-        service = AgentService()
         images = [
             ImageContent(media_type="image/png", data="aW1hZ2Ux"),
             ImageContent(media_type="image/jpeg", data="aW1hZ2Uy"),
         ]
-        result = service._build_user_content("Compare these images", images)
+        result = build_user_content("Compare these images", images)
 
         assert isinstance(result, list)
         assert len(result) == 3
@@ -892,16 +869,14 @@ class TestAgentServiceBuildUserContent:
 
     def test_empty_images_list_returns_string(self):
         """Test that empty images list returns plain string."""
-        service = AgentService()
-        result = service._build_user_content("Hello", [])
+        result = build_user_content("Hello", [])
         assert result == "Hello"
         assert isinstance(result, str)
 
     def test_with_text_file_paths_returns_list(self):
         """Test that text file paths produce a content list with workspace note."""
-        service = AgentService()
         paths = [Path("/mock/output/readme.md"), Path("/mock/output/data.json")]
-        result = service._build_user_content("Analyze these", None, text_file_paths=paths)
+        result = build_user_content("Analyze these", None, text_file_paths=paths)
 
         assert isinstance(result, list)
         assert len(result) == 2
@@ -913,8 +888,7 @@ class TestAgentServiceBuildUserContent:
 
     def test_with_empty_text_file_paths_returns_string(self):
         """Test that empty text_file_paths returns plain string."""
-        service = AgentService()
-        result = service._build_user_content("Hello", None, text_file_paths=[])
+        result = build_user_content("Hello", None, text_file_paths=[])
         assert result == "Hello"
         assert isinstance(result, str)
 
@@ -922,10 +896,9 @@ class TestAgentServiceBuildUserContent:
         """Test that both documents and text files produce separate notes."""
         from rossum_agent.api.models.schemas import DocumentContent
 
-        service = AgentService()
         docs = [DocumentContent(media_type="application/pdf", data="aGVsbG8=", filename="invoice.pdf")]
         text_paths = [Path("/mock/output/notes.md")]
-        result = service._build_user_content(
+        result = build_user_content(
             "Process all", None, documents=docs, output_dir=Path("/mock/output"), text_file_paths=text_paths
         )
 
@@ -939,7 +912,6 @@ class TestAgentServiceBuildUserContent:
         """Test that text/plain and text/markdown documents are inlined, not just path-referenced."""
         from rossum_agent.api.models.schemas import DocumentContent
 
-        service = AgentService()
         docs = [
             DocumentContent(
                 media_type="text/markdown",
@@ -952,7 +924,7 @@ class TestAgentServiceBuildUserContent:
                 filename="notes.txt",
             ),
         ]
-        result = service._build_user_content("Read these", None, documents=docs, output_dir=Path("/mock/output"))
+        result = build_user_content("Read these", None, documents=docs, output_dir=Path("/mock/output"))
 
         assert isinstance(result, list)
         assert len(result) == 2  # inlined block + prompt
@@ -968,7 +940,6 @@ class TestAgentServiceBuildUserContent:
         """Test that text documents are inlined while binary documents are path-referenced."""
         from rossum_agent.api.models.schemas import DocumentContent
 
-        service = AgentService()
         docs = [
             DocumentContent(
                 media_type="text/markdown",
@@ -981,7 +952,7 @@ class TestAgentServiceBuildUserContent:
                 filename="invoice.pdf",
             ),
         ]
-        result = service._build_user_content("Process all", None, documents=docs, output_dir=Path("/mock/output"))
+        result = build_user_content("Process all", None, documents=docs, output_dir=Path("/mock/output"))
 
         assert isinstance(result, list)
         assert len(result) == 3  # inlined text + doc reference + prompt
@@ -997,12 +968,10 @@ class TestAgentServiceBuildUpdatedHistoryWithImages:
 
     def test_build_history_with_images(self):
         """Test building history with images included."""
-        service = AgentService()
-
         existing = [{"role": "user", "content": "Previous message"}]
         images = [ImageContent(media_type="image/png", data="aGVsbG8=")]
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=existing,
             user_prompt="Analyze this image",
             final_response="Analysis complete",
@@ -1021,11 +990,9 @@ class TestAgentServiceBuildUpdatedHistoryWithImages:
 
     def test_build_history_without_images(self):
         """Test building history without images returns text-only content."""
-        service = AgentService()
-
         existing = []
 
-        updated = service.build_updated_history(
+        updated = build_updated_history(
             existing_history=existing, user_prompt="Text only", final_response="Response", images=None
         )
 
@@ -1038,13 +1005,11 @@ class TestAgentServiceParseStoredContent:
 
     def test_parse_string_content(self):
         """Test parsing string content returns string."""
-        service = AgentService()
-        result = service._parse_stored_content("Hello, world!")
+        result = parse_stored_content("Hello, world!")
         assert result == "Hello, world!"
 
     def test_parse_multimodal_content(self):
         """Test parsing multimodal content with images and text."""
-        service = AgentService()
         stored_content = [
             {
                 "type": "image",
@@ -1057,7 +1022,7 @@ class TestAgentServiceParseStoredContent:
             {"type": "text", "text": "Analyze this"},
         ]
 
-        result = service._parse_stored_content(stored_content)
+        result = parse_stored_content(stored_content)
 
         assert isinstance(result, list)
         assert len(result) == 2
@@ -1070,19 +1035,17 @@ class TestAgentServiceParseStoredContent:
 
     def test_parse_empty_list_returns_empty_string(self):
         """Test parsing empty list returns empty string."""
-        service = AgentService()
-        result = service._parse_stored_content([])
+        result = parse_stored_content([])
         assert result == ""
 
     def test_parse_unknown_block_types_ignored(self):
         """Test that unknown block types are ignored."""
-        service = AgentService()
         stored_content = [
             {"type": "unknown", "data": "something"},
             {"type": "text", "text": "Valid text"},
         ]
 
-        result = service._parse_stored_content(stored_content)
+        result = parse_stored_content(stored_content)
 
         assert isinstance(result, list)
         assert len(result) == 1
@@ -1094,7 +1057,6 @@ class TestAgentServiceRestoreConversationHistoryWithImages:
 
     def test_restore_multimodal_user_message(self):
         """Test restoring user messages with images."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -1111,7 +1073,7 @@ class TestAgentServiceRestoreConversationHistoryWithImages:
             {"role": "assistant", "content": "I see a document."},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         mock_agent.add_user_message.assert_called_once()
         call_args = mock_agent.add_user_message.call_args[0][0]
@@ -1123,7 +1085,6 @@ class TestAgentServiceRestoreConversationHistoryWithImages:
 
     def test_restore_mixed_text_and_multimodal_messages(self):
         """Test restoring a mix of text-only and multimodal messages."""
-        service = AgentService()
         mock_agent = MagicMock()
 
         history = [
@@ -1139,7 +1100,7 @@ class TestAgentServiceRestoreConversationHistoryWithImages:
             {"role": "assistant", "content": "That's a chart."},
         ]
 
-        service._restore_conversation_history(mock_agent, history)
+        restore_conversation_history(mock_agent, history)
 
         assert mock_agent.add_user_message.call_count == 2
         assert mock_agent.add_assistant_message.call_count == 2
@@ -1161,7 +1122,7 @@ class TestAgentServiceSubAgentCallbacks:
 
     async def test_on_task_snapshot_with_queue(self):
         """Test _on_task_snapshot puts TaskSnapshotEvent on queue."""
-        from rossum_agent.api.services.agent_service import _request_context, _RequestContext
+        from rossum_agent.api.services.agent_service.service import _request_context, _RequestContext
 
         service = AgentService()
         ctx = _RequestContext()
@@ -1181,7 +1142,7 @@ class TestAgentServiceSubAgentCallbacks:
 
     def test_on_task_snapshot_without_queue(self):
         """Test _on_task_snapshot does nothing when queue is None."""
-        from rossum_agent.api.services.agent_service import _request_context, _RequestContext
+        from rossum_agent.api.services.agent_service.service import _request_context, _RequestContext
 
         service = AgentService()
         ctx = _RequestContext()
@@ -1193,7 +1154,7 @@ class TestAgentServiceSubAgentCallbacks:
     async def test_on_task_snapshot_queue_full(self, caplog):
         """Test _on_task_snapshot logs warning when queue is full."""
 
-        from rossum_agent.api.services.agent_service import _request_context, _RequestContext
+        from rossum_agent.api.services.agent_service.service import _request_context, _RequestContext
 
         service = AgentService()
         ctx = _RequestContext()
@@ -1236,9 +1197,9 @@ class TestAgentServiceRunAgentWithImages:
         ]
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -1284,12 +1245,14 @@ class TestAgentServiceUrlContext:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
-            patch("rossum_agent.api.services.agent_service.get_system_prompt", return_value="Base prompt"),
-            patch("rossum_agent.api.services.agent_service.extract_url_context") as mock_extract,
-            patch("rossum_agent.api.services.agent_service.format_context_for_prompt", return_value="URL context"),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.get_system_prompt", return_value="Base prompt"),
+            patch("rossum_agent.api.services.agent_service.service.extract_url_context") as mock_extract,
+            patch(
+                "rossum_agent.api.services.agent_service.service.format_context_for_prompt", return_value="URL context"
+            ),
             patch.object(
                 AgentService,
                 "_setup_change_tracking",
@@ -1411,9 +1374,9 @@ class TestAfterLoopHook:
         )
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(AgentService, "_try_create_config_commit", return_value=fake_commit),
             patch.object(
                 AgentService,
@@ -1463,9 +1426,9 @@ class TestAfterLoopHook:
         mock_agent.run = mock_run
 
         with (
-            patch("rossum_agent.api.services.agent_service.connect_mcp_server") as mock_connect,
-            patch("rossum_agent.api.services.agent_service.create_agent") as mock_create_agent,
-            patch("rossum_agent.api.services.agent_service.create_session_output_dir", return_value=tmp_path),
+            patch("rossum_agent.api.services.agent_service.service.connect_mcp_server") as mock_connect,
+            patch("rossum_agent.api.services.agent_service.service.create_agent") as mock_create_agent,
+            patch("rossum_agent.api.services.agent_service.service.create_session_output_dir", return_value=tmp_path),
             patch.object(AgentService, "_try_create_config_commit", return_value=None),
             patch.object(
                 AgentService,
@@ -1496,67 +1459,67 @@ class TestResolveCautiousPreapprovals:
     """Test AgentService._resolve_cautious_preapprovals."""
 
     def test_empty_pending_returns_empty(self):
-        result = AgentService._resolve_cautious_preapprovals(set(), "Yes, proceed")
+        result = resolve_cautious_preapprovals(set(), "Yes, proceed")
         assert result == set()
 
     def test_approval_returns_pending_copy(self):
         pending = {"update_queue", "delete_workspace"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "1. Do you want?\nYes, proceed")
+        result = resolve_cautious_preapprovals(pending, "1. Do you want?\nYes, proceed")
         assert result == pending
         assert result is not pending  # must be a copy
 
     def test_no_answer_returns_empty(self):
         pending = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "1. Do you want?\nNo, cancel")
+        result = resolve_cautious_preapprovals(pending, "1. Do you want?\nNo, cancel")
         assert result == set()
 
     def test_chat_answer_returns_empty(self):
         pending = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "1. Do you want?\nLet me provide context")
+        result = resolve_cautious_preapprovals(pending, "1. Do you want?\nLet me provide context")
         assert result == set()
 
     def test_freeform_answer_returns_empty(self):
         pending = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "I'd rather not do this right now")
+        result = resolve_cautious_preapprovals(pending, "I'd rather not do this right now")
         assert result == set()
 
     def test_unconsumed_preapprovals_carried_forward(self):
         """Unconsumed pre-approvals from previous turns are always included."""
         unconsumed = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(set(), "some answer", unconsumed)
+        result = resolve_cautious_preapprovals(set(), "some answer", unconsumed)
         assert result == {"update_queue"}
 
     def test_unconsumed_merged_with_new_approvals(self):
         """Unconsumed pre-approvals merge with newly approved tools."""
         pending = {"create_hook"}
         unconsumed = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed)
+        result = resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed)
         assert result == {"update_queue", "create_hook"}
 
     def test_unconsumed_alone_without_approval_label(self):
         """Unconsumed pre-approvals carry forward even when pending are rejected."""
         pending = {"create_hook"}
         unconsumed = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "No, cancel", unconsumed)
+        result = resolve_cautious_preapprovals(pending, "No, cancel", unconsumed)
         assert result == {"update_queue"}
 
     def test_empty_unconsumed_no_effect(self):
         """Empty unconsumed set has no effect."""
         pending = {"update_queue"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", set())
+        result = resolve_cautious_preapprovals(pending, "Yes, proceed", set())
         assert result == {"update_queue"}
 
     def test_lifetime_approved_tools_always_included(self):
         """Lifetime-approved tools are included regardless of prompt content."""
         approved = {"patch_schema"}
-        result = AgentService._resolve_cautious_preapprovals(set(), "some unrelated message", approved=approved)
+        result = resolve_cautious_preapprovals(set(), "some unrelated message", approved=approved)
         assert result == {"patch_schema"}
 
     def test_lifetime_approved_merged_with_new_approvals(self):
         """Lifetime approvals merge with newly approved pending tools."""
         pending = {"create_hook"}
         approved = {"patch_schema"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", approved=approved)
+        result = resolve_cautious_preapprovals(pending, "Yes, proceed", approved=approved)
         assert result == {"patch_schema", "create_hook"}
 
     def test_lifetime_approved_merged_with_unconsumed(self):
@@ -1564,14 +1527,14 @@ class TestResolveCautiousPreapprovals:
         pending = {"create_hook"}
         unconsumed = {"update_queue"}
         approved = {"patch_schema"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed, approved)
+        result = resolve_cautious_preapprovals(pending, "Yes, proceed", unconsumed, approved)
         assert result == {"patch_schema", "update_queue", "create_hook"}
 
     def test_lifetime_approved_survives_rejection(self):
         """Lifetime approvals persist even when pending tools are rejected."""
         pending = {"create_hook"}
         approved = {"patch_schema"}
-        result = AgentService._resolve_cautious_preapprovals(pending, "No, cancel", approved=approved)
+        result = resolve_cautious_preapprovals(pending, "No, cancel", approved=approved)
         assert result == {"patch_schema"}
 
 
@@ -1579,11 +1542,11 @@ class TestInjectPreapprovalIntoSystemPrompt:
     """Test AgentService._inject_preapproval_into_system_prompt."""
 
     def test_no_preapprovals_returns_unchanged(self):
-        result = AgentService._inject_preapproval_into_system_prompt("You are an agent.", set())
+        result = inject_preapproval_into_system_prompt("You are an agent.", set())
         assert result == "You are an agent."
 
     def test_appends_preapproval_section(self):
-        result = AgentService._inject_preapproval_into_system_prompt("You are an agent.", {"update_queue"})
+        result = inject_preapproval_into_system_prompt("You are an agent.", {"update_queue"})
         assert "update_queue" in result
         assert "already approved" in result
         assert "without asking for confirmation" in result
@@ -1591,7 +1554,5 @@ class TestInjectPreapprovalIntoSystemPrompt:
         assert result.startswith("You are an agent.")
 
     def test_multiple_preapprovals_sorted(self):
-        result = AgentService._inject_preapproval_into_system_prompt(
-            "You are an agent.", {"create_hook", "update_queue"}
-        )
+        result = inject_preapproval_into_system_prompt("You are an agent.", {"create_hook", "update_queue"})
         assert "create_hook, update_queue" in result

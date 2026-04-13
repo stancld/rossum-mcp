@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from rossum_api.models.user import User
-from rossum_mcp.tools.update.handler import register_update_tools
+from rossum_mcp.tools.update.users import register_user_tools
 
 
 def create_mock_user(**kwargs) -> User:
@@ -70,7 +70,7 @@ class TestUpdateUser:
     @pytest.mark.asyncio
     async def test_update_user_success(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test successful user update."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_user_tools(mock_mcp, mock_client)
 
         updated_user = create_mock_user(id=100, first_name="Updated")
         mock_client._http_client.update.return_value = updated_user
@@ -88,7 +88,7 @@ class TestUpdateUser:
     @pytest.mark.asyncio
     async def test_update_user_multiple_fields(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:
         """Test user update with multiple fields."""
-        register_update_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
+        register_user_tools(mock_mcp, mock_client)
 
         updated_user = create_mock_user(id=100, first_name="Jane", is_active=False)
         mock_client._http_client.update.return_value = updated_user

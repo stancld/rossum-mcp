@@ -1,7 +1,7 @@
 """Entity fetch functions and config registry.
 
-Maps entity names to retrieve/search callables (EntityConfig). Consumed by handler.py to
-wire up MCP tools, and by the search layer for shared search_fn references.
+Maps entity names to retrieve callables (EntityConfig). Consumed by handler.py to
+wire up the get MCP tool.
 """
 
 from __future__ import annotations
@@ -21,12 +21,16 @@ from rossum_api.models.queue import Queue
 from rossum_api.models.user import User
 from rossum_api.models.workspace import Workspace
 
+from rossum_mcp.models.annotation import Annotation
+from rossum_mcp.models.email_template import EmailTemplate
+from rossum_mcp.models.hook import Hook
+from rossum_mcp.models.rule import Rule
+from rossum_mcp.models.schema import Schema
 from rossum_mcp.tools.base import (
     resolve_queue_workspaces,
     resolve_workspace_from_queue,
     resolve_workspaces_from_queues,
 )
-from rossum_mcp.tools.models import Annotation, EmailTemplate, Hook, Rule, Schema
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -39,8 +43,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EntityConfig:
-    retrieve_fn: Callable[..., Awaitable[object]] | None
-    search_fn: Callable[..., Awaitable[list]] | None
+    retrieve_fn: Callable[..., Awaitable[object]]
 
 
 async def _get_annotation(client: AsyncRossumAPIClient, annotation_id: int) -> Annotation:
@@ -131,83 +134,20 @@ async def _get_hook_secrets_keys(client: AsyncRossumAPIClient, hook_id: int) -> 
 
 
 def build_get_registry(client: AsyncRossumAPIClient) -> dict[str, EntityConfig]:
-    """Build registry with retrieve functions only (search_fn populated by search layer)."""
-    # Import search registry lazily to avoid circular imports at module level
-    from rossum_mcp.tools.search.registry import build_search_registry  # noqa: PLC0415 - circular import avoidance
-
-    search_reg = build_search_registry(client)
-
+    """Build registry mapping entity names to their retrieve functions."""
     return {
-        "queue": EntityConfig(
-            retrieve_fn=lambda id: _get_queue(client, id),
-            search_fn=search_reg["queue"],
-        ),
-        "schema": EntityConfig(
-            retrieve_fn=lambda id: _get_schema(client, id),
-            search_fn=search_reg["schema"],
-        ),
-        "hook": EntityConfig(
-            retrieve_fn=lambda id: _get_hook(client, id),
-            search_fn=search_reg["hook"],
-        ),
-        "engine": EntityConfig(
-            retrieve_fn=lambda id: _get_engine(client, id),
-            search_fn=search_reg["engine"],
-        ),
-        "rule": EntityConfig(
-            retrieve_fn=lambda id: _get_rule(client, id),
-            search_fn=search_reg["rule"],
-        ),
-        "user": EntityConfig(
-            retrieve_fn=lambda id: _get_user(client, id),
-            search_fn=search_reg["user"],
-        ),
-        "workspace": EntityConfig(
-            retrieve_fn=lambda id: _get_workspace(client, id),
-            search_fn=search_reg["workspace"],
-        ),
-        "email_template": EntityConfig(
-            retrieve_fn=lambda id: _get_email_template(client, id),
-            search_fn=search_reg["email_template"],
-        ),
-        "organization_group": EntityConfig(
-            retrieve_fn=lambda id: _get_organization_group(client, id),
-            search_fn=search_reg["organization_group"],
-        ),
-        "organization_limit": EntityConfig(
-            retrieve_fn=lambda id: _get_organization_limit(client, id),
-            search_fn=None,
-        ),
-        "annotation": EntityConfig(
-            retrieve_fn=lambda id: _get_annotation(client, id),
-            search_fn=search_reg["annotation"],
-        ),
-        "relation": EntityConfig(
-            retrieve_fn=lambda id: _get_relation(client, id),
-            search_fn=search_reg["relation"],
-        ),
-        "document_relation": EntityConfig(
-            retrieve_fn=lambda id: _get_document_relation(client, id),
-            search_fn=search_reg["document_relation"],
-        ),
-        "hook_log": EntityConfig(
-            retrieve_fn=None,
-            search_fn=search_reg["hook_log"],
-        ),
-        "hook_template": EntityConfig(
-            retrieve_fn=None,
-            search_fn=search_reg["hook_template"],
-        ),
-        "user_role": EntityConfig(
-            retrieve_fn=None,
-            search_fn=search_reg["user_role"],
-        ),
-        "queue_template_name": EntityConfig(
-            retrieve_fn=None,
-            search_fn=search_reg["queue_template_name"],
-        ),
-        "hook_secrets_keys": EntityConfig(
-            retrieve_fn=lambda id: _get_hook_secrets_keys(client, id),
-            search_fn=None,
-        ),
+        "queue": EntityConfig(retrieve_fn=lambda id: _get_queue(client, id)),
+        "schema": EntityConfig(retrieve_fn=lambda id: _get_schema(client, id)),
+        "hook": EntityConfig(retrieve_fn=lambda id: _get_hook(client, id)),
+        "engine": EntityConfig(retrieve_fn=lambda id: _get_engine(client, id)),
+        "rule": EntityConfig(retrieve_fn=lambda id: _get_rule(client, id)),
+        "user": EntityConfig(retrieve_fn=lambda id: _get_user(client, id)),
+        "workspace": EntityConfig(retrieve_fn=lambda id: _get_workspace(client, id)),
+        "email_template": EntityConfig(retrieve_fn=lambda id: _get_email_template(client, id)),
+        "organization_group": EntityConfig(retrieve_fn=lambda id: _get_organization_group(client, id)),
+        "organization_limit": EntityConfig(retrieve_fn=lambda id: _get_organization_limit(client, id)),
+        "annotation": EntityConfig(retrieve_fn=lambda id: _get_annotation(client, id)),
+        "relation": EntityConfig(retrieve_fn=lambda id: _get_relation(client, id)),
+        "document_relation": EntityConfig(retrieve_fn=lambda id: _get_document_relation(client, id)),
+        "hook_secrets_keys": EntityConfig(retrieve_fn=lambda id: _get_hook_secrets_keys(client, id)),
     }

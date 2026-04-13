@@ -229,7 +229,7 @@ class TestCommitStoreListCommits:
         env = "https://example.rossum.app/api/v1"
 
         commit = _make_commit(hash="str_hash")
-        # Some Redis clients may return strings instead of bytes
+        # Some Valkey clients may return strings instead of bytes
         client.zrevrange.return_value = ["str_hash"]
         client.get.return_value = commit.model_dump_json().encode()
 
@@ -457,7 +457,7 @@ class TestSnapshotStoreListVersions:
 
 
 class TestSnapshotStoreGetSnapshotAtStringHash:
-    """Test get_snapshot_at handles string-typed hash from Redis."""
+    """Test get_snapshot_at handles string-typed hash from Valkey."""
 
     def test_string_hash_response(self):
         client = _make_mock_client()
@@ -465,7 +465,7 @@ class TestSnapshotStoreGetSnapshotAtStringHash:
         env = "https://example.rossum.app/api/v1"
         data = {"content": [{"id": "f1"}]}
 
-        # Some Redis clients return strings instead of bytes
+        # Some Valkey clients return strings instead of bytes
         client.zrevrangebyscore.return_value = ["str_hash"]
         client.get.return_value = json.dumps(data).encode()
 
@@ -476,7 +476,7 @@ class TestSnapshotStoreGetSnapshotAtStringHash:
 
 
 class TestSnapshotStoreListVersionsStringHash:
-    """Test list_versions handles string-typed hashes from Redis."""
+    """Test list_versions handles string-typed hashes from Valkey."""
 
     def test_string_hashes(self):
         client = _make_mock_client()

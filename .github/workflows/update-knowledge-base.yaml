@@ -1,0 +1,159 @@
+name: Update Knowledge Base
+
+on:
+  schedule:
+    # Sunday 10 PM CEST = 20:00 UTC (during DST; 21:00 UTC in winter)
+    - cron: "0 20 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-kb:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --extra scripts
+        working-directory: rossum-agent
+
+      - name: Save previous KB data
+        run: cp rossum-agent/rossum_agent/data/rossum-kb.json /tmp/rossum-kb-old.json
+
+      - name: Scrape Knowledge Base
+        run: |
+          uv run python scripts/scrape_knowledge_base.py \
+            --output rossum_agent/data/rossum-kb.json \
+            --verbose
+        working-directory: rossum-agent
+
+      - name: Check for changes
+        id: diff
+        run: |
+          # Compare articles only (scraped_at timestamp always differs).
+          # Restore old file if nothing changed to avoid a timestamp-only PR.
+          python3 -c "
+          import json, sys
+          old = json.load(open('/tmp/rossum-kb-old.json'))
+          new = json.load(open('rossum-agent/rossum_agent/data/rossum-kb.json'))
+          sys.exit(0 if old['articles'] == new['articles'] else 1)
+          " && {
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            cp /tmp/rossum-kb-old.json rossum-agent/rossum_agent/data/rossum-kb.json
+          } || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Compute change summary
+        if: steps.diff.outputs.changed == 'true'
+        id: summary
+        run: |
+          python3 - <<'PYEOF'
+          import difflib, json, os
+
+          old = json.loads(open("/tmp/rossum-kb-old.json").read())
+          new = json.loads(open("rossum-agent/rossum_agent/data/rossum-kb.json").read())
+
+          old_slugs = {a["slug"] for a in old["articles"]}
+          new_slugs = {a["slug"] for a in new["articles"]}
+          old_by_slug = {a["slug"]: a for a in old["articles"]}
+          new_by_slug = {a["slug"]: a for a in new["articles"]}
+
+          added = sorted(new_slugs - old_slugs)
+          removed = sorted(old_slugs - new_slugs)
+          updated = sorted(
+              s for s in old_slugs & new_slugs
+              if old_by_slug[s]["content"] != new_by_slug[s]["content"]
+          )
+
+          old_chars = sum(len(a["content"]) for a in old["articles"])
+          new_chars = sum(len(a["content"]) for a in new["articles"])
+          growth = ((new_chars - old_chars) / old_chars * 100) if old_chars else 0
+
+          MAX_DIFF_LINES = 50
+          MAX_BODY_CHARS = 60000  # GitHub PR body limit is 65536
+
+          def article_diff(old_content: str, new_content: str, slug: str) -> str:
+              diff_lines = list(difflib.unified_diff(
+                  old_content.splitlines(),
+                  new_content.splitlines(),
+                  fromfile=f"a/{slug}",
+                  tofile=f"b/{slug}",
+                  lineterm="",
+              ))
+              if not diff_lines:
+                  return ""
+              truncated = ""
+              if len(diff_lines) > MAX_DIFF_LINES:
+                  diff_lines = diff_lines[:MAX_DIFF_LINES]
+                  truncated = f"\n... ({len(diff_lines)} lines shown, diff truncated)"
+              return "\n".join(diff_lines) + truncated
+
+          lines = []
+          lines.append(f"**{len(new['articles'])}** articles total "
+                       f"(was {len(old['articles'])})")
+          lines.append(f"Content size: {new_chars:,} chars "
+                       f"({growth:+.1f}% vs previous)")
+          if added:
+              lines.append(f"\n### New articles ({len(added)})")
+              for s in added:
+                  title = new_by_slug[s].get("title", s)
+                  lines.append(f"- **{title}** (`{s}`)")
+          if removed:
+              lines.append(f"\n### Removed articles ({len(removed)})")
+              for s in removed:
+                  title = old_by_slug[s].get("title", s)
+                  lines.append(f"- **{title}** (`{s}`)")
+          if updated:
+              lines.append(f"\n### Updated articles ({len(updated)})")
+              for s in updated:
+                  title = new_by_slug[s].get("title", s)
+                  diff = article_diff(
+                      old_by_slug[s]["content"],
+                      new_by_slug[s]["content"],
+                      s,
+                  )
+                  lines.append(f"\n<details>\n<summary>{title} (<code>{s}</code>)</summary>\n")
+                  lines.append(f"```diff\n{diff}\n```")
+                  lines.append("</details>")
+          if not added and not removed and not updated:
+              lines.append("\nNo article-level changes detected (metadata only).")
+
+          body = "\n".join(lines)
+          if len(body) > MAX_BODY_CHARS:
+              body = body[:MAX_BODY_CHARS] + "\n\n... (truncated due to size)"
+          print(body)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              # Multiline output
+              f.write("body<<EOFBODY\n")
+              f.write(body + "\n")
+              f.write("EOFBODY\n")
+          PYEOF
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automated/update-knowledge-base
+          delete-branch: true
+          commit-message: "chore: update rossum-kb.json with latest Knowledge Base scrape"
+          title: "chore: Update Knowledge Base data"
+          body: |
+            ## Summary
+
+            Automated weekly scrape of the [Rossum Knowledge Base](https://knowledge-base.rossum.ai/).
+
+            ${{ steps.summary.outputs.body }}
+
+            ---
+            🤖 This PR was created automatically by the `update-knowledge-base` workflow.
+          labels: automated,knowledge-base

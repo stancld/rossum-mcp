@@ -15,7 +15,6 @@
 |---------|---------------|
 | rossum-mcp | `rossum-mcp/CHANGELOG.md` |
 | rossum-agent | `rossum-agent/CHANGELOG.md` |
-| rossum-deploy | `rossum-deploy/CHANGELOG.md` |
 | rossum-agent-client | `rossum-agent-client/CHANGELOG.md` |
 
 ## Change Categories

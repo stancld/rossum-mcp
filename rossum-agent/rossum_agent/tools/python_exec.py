@@ -6,25 +6,25 @@ import ast
 import functools
 import io
 import json
-import logging
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pandas
+import structlog
 from anthropic import beta_tool
 
-from rossum_agent.python_tools import master_data_hub
-from rossum_agent.python_tools.copilot import automation_setup, formula, lookup, rule
 from rossum_agent.tools.core import get_context
 from rossum_agent.tools.file_tools import write_file as _write_file_tool
+from rossum_agent.tools.python_helpers import master_data_hub
+from rossum_agent.tools.python_helpers.copilot import automation_setup, formula, lookup, rule
 from rossum_agent.tools.subagents.mcp_helpers import call_mcp_tool as _call_mcp_tool
 
 if TYPE_CHECKING:
     from anthropic.types import ToolParam
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _MAX_CODE_LENGTH = 25000
 _SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls"})
@@ -256,9 +256,13 @@ def _build_helpers() -> dict[str, object]:
         return content
 
     def read_excel(file_path: str, sheet_name: str | int | None = 0) -> object:
-        resolved = Path(file_path).resolve()
+        path = Path(file_path)
+        if not path.is_absolute():
+            path = get_context().get_output_dir().resolve() / path
+        resolved = path.resolve()
         if resolved.suffix.lower() not in _SPREADSHEET_EXTENSIONS:
             raise ValueError("read_excel() only supports .xlsx and .xls files")
+        _validate_sandbox_path(resolved, "read_excel()")
         return pandas.read_excel(resolved, sheet_name=sheet_name)
 
     return {

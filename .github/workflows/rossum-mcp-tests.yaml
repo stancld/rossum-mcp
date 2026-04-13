@@ -11,20 +11,23 @@ jobs:
   tests:
     runs-on: ubuntu-24.04
     services:
-      redis:
-        image: redis:7
+      valkey:
+        image: valkey/valkey:8
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "valkey-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
@@ -45,12 +48,12 @@ jobs:
       - name: Upload pytest results
         uses: actions/upload-artifact@v4
         with:
-          name: test-report
+          name: rossum-mcp-test-report-${{ matrix.python-version }}
           path: rossum-mcp/report.xml
         if: failure()
 
       - name: Coverage statistics
-        if: success()
+        if: success() && matrix.python-version == '3.12'
         run: |
           uv run coverage xml
           uv run coverage report
@@ -58,6 +61,7 @@ jobs:
         working-directory: rossum-mcp
 
       - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
