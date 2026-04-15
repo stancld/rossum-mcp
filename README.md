@@ -176,6 +176,28 @@ uv run rossum-agent-api
 
 The agent expects PostgreSQL on `localhost:5432` and Valkey on `localhost:6379` by default. Override via `POSTGRES_*` and `VALKEY_*` env vars (see [CLAUDE.md](CLAUDE.md)).
 
+**Install the TUI** (Fabry) from the local checkout to chat with the agent from your terminal:
+
+```bash
+# Build the TypeScript client first (TUI depends on it via file:)
+cd rossum-agent-client-ts
+npm install
+npm run build
+
+# Build and link the TUI
+cd ../rossum-agent-tui
+npm install
+npm run build
+npm link    # exposes `fabry` on your PATH
+
+fabry \
+  --api-url http://localhost:8000 \
+  --token your-token \
+  --rossum-url your-api-url
+```
+
+See [rossum-agent-tui/README.md](rossum-agent-tui/README.md) for flags, keybindings, and session persistence.
+
 For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md). See [CLAUDE.md](CLAUDE.md) for the full list of configuration options (AWS Bedrock, Valkey, logging, etc.).
 
 ## Installation & Usage

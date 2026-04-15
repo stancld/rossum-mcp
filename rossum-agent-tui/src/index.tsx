@@ -72,8 +72,8 @@ async function main() {
       const abort = new AbortController();
 
       const apiProcess: ChildProcess = spawn(
-        "rossum-agent-api",
-        ["--host", host, "--port", port],
+        "uv",
+        ["run", "rossum-agent-api", "--host", host, "--port", port],
         {
           env: {
             ...process.env,
@@ -92,7 +92,7 @@ async function main() {
       apiProcess.on("error", (err) => {
         const isNotFound = (err as NodeJS.ErrnoException).code === "ENOENT";
         const message = isNotFound
-          ? "rossum-agent-api not found. Install it with: pip install rossum-agent"
+          ? "uv not found. Install uv (https://docs.astral.sh/uv/) and run from a directory with rossum-agent installed."
           : `Failed to start rossum-agent-api: ${err.message}`;
         abort.abort(message);
       });
