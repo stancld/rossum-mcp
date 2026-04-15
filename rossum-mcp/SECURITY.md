@@ -42,4 +42,4 @@ Rate limiting is enforced **server-side by the Rossum API**. Requests that excee
 
 ## Reporting Vulnerabilities
 
-If you discover a security issue, please use [GitHub's private vulnerability reporting](https://github.com/stancld/rossum-agents/security/advisories/new) to submit a description, reproduction steps, and affected package(s). Do not open a public issue.
+If you discover a security issue, please use [GitHub's private vulnerability reporting](https://github.com/rossumai/rossum-agents/security/advisories/new) to submit a description, reproduction steps, and affected package(s). Do not open a public issue.

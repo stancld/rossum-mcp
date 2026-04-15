@@ -133,7 +133,7 @@ html_theme_options = {
     "sidebar_hide_name": False,
     "navigation_with_keys": True,
     "top_of_page_buttons": ["view"],
-    "source_repository": "https://github.com/stancld/rossum-agents",
+    "source_repository": "https://github.com/rossumai/rossum-agents",
     "source_branch": "master",
     "source_directory": "docs/source/",
 }

@@ -25,7 +25,7 @@ Quick Start
 
       .. code-block:: bash
 
-         git clone https://github.com/stancld/rossum-agents.git
+         git clone https://github.com/rossumai/rossum-agents.git
          cd rossum-agents/rossum-mcp
          uv sync
 

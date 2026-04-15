@@ -2578,7 +2578,7 @@ requires-dist = [
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.22" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.22" },
     { name = "rossum-api", specifier = ">=3.13.1" },
-    { name = "rossum-mcp", git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp" },
+    { name = "rossum-mcp", git = "https://github.com/rossumai/rossum-agents.git?subdirectory=rossum-mcp" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'slack'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'tests'", specifier = ">=3.27.0" },
@@ -2632,7 +2632,7 @@ wheels = [
 [[package]]
 name = "rossum-mcp"
 version = "2.3.0.dev0"
-source = { git = "https://github.com/stancld/rossum-agents.git?subdirectory=rossum-mcp#5cbde58e1c0b2d88d5bed91e0e30e5dbfe154c5e" }
+source = { git = "https://github.com/rossumai/rossum-agents.git?subdirectory=rossum-mcp#5cbde58e1c0b2d88d5bed91e0e30e5dbfe154c5e" }
 dependencies = [
     { name = "fastmcp" },
     { name = "pydantic" },

@@ -115,7 +115,7 @@ all = [
 ]
 
 [tool.uv.sources]
-rossum-mcp = { git = "https://github.com/stancld/rossum-agents.git", subdirectory = "rossum-mcp" }
+rossum-mcp = { git = "https://github.com/rossumai/rossum-agents.git", subdirectory = "rossum-mcp" }
 
 [tool.pytest.ini_options]
 markers = [

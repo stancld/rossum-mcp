@@ -177,4 +177,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 - [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [Rossum Agent README](../rossum-agent/README.md)
-- [Main Repository](https://github.com/stancld/rossum-agents)
+- [Main Repository](https://github.com/rossumai/rossum-agents)

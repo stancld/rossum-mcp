@@ -13,10 +13,10 @@
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 
-[![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
-[![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
-[![Snyk Security](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml)
-[![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-agents/badge)](https://www.codefactor.io/repository/github/stancld/rossum-agents)
+[![codecov](https://codecov.io/gh/rossumai/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/rossumai/rossum-agents)
+[![CodeQL](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml)
+[![Snyk Security](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml)
+[![CodeFactor](https://www.codefactor.io/repository/github/rossumai/rossum-agents/badge)](https://www.codefactor.io/repository/github/rossumai/rossum-agents)
 
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Fully Typed](https://img.shields.io/badge/Fully_Typed-Pydantic_%2B_Literals-blue.svg)](#mcp-tools)
@@ -143,8 +143,8 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 **Core packages:**
 
-- **[rossum-mcp/](rossum-mcp/)** - MCP server exposing the Rossum API as a fully-typed tool surface for AI assistants
-- **[rossum-agent/](rossum-agent/)** - Specialized AI agent with skills, sub-agents, and a REST API
+- **[rossum-mcp/](rossum-mcp/)** - MCP server exposing the Rossum API as a fully-typed tool surface for AI assistants (see [available tools](rossum-mcp/README.md#available-tools))
+- **[rossum-agent/](rossum-agent/)** - Specialized AI agent with skills, sub-agents, and a REST API (see [available tools](rossum-agent/README.md#available-tools) and [skills & sub-agents](https://stancld.github.io/rossum-agents/skills_and_subagents.html))
 
 **Supporting packages** (used for development, deployment, and integration):
 
@@ -154,75 +154,31 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 ## Quick Start
 
-```bash
-# Install and run (fastest)
-uv pip install rossum-agent[api]
-export ROSSUM_API_TOKEN="your-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-rossum-agent-api
-```
-
-Or with Docker:
+**Prerequisites**: Python 3.12+, [uv](https://docs.astral.sh/uv/), [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git && cd rossum-agents
-echo "ROSSUM_API_TOKEN=your-token" > .env
-echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
-docker-compose up rossum-agent
-```
-
-## Installation & Usage
-
-**Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
-
-### Docker Compose (Recommended)
-
-**Best for**: Local development and quick testing
-
-```bash
-git clone https://github.com/stancld/rossum-agents.git
-cd rossum-agents
-
-# Create .env file with required variables
-cat > .env << EOF
-ROSSUM_API_TOKEN=your-api-token
-ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1
-ROSSUM_MCP_MODE=read-write
-AWS_PROFILE=default
-AWS_DEFAULT_REGION=us-east-1
-EOF
-
-# Run the agent API
-docker-compose up rossum-agent-api
-```
-
-Valkey is included in the compose stack and used for change tracking.
-
----
-
-### From Source
-
-**Best for**: Development, customization, contributing
-
-```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents
 
 # Install all packages with all features
 uv sync --all-extras
 
-# Set up environment variables
-export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-export ROSSUM_MCP_MODE="read-write"
+# AWS Bedrock (the agent uses Claude via Bedrock)
+export AWS_PROFILE="rossum-dev"
+export AWS_REGION="eu-west-1"
 
-# Run the agent
-rossum-agent-api                                # REST API
+# Start PostgreSQL (session storage) and Valkey (change tracking)
+docker-compose up -d postgres valkey
+
+# Run the agent REST API
+uv run rossum-agent-api
 ```
 
-For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md).
+The agent expects PostgreSQL on `localhost:5432` and Valkey on `localhost:6379` by default. Override via `POSTGRES_*` and `VALKEY_*` env vars (see [CLAUDE.md](CLAUDE.md)).
 
----
+For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md). See [CLAUDE.md](CLAUDE.md) for the full list of configuration options (AWS Bedrock, Valkey, logging, etc.).
+
+## Installation & Usage
 
 ### MCP Server with Claude Desktop
 
@@ -247,74 +203,6 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 ```
 
 Or run standalone: `rossum-mcp`
-
----
-
-### AI Agent Interfaces
-
-```bash
-# REST API (from source)
-rossum-agent-api
-```
-
-The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
-
-## Agent Skills & Sub-Agents
-
-The Rossum Agent includes specialized capabilities for complex workflows:
-
-<details>
-<summary><strong>Show skills and sub-agents</strong></summary>
-
-**Skills** - Domain-specific instructions loaded on-demand via `load_skill`:
-
-| Skill | Purpose |
-|-------|---------|
-| `schema-patching` | Add, update, or remove individual schema fields |
-| `python-execution` | Constrained Python snippets, schema export of bulky structured outputs |
-| `ui-settings` | Update queue UI settings without corrupting structure |
-| `hooks` | Hook templates, token_owner, testing, debugging |
-| `txscript` | TxScript language reference for formula fields, serverless functions, and rule trigger conditions |
-| `rules-and-actions` | Create validation rules with TxScript conditions and actions |
-| `formula-fields` | Create/configure formula fields with TxScript |
-| `reasoning-fields` | Create AI-powered reasoning fields with prompt + context |
-| `lookup-fields` | Create/configure lookup fields backed by Master Data Hub datasets |
-| `master-data-hub` | Configure and manage Master Data Hub datasets |
-| `document-testing` | End-to-end document extraction testing workflows |
-| `automation-setup` | Set up automation pipelines for document processing |
-| `customer-email` | Draft client-facing emails about Rossum topics |
-
-**Sub-Agents** - Opus-powered components for complex iterative tasks:
-
-| Sub-Agent | Invoked Via | Purpose |
-|-----------|-------------|---------|
-| Knowledge Base | `search_knowledge_base(query)` | Search Rossum docs with Opus-powered analysis |
-| Schema Patching | `patch_schema_with_subagent(schema_id, changes)` | Programmatic bulk schema modifications |
-
-See the [full documentation](https://stancld.github.io/rossum-agents/skills_and_subagents.html) for details.
-
-</details>
-
-## MCP Tools
-
-The MCP server exposes a compact, fully-typed tool surface — Pydantic models, `Literal` unions, and consolidated APIs built for agents:
-
-| Category | Description |
-|----------|-------------|
-| Read Layer | Get any entity by ID or search/list with typed filters |
-| Delete Layer | Unified delete for any supported entity by ID |
-| Document Processing | Upload documents, retrieve content, update/confirm/copy annotations |
-| Queue Management | Create, configure queues (including from templates) |
-| Schema Management | Define, modify, patch, and prune field structures |
-| Engine Management | Configure extraction and splitting engines |
-| Extensions (Hooks) | Webhooks, serverless functions, template-based creation, testing |
-| Rules & Actions | Business rules with TxScript triggers and actions |
-| Workspace Management | Create workspaces |
-| Organization & Users | Feature flags, user creation and updates |
-| Email Templates | Automated email responses |
-| MCP Mode | Get/set read-only or read-write mode at runtime |
-
-See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [rossum-mcp/TOOLS.md](rossum-mcp/TOOLS.md) for detailed API documentation.
 
 ## Documentation
 

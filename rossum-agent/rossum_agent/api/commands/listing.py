@@ -63,7 +63,7 @@ async def handle_list_skills(ctx: CommandContext) -> str:
     if not skills:
         return "No skills found."
 
-    base_url = "https://github.com/stancld/rossum-agents/blob/master/rossum-agent/rossum_agent/skills"
+    base_url = "https://github.com/rossumai/rossum-agents/blob/master/rossum-agent/rossum_agent/skills"
     lines = [f"**Available skills ({len(skills)}):**", ""]
     for skill in sorted(skills, key=lambda skill_info: skill_info.slug):
         goal = extract_skill_goal(skill.content)
