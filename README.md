@@ -143,8 +143,8 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 **Core packages:**
 
-- **[rossum-mcp/](rossum-mcp/)** - MCP server exposing the Rossum API as a fully-typed tool surface for AI assistants
-- **[rossum-agent/](rossum-agent/)** - Specialized AI agent with skills, sub-agents, and a REST API
+- **[rossum-mcp/](rossum-mcp/)** - MCP server exposing the Rossum API as a fully-typed tool surface for AI assistants (see [available tools](rossum-mcp/README.md#available-tools))
+- **[rossum-agent/](rossum-agent/)** - Specialized AI agent with skills, sub-agents, and a REST API (see [available tools](rossum-agent/README.md#available-tools) and [skills & sub-agents](https://stancld.github.io/rossum-agents/skills_and_subagents.html))
 
 **Supporting packages** (used for development, deployment, and integration):
 
@@ -258,63 +258,6 @@ rossum-agent-api
 ```
 
 The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
-
-## Agent Skills & Sub-Agents
-
-The Rossum Agent includes specialized capabilities for complex workflows:
-
-<details>
-<summary><strong>Show skills and sub-agents</strong></summary>
-
-**Skills** - Domain-specific instructions loaded on-demand via `load_skill`:
-
-| Skill | Purpose |
-|-------|---------|
-| `schema-patching` | Add, update, or remove individual schema fields |
-| `python-execution` | Constrained Python snippets, schema export of bulky structured outputs |
-| `ui-settings` | Update queue UI settings without corrupting structure |
-| `hooks` | Hook templates, token_owner, testing, debugging |
-| `txscript` | TxScript language reference for formula fields, serverless functions, and rule trigger conditions |
-| `rules-and-actions` | Create validation rules with TxScript conditions and actions |
-| `formula-fields` | Create/configure formula fields with TxScript |
-| `reasoning-fields` | Create AI-powered reasoning fields with prompt + context |
-| `lookup-fields` | Create/configure lookup fields backed by Master Data Hub datasets |
-| `master-data-hub` | Configure and manage Master Data Hub datasets |
-| `document-testing` | End-to-end document extraction testing workflows |
-| `automation-setup` | Set up automation pipelines for document processing |
-| `customer-email` | Draft client-facing emails about Rossum topics |
-
-**Sub-Agents** - Opus-powered components for complex iterative tasks:
-
-| Sub-Agent | Invoked Via | Purpose |
-|-----------|-------------|---------|
-| Knowledge Base | `search_knowledge_base(query)` | Search Rossum docs with Opus-powered analysis |
-| Schema Patching | `patch_schema_with_subagent(schema_id, changes)` | Programmatic bulk schema modifications |
-
-See the [full documentation](https://stancld.github.io/rossum-agents/skills_and_subagents.html) for details.
-
-</details>
-
-## MCP Tools
-
-The MCP server exposes a compact, fully-typed tool surface — Pydantic models, `Literal` unions, and consolidated APIs built for agents:
-
-| Category | Description |
-|----------|-------------|
-| Read Layer | Get any entity by ID or search/list with typed filters |
-| Delete Layer | Unified delete for any supported entity by ID |
-| Document Processing | Upload documents, retrieve content, update/confirm/copy annotations |
-| Queue Management | Create, configure queues (including from templates) |
-| Schema Management | Define, modify, patch, and prune field structures |
-| Engine Management | Configure extraction and splitting engines |
-| Extensions (Hooks) | Webhooks, serverless functions, template-based creation, testing |
-| Rules & Actions | Business rules with TxScript triggers and actions |
-| Workspace Management | Create workspaces |
-| Organization & Users | Feature flags, user creation and updates |
-| Email Templates | Automated email responses |
-| MCP Mode | Get/set read-only or read-write mode at runtime |
-
-See [rossum-mcp/README.md](rossum-mcp/README.md) for the full tool list and [rossum-mcp/TOOLS.md](rossum-mcp/TOOLS.md) for detailed API documentation.
 
 ## Documentation
 
