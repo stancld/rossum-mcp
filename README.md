@@ -13,10 +13,10 @@
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
 
-[![codecov](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/stancld/rossum-agents)
-[![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
-[![Snyk Security](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml)
-[![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-agents/badge)](https://www.codefactor.io/repository/github/stancld/rossum-agents)
+[![codecov](https://codecov.io/gh/rossumai/rossum-agents/branch/master/graph/badge.svg)](https://codecov.io/gh/rossumai/rossum-agents)
+[![CodeQL](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml)
+[![Snyk Security](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml)
+[![CodeFactor](https://www.codefactor.io/repository/github/rossumai/rossum-agents/badge)](https://www.codefactor.io/repository/github/rossumai/rossum-agents)
 
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Fully Typed](https://img.shields.io/badge/Fully_Typed-Pydantic_%2B_Literals-blue.svg)](#mcp-tools)
@@ -165,7 +165,7 @@ rossum-agent-api
 Or with Docker:
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git && cd rossum-agents
+git clone https://github.com/rossumai/rossum-agents.git && cd rossum-agents
 echo "ROSSUM_API_TOKEN=your-token" > .env
 echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
 docker-compose up rossum-agent
@@ -180,7 +180,7 @@ docker-compose up rossum-agent
 **Best for**: Local development and quick testing
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents
 
 # Create .env file with required variables
@@ -205,7 +205,7 @@ Valkey is included in the compose stack and used for change tracking.
 **Best for**: Development, customization, contributing
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents
 
 # Install all packages with all features

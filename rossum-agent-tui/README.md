@@ -30,10 +30,10 @@
 
 ## Installation
 
-Download the latest release from [GitHub Releases](https://github.com/stancld/rossum-agents/releases) and install it with npm:
+Download the latest release from [GitHub Releases](https://github.com/rossumai/rossum-agents/releases) and install it with npm:
 
 ```bash
-npm install -g https://github.com/stancld/rossum-agents/releases/download/rossum-agent-tui-vX.Y.Z/rossum-agent-tui-X.Y.Z.tgz
+npm install -g https://github.com/rossumai/rossum-agents/releases/download/rossum-agent-tui-vX.Y.Z/rossum-agent-tui-X.Y.Z.tgz
 ```
 
 Replace `X.Y.Z` with the version you want to install. After installation, the `fabry` command is available globally.
@@ -137,4 +137,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 - [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [Rossum Agent README](../rossum-agent/README.md)
-- [Main Repository](https://github.com/stancld/rossum-agents)
+- [Main Repository](https://github.com/rossumai/rossum-agents)

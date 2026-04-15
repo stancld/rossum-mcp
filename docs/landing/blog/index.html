@@ -520,7 +520,7 @@
         Rossum MCP & Agent
       </a>
       <div class="nav-links">
-        <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/rossumai/rossum-agents" target="_blank" rel="noopener">GitHub</a>
         <a href="../source/">Docs</a>
         <a href="../api-reference/">API Reference</a>
         <a href="./" aria-current="page">Blog</a>
@@ -568,7 +568,7 @@
 
       <h2 id="section-1">1. Let Type Hints Define Your Tools</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/56" class="pr-link" target="_blank" rel="noopener">PR #56</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/56" class="pr-link" target="_blank" rel="noopener">PR #56</a>
 
       <p>My first tool layer looked like many backend systems: handler classes inheriting from a base, scattered across 10 files, each with its own registration boilerplate. Adding a new tool meant touching multiple files and trying to remember where the logic lived.</p>
 
@@ -604,7 +604,7 @@
 
       <h2 id="section-2">2. From Smolagents to the Claude Agent SDK</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/57" class="pr-link" target="_blank" rel="noopener">PR #57</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/57" class="pr-link" target="_blank" rel="noopener">PR #57</a>
 
       <p>My initial stack used <strong><a href="https://huggingface.co/docs/smolagents" target="_blank" rel="noopener">smolagents</a></strong> (Hugging Face's library for building agents in a few lines of code) and <strong><a href="https://www.litellm.ai/" target="_blank" rel="noopener">LiteLLM</a></strong> (a unified interface for swapping between OpenAI, Anthropic, and other providers). My first working prototype took an afternoon.</p>
 
@@ -620,7 +620,7 @@
 
       <h2 id="section-3">3. Embed Agent's UI Where the Work Happens</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/58" class="pr-link" target="_blank" rel="noopener">PR #58</a>
 
       <p>The agent started as a <strong>CLI script</strong>. It worked great for engineers, but for a support engineer, solution architect, or account manager, "clone the repo and configure your environment variables" isn't a feature. It's a roadblock.</p>
 
@@ -637,7 +637,7 @@
 
       <h2 id="section-4">4. Sub-Agents for Context Isolation</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/107" class="pr-link" target="_blank" rel="noopener">PR #107</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/107" class="pr-link" target="_blank" rel="noopener">PR #107</a>
       <a href="https://code.claude.com/docs/en/sub-agents" class="pr-link" target="_blank" rel="noopener">Sub-Agents</a>
 
       <p>Early on, I treated the agent like a single specialist locked in a room with every tool I could provide. I assumed that because Rossum is a specialized domain, one well-prompted agent could handle the entire API surface.</p>
@@ -665,7 +665,7 @@
 
       <h2 id="section-5">5. Skills: Load Knowledge Just-in-Time</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/73" class="pr-link" target="_blank" rel="noopener">PR #73</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/73" class="pr-link" target="_blank" rel="noopener">PR #73</a>
       <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview" class="pr-link" target="_blank" rel="noopener">Agent Skills</a>
 
       <p>Initially, the agent's "brain" was a monolithic system prompt. I kept adding rules, edge cases, and <code>IMPORTANT:</code> blocks in all caps. It felt productive until it became brittle, unreadable, and expensive. Loading every format specification and workflow upfront meant I was paying for tokens the agent didn't even need for 90% of tasks.</p>
@@ -697,7 +697,7 @@
 
       <h2 id="section-6">6. Dynamic Tool Loading Cuts Context Costs</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/108" class="pr-link" target="_blank" rel="noopener">PR #108</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/108" class="pr-link" target="_blank" rel="noopener">PR #108</a>
 
       <p>As the toolkit expanded, I hit the "Agent Tax": every tool costs tokens even if never called. Loading 50+ MCP tools upfront burned <strong>8,000 tokens</strong> before the user typed a word.</p>
 
@@ -721,7 +721,7 @@
 
       <h2 id="section-7">7. Smarter Models Need Simpler Prompts</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/99" class="pr-link" target="_blank" rel="noopener">PR #99</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/99" class="pr-link" target="_blank" rel="noopener">PR #99</a>
       <a href="https://github.com/anthropics/claude-code/tree/main/plugins/claude-opus-4-5-migration" class="pr-link" target="_blank" rel="noopener">Opus 4.5 Migration Plugin</a>
 
       <p>Switching models usually feels like a simple configuration change. But moving from Sonnet to <strong>Claude Opus 4.6</strong> taught me that better models require better, and often <em>shorter</em>, instructions. My prompt had become an over-engineered legal document, and I had to admit it.</p>
@@ -769,7 +769,7 @@
 
       <h2 id="section-8">8. Regression Testing: Prompts Need Tests Too</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/pull/82" class="pr-link" target="_blank" rel="noopener">PR #82</a>
+      <a href="https://github.com/rossumai/rossum-agents/pull/82" class="pr-link" target="_blank" rel="noopener">PR #82</a>
 
       <p>Refactoring a prompt can change system behavior as much as changing business logic. Every "improvement" is a potential regression.</p>
 
@@ -812,7 +812,7 @@
 
       <h2 id="section-9">9. Orchestrate Specialists, Don't Replicate Them</h2>
 
-      <a href="https://github.com/stancld/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
+      <a href="https://github.com/rossumai/rossum-agents/commit/59e0881" class="pr-link" target="_blank" rel="noopener">Commit 59e0881</a>
       <a href="https://knowledge-base.rossum.ai/docs/formula-fields-in-rossum" class="pr-link" target="_blank" rel="noopener">Formula Fields in Rossum</a>
 
       <p><a href="#section-4">Section 4</a> covered sub-agents for context isolation. This section goes further: instead of spawning another instance of the same frontier model, the agent hands off work to an <strong>existing production system</strong>.</p>
@@ -856,8 +856,8 @@
       <p>If you're building agents and want to compare notes, or tell me where I'm wrong, find me on <a href="https://github.com/stancld" target="_blank" rel="noopener">GitHub</a> or <a href="https://x.com/stancld" target="_blank" rel="noopener">X</a>. The lessons are in the diffs. Most are deletions.</p>
 
       <div class="cta-box">
-        <p>All PRs are in the <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs and the backtracking.</p>
-        <a href="https://github.com/stancld/rossum-agents" class="cta-button" target="_blank" rel="noopener">
+        <p>All PRs are in the <a href="https://github.com/rossumai/rossum-agents" target="_blank" rel="noopener">rossum-agents repository</a>. Open the diffs to see the trade-offs and the backtracking.</p>
+        <a href="https://github.com/rossumai/rossum-agents" class="cta-button" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           Star on GitHub
         </a>
@@ -868,7 +868,7 @@
   <footer>
     <div class="container">
       <p class="disclaimer">This is not an official Rossum product. It is a community-developed integration built on top of the Rossum API.</p>
-      <p>Built with 💙 for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> · <a href="https://github.com/stancld/rossum-agents" target="_blank" rel="noopener">Source on GitHub</a> · <a href="https://github.com/stancld/rossum-agents/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="../">Back to Home</a></p>
+      <p>Built with 💙 for <a href="https://rossum.ai" target="_blank" rel="noopener">Rossum</a> · <a href="https://github.com/rossumai/rossum-agents" target="_blank" rel="noopener">Source on GitHub</a> · <a href="https://github.com/rossumai/rossum-agents/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a> · <a href="../">Back to Home</a></p>
     </div>
   </footer>
 

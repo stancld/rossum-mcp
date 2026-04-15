@@ -6,7 +6,7 @@ Only the latest released version of each package receives security updates.
 
 ## Reporting a Vulnerability
 
-Please **do not** open a public issue. Instead, use [GitHub's private vulnerability reporting](https://github.com/stancld/rossum-agents/security/advisories/new) to submit a description, reproduction steps, and affected package(s). You can expect a response within 72 hours.
+Please **do not** open a public issue. Instead, use [GitHub's private vulnerability reporting](https://github.com/rossumai/rossum-agents/security/advisories/new) to submit a description, reproduction steps, and affected package(s). You can expect a response within 72 hours.
 
 ## What's in Place
 

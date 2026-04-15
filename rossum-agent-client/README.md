@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/rossum-agent-client.svg)](https://pypi.org/project/rossum-agent-client/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-agent-client](https://img.shields.io/pypi/v/rossum-agent-client?label=rossum-agent-client)](https://pypi.org/project/rossum-agent-client/)
-[![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent-client)](https://codecov.io/gh/stancld/rossum-agents)
+[![Coverage](https://codecov.io/gh/rossumai/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent-client)](https://codecov.io/gh/rossumai/rossum-agents)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -263,4 +263,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 - [Full Documentation](https://stancld.github.io/rossum-agents/)
 - [Rossum Agent README](../rossum-agent/README.md)
 - [Rossum API Documentation](https://rossum.app/api/docs/)
-- [Main Repository](https://github.com/stancld/rossum-agents)
+- [Main Repository](https://github.com/rossumai/rossum-agents)

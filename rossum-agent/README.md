@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/rossum-agent.svg)](https://pypi.org/project/rossum-agent/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-agent](https://img.shields.io/pypi/v/rossum-agent?label=rossum-agent)](https://pypi.org/project/rossum-agent/)
-[![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/stancld/rossum-agents)
+[![Coverage](https://codecov.io/gh/rossumai/rossum-agents/branch/master/graph/badge.svg?flag=rossum-agent)](https://codecov.io/gh/rossumai/rossum-agents)
 
 [![Rossum API](https://img.shields.io/badge/Rossum-API-orange.svg)](https://github.com/rossumai/rossum-api)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -58,7 +58,7 @@ rossum-agent-api
 Or run from source:
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents/rossum-agent
 
 uv sync --extra all        # All extras (api, docs, tests)
@@ -207,4 +207,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 - [API Reference](https://stancld.github.io/rossum-agents/api-reference/)
 - [MCP Server README](../rossum-mcp/README.md)
 - [Rossum API Documentation](https://rossum.app/api/docs/)
-- [Main Repository](https://github.com/stancld/rossum-agents)
+- [Main Repository](https://github.com/rossumai/rossum-agents)

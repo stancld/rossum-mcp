@@ -78,7 +78,7 @@ See `regression_tests/README.md` for details on running tests and all available 
 ## Development setup
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents
 uv sync --all-extras          # install all packages with dev dependencies
 pytest                         # run tests

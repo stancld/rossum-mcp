@@ -9,10 +9,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI - rossum-mcp](https://img.shields.io/pypi/v/rossum-mcp?label=rossum-mcp)](https://pypi.org/project/rossum-mcp/)
 
-[![Coverage](https://codecov.io/gh/stancld/rossum-agents/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/stancld/rossum-agents)
-[![CodeQL](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/codeql.yaml)
-[![Snyk Security](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/stancld/rossum-agents/actions/workflows/snyk.yaml)
-[![CodeFactor](https://www.codefactor.io/repository/github/stancld/rossum-agents/badge)](https://www.codefactor.io/repository/github/stancld/rossum-agents)
+[![Coverage](https://codecov.io/gh/rossumai/rossum-agents/branch/master/graph/badge.svg?flag=rossum-mcp)](https://codecov.io/gh/rossumai/rossum-agents)
+[![CodeQL](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/codeql.yaml)
+[![Snyk Security](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml/badge.svg)](https://github.com/rossumai/rossum-agents/actions/workflows/snyk.yaml)
+[![CodeFactor](https://www.codefactor.io/repository/github/rossumai/rossum-agents/badge)](https://www.codefactor.io/repository/github/rossumai/rossum-agents)
 
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![Fully Typed](https://img.shields.io/badge/Fully_Typed-Pydantic_%2B_Enums-blue.svg)](#available-tools)
@@ -80,7 +80,7 @@ rossum-mcp
 Or run from source:
 
 ```bash
-git clone https://github.com/stancld/rossum-agents.git
+git clone https://github.com/rossumai/rossum-agents.git
 cd rossum-agents/rossum-mcp
 
 uv sync

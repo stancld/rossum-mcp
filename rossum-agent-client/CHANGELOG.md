@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added `persona` parameter to `create_chat()` and CLI (`--persona` / `ROSSUM_AGENT_PERSONA`) — supports `default` and `cautious` personas
-- Added `TaskSnapshotEvent` model for consuming task tracker events [#157](https://github.com/stancld/rossum-agents/pull/157)
-- Added `output_files` parameter to `run_chat()` for remapping generated filenames on download [#180](https://github.com/stancld/rossum-agents/pull/180)
+- Added `TaskSnapshotEvent` model for consuming task tracker events [#157](https://github.com/rossumai/rossum-agents/pull/157)
+- Added `output_files` parameter to `run_chat()` for remapping generated filenames on download [#180](https://github.com/rossumai/rossum-agents/pull/180)
 
 ### Deprecated
 - `send_message_stream` — still parses legacy SSE protocol; server now uses AI SDK UI Message Stream v1 format. Will be migrated in a future release.
 
 ### Changed
-- `run_chat()` now returns the chat ID (`str`) instead of `None` [#180](https://github.com/stancld/rossum-agents/pull/180)
+- `run_chat()` now returns the chat ID (`str`) instead of `None` [#180](https://github.com/rossumai/rossum-agents/pull/180)
 
 ## [1.1.0] - 2026-01-28
 
