@@ -154,55 +154,7 @@ This example showcases the agent's ability to orchestrate complex workflows invo
 
 ## Quick Start
 
-```bash
-# Install and run (fastest)
-uv pip install rossum-agent[api]
-export ROSSUM_API_TOKEN="your-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-rossum-agent-api
-```
-
-Or with Docker:
-
-```bash
-git clone https://github.com/rossumai/rossum-agents.git && cd rossum-agents
-echo "ROSSUM_API_TOKEN=your-token" > .env
-echo "ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1" >> .env
-docker-compose up rossum-agent
-```
-
-## Installation & Usage
-
-**Prerequisites**: Python 3.12+, [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
-
-### Docker Compose (Recommended)
-
-**Best for**: Local development and quick testing
-
-```bash
-git clone https://github.com/rossumai/rossum-agents.git
-cd rossum-agents
-
-# Create .env file with required variables
-cat > .env << EOF
-ROSSUM_API_TOKEN=your-api-token
-ROSSUM_API_BASE_URL=https://api.elis.rossum.ai/v1
-ROSSUM_MCP_MODE=read-write
-AWS_PROFILE=default
-AWS_DEFAULT_REGION=us-east-1
-EOF
-
-# Run the agent API
-docker-compose up rossum-agent-api
-```
-
-Valkey is included in the compose stack and used for change tracking.
-
----
-
-### From Source
-
-**Best for**: Development, customization, contributing
+**Prerequisites**: Python 3.12+, [uv](https://docs.astral.sh/uv/), [Rossum account](https://rossum.ai/) with [API credentials](https://rossum.app/api/docs/#authentication)
 
 ```bash
 git clone https://github.com/rossumai/rossum-agents.git
@@ -211,18 +163,22 @@ cd rossum-agents
 # Install all packages with all features
 uv sync --all-extras
 
-# Set up environment variables
-export ROSSUM_API_TOKEN="your-api-token"
-export ROSSUM_API_BASE_URL="https://api.elis.rossum.ai/v1"
-export ROSSUM_MCP_MODE="read-write"
+# AWS Bedrock (the agent uses Claude via Bedrock)
+export AWS_PROFILE="rossum-dev"
+export AWS_REGION="eu-west-1"
 
-# Run the agent
-rossum-agent-api                                # REST API
+# Start PostgreSQL (session storage) and Valkey (change tracking)
+docker-compose up -d postgres valkey
+
+# Run the agent REST API
+uv run rossum-agent-api
 ```
 
-For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md).
+The agent expects PostgreSQL on `localhost:5432` and Valkey on `localhost:6379` by default. Override via `POSTGRES_*` and `VALKEY_*` env vars (see [CLAUDE.md](CLAUDE.md)).
 
----
+For individual package details, see [rossum-mcp/README.md](rossum-mcp/README.md) and [rossum-agent/README.md](rossum-agent/README.md). See [CLAUDE.md](CLAUDE.md) for the full list of configuration options (AWS Bedrock, Valkey, logging, etc.).
+
+## Installation & Usage
 
 ### MCP Server with Claude Desktop
 
@@ -247,17 +203,6 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 ```
 
 Or run standalone: `rossum-mcp`
-
----
-
-### AI Agent Interfaces
-
-```bash
-# REST API (from source)
-rossum-agent-api
-```
-
-The agent includes file writing tools and Rossum integration via MCP. See [examples/](examples/) for complete workflows.
 
 ## Documentation
 
