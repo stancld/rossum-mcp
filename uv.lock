@@ -2572,7 +2572,7 @@ wheels = [
 
 [[package]]
 name = "rossum-api"
-version = "3.13.1"
+version = "3.13.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -2580,9 +2580,9 @@ dependencies = [
     { name = "httpx" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/c6/d34844a87a91ac558a623d072069d65c19e635ea258e5bd7f4a3f8741593/rossum_api-3.13.1.tar.gz", hash = "sha256:5307e272592904a8170a4dd633ce8b1b1f726b63a1af30090353a4fbd43a2a6d", size = 162380, upload-time = "2026-03-30T07:09:33.109Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/dd/bb4ac21be54232499c8c8eb5209ce173eca06dfb04fccfb377f948cbc73a/rossum_api-3.13.3.tar.gz", hash = "sha256:84c9e49444b7df68f91523fc1a53ad4fd1d2bc14908e753984f611c05d650fcc", size = 162576, upload-time = "2026-04-20T07:05:34.46Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/de/84ef1adad5809fad7bb95c8338b245ec299df5c9c2c08a61aa58f4be4c0b/rossum_api-3.13.1-py3-none-any.whl", hash = "sha256:22bf0dabc961bb685d9037c1a0ae89c5fe16a34d488a8586114b07b57c2de2f8", size = 78682, upload-time = "2026-03-30T07:09:32.161Z" },
+    { url = "https://files.pythonhosted.org/packages/95/1f/bc4b97b2748395a928caec6a212706fee548bd50c3cbc3d8b723c945bd8c/rossum_api-3.13.3-py3-none-any.whl", hash = "sha256:326ab4247f6d4ef3a6bacf377b79308aa6f1cebbc38fc21d0dd2a59e0b18fb56", size = 78775, upload-time = "2026-04-20T07:05:33.26Z" },
 ]
 
 [[package]]
@@ -2749,8 +2749,8 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.0.0" },
     { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.22" },
     { name = "python-multipart", marker = "extra == 'api'", specifier = ">=0.0.22" },
-    { name = "rossum-api", specifier = ">=3.13.1" },
-    { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.13.1" },
+    { name = "rossum-api", specifier = ">=3.13.3" },
+    { name = "rossum-api", marker = "extra == 'all'", specifier = ">=3.13.3" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'all'", specifier = ">=3.27.0" },
     { name = "slack-sdk", extras = ["optional"], marker = "extra == 'tests'", specifier = ">=3.27.0" },
     { name = "slowapi", marker = "extra == 'all'", specifier = ">=0.1.9" },
