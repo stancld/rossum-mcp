@@ -23,6 +23,7 @@ async def _create_rule(
     actions: list[RuleAction],
     enabled: bool = True,
     queue_ids: list[int] | None = None,
+    description: str | None = None,
 ) -> Rule:
     logger.debug(f"Creating rule: name={name}, enabled={enabled}")
 
@@ -35,6 +36,8 @@ async def _create_rule(
 
     if queue_ids is not None:
         rule_data["queues"] = [build_resource_url(base_url, "queues", qid) for qid in queue_ids]
+    if description is not None:
+        rule_data["description"] = description
 
     rule: Rule = await client.create_new_rule(rule_data)
     logger.info(f"Rule {rule.id} '{rule.name}' created")
@@ -43,7 +46,7 @@ async def _create_rule(
 
 def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
     @mcp.tool(
-        description="Create a rule: trigger is a TxScript condition; action includes id, type, event, payload. Optionally scope with queue_ids.",
+        description="Create a rule: trigger is a TxScript condition; action includes id, type, event, payload. Optionally scope with queue_ids. description is free-form (max 255 chars).",
         tags={"rules", "write"},
         annotations={"readOnlyHint": False},
     )
@@ -53,5 +56,15 @@ def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: st
         actions: list[RuleAction],
         enabled: bool = True,
         queue_ids: list[int] | None = None,
+        description: str | None = None,
     ) -> Rule | dict:
-        return await _create_rule(client, base_url, name, trigger_condition, actions, enabled, queue_ids)
+        return await _create_rule(
+            client,
+            base_url,
+            name,
+            trigger_condition,
+            actions,
+            enabled,
+            queue_ids,
+            description,
+        )

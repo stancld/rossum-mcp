@@ -61,15 +61,16 @@ class TestPatchRule:
         """Test patching multiple fields at once."""
         register_rule_tools(mock_mcp, mock_client, "https://api.test.rossum.ai/v1")
 
-        updated_rule = create_mock_rule(id=123, enabled=False, trigger_condition="field.x > 0")
+        updated_rule = create_mock_rule(id=123, enabled=False, trigger_condition="field.x > 0", description="Updated")
         mock_client.update_part_rule.return_value = updated_rule
 
         patch_rule = mock_mcp._tools["patch_rule"]
-        result = await patch_rule(rule_id=123, enabled=False, trigger_condition="field.x > 0")
+        result = await patch_rule(rule_id=123, enabled=False, trigger_condition="field.x > 0", description="Updated")
 
         assert result.enabled is False
         mock_client.update_part_rule.assert_called_once_with(
-            123, {"trigger_condition": "field.x > 0", "enabled": False}
+            123,
+            {"trigger_condition": "field.x > 0", "enabled": False, "description": "Updated"},
         )
 
     @pytest.mark.asyncio

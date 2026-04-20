@@ -440,6 +440,7 @@ Creates a new business rule. Optionally scope with `queue_ids`.
 - `actions` (array, required): List of actions. Each action requires: `id` (unique string), `type`, `event`, `payload`
 - `enabled` (boolean, optional, default: true): Whether the rule is enabled
 - `queue_ids` (array of integers, optional): Queue IDs to scope the rule to specific queues
+- `description` (string, optional): Free-form description (max 255 chars)
 
 **Action types:** `show_message`, `add_automation_blocker`, `add_validation_source`, `change_queue`, `send_email`, `hide_field`, `show_field`, `show_hide_field`, `change_status`, `add_label`, `remove_label`, `custom`
 
@@ -472,6 +473,7 @@ Partial update (PATCH) of a business rule. Only provided fields are updated.
 - `actions` (array, optional): List of actions
 - `enabled` (boolean, optional): Whether the rule is enabled
 - `queue_ids` (array of integers, optional): Queue IDs; pass `[]` to clear queue scoping
+- `description` (string, optional): Free-form description (max 255 chars); pass `""` to clear
 
 **Example:**
 ```python
@@ -486,6 +488,9 @@ patch_rule(rule_id=67890, queue_ids=[101, 102])
 
 # Remove all queue associations (rule applies to all queues using its schema)
 patch_rule(rule_id=67890, queue_ids=[])
+
+# Update description (empty string clears it)
+patch_rule(rule_id=67890, description="Blocks high-value invoices")
 ```
 
 ---

@@ -22,6 +22,7 @@ async def _patch_rule(
     actions: list[RuleAction] | None = None,
     enabled: bool | None = None,
     queue_ids: list[int] | None = None,
+    description: str | None = None,
 ) -> Rule:
     """Partial update (PATCH) - only provided fields are updated."""
     logger.debug(f"Patching rule: rule_id={rule_id}")
@@ -37,6 +38,8 @@ async def _patch_rule(
         patch_data["enabled"] = enabled
     if queue_ids is not None:
         patch_data["queues"] = [build_resource_url(base_url, "queues", qid) for qid in queue_ids]
+    if description is not None:
+        patch_data["description"] = description
 
     if not patch_data:
         raise ToolError("No fields provided to update")
@@ -48,7 +51,7 @@ async def _patch_rule(
 
 def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: str) -> None:
     @mcp.tool(
-        description="Patch a rule (PATCH); only provided fields change. queue_ids=[] clears queue scoping.",
+        description="Patch a rule (PATCH); only provided fields change. queue_ids=[] clears queue scoping. description is free-form (max 255 chars); use empty string to clear.",
         tags={"rules", "write"},
         annotations={"readOnlyHint": False},
     )
@@ -59,5 +62,16 @@ def register_rule_tools(mcp: FastMCP, client: AsyncRossumAPIClient, base_url: st
         actions: list[RuleAction] | None = None,
         enabled: bool | None = None,
         queue_ids: list[int] | None = None,
+        description: str | None = None,
     ) -> Rule | dict:
-        return await _patch_rule(client, base_url, rule_id, name, trigger_condition, actions, enabled, queue_ids)
+        return await _patch_rule(
+            client,
+            base_url,
+            rule_id,
+            name,
+            trigger_condition,
+            actions,
+            enabled,
+            queue_ids,
+            description,
+        )

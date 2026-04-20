@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `create_rule` and `patch_rule` now accept a `description` parameter (free-form, max 255 chars; `""` clears it on patch)
+
 ## [2.2.0] - 2026-04-11
 
 ### Added
