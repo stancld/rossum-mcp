@@ -59,6 +59,7 @@ class TestCreateRule:
             enabled=True,
             trigger_condition="field.amount > 1000",
             actions=[test_action],
+            description="Blocks high-value invoices",
         )
         mock_client.create_new_rule.return_value = mock_rule
 
@@ -69,6 +70,7 @@ class TestCreateRule:
             actions=[test_action],
             enabled=True,
             queue_ids=[100],
+            description="Blocks high-value invoices",
         )
 
         assert result.id == 456
@@ -82,6 +84,7 @@ class TestCreateRule:
         assert call_args["trigger_condition"] == "field.amount > 1000"
         assert call_args["actions"] == [test_action]
         assert call_args["enabled"] is True
+        assert call_args["description"] == "Blocks high-value invoices"
 
     @pytest.mark.asyncio
     async def test_create_rule_without_queue_ids(self, mock_mcp: Mock, mock_client: AsyncMock) -> None:

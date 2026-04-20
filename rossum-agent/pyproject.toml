@@ -34,7 +34,7 @@ dependencies = [
     "openpyxl>=3.1.0",
     "pandas>=2.0.0",
     "pydantic>2.0.0",
-    "rossum-api>=3.13.1",
+    "rossum-api>=3.13.3",
     "rossum-mcp>=2.2.0,<3.0.0",
     "structlog>=24.1.0",
     # Required by pandas for reading legacy .xls files in sandboxed execution

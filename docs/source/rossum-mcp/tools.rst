@@ -700,6 +700,9 @@ Creates a new business rule with trigger conditions and actions.
    * - ``queue_ids``
      - list[int], optional
      - Queue IDs to scope the rule
+   * - ``description``
+     - string, optional
+     - Free-form description (max 255 chars)
 
 **Action types:** ``show_message``, ``add_automation_blocker``, ``add_validation_source``, ``change_queue``, ``send_email``, ``hide_field``, ``show_field``, ``show_hide_field``, ``change_status``, ``add_label``, ``remove_label``, ``custom``
 
@@ -733,6 +736,9 @@ Partial update of a business rule. Only provided fields are updated.
    * - ``queue_ids``
      - list[int], optional
      - Queue IDs (``[]`` removes all queue associations)
+   * - ``description``
+     - string, optional
+     - Free-form description (max 255 chars; ``""`` clears it)
 
 Workspace Management
 --------------------

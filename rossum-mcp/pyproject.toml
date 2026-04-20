@@ -27,7 +27,7 @@ classifiers = [
 dependencies = [
     "fastmcp==3.2.0",
     "pydantic>2.0.0",
-    "rossum-api>=3.13.1",
+    "rossum-api>=3.13.3",
     "structlog>=24.1.0",
 ]
 
@@ -57,7 +57,7 @@ all = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
-    "rossum-api>=3.13.1",
+    "rossum-api>=3.13.3",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.25.0",
     "sphinx-copybutton>=0.5.2",

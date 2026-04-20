@@ -230,6 +230,7 @@ def create_mock_rule(**kwargs) -> Rule:
         "rule_template": None,
         "synchronized_from_template": False,
         "actions": [],
+        "description": "",
     }
     defaults.update(kwargs)
     return Rule(**defaults)

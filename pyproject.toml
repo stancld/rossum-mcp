@@ -21,7 +21,7 @@ dependencies = [
     "cryptography>=46.0.5",
     "fastmcp==3.2.0",
     "mcp>=1.0.0",
-    "rossum-api>=3.13.1",
+    "rossum-api>=3.13.3",
     "structlog>=24.1.0",
 ]
 
@@ -111,7 +111,7 @@ all = [
     "pytest-xdist>=3.0.0",
     "python-multipart>=0.0.22",
     "valkey>=6.1.0",
-    "rossum-api>=3.13.1",
+    "rossum-api>=3.13.3",
     "slack-sdk[optional]>=3.27.0",
     "slowapi>=0.1.9",
     "sphinx>=7.0.0",

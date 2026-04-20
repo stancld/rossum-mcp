@@ -150,6 +150,7 @@ TUI imports OpenAPI types from `rossum-agent-client` — there is no separate `g
 | New agent tools | Tests in `rossum-agent/tests/` |
 | Bug fixes | Regression tests |
 | Modified logic | Update + add tests |
+| New param on existing handler | Enrich existing tests — don't add new test functions |
 
 Structure: `tests/` mirrors source, pytest fixtures in `conftest.py`, imports at file top. Use `pytest.mark.parametrize` to eliminate repetitive test functions that differ only in inputs/expected outputs.
 
